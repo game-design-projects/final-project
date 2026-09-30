@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Halls of Jev</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><path d='M2 2h12v12H2zM5 5h6v6H5z' fill='none' stroke='white'/></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="crt" aria-label="Halls of Jev">
+        <div class="bar"><span id="cmds">PRESS ANY KEY</span><span id="where"></span></div>
+        <div class="mid">
+          <canvas id="view" width="448" height="288" aria-label="Dungeon view"></canvas>
+          <div class="side">
+            <div id="log" class="log" aria-live="polite"></div>
+            <canvas id="map" width="105" height="105" aria-label="Automap"></canvas>
+          </div>
+        </div>
+        <form id="inputForm" class="bar input" autocomplete="off">
+          <div id="inputRow" hidden>
+            <label for="text" id="inputLabel"></label>
+            <span class="caret">&gt;</span><input id="text" maxlength="240" spellcheck="false" />
+          </div>
+        </form>
+        <table id="party">
+          <thead>
+            <tr><th>#</th><th>CHARACTER NAME</th><th>CLASS</th><th>AC</th><th>HITS</th><th>STATUS</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="foot"><span id="lvl"></span></div>
+        <div id="buttons" class="buttons"></div>
+      </section>
+
+      <aside id="jev" class="jev" aria-label="Jev mind">
+        <h2>JEV MIND <small>(J)</small></h2>
+        <div id="jevBody"><p class="meta">MEET A MONSTER. EVERY ROUND, ONE JEV REQUEST DECIDES WHAT IT HEARD, WHAT IT DOES, WHO IT TARGETS AND WHAT IT SAYS. AFTER EACH FIGHT, YOUR MONSTER ALLIES JUDGE YOU.</p></div>
+      </aside>
+    </main>
+    <script src="config.js"></script>
+    <script type="module" src="game.js"></script>
+  </body>
+</html>

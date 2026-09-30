@@ -1,0 +1,23 @@
+{
+  "name": "jev-game-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A gate-guard NPC whose decisions come from Jev (TypeSafe System One) instead of hand-tuned heuristics.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "scenarios": "node scripts/scenarios.js",
+    "crawler": "node crawler/server.js",
+    "crawler:scenarios": "node crawler/scripts/scenarios.js",
+    "crawler:itch": "node crawler/scripts/build-itch.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.145.0"
+  }
+}
