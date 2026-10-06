@@ -25,7 +25,10 @@
       <section class="crt" aria-label="Donjon">
         <div class="bar"><span id="cmds">PRESS ANY KEY</span><span id="where"></span></div>
         <div class="mid">
-          <canvas id="view" width="448" height="288" aria-label="Dungeon view"></canvas>
+          <div class="viewport">
+            <canvas id="view" width="448" height="288" aria-label="Dungeon view"></canvas>
+            <div id="modal" class="modal" role="alertdialog" aria-live="assertive" hidden></div>
+          </div>
           <div class="side">
             <div id="log" class="log" aria-live="polite"></div>
             <div id="vows" class="vows" hidden>

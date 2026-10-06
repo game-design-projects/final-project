@@ -161,11 +161,33 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------------------------------------------------------------- waiting for the player (prompt / menu / text)
 
-function ask(text) {
+// A yes/no question. It shows as a lit-up box over the view, where your eyes already are, and
+// any other key shakes it rather than being silently ignored. `walkAway`: moving answers no and moves.
+function ask(text, { yes = "YES", no = "NO", walkAway = false } = {}) {
   return new Promise((resolve) => {
-    G.prompt = { text, resolve };
+    G.prompt = { text, resolve, yes, no, walkAway };
+    console.debug("prompt:", text);
     render();
   });
+}
+
+function renderModal() {
+  const el = $("#modal");
+  const p = G?.prompt;
+  el.hidden = !p;
+  if (!p) return;
+  el.style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
+  el.innerHTML = `<p>${esc(p.text)}</p><div class="choices"><button data-key="y"><kbd>Y</kbd> ${esc(p.yes)}</button><button data-key="n"><kbd>N</kbd> ${esc(p.no)}</button></div>${
+    p.walkAway ? `<p class="aside">OR JUST WALK AWAY</p>` : ""
+  }`;
+}
+
+// Draws the eye back to whatever is waiting on the player
+function nudgeModal() {
+  const el = $("#modal");
+  el.classList.remove("nudge");
+  void el.offsetWidth; // restart the animation
+  el.classList.add("nudge");
 }
 
 function choose(title, options) {
@@ -334,6 +356,7 @@ function render() {
   renderParty();
   renderVows();
   renderButtons();
+  renderModal();
 }
 
 // Numbers and words that float up from monsters and party members: damage, misses, feelings.
@@ -583,7 +606,7 @@ function step(dir) {
   const b = G.map.boss;
   if (b && !b.defeated && nx === b.x && ny === b.y) return bossEncounter();
   if (nx === G.map.stairs.x && ny === G.map.stairs.y) {
-    ask("STAIRS DOWN. DESCEND?").then((yes) => (yes ? descend() : render()));
+    ask(`STAIRS DOWN TO B${G.floor + 1}F. DESCEND?`, { yes: "DESCEND", no: "STAY", walkAway: true }).then((yes) => (yes ? descend() : render()));
     return;
   }
   if (--G.graceSteps <= 0 && Math.random() < floorRules(G.floor).encounter) return encounter();
@@ -623,7 +646,7 @@ async function camp() {
   for (const dead of G.party.filter((m) => m.dead)) {
     if (!cleric || !(cleric.slots[2] > 0)) break;
     render();
-    if (!(await ask(`${cleric.name} CAN CAST REVIVIFY ON ${dead.name} (USES A 3RD-CIRCLE SLOT). DO IT?`))) continue;
+    if (!(await ask(`${cleric.name} CAN CAST REVIVIFY ON ${dead.name} (USES A 3RD-CIRCLE SLOT). DO IT?`, { yes: "REVIVE", no: "NOT NOW" }))) continue;
     cleric.slots[2]--;
     revive(dead);
   }
@@ -2104,7 +2127,7 @@ async function monstersTurn(playerAction, events, did) {
       say(`${UP(e.name)} WANTS TO JOIN, BUT YOUR PARTY IS FULL.`, "dim");
       continue;
     }
-    const yes = await ask(`${UP(e.name)} WANTS TO JOIN. ACCEPT?`);
+    const yes = await ask(`${UP(e.name)} WANTS TO JOIN. ACCEPT?`, { yes: "WELCOME IT", no: "TURN IT AWAY" });
     if (yes) recruit(e);
     else {
       e.status = "left";
@@ -2482,11 +2505,19 @@ function key(k) {
     return;
   }
   if (G.prompt) {
-    if (k === "y" || k === "n") {
-      const p = G.prompt;
+    const p = G.prompt;
+    const answer = k === "y" || k === "enter" ? true : k === "n" || k === "escape" ? false : null;
+    if (answer !== null) {
       G.prompt = null;
-      p.resolve(k === "y");
+      p.resolve(answer);
+      return;
     }
+    if (p.walkAway && ["fwd", "back", "turnL", "turnR"].includes(k)) {
+      G.prompt = null;
+      p.resolve(false);
+      return key(k);
+    }
+    nudgeModal();
     return;
   }
   if (G.menu) {
@@ -2602,6 +2633,10 @@ $("#buttons").addEventListener("click", (ev) => {
   const k = ev.target.closest("button")?.dataset.key;
   if (k) key(k);
 });
+$("#modal").addEventListener("click", (ev) => {
+  const k = ev.target.closest("button")?.dataset.key;
+  if (k) key(k);
+});
 $("#view").addEventListener("click", () => start());
 
 // Title card, then a light animation loop (monsters wobble, the title blinks)
@@ -2654,4 +2689,5 @@ if (location.hash.includes("debug"))
       return encounter([e]);
     },
     descend: () => descend(),
+    ask: (text = `STAIRS DOWN TO B${G.floor + 1}F. DESCEND?`) => ask(text, { yes: "DESCEND", no: "STAY", walkAway: true }),
   };
