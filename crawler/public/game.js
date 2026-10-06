@@ -4,6 +4,7 @@ import { drawMonster, SLOTS, SHINY_COLOR, BOSS_COLOR, ART } from "./art.js";
 import { Ambient } from "./ambient.js";
 import { Sfx } from "./sfx.js";
 import { d, d20, rollDice, fmtRoll, prof, CLASSES, SPELLS, SPELL_TEXT, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
+import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
 
 const $ = (s) => document.querySelector(s);
 const view = $("#view").getContext("2d");
@@ -43,6 +44,13 @@ const store = {
   },
 };
 
+// Developer mode: the Jev mind panel (J), raw numbers in the log, and the `halls` console hooks. Players never see
+// any of it; monsters' minds reach them through what they say and do. Turn it on with ?debug or #debug in the URL
+// (e.g. #floor5-debug), or for good with localStorage "donjon.debug" = "1".
+const DEBUG = /debug/i.test(location.search + location.hash) || store.get("donjon.debug") === "1";
+// Log lines for developers only, e.g. the numbers behind a feeling or a loyalty change.
+const dbg = (text) => DEBUG && say(`[DEBUG] ${text}`, "dim");
+
 // ---------------------------------------------------------------- state
 
 let G;
@@ -70,7 +78,7 @@ function newRun() {
   enterFloor(1);
   say("You descend into the Donjon. The monsters here listen, if you talk to them.", "dim");
   say("HORTENSE IS A FIGHTER, ROLF A CLERIC WHO HEALS, EUGENE A WIZARD. EVERY SWING, SPELL AND PLEA IS A DICE ROLL.", "dim");
-  say("MOVE: ARROWS/WASD  C: CAMP  E: TALK TO ALLY  V: VOW  B: BOONS  M: MAP  J: JEV MIND  P: MUSIC  O: SOUND", "dim");
+  say(`MOVE: ARROWS/WASD  C: CAMP  E: TALK TO ALLY  V: VOW  B: BOONS  M: MAP  ${DEBUG ? "J: JEV MIND  " : ""}P: MUSIC  O: SOUND`, "dim");
   say("FIND THE STAIRS ON EACH FLOOR. EVERY FLOOR YOU CLEAR EARNS A ROLL OF FATE.", "dim");
   announceFloor(1);
   render();
@@ -669,6 +677,8 @@ async function talkToAlly() {
     ally.loyalty = clamp(ally.loyalty + r.loyaltyDelta);
     const color = colorOf(ally);
     say(`${ally.name}: ${r.line}`, "npc", color);
+    const tell = reactionTell(ally.species, ally.name, r.level);
+    if (tell) say(tell, "", color);
     if (r.buff) {
       ally.buff = r.buff;
       say(`${ally.name} IS ${r.buff.id}: ${UP(r.buff.desc)}.`, "big", color);
@@ -681,7 +691,7 @@ async function talkToAlly() {
       } else ally.mood = r.outcome;
       say(`${ally.name} ${UP(r.outcome.desc)}.`, r.level <= 1 ? "big warn" : "big", r.level <= 1 ? undefined : color);
     }
-    say(`LOYALTY ${r.loyaltyDelta >= 0 ? "+" : ""}${r.loyaltyDelta} (NOW ${loyaltyWord(ally.loyalty)}).`, "dim");
+    dbg(`LANDED ${r.resonance.toFixed(1)}/4, LOYALTY ${r.loyaltyDelta >= 0 ? "+" : ""}${r.loyaltyDelta} → ${ally.loyalty} (${loyaltyWord(ally.loyalty)})`);
     sfx.play(r.level <= 0 ? "bad" : r.level === 1 ? "sad" : r.level >= 4 ? "levelup" : "good");
     showJev({ kind: "talk", ally, r });
   } catch (err) {
@@ -766,6 +776,9 @@ async function makeVow() {
     const r = await api("/api/vow", { monster: { species: to.species, name: to.name, traits: to.traits }, vow: { text: text.toLowerCase() } });
     const color = colorOf(to);
     say(`${UP(to.name)}: ${r.line}`, "npc", color);
+    const tell = reactionTell(to.species, to.name, r.level);
+    if (tell) say(tell, "", color);
+    dbg(`${UP(to.name)} LIKES THE VOW ${r.liking.toFixed(1)}/4`);
     const shift = r.level - 2;
     if (inCombat) {
       to.meters.friendliness = clamp(to.meters.friendliness + shift * 9);
@@ -835,6 +848,8 @@ async function flushBreaks() {
     G.busy = false;
     showJev({ kind: "broken", ally, v, r });
     const color = colorOf(ally);
+    // It wanted to forgive, but the wound runs too deep: say so, or the walk-out reads like a contradiction
+    if (r.picked === "forgive" && r.response !== "forgive") say(cantForgiveLine(ally.species, ally.name), "", color);
     say(`${ally.name}: ${r.line}`, "npc", color);
     ally.loyalty = r.loyalty;
     if (r.response === "forgive") say(`${ally.name} STAYS. FOR NOW.`, "dim", color);
@@ -2074,9 +2089,14 @@ async function monstersTurn(playerAction, events, did) {
     e.meters = r.meters;
     e.impressions = r.impressions;
     e.side = r.side;
+    // Its reply as the player meets it: how it reacts, what it says, and why it said yes or no to joining
+    // A monster's side starts as a placeholder, so only a change after its first reply is news
+    const told = groupLog(r, { name: e.name, species: e.species, sideBefore: e.replied ? before : null, debug: DEBUG });
+    e.replied = true;
+    const answer = told.find((l) => l.kind === "join")?.text;
     c.lastLines[e.id] = r.line;
-    c.conversation.push({ speaker: e.name, text: r.line });
-    say(`${UP(e.name)}: ${r.line}`, "npc", colorOf(e));
+    c.conversation.push({ speaker: e.name, text: r.spoken === false ? answer ?? r.line : r.line });
+    for (const l of told) say(l.text, l.cls, l.kind === "debug" ? undefined : colorOf(e));
     if (r.emotion) showEmotion(e, r.emotion);
     if (e.cooldown > 0) e.cooldown--;
     // Someone switching sides is news to the rest of the group
@@ -2126,15 +2146,10 @@ function endMonsterRound() {
   }
 }
 
-// How the party's words or gift made a monster feel, and what that does. Every feeling has teeth.
+// What a feeling does once it's been told in the log (groupLog): float, sound, condition, dropped gold.
+// Every feeling has teeth.
 function showEmotion(e, em) {
   const color = colorOf(e);
-  const NAMES = { friendliness: "FRIENDLY", anger: "ANGER", fear: "FEAR" };
-  const delta = Object.entries(em.delta ?? {})
-    .filter(([, v]) => v)
-    .map(([k, v]) => `${NAMES[k]} ${v > 0 ? "+" : ""}${v}`)
-    .join(", ");
-  say(`${UP(e.name)} IS ${em.label}! ${em.effect}.${delta ? ` (${delta})` : ""}`, "big", color);
   floatOn(e, `${em.label}!`, color, 10);
   sfx.play({ good: "good", bad: "bad", fear: "fear", sad: "sad", odd: "odd" }[em.tone] ?? "good");
   if (em.cond) e.cond[em.cond] = Math.max(e.cond[em.cond] ?? 0, em.rounds);
@@ -2387,6 +2402,10 @@ async function allyReactionsAfter(c) {
     m.loyalty = x.loyalty;
     const color = colorOf(m);
     say(`${m.name}: ${x.line}`, "npc", color);
+    // What it made of the fight, and the moment that tipped it, so a walk-out never comes out of nowhere
+    const felt = allyLine(m.species, m.name, x);
+    if (felt) say(felt, "", color);
+    dbg(`${m.name} APPROVAL ${x.approval.toFixed(1)}/4, LOYALTY ${x.delta >= 0 ? "+" : ""}${x.delta} → ${x.loyalty}${x.blocked ? `; ${x.blocked}` : ""}`);
     if (x.decision === "leave_party") {
       G.party = G.party.filter((p) => p !== m);
       say(`${m.name} LEAVES THE PARTY.`, "warn", color);
@@ -2409,7 +2428,9 @@ function gameOver() {
   render();
 }
 
-// ---------------------------------------------------------------- Jev mind panel
+// ---------------------------------------------------------------- Jev mind panel (debug only)
+// The raw decision behind every monster: meters, perception, odds, blocked picks. A developer tool; players read
+// monsters through the log instead (narrate.js). Only exists in DEBUG mode.
 
 function bar(v, max = 1) {
   return `<span class="meter"><span style="width:${Math.max(0, Math.min(1, v / max)) * 100}%"></span></span>`;
@@ -2417,6 +2438,7 @@ function bar(v, max = 1) {
 const words = (s) => esc(UP(String(s).replaceAll("_", " ")));
 
 function showJev(x) {
+  if (!DEBUG) return;
   const el = $("#jevBody");
   let h = "";
   if (x.kind === "group") {
@@ -2432,6 +2454,7 @@ function showJev(x) {
       for (const p of r.emotionProbabilities ?? []) h += `<span class="${p.id === r.emotion?.id ? "hot" : ""}">FEELS ${words(p.id)}</span>${bar(p.p)}<span>${Math.round(p.p * 100)}%</span>`;
       h += `</div>`;
       if (r.emotion) h += `<p class="meta">FEELING: ${esc(r.emotion.label)} → ${esc(r.emotion.effect)}</p>`;
+      if (r.join) h += `<p class="meta">JOIN: ${r.join.accepted ? (r.join.moved ? "ASKS TO COME" : "YES") : "NO"} · REASON ${words(r.join.reason)}</p>`;
       if (r.blocked) h += `<p class="blocked">CODE BLOCKED ${words(r.picked)}: ${esc(r.blocked)} → ${words(r.action)}</p>`;
     }
   } else if (x.kind === "allies") {
@@ -2440,6 +2463,7 @@ function showJev(x) {
     for (const a of r.reactions) {
       h += `<h3>${esc(a.name)}</h3><div class="rows"><span>APPROVAL 0–4</span>${bar(a.approval, 4)}<span>${a.approval.toFixed(1)}</span><span>LOYALTY ${a.delta >= 0 ? "+" : ""}${a.delta}</span>${bar(a.loyalty, 100)}<span>${a.loyalty}</span></div>`;
       h += `<p class="meta">DECISION: ${words(a.decision)}${a.picked !== "stay" && a.picked !== a.decision ? ` (JEV SAID ${words(a.picked)})` : ""}</p>`;
+      if (a.moment) h += `<p class="meta">MOST STRUCK BY: ${esc(a.moment)}</p>`;
       if (a.blocked) h += `<p class="blocked">${esc(a.blocked)}</p>`;
     }
   } else if (x.kind === "talk") {
@@ -2499,7 +2523,7 @@ function key(k) {
     return;
   }
   if (G.busy || G.input) return;
-  if (k === "j") return toggleJev();
+  if (k === "j" && DEBUG) return toggleJev();
   if (k === "p") return music.toggle();
   if (k === "o") {
     say(`SOUND EFFECTS ${sfx.toggle() ? "ON" : "OFF"}.`, "dim");
@@ -2525,7 +2549,8 @@ function toggleJev() {
   const hidden = $("#jev").classList.toggle("hidden");
   store.set("hallsOfJev.jev", hidden ? "0" : "1");
 }
-if (store.get("hallsOfJev.jev") === "0") $("#jev").classList.add("hidden");
+// Hidden in the page by default; in debug mode it opens unless the developer closed it last time
+if (DEBUG && store.get("hallsOfJev.jev") !== "0") $("#jev").classList.remove("hidden");
 
 const KEYMAP = {
   arrowup: "fwd",
@@ -2615,8 +2640,8 @@ function bossEncounterHere() {
   return bossEncounter();
 }
 
-// Debug hook: open with #debug, then e.g. halls.meet("goblin", "slime") in the console.
-if (location.hash.includes("debug"))
+// Debug hook: open with #debug (or ?debug), then e.g. halls.meet("goblin", "slime") in the console.
+if (DEBUG)
   window.halls = {
     hostile: (species) => {
       const e = makeEnemy(species);

@@ -24,7 +24,7 @@ cd ../..
 npm run crawler:itch -- https://halls-of-jev-api.<you>.workers.dev
 ```
 
-Upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". An embed size of about 1180 × 820 fits the game plus the Jev panel; enable the fullscreen button too.
+Upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". An embed size of about 900 × 820 fits the game (the Jev mind panel is a developer tool and stays hidden); enable the fullscreen button too.
 
 - The Worker runs the same code as the local server (`crawler/src/api.js`), so the monsters behave identically.
 - To test the itch build locally: `node crawler/proxy/dev.js` (Worker on port 5175), then `npm run crawler:itch -- http://localhost:5175` and serve `dist/donjon` from any static server.
@@ -36,7 +36,7 @@ Upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This f
 | --- | --- |
 | Exploring | ↑/W forward · ↓/S back · ←/A and →/D turn · **C** camp (long rest; may be ambushed) · **E** talk to an ally · **V** make a vow to an ally · **B** boons · **M** map |
 | Combat | **F** fight (everyone uses their default) · **C** cast: choose each adventurer's action, spell or skill · **T** talk (everyone hears) · **R** recruit the target · **G** give gold · **V** vow to the target · **E** escape · **1–3** pick target |
-| Anywhere | **J** Jev mind panel · **P** music on/off · **O** sound effects on/off |
+| Anywhere | **P** music on/off · **O** sound effects on/off |
 
 ### D&D-style combat
 
@@ -62,7 +62,7 @@ The rules follow D&D 5e, simplified (`public/dnd.js`). Every roll is shown in th
   | --- | --- |
   | DELIGHTED | won't attack this round |
   | IN STITCHES | too busy laughing to fight |
-  | TOUCHED | its heart opens; if it likes you enough, it asks to join |
+  | TOUCHED | its heart opens: it won't attack you this round, and if it likes you enough it asks to come along |
   | FLATTERED | lowers its guard: you get advantage against it |
   | INTRIGUED | lets slip a weak spot: +2 to hit it for the rest of the fight |
   | CONFUSED | loses its turn |
@@ -71,8 +71,13 @@ The rules follow D&D 5e, simplified (`public/dnd.js`). Every roll is shown in th
   | ENRAGED | advantage and +3 damage, but reckless (AC −3) |
   | TERRIFIED | disadvantage on attacks, and it drops gold |
 
-  Each feeling also moves its friendliness, anger or fear, and the log shows by how much.
-- **Recruit (R):** ask your target to join, with or without words. Your talker rolls Persuasion against a DC set by how much it likes you, how angry it is, and whether it is losing. The result (irresistible, convincing, close, clumsy or disastrous) shifts its mood before it answers. Winning a monster over, or letting it leave in peace, gives half its XP.
+  Each feeling also moves its friendliness, anger or fear. You never see those numbers: you read the mood the way you would at a table, from what it says and how it moves. The log narrates a tell for every feeling ("Grak lets its big ears droop."), and when a monster changes sides ("the fight has gone out of it", "You've made an enemy").
+- **Recruit (R):** ask your target to join, with or without words. Your talker rolls Persuasion against a DC set by how much it likes you, how angry it is, and whether it is losing. A convincing or irresistible pitch brings it up to the point where it would consider joining; a close, clumsy or disastrous one only nudges (or sours) its mood. Then the monster answers in character, and the log always says why, so what it seems to feel and what it does agree:
+  - *"Grak grins, showing crooked teeth, but grunts that it won't leave Snag."* (likes you, but won't abandon its brother)
+  - *"Glop still quivers a little, but burbles that it won't be alone down here anymore."* (unsure of you, but comes anyway)
+  - *"Drip wobbles from side to side and burbles that it didn't like how you asked."* (a botched pitch to a friend)
+
+  Reasons to refuse: it doesn't know you well enough yet, wants more first, is still angry, didn't like how you asked, won't leave the others with it, is too proud, won't leave its home, is afraid of what lies deeper, or you let it down before. Reasons to come: it likes you, respects your strength, wants gold and loot, is lonely, wants to be with its kind in your party, feels safer with you, is curious, or is grateful. Winning a monster over, or letting it leave in peace, gives half its XP.
 - **Ally talks (E)** always have a result, by how your words land (0–4): it sulks and sits out the next fight, gets distracted (−2 to hit), feels steady (+1 to hit), gets its species buff, or is inspired (buff, full heal and a level).
 
 ### Floors and champions
@@ -114,11 +119,22 @@ The rules follow D&D 5e, simplified (`public/dnd.js`). Every roll is shown in th
 
   If you swore to a monster that's still in the fight, it gets angry instead. If the one you swore to is gone, nobody holds you to it.
 
-Test these against the live API with `node crawler/scripts/social-scenarios.js`, or in the browser with `#debug` and `halls.meet("goblin", "slime")`, `halls.hostile("slime")`, `halls.ally("slime", "Glop")`.
+- **Allies explain themselves.** After a fight, each ally's reaction line matches how it judged you, and the log names the moment it can't get past ("Glop can't stomach how you killed Drip while it begged for mercy.") or liked. An ally that nearly walked out "stays. For now." A betrayed ally that wanted to forgive you but can't says so before it leaves.
 
-**Test runs:** open http://localhost:5174/#floor5 (any number) to start on that floor with a party that got there: every member at that level, one Roll of Fate boon per floor cleared, some gold, fully rested. Add `-debug` (`#floor5-debug`) to also get the console hooks.
+Test these against the live API with `node crawler/scripts/social-scenarios.js`, or in the browser in debug mode with `halls.meet("goblin", "slime")`, `halls.hostile("slime")`, `halls.ally("slime", "Glop")`.
 
-Floors are new mazes every time you descend. Death is permanent, and your deepest floor is remembered. Open `#debug` in the URL to get `halls.meet("dragon")` in the console.
+### Debug mode (developers only)
+
+Players never see Jev's raw output. Open the game with `?debug` or `#debug` in the URL (e.g. `http://localhost:5174/?debug` or `#floor5-debug`), or set `localStorage["donjon.debug"] = "1"`, to get:
+- the **Jev mind panel** (toggle with **J**): every monster's meters, what it heard, Jev's action odds, its feeling odds, its answer to an invitation and the reason, every choice code blocked, and how allies scored each fight;
+- `[DEBUG]` lines in the log with the numbers behind feelings, ally talks, vows and loyalty changes;
+- the `halls` console hooks.
+
+The server also logs one `[join]` line per invitation answer (who, yes or no, the reason, and the numbers behind it).
+
+**Test runs:** open http://localhost:5174/#floor5 (any number) to start on that floor with a party that got there: every member at that level, one Roll of Fate boon per floor cleared, some gold, fully rested. Add `-debug` (`#floor5-debug`) to also get debug mode (see above).
+
+Floors are new mazes every time you descend. Death is permanent, and your deepest floor is remembered.
 
 ## The monsters
 
@@ -139,19 +155,20 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 ## How Jev runs it
 
-**Each combat round:** one Jev request (`src/enemy.js`, about 10–20 questions, ~150–250 ms):
+**Each combat round:** one Jev request (`src/enemy.js`, about 10–25 questions per monster, ~150–300 ms):
 - It reads your message: threat, insult, kindness 0–3, joke, offers gold, asks it to join, asks for peace.
 - It picks an action from the feasible set and a target from the living party members.
 - It also picks one line per possible action from that species' approved lines in `public/species.js`, so whatever action survives the rules already has a line.
+- Whenever joining is possible (you recruited it, your words invite it, or it's warm enough to ask): whether it wants to say yes, plus its main reason to say yes **and** its main reason to say no (both asked at once, since Jev answers in parallel).
 
 **Code owns the rules:**
 - Your words move the monster's friendliness, anger and fear, using per-species weights.
-- A monster can only join once it's friendly enough (the slime's bar is lower than the dragon's). The state tells Jev whether that's true yet.
-- Tribute must meet the monster's minimum. Code describes the offer in words ("a generous offer") because Jev compares words better than numbers.
+- A monster can only join once it's friendly enough (the slime's bar is lower than the dragon's) and calm enough. The answer to an invitation (`resolveJoin`) is settled from its mood *after* this round's pitch, words and feeling, plus Jev's yes/no; code then keeps the reason that matches the outcome (an angry refusal always gets an angry reason). Feeling offended, enraged or confused that same round rules out a yes. A monster that likes you and says no declines instead of attacking.
+- Tribute must meet the monster's minimum. Code describes the offer in words ("a generous offer") because Jev compares words better than numbers. A refusal says whether the offer was too small, it's too angry, or it can't be bought.
 - An angry monster can't just walk away.
-- The Jev panel shows every blocked choice.
+- `public/narrate.js` turns all of this into the log: species body language, and the reason behind an answer. Shared by the browser and the server; it never shows a number.
 
-**After each encounter:** one request (`src/allies.js`) scores how each ally feels about what happened, from 0 to 4, by its own values. Code turns that into loyalty. Allies below 45 loyalty are also asked whether they stay, leave or turn on you. Code only allows leaving below 30 and betrayal below 15. A betrayer becomes an enemy that remembers why.
+**After each encounter:** one request (`src/allies.js`) scores how each ally feels about what happened, from 0 to 4, by its own values, and picks the moment it reacted to most. Code turns the score into loyalty and picks the reaction line Jev liked best *among the lines that match the score*, so a disapproving ally never cheers (ally talks and vows do the same). Allies below 45 loyalty are also asked whether they stay, leave or turn on you. Code only allows leaving below 30 and betrayal below 15. A betrayer becomes an enemy that remembers why.
 
 ## Music
 
