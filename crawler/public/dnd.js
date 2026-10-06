@@ -20,11 +20,23 @@ export function rollDice(spec, { crit = false, count } = {}) {
   return Math.max(0, total);
 }
 
-// "D20 14+5=19", or "D20 7/15→15+5=20" with advantage or disadvantage
+// "ROLLED 14 +5 = 19", or "ROLLED 16 (ADVANTAGE) +5 = 21" when it rolled two dice and kept the better one
 export function fmtRoll(r, bonus) {
-  const die = r.rolls.length > 1 ? `${r.rolls.join("/")}${r.adv > 0 ? " ADV" : " DIS"}→${r.roll}` : `${r.roll}`;
-  return `D20 ${die}${bonus ? `${bonus > 0 ? "+" : ""}${bonus}` : ""}=${r.roll + bonus}`;
+  const how = r.rolls.length > 1 ? ` (${r.adv > 0 ? "ADVANTAGE" : "DISADVANTAGE"})` : "";
+  return `ROLLED ${r.roll}${how}${bonus ? ` ${bonus > 0 ? "+" : "-"}${Math.abs(bonus)} = ${r.roll + bonus}` : ""}`;
 }
+
+// "8d6" → "8-48": a range a newcomer can read, instead of dice notation.
+export function diceRange(spec) {
+  const m = /^(\d+)d(\d+)([+-]\d+)?$/i.exec(spec);
+  if (!m) throw new Error(`bad dice ${spec}`);
+  const n = Number(m[1]);
+  const k = Number(m[3] ?? 0);
+  return `${Math.max(0, n + k)}-${n * Number(m[2]) + k}`;
+}
+
+// Saving throws and abilities by name, for the log.
+export const ABILITY_WORDS = { str: "STRENGTH", dex: "DEXTERITY", con: "CONSTITUTION", int: "INTELLIGENCE", wis: "WISDOM", cha: "CHARISMA" };
 
 export const prof = (level) => 2 + Math.floor((Math.max(1, level) - 1) / 4);
 
@@ -82,22 +94,30 @@ export const SPELLS = {
   spirit_guardians: { name: "SPIRIT GUARDIANS", cls: "cleric", lvl: 3, kind: "save", save: "wis", dice: "3d8", half: true, target: "all", sfx: "holy" },
 };
 
+// What each spell does, in words. {DMG} becomes the damage range at the caster's level (free spells grow).
 export const SPELL_TEXT = {
-  fire_bolt: "1D10 FIRE, SPELL ATTACK",
-  magic_missile: "3 DARTS OF 1D4+1, NEVER MISS",
-  burning_hands: "3D6 FIRE TO EVERY ENEMY, DEX SAVE FOR HALF",
-  sleep: "5D8 HP OF ENEMIES FALL ASLEEP, WEAKEST FIRST",
-  scorching_ray: "3 RAYS OF 2D6 FIRE",
-  hold_monster: "WIS SAVE OR PARALYZED: IT LOSES TURNS, YOUR HITS CRIT",
-  fireball: "8D6 FIRE TO EVERY ENEMY, DEX SAVE FOR HALF",
-  sacred_flame: "1D8 RADIANT, DEX SAVE",
-  cure_wounds: "HEAL 1D8+WIS",
-  bless: "+1D4 TO THE PARTY'S ATTACKS AND SAVES THIS FIGHT",
-  guiding_bolt: "4D6 RADIANT, NEXT ATTACK ON IT HAS ADVANTAGE",
-  prayer_of_healing: "HEAL THE WHOLE PARTY 2D8+WIS",
-  revivify: "BRING A DEAD ALLY BACK WITH 1 HP",
-  spirit_guardians: "3D8 RADIANT TO EVERY ENEMY, WIS SAVE FOR HALF",
+  fire_bolt: "{DMG} FIRE DAMAGE IF IT HITS",
+  magic_missile: "3 DARTS OF {DMG} DAMAGE THAT NEVER MISS",
+  burning_hands: "{DMG} FIRE TO EVERY ENEMY. HALF IF THEY DODGE",
+  sleep: "PUTS THE WEAKEST ENEMIES TO SLEEP",
+  scorching_ray: "3 RAYS OF {DMG} FIRE, EACH ROLLS TO HIT",
+  hold_monster: "PARALYZES ONE ENEMY UNLESS IT RESISTS: IT LOSES TURNS AND YOUR HITS ARE CRITICAL",
+  fireball: "{DMG} FIRE TO EVERY ENEMY. HALF IF THEY DODGE",
+  sacred_flame: "{DMG} HOLY DAMAGE UNLESS IT DODGES",
+  cure_wounds: "HEALS ONE OF YOU FOR {DMG}, MORE WITH WISDOM",
+  bless: "+1 TO 4 ON THE PARTY'S ATTACKS AND SAVES THIS FIGHT",
+  guiding_bolt: "{DMG} HOLY DAMAGE, AND THE NEXT ATTACK ON IT IS BETTER",
+  prayer_of_healing: "HEALS THE WHOLE PARTY FOR {DMG}, MORE WITH WISDOM",
+  revivify: "BRINGS A DEAD ALLY BACK WITH 1 HEALTH",
+  spirit_guardians: "{DMG} HOLY DAMAGE TO EVERY ENEMY. HALF IF THEY RESIST",
 };
+
+// A spell's description for a caster of this level.
+export function spellText(key, level = 1) {
+  const s = SPELLS[key];
+  const dice = s.dice && (s.cantrip ? `${cantripDice(level)}${s.dice.slice(s.dice.indexOf("d"))}` : s.dice);
+  return SPELL_TEXT[key].replace("{DMG}", dice ? diceRange(dice) : "");
+}
 
 // Spells a caster of this class can cast at this level (the highest circle they have slots for).
 export function spellsKnown(cls, level) {

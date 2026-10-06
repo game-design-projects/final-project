@@ -89,7 +89,7 @@ export const EMOTIONS = {
     meters: { anger: 38, friendliness: -22 },
     cond: "enraged",
     rounds: 3,
-    effect: "ADVANTAGE AND +3 DAMAGE, BUT RECKLESS: AC -3",
+    effect: "ADVANTAGE AND +3 DAMAGE, BUT RECKLESS: ARMOR -3",
     tone: "bad",
   },
   terrified: {

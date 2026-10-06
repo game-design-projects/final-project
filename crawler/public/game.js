@@ -1,10 +1,11 @@
 import { SPECIES } from "./species.js";
-import { DIRS, DIR_NAMES, VIEW, scaleAt, PALETTES, drawCorridor, drawMap, drawTitle, clear } from "./render.js";
+import { DIRS, VIEW, scaleAt, PALETTES, drawCorridor, drawMap, drawTitle, clear } from "./render.js";
 import { drawMonster, SLOTS, SHINY_COLOR, BOSS_COLOR, ART } from "./art.js";
 import { Ambient } from "./ambient.js";
 import { Sfx } from "./sfx.js";
 import { DicePops, dieTier, landPunch, DIE_TUMBLE_MS, DIE_ANIM_MS } from "./dice.js";
-import { d, d20, rollDice, fmtRoll, prof, CLASSES, SPELLS, SPELL_TEXT, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
+import { d, d20, rollDice, fmtRoll, diceRange, prof, CLASSES, SPELLS, spellText, ABILITY_WORDS, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
+import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg } from "./status.js";
 import { initTutorial } from "./tutorial.js";
 import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
 
@@ -62,7 +63,8 @@ let uid = 0;
 const tips = initTutorial({
   store,
   view: $("#view"),
-  context: () => (!G || G.mode === "over" ? "off" : G.roll || G.waitKey ? "roll" : G.prompt ? "prompt" : G.combat ? "combat" : "explore"),
+  // A menu or the talk box counts as a question: the lit-up dock has the player's attention, and keys mean something else there
+  context: () => (!G || G.mode === "over" ? "off" : G.roll || G.waitKey ? "roll" : G.prompt || G.menu || G.input ? "prompt" : G.combat ? "combat" : "explore"),
   accent: () => G?.map?.palette?.accent,
   onShow: () => sfx.play("tick"),
 });
@@ -84,13 +86,12 @@ function newRun() {
     vows: [],
     pendingBreaks: [],
     graceSteps: 4,
-    spellHelp: new Set(),
     log: [],
   };
   enterFloor(1);
   say("You descend into the Donjon. The monsters here listen, if you talk to them.", "dim");
   say("HORTENSE IS A FIGHTER, ROLF A CLERIC WHO HEALS, EUGENE A WIZARD. EVERY SWING, SPELL AND PLEA IS A DICE ROLL.", "dim");
-  if (!tips.on()) say(`MOVE: ARROWS/WASD  C: CAMP  E: TALK TO ALLY  V: VOW  B: BOONS  M: MAP  ${DEBUG ? "J: JEV MIND  " : ""}P: MUSIC  O: SOUND`, "dim");
+  if (!tips.on()) say("MOVE WITH THE ARROW KEYS OR WASD. EVERYTHING ELSE IS ON THE BAR UNDER THE VIEW: PRESS ITS KEY OR CLICK IT.", "dim");
   say("FIND THE STAIRS ON EACH FLOOR. EVERY FLOOR YOU CLEAR EARNS A ROLL OF FATE.", "dim");
   announceFloor(1);
   hint("move");
@@ -122,6 +123,8 @@ function refreshSlots(m, fill = false) {
   m.slots = m.maxSlots.map((n, i) => (fill ? n : Math.min(n, (m.slots?.[i] ?? 0) + Math.max(0, n - (old[i] ?? 0)))));
 }
 
+const slotTotal = (m) => m.maxSlots.reduce((a, b) => a + b, 0);
+
 // Per-member modifiers from the Roll of Fate. They compound as you go deeper.
 const baseMods = () => ({ dmg: 1, critMin: 20, hits: 1, lifesteal: 0, spell: 1, hitBonus: 0 });
 
@@ -146,9 +149,9 @@ function levelUp(m) {
       refreshSlots(m);
       const learned = spellsKnown(m.clsId, m.level).filter((k) => !before.includes(k));
       if (learned.length) notes.push(`LEARNS ${learned.map((k) => SPELLS[k].name).join(", ")}`);
-      if (m.level === 5) notes.push("CANTRIPS NOW ROLL 2 DICE");
+      if (m.level === 5) notes.push("FREE SPELLS NOW ROLL 2 DICE OF DAMAGE");
     }
-    if (m.level % 4 === 1) notes.push(`PROFICIENCY +${prof(m.level)}`);
+    if (m.level % 4 === 1) notes.push(`TRAINING BONUS +${prof(m.level)} TO ATTACKS, SPELLS AND TALKING`);
   } else {
     const gain = 3 + Math.floor(m.level / 2);
     m.maxHp += gain;
@@ -214,16 +217,27 @@ function nudgeModal() {
   el.classList.add("nudge");
 }
 
-function choose(title, options) {
+// A list to pick from, shown in the command dock. Options: { label, value, hint?, cost? (spell circle, 0 = free), who? (a member: shows health) }.
+// `who` on the menu itself shows that member's spell slots next to the title.
+function choose(title, options, { who } = {}) {
   return new Promise((resolve) => {
-    G.menu = { title, options, resolve };
+    G.menu = { title, options, resolve, sel: 0, who };
+    console.debug("menu:", title, options.length);
     render();
   });
 }
 
+// The dock is waiting on you and a key it doesn't take was pressed: shake it so the eye goes there.
+function nudgeDock() {
+  const el = $("#dock");
+  el.classList.remove("nudge");
+  void el.offsetWidth; // restart the animation
+  el.classList.add("nudge");
+}
+
 function askText(label, numeric = false) {
   return new Promise((resolve) => {
-    G.input = { label, resolve };
+    G.input = { label, resolve, numeric };
     const box = $("#text");
     $("#inputRow").hidden = false;
     $("#inputLabel").textContent = label;
@@ -265,7 +279,7 @@ function floorRules(f) {
 }
 
 const NEWS = {
-  1: "B1F IS QUIET: SMALL HALLS, LONE SLIMES AND GOBLINS. A GOOD PLACE TO LEARN THE DICE.",
+  1: "FLOOR 1 IS QUIET: SMALL HALLS, LONE SLIMES AND GOBLINS. A GOOD PLACE TO LEARN THE DICE.",
   2: "NEW: MONSTERS NOW ROAM IN PAIRS. BANDITS AND SNAKE PEOPLE LURK HERE.",
   3: "NEW: GROUPS OF THREE, AND ROCK ENTITIES. SPECIAL ATTACKS NOW POISON, ENTANGLE AND KNOCK YOU DOWN.",
   4: "NEW: DRAGONS. THE HALLS GROW WIDER.",
@@ -386,7 +400,7 @@ function render() {
   renderLog();
   renderParty();
   renderVows();
-  renderButtons();
+  renderDock();
   renderModal();
 }
 
@@ -457,30 +471,11 @@ function drawFloaters(t) {
   view.restore();
 }
 
-const COND_TAG = {
-  asleep: "ZZZ",
-  held: "HELD",
-  charmed: "CHARMED",
-  laughing: "LAUGHING",
-  confused: "CONFUSED",
-  demoralized: "SAD",
-  spiteful: "SPITEFUL",
-  enraged: "ENRAGED",
-  frightened: "SCARED",
-  exposed: "OFF GUARD",
-  weakspot: "WEAK SPOT",
-  lit: "GLOWING",
-  dodging: "DODGING",
-  poisoned: "POISON",
-  restrained: "BOUND",
-  prone: "PRONE",
-};
-const condTags = (x, max = 3) =>
-  Object.keys(x.cond ?? {})
-    .map((k) => COND_TAG[k])
-    .filter(Boolean)
-    .slice(0, max)
-    .join(" ");
+// One of the 7x7 status icons (status.js), drawn on the canvas at `px` pixels per dot.
+function drawIcon(ctx, name, x, y, color, px = 1) {
+  ctx.fillStyle = color;
+  (ICONS[name] ?? ICONS.dot).forEach((row, j) => [...row].forEach((c, i) => c === "#" && ctx.fillRect(x + i * px, y + j * px, px, px)));
+}
 
 function drawView(t) {
   const shaking = t < shakeUntil && t >= shakeUntil - 220;
@@ -517,17 +512,29 @@ function drawMonsterTag(e, slot, i, count) {
   view.fillStyle = color;
   view.strokeStyle = color;
   view.font = `8px "Press Start 2P", monospace`;
-  const label = `${count > 1 ? `${i + 1} ` : ""}${UP(e.name)}${e.elite ? " (VET)" : ""}`;
+  const label = `${count > 1 ? `${i + 1} ` : ""}${UP(e.name)}`;
   view.fillText(e.id === G.combat.target && count > 1 ? `>${label}<` : label, slot.cx, 13);
+  // Health bar: its length and its color (green, yellow, red) both say how close to falling it is
+  const st = hpState(e);
   const w = 72;
+  const x0 = Math.round(slot.cx - w / 2);
   view.lineWidth = 1;
-  view.strokeRect(Math.round(slot.cx - w / 2) + 0.5, 18.5, w, 5);
-  view.fillRect(Math.round(slot.cx - w / 2) + 2, 20, Math.max(0, Math.round((w - 3) * Math.max(0, e.hp) / e.maxHp)), 3);
-  const tags = condTags(e, count > 2 ? 1 : 2);
-  if (tags) {
+  view.strokeRect(x0 + 0.5, 18.5, w, 5);
+  view.fillStyle = st.color;
+  view.fillRect(x0 + 2, 20, Math.max(0, Math.round((w - 3) * st.pct)), 3);
+  // Veteran mark and conditions: an icon each, with its word while there is room
+  const tags = [...(e.elite ? [{ icon: "star", word: "VETERAN", color: "#e8e8e8" }] : []), ...condList(e.cond)].slice(0, 3);
+  if (tags.length) {
+    const withWords = count > 2 ? 1 : 2;
     view.font = `7px "Press Start 2P", monospace`;
-    view.fillStyle = "#e8e8e8";
-    view.fillText(tags, slot.cx, 35);
+    view.textAlign = "left";
+    const widths = tags.map((t, j) => 7 + (j < withWords ? 3 + view.measureText(t.word).width : 0));
+    let x = Math.round(slot.cx - (widths.reduce((a, b) => a + b, 0) + 6 * (tags.length - 1)) / 2);
+    tags.forEach((t, j) => {
+      drawIcon(view, t.icon, x, 28, t.color);
+      if (j < withWords) view.fillText(t.word, x + 10, 35);
+      x += widths[j] + 6;
+    });
   }
   view.restore();
 }
@@ -550,18 +557,23 @@ function drawBossAhead(t) {
   }
 }
 
+// The status line on top: where you are, which way you face (or the fight's round), gold and boons.
+// Commands live in the dock under the view, where the eyes already are.
 function renderBar() {
-  let cmds;
-  if (G.roll) cmds = G.roll.landed ? "PRESS ANY KEY" : "ROLLING...";
-  else if (G.mode === "over") cmds = "ENTER) NEW RUN";
-  else if (G.prompt) cmds = `${G.prompt.text}  Y)ES  N)O`;
-  else if (G.menu) cmds = `${G.menu.title}  ${G.menu.options.map((o, i) => `${i + 1})${o.label}`).join(" ")}  ESC)BACK`;
-  else if (G.input) cmds = G.input.label;
-  else if (G.busy) cmds = "...";
-  else if (G.combat) cmds = `F)IGHT C)AST T)ALK R)ECRUIT G)IVE V)OW E)SCAPE${present().length > 1 ? "  1-3 TARGET" : ""}`;
-  else cmds = "C)AMP E)NCOURAGE V)OW B)OONS M)AP J)EV P)MUSIC O)SOUND";
-  $("#cmds").textContent = cmds;
-  $("#where").textContent = `B${G.floor}F  ${DIR_NAMES[G.dir]}  GOLD ${G.gold}`;
+  const pal = G.map.palette;
+  const c = G.combat;
+  const n = G.boons.length;
+  $("#where").innerHTML = [
+    `<span class="loc"><b style="color:${pal.accent}">${floorName(G.floor)}</b> ${esc(pal.name)}</span>`,
+    c
+      ? `<span class="fight">${iconSvg("flame", "#ff5a4a")}IN A FIGHT</span>`
+      : `<span class="face" title="THE WAY YOU ARE LOOKING (UP ON THE MAP IS NORTH)">${iconSvg(["up", "right", "down", "left"][G.dir], "#8a8a8a")}FACING ${facingWord(G.dir)}</span>`,
+    `<span class="gold">${iconSvg("coin", "#ffd27a")}${G.gold} GOLD</span>`,
+    `<span class="boons" title="ROLL OF FATE BOONS YOU HAVE WON. PRESS B TO LIST THEM">${iconSvg("star", n ? "#ffd27a" : "#5a5a5a")}${n} BOON${n === 1 ? "" : "S"}</span>`,
+    // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
+    // (J, the Jev mind panel, exists only in debug runs)
+    `<span class="sys">${!DEBUG ? "" : cmd("j", "JEV", { cls: $("#jev").classList.contains("hidden") ? "off" : "", hint: "SHOW OR HIDE THE JEV PANEL" })}${cmd("h", "TIPS", { cls: tips.on() ? "" : "off" })}${cmd("p", "MUSIC", { cls: music.on ? "" : "off" })}${cmd("o", "SOUND", { cls: sfx.on ? "" : "off" })}</span>`,
+  ].join("");
 }
 
 function renderLog() {
@@ -573,29 +585,66 @@ function renderLog() {
   el.scrollTop = el.scrollHeight;
 }
 
-const loyaltyWord = (l) => (l >= 75 ? "DEVOTED" : l >= 50 ? "CONTENT" : l >= 30 ? "UNEASY" : l >= 15 ? "RESENTS" : "LEAVING?");
+const loyaltyWord = (l) => loyaltyState(l).word;
 
-function statusOf(m) {
-  if (m.dead) return "DEAD";
-  if (m.down) return m.stable ? "STABLE" : `DOWN +${m.saves.s} -${m.saves.f}`;
-  const bits = [m.kind === "human" ? "OK" : loyaltyWord(m.loyalty)];
-  if (m.slots) bits.push(`SL${m.slots.join("/")}`);
-  if (m.mods?.hits > 1) bits.push(`${m.mods.hits}X`);
-  if (m.buff) bits.push(m.buff.id);
-  if (m.mood) bits.push(m.mood.id);
-  const tags = condTags(m);
-  if (tags) bits.push(tags);
-  return bits.join(" ");
+// The party panel: one row per member. Health is a bar (length + color) with a word once it matters,
+// armor a shield, spell slots pips colored by circle, and conditions icon chips. Hover anything for the details.
+const chip = (icon, word, color, tip) => `<span class="chip" style="--c:${color}" title="${esc(tip)}">${iconSvg(icon, color)}${esc(word)}</span>`;
+const MOODS = { SULKING: ["frown", "#8a8a8a"], DISTRACTED: ["what", "#ffd23f"], STEADY: ["target", "#8fd3ff"] };
+
+function slotPips(m) {
+  const groups = slotGroups(m.slots, m.maxSlots);
+  const tip = `SPELL SLOTS LEFT: ${groups.map((g) => `${CIRCLE_WORDS[g.circle - 1]} CIRCLE ${g.left} OF ${g.max}`).join(", ")}. A SPELL USES ONE SLOT OF ITS CIRCLE. CAMP TO REFILL`;
+  return `<span class="pips" title="${esc(tip)}">${groups.map((g) => `<span class="pg" style="--c:${g.color}">${g.pips.map((on) => `<i${on ? ' class="on"' : ""}></i>`).join("")}</span>`).join("")}</span>`;
+}
+
+function powersCell(m) {
+  if (m.maxSlots) return slotPips(m);
+  if (m.clsId !== "fighter") return "";
+  const skills = [
+    ["second_wind", "SECOND WIND"],
+    ["action_surge", "ACTION SURGE"],
+  ];
+  const tip = `SKILLS: ${skills.map(([k, w]) => `${w} ${m.uses?.[k] ? "READY" : "USED"}`).join(", ")}. THEY COME BACK WHEN YOU CAMP`;
+  return `<span class="pips" title="${tip}"><span class="pg sq" style="--c:#ffb347">${skills.map(([k]) => `<i${m.uses?.[k] ? ' class="on"' : ""}></i>`).join("")}</span></span>`;
+}
+
+function statusChips(m) {
+  const chips = [];
+  if (m.kind === "monster" && !m.dead) {
+    const l = loyaltyState(m.loyalty ?? 50);
+    chips.push(chip("heart", l.word, l.color, `LOYALTY ${m.loyalty ?? 50} OF 100: ${l.word}. AN UNHAPPY ALLY MAY LEAVE OR TURN ON YOU`));
+  }
+  for (const c of condList(m.cond)) chips.push(chip(c.icon, c.word, c.color, c.tip));
+  if (m.buff) chips.push(chip("star", m.buff.id, "#ffe14a", `${m.buff.id}: ${UP(m.buff.desc)}`));
+  if (m.mood) chips.push(chip(...(MOODS[m.mood.id] ?? ["dot", "#e8e8e8"]), m.mood.id, `${m.mood.id}: ${UP(m.mood.desc)}`));
+  if (m.phoenix && !m.dead) chips.push(chip("flame", "PHOENIX", "#ffb347", "PHOENIX FEATHER: WILL CHEAT DEATH ONCE"));
+  return chips.join("");
+}
+
+// Down members: three boxes for death-save successes, three for failures.
+function deathSaves(m) {
+  const s = m.saves ?? { s: 0, f: 0 };
+  const box = (on, cls) => `<i class="${cls}${on ? " on" : ""}"></i>`;
+  const tip = `DEATH SAVES: ${s.s} OF 3 SUCCESSES, ${s.f} OF 3 FAILURES. THREE FAILURES AND ${m.name} DIES. ANY HEALING GETS THEM UP`;
+  return `<span class="saves" title="${esc(tip)}">${[0, 1, 2].map((j) => box(j < s.s, "ok")).join("")}${[0, 1, 2].map((j) => box(j < s.f, "bad")).join("")}</span>`;
+}
+
+function partyRow(m, i) {
+  const st = hpState(m);
+  const hp = Math.max(0, m.hp);
+  const ink = m.kind === "monster" ? ` style="color:${colorOf(m)}"` : "";
+  const who = `<span class="who"${ink}><b>${m.dead ? iconSvg("skull", "#8a8a8a") : ""}${esc(m.name)}</b><small>${classWord(m)}${m.kind === "monster" ? " ALLY" : ""} · LEVEL ${m.level ?? 1}</small></span>`;
+  const word = st.id === "healthy" ? "" : `<em>${st.word}</em>`;
+  const health = `<span class="hp" style="--st:${st.color}" title="HEALTH ${hp} OF ${m.maxHp}: ${st.word}"><span class="hpbar"><i style="width:${Math.round(st.pct * 100)}%"></i></span><small>${
+    m.dead ? word : m.down ? `${word}${m.stable ? "" : deathSaves(m)}` : `${hp}/${m.maxHp} ${word}`
+  }</small></span>`;
+  const armor = `<span class="ac" title="ARMOR ${m.ac}: AN ATTACKER NEEDS ${m.ac} OR MORE, WITH ITS BONUS, TO HIT">${iconSvg("shield", "#9fb0c0")}${m.ac}</span>`;
+  return `<div class="prow ${st.id}"${boonTitle(m)}><span class="num">${i + 1}</span>${who}${health}${armor}<span class="pw">${powersCell(m)}</span><span class="chips">${statusChips(m)}</span></div>`;
 }
 
 function renderParty() {
-  $("#party tbody").innerHTML = G.party
-    .map(
-      (m, i) =>
-        `<tr class="${m.dead ? "dead" : m.down ? "down" : ""}"${m.kind === "monster" ? ` style="color:${colorOf(m)}"` : ""}${boonTitle(m)}><td>${i + 1}</td><td>${esc(m.name)}</td><td>${m.cls}</td><td>${m.level ?? 1}</td><td>${m.ac}</td><td>${Math.max(0, m.hp)}/${m.maxHp}</td><td>${esc(statusOf(m))}</td></tr>`,
-    )
-    .join("");
-  $("#lvl").textContent = `B${G.floor}F · ${G.map.palette.name} · ${G.boons.length} BOON${G.boons.length === 1 ? "" : "S"} (B TO LIST)`;
+  $("#party").innerHTML = `<div class="prow phead" aria-hidden="true"><span></span><span>PARTY</span><span>HEALTH</span><span>ARMOR</span><span>SPELLS</span><span>STATUS</span></div>${G.party.map(partyRow).join("")}`;
 }
 
 // The vow ledger. Re-rendered only when something changes, so a fresh slash animates exactly once.
@@ -622,26 +671,102 @@ function renderVows() {
   }
 }
 
-const BUTTONS = {
-  explore: [["↰", "turnL"], ["↑", "fwd"], ["↱", "turnR"], ["↓", "back"], ["CAMP", "c"], ["TALK ALLY", "e"], ["VOW", "v"], ["MAP", "m"], ["♪", "p"], ["SFX", "o"]],
-  combat: [["FIGHT", "f"], ["CAST", "c"], ["TALK", "t"], ["RECRUIT", "r"], ["GIVE", "g"], ["VOW", "v"], ["ESCAPE", "e"]],
-  prompt: [["YES", "y"], ["NO", "n"]],
-  over: [["NEW RUN", "enter"]],
-};
-function renderButtons() {
-  let html = "";
-  if (G.waitKey) html = btns([["CONTINUE", "enter"]]);
-  else if (G.mode === "over") html = btns(BUTTONS.over);
-  else if (G.prompt) html = btns(BUTTONS.prompt);
-  else if (G.menu) html = btns([...G.menu.options.map((o, i) => [`${i + 1} ${o.label}`, String(i + 1), o.hint]), ["BACK", "escape"]]);
-  else if (G.input || G.busy) html = "";
+// ---------------------------------------------------------------- the command dock
+// Every command is a keycap button: the key to press and what it does, clickable too. One place for keyboard,
+// mouse and touch. When the game waits on you (a menu, the talk box, "any key"), the dock lights up in the
+// floor's accent color and shakes if you press a key it doesn't take.
+
+const ARROWS = { fwd: "up", back: "down", turnL: "left", turnR: "right" };
+const capOf = (k) => (ARROWS[k] ? iconSvg(ARROWS[k]) : { escape: "ESC", enter: "ENTER" }[k] ?? esc(k.toUpperCase()));
+function cmd(k, label, { hint = "", sub = "", cls = "", cap, style = "" } = {}) {
+  return `<button type="button" class="cmd ${cls}" data-key="${k}"${hint ? ` data-hint="${esc(hint)}"` : ""}${style ? ` style="${style}"` : ""}><kbd>${cap ?? capOf(k)}</kbd>${
+    label ? `<span class="lbl">${label}${sub ? `<small>${sub}</small>` : ""}</span>` : ""
+  }</button>`;
+}
+
+// The hint line under the commands: what the hovered (or highlighted) command does.
+let dockHint = "";
+
+function menuHtml(m) {
+  const n = m.options.length;
+  const rows = n > 4 ? Math.ceil(n / 2) : n;
+  const opts = m.options
+    .map((o, i) => {
+      const key = i < 9 ? String(i + 1) : i === 9 ? "0" : "";
+      let tail = "";
+      if (o.cost === 0) tail = `<span class="free">FREE</span>`;
+      else if (o.cost && m.who?.slots) {
+        const left = m.who.slots[o.cost - 1] ?? 0;
+        tail = `<span class="pg" style="--c:${CIRCLE_COLORS[o.cost - 1]}" title="USES ONE ${CIRCLE_WORDS[o.cost - 1]}-CIRCLE SLOT. ${left} LEFT">${"<i class=\"on\"></i>".repeat(left)}</span>`;
+      } else if (o.who) {
+        const st = hpState(o.who);
+        tail = `<span class="hpbar mini" style="--st:${st.color}"><i style="width:${Math.round(st.pct * 100)}%"></i></span>`;
+      }
+      return `<button type="button" class="opt${i === m.sel ? " sel" : ""}" data-key="pick:${i}" data-i="${i}" data-hint="${esc(o.hint ?? "")}"><kbd>${key || "&nbsp;"}</kbd><span class="lbl">${esc(o.label)}</span>${tail}</button>`;
+    })
+    .join("");
+  const slots = m.who?.maxSlots ? ` ${slotPips(m.who)}` : "";
+  return `<p class="ask">${esc(m.title)}${slots}</p><div class="menu" style="grid-template-rows:repeat(${rows},auto)">${opts}</div><div class="row keys"><span class="how"><kbd>${iconSvg("up")}</kbd><kbd>${iconSvg("down")}</kbd> CHOOSE <kbd>ENTER</kbd> PICK${n > 1 ? ` <kbd>1</kbd>-<kbd>${Math.min(n, 9)}</kbd>` : ""}</span>${cmd("escape", "BACK")}</div>`;
+}
+
+function renderDock() {
+  const dock = $("#dock");
+  let html;
+  let hint = "";
+  let waiting = false;
+  if (G.waitKey) {
+    waiting = true;
+    html = `<div class="row">${cmd("enter", "CONTINUE", { cap: "ANY KEY", cls: "go" })}</div>`;
+  } else if (G.roll) html = `<p class="wait">THE ROLL OF FATE IS SPINNING<span class="dots"></span></p>`;
+  else if (G.mode === "over") {
+    waiting = true;
+    html = `<p class="ask">YOUR PARTY HAS FALLEN.</p><div class="row">${cmd("enter", "NEW RUN", { cls: "go" })}</div>`;
+  } else if (G.prompt) html = `<p class="wait echo">${iconSvg("up")} ANSWER THE QUESTION ON THE VIEW</p>`;
+  else if (G.menu) {
+    waiting = true;
+    html = menuHtml(G.menu);
+    hint = G.menu.options[G.menu.sel]?.hint ?? "";
+  } else if (G.input) {
+    waiting = true;
+    html = `<div class="row">${cmd("enter", G.input.numeric ? "GIVE" : "SAY IT", { cls: "go" })}${cmd("escape", "CANCEL")}</div>`;
+  } else if (G.busy) html = `<p class="wait">${G.combat ? "THE FIGHT PLAYS OUT" : "LISTENING"}<span class="dots"></span></p>`;
   else if (G.combat) {
     const here = present();
-    html = btns(BUTTONS.combat) + (here.length > 1 ? btns(here.map((e, i) => [`${e.id === G.combat.target ? "▶ " : ""}${i + 1} ${UP(e.name)}`, String(i + 1)])) : "");
-  } else html = btns(BUTTONS.explore);
-  $("#buttons").innerHTML = html;
+    const t = targetEnemy();
+    const tn = t ? UP(t.name) : "THE TARGET";
+    html =
+      `<div class="row">` +
+      cmd("f", "QUICK ATTACK", { cls: "main", sub: "EVERYONE'S USUAL MOVE", hint: "EVERYONE DOES THEIR USUAL MOVE AT ONCE: WEAPONS, AND THE WIZARD'S FREE FIRE BOLT. USES NO SPELL SLOTS. ALLIES ACT ON THEIR OWN" }) +
+      cmd("c", "CHOOSE MOVES", { cls: "main", sub: "SPELLS AND SKILLS", hint: "PICK A MOVE FOR EACH ADVENTURER, ONE BY ONE: ATTACK, A SKILL, OR A SPELL (SPELLS USE SLOTS)" }) +
+      cmd("t", "TALK", { hint: "SAY SOMETHING. EVERY MONSTER HERE HEARS IT" }) +
+      cmd("r", "RECRUIT", { hint: `ASK ${tn} TO JOIN YOUR PARTY` }) +
+      cmd("g", "GIVE GOLD", { hint: `OFFER ${tn} SOME GOLD` }) +
+      cmd("v", "VOW", { hint: `SWEAR A PROMISE TO ${tn}, ONCE PER FIGHT` }) +
+      cmd("e", "ESCAPE", { hint: "TRY TO RUN AWAY" }) +
+      `</div>`;
+    if (here.length > 1)
+      html += `<div class="row targets"><span class="lab">TARGET</span>${here
+        .map((e, i) => cmd(String(i + 1), esc(UP(e.name)), { cls: e.id === G.combat.target ? "on" : "", hint: `AIM YOUR ATTACKS AND WORDS AT ${UP(e.name)}`, style: `--c:${colorOf(e)}` }))
+        .join("")}</div>`;
+  } else {
+    const none = !allies().length;
+    const noAlly = { cls: none ? "off" : "", hint: "NO MONSTER ALLIES YET. WIN ONE OVER IN A FIGHT (RECRUIT)" };
+    html =
+      `<div class="row"><span class="pad">${cmd("turnL", "", { hint: "TURN LEFT (A)" })}${cmd("fwd", "", { hint: "STEP FORWARD (W)" })}${cmd("back", "", { hint: "STEP BACK (S)" })}${cmd("turnR", "", { hint: "TURN RIGHT (D)" })}<span class="lab">MOVE</span></span>` +
+      cmd("c", "CAMP", { hint: "REST: HEAL HALF YOUR WOUNDS, GET SPELL SLOTS AND SKILLS BACK. SOMETHING MAY FIND YOU" }) +
+      cmd("e", "TALK TO ALLY", none ? noAlly : { hint: "TALK TO A MONSTER ALLY, ONCE PER ALLY PER FLOOR" }) +
+      cmd("v", "VOW", none ? noAlly : { hint: "SWEAR A PROMISE TO A MONSTER ALLY" }) +
+      cmd("b", "BOONS", { hint: "LIST THE ROLL OF FATE BOONS YOU HAVE WON" }) +
+      cmd("m", "MAP", { hint: "SHOW OR HIDE THE MAP" }) +
+      `</div>`;
+  }
+  dock.classList.toggle("waiting", waiting);
+  if (!waiting) dock.classList.remove("nudge");
+  dock.style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
+  $("#cmds").innerHTML = html;
+  dockHint = hint;
+  $("#hint").textContent = hint;
 }
-const btns = (list) => list.map(([l, k, hint]) => `<button data-key="${k}"${hint ? ` title="${esc(hint)}"` : ""}>${esc(l)}</button>`).join("");
 
 // ---------------------------------------------------------------- exploring
 
@@ -669,7 +794,7 @@ function step(dir) {
   const b = G.map.boss;
   if (b && !b.defeated && nx === b.x && ny === b.y) return bossEncounter();
   if (nx === G.map.stairs.x && ny === G.map.stairs.y) {
-    ask(`STAIRS DOWN TO B${G.floor + 1}F. DESCEND?`, { yes: "DESCEND", no: "STAY", walkAway: true }).then((yes) => (yes ? descend() : render()));
+    ask(`STAIRS DOWN TO ${floorName(G.floor + 1)}. DESCEND?`, { yes: "DESCEND", no: "STAY", walkAway: true }).then((yes) => (yes ? descend() : render()));
     return;
   }
   if (--G.graceSteps <= 0 && Math.random() < floorRules(G.floor).encounter) return encounter();
@@ -689,7 +814,7 @@ async function descend() {
   await rollOfFate(G.floor);
   enterFloor(G.floor + 1);
   G.graceSteps = 4;
-  say(`YOU DESCEND TO B${G.floor}F: THE ${G.map.palette.name}. THE MONSTERS HERE ARE TOUGHER.`, "", G.map.palette.accent);
+  say(`YOU DESCEND TO ${floorName(G.floor)}: THE ${G.map.palette.name}. THE MONSTERS HERE ARE TOUGHER.`, "", G.map.palette.accent);
   announceFloor(G.floor);
   if (allies().length) say("YOUR ALLIES WILL HEAR YOU OUT AGAIN ON THIS FLOOR (E).", "dim");
   render();
@@ -710,7 +835,7 @@ async function camp() {
   for (const dead of G.party.filter((m) => m.dead)) {
     if (!cleric || !(cleric.slots[2] > 0)) break;
     render();
-    if (!(await ask(`${cleric.name} CAN CAST REVIVIFY ON ${dead.name} (USES A 3RD-CIRCLE SLOT). DO IT?`, { yes: "REVIVE", no: "NOT NOW" }))) continue;
+    if (!(await ask(`${cleric.name} CAN CAST REVIVIFY ON ${dead.name} (USES A THIRD-CIRCLE SPELL SLOT). DO IT?`, { yes: "REVIVE", no: "NOT NOW" }))) continue;
     cleric.slots[2]--;
     revive(dead);
   }
@@ -985,7 +1110,7 @@ const BOONS = [
     valid: (m) => m.mods.critMin > 15,
     apply: (m, tier) => {
       m.mods.critMin = Math.max(15, m.mods.critMin - Math.max(1, Math.round(tier / 3)));
-      return `${m.name} NOW SCORES CRITICAL HITS ON A ${m.mods.critMin}-20 (CRITS ROLL DOUBLE DICE)`;
+      return `${m.name} NOW SCORES CRITICAL HITS ON A ${m.mods.critMin}-20 (CRITICAL HITS ROLL DOUBLE DAMAGE DICE)`;
     },
   },
   {
@@ -1005,7 +1130,7 @@ const BOONS = [
     valid: (m) => m.mods.hits < 8 && m.clsId !== "wizard",
     apply: (m) => {
       m.mods.hits = { 1: 2, 2: 3, 3: 4, 4: 8 }[m.mods.hits] ?? 8;
-      return `${m.name} NOW STRIKES ${m.mods.hits}X EVERY TURN`;
+      return `${m.name} NOW STRIKES ${m.mods.hits} TIMES EVERY TURN`;
     },
   },
   {
@@ -1015,7 +1140,7 @@ const BOONS = [
     apply: (m, tier) => {
       const add = Math.max(1, Math.round(tier / 3));
       m.ac += add;
-      return `${m.name}'S ARMOR CLASS RISES BY ${add} TO ${m.ac}. MONSTERS MISS IT MORE`;
+      return `${m.name}'S ARMOR RISES BY ${add} TO ${m.ac}. MONSTERS MISS IT MORE`;
     },
   },
   {
@@ -1038,7 +1163,7 @@ const BOONS = [
       if (tier >= 6) m.bonusSlots[2] += 1;
       refreshSlots(m, true);
       m.mods.spell *= 1 + 0.2 * tier;
-      return `${m.name} NOW HAS ${m.maxSlots.join("/")} SPELL SLOTS AND SPELLS HIT X${m.mods.spell.toFixed(2)}`;
+      return `${m.name} GETS MORE SPELL SLOTS (NOW ${slotTotal(m)}) AND SPELLS HIT X${m.mods.spell.toFixed(2)}`;
     },
   },
   {
@@ -1051,7 +1176,7 @@ const BOONS = [
         m.maxHp += add;
         m.hp += add;
       }
-      return `THE WHOLE PARTY GAINS +${add} MAX HP`;
+      return `THE WHOLE PARTY GAINS +${add} MAX HEALTH`;
     },
   },
   {
@@ -1088,7 +1213,7 @@ const LEGENDARY = [
         m.mods.dmg *= 1.5;
         m.mods.critMin = Math.max(15, m.mods.critMin - 1);
       }
-      return "THE WHOLE PARTY DEALS X1.5 DAMAGE AND CRITS ON ONE MORE NUMBER";
+      return "THE WHOLE PARTY DEALS X1.5 DAMAGE AND LANDS CRITICAL HITS MORE OFTEN";
     },
   },
   {
@@ -1099,7 +1224,7 @@ const LEGENDARY = [
       m.bonusSlots = m.bonusSlots.map((n) => n + 2);
       refreshSlots(m, true);
       m.mods.spell *= 1.5;
-      return `${m.name} GAINS 2 SLOTS OF EVERY CIRCLE (${m.maxSlots.join("/")}) AND SPELLS HIT X${m.mods.spell.toFixed(2)}`;
+      return `${m.name} GAINS 2 SPELL SLOTS OF EVERY CIRCLE (NOW ${slotTotal(m)}) AND SPELLS HIT X${m.mods.spell.toFixed(2)}`;
     },
   },
   {
@@ -1112,7 +1237,7 @@ const LEGENDARY = [
         m.maxHp += add;
         m.hp = m.maxHp;
       }
-      return `THE WHOLE PARTY GAINS +${add} MAX HP AND HEALS FULLY`;
+      return `THE WHOLE PARTY GAINS +${add} MAX HEALTH AND HEALS FULLY`;
     },
   },
   {
@@ -1122,7 +1247,7 @@ const LEGENDARY = [
     valid: (m) => m.mods.hits < 8 && m.clsId !== "wizard",
     apply: (m) => {
       m.mods.hits = Math.min(8, m.mods.hits * 2);
-      return `${m.name} NOW STRIKES ${m.mods.hits}X EVERY TURN`;
+      return `${m.name} NOW STRIKES ${m.mods.hits} TIMES EVERY TURN`;
     },
   },
 ];
@@ -1236,17 +1361,18 @@ function drawRoll(t) {
 
 function listBoons() {
   if (!G.boons.length) say("NO BOONS YET. CLEAR A FLOOR AND ROLL FOR ONE.", "dim");
-  else for (const b of G.boons) say(`B${b.floor}F ${b.great ? "GREAT " : b.kind === "shiny" ? "SHINY " : ""}${b.name}: ${b.text}`, "dim");
+  else for (const b of G.boons) say(`${floorName(b.floor)}: ${b.great ? "GREAT " : b.kind === "shiny" ? "SHINY " : ""}${b.name}: ${b.text}`, "dim");
   render();
 }
 
 function boonTitle(m) {
   const md = m.mods;
   if (!md) return "";
-  const bits = [`LEVEL ${m.level ?? 1}`, `XP ${m.xp ?? 0}/${xpFor(m.level ?? 1)}`, `DAMAGE X${md.dmg.toFixed(2)}`, `CRITS ON ${md.critMin}-20`, `${md.hits}X STRIKES`];
-  if (m.abil) bits.push(`STR ${sign(m.abil.str)} DEX ${sign(m.abil.dex)} CON ${sign(m.abil.con)} INT ${sign(m.abil.int)} WIS ${sign(m.abil.wis)} CHA ${sign(m.abil.cha)}`);
+  const bits = [`LEVEL ${m.level ?? 1}`, `EXPERIENCE ${m.xp ?? 0} OF ${xpFor(m.level ?? 1)} TO THE NEXT LEVEL`, `DAMAGE X${md.dmg.toFixed(2)}`, `CRITICAL HITS ON A ${md.critMin === 20 ? "20" : `${md.critMin}-20`}`];
+  if (md.hits > 1) bits.push(`STRIKES ${md.hits} TIMES A TURN`);
+  if (m.abil) bits.push(Object.entries(m.abil).map(([k, v]) => `${ABILITY_WORDS[k]} ${sign(v)}`).join(" "));
   if (md.hitBonus) bits.push(`+${md.hitBonus} TO HIT`);
-  if (md.lifesteal) bits.push(`LIFESTEAL ${Math.round(md.lifesteal * 100)}%`);
+  if (md.lifesteal) bits.push(`HEALS ${Math.round(md.lifesteal * 100)}% OF THE DAMAGE IT DEALS`);
   if (m.phoenix) bits.push("WILL CHEAT DEATH ONCE");
   return ` title="${esc(bits.join(" · "))}"`;
 }
@@ -1397,14 +1523,14 @@ async function encounter(group = makeGroup(), opts = {}) {
     addEnemy(e);
     const sp = SPECIES[e.species];
     const article = /^[aeiou]/.test(sp.label) ? "AN" : "A";
-    if (e.boss) say(`${UP(e.name)}, CHAMPION OF B${G.floor}F! ${e.maxHp} HP, AC ${e.ac}, TWO ATTACKS A TURN.`, "big", BOSS_COLOR);
+    if (e.boss) say(`${UP(e.name)}, CHAMPION OF ${floorName(G.floor)}! ${e.maxHp} HEALTH, ARMOR ${e.ac}, TWO ATTACKS A TURN.`, "big", BOSS_COLOR);
     else
       say(
         e.formerAlly ? `${UP(e.name)} TURNS ON YOU!` : e.shiny ? `A SHINY ${UP(sp.label)} APPEARS! IT GLITTERS GOLD!` : `${e.elite ? "A VETERAN" : article} ${UP(sp.label)} APPEARS!`,
         "big",
         colorOf(e),
       );
-    if (!e.formerAlly && !e.boss) say(`IT IS ${UP(e.name)}, ${UP(e.traits.slice(0, 2).join(" and "))}. AC ${e.ac}.`, "dim");
+    if (!e.formerAlly && !e.boss) say(`IT IS ${UP(e.name)}, ${UP(e.traits.slice(0, 2).join(" and "))}. ARMOR ${e.ac}.`, "dim");
   }
   G.combat.target = G.combat.enemies[0].id;
   G.combat.history = G.combat.history.map((h) => h.replace("joined the fight", "was met by the party"));
@@ -1419,7 +1545,7 @@ async function encounter(group = makeGroup(), opts = {}) {
   const first = pr >= mr;
   rollFx(pd, { x: 112, y: 226 }, { label: `PARTY ${pr}` });
   rollFx(md, { x: 336, y: 226 }, { label: `FOES ${mr}` });
-  say(`INITIATIVE: PARTY ${pr} VS MONSTERS ${mr}. ${first ? "YOU ACT FIRST!" : "THEY ACT FIRST!"}`, first ? "" : "warn");
+  say(`WHO MOVES FIRST: PARTY ROLLED ${pr}, MONSTERS ${mr}. ${first ? "YOU ACT FIRST!" : "THEY ACT FIRST!"}`, first ? "" : "warn");
   hint("combat");
   if (present().length > 1) hint("target");
   render();
@@ -1517,12 +1643,12 @@ function killEnemy(e, by, byMonster) {
   G.gold += gold;
   sfx.play("kill");
   if (byMonster) {
-    say(`${UP(e.name)} IS KILLED BY ${UP(byMonster.name)}! +${xp} XP, +${gold} GOLD.`, "big", colorOf(e));
+    say(`${UP(e.name)} IS KILLED BY ${UP(byMonster.name)}! +${xp} EXPERIENCE, +${gold} GOLD.`, "big", colorOf(e));
     history(`${byMonster.name} killed ${e.name}.`);
     for (const o of present()) o.thisRound.push(`${byMonster.name} killed ${e.name}.`);
   } else {
     c.kills++;
-    say(`${UP(e.name)} IS SLAIN! +${xp} XP, +${gold} GOLD.`, "big", colorOf(e));
+    say(`${UP(e.name)} IS SLAIN! +${xp} EXPERIENCE, +${gold} GOLD.`, "big", colorOf(e));
     const last = c.lastLines?.[e.id];
     history(`The party killed ${e.name}, the ${sp.label}, and took ${gold} gold.${last ? ` Its last words were: "${last}"` : ""}`);
     vowEvent("kill", e.species, `The party killed ${e.name}, ${aLabel(e.species)}${last ? `, whose last words were "${last}"` : ""}.`);
@@ -1567,6 +1693,8 @@ function monsterSave(e, stat) {
   rollFx(r, spotOf(e), { total });
   return total;
 }
+// "ROLLED 12, NEEDED 14": a saving throw in the log, without DC jargon
+const saveText = (sv, dc) => `ROLLED ${sv}, NEEDED ${dc}`;
 
 function partySave(v, stat) {
   const bless = G.combat?.blessed ? d(4) : 0;
@@ -1611,13 +1739,13 @@ async function weaponAttacks(m, attacks) {
       dmg = weaponDamage(m, crit);
       if (m.mods.lifesteal) m.hp = Math.min(m.maxHp, m.hp + Math.ceil(dmg * m.mods.lifesteal));
       hitEnemy(e, dmg, `${m.name} hit you${crit ? " with a critical blow" : ""} for ${dmg}.`, crit ? "#ffe03a" : "#ffffff");
-      if (crit) floatOn(e, "CRIT!", "#ffe03a", 9);
+      if (crit) floatOn(e, "CRITICAL!", "#ffe03a", 9);
     } else floatOn(e, r.roll === 1 ? "FUMBLE" : "MISS", "#8a8a8a", 9);
     sfx.play(crit ? "crit" : hit ? "hit" : "miss");
     results.push({ e, hit, crit, dmg });
     if (attacks <= 3) {
-      const verdict = !hit ? (r.roll === 1 ? "NATURAL 1, FUMBLE!" : "MISS.") : `${r.roll === 20 ? "NATURAL 20! " : crit ? "CRITICAL! " : "HIT! "}${dmg} DAMAGE.`;
-      say(`${m.name} ATTACKS ${UP(e.name)}: ${fmtRoll(r, bonus)} VS AC ${ac}. ${verdict}`, hit ? (crit ? "big" : "") : "dim", color);
+      const verdict = !hit ? (r.roll === 1 ? "A 1 ALWAYS MISSES. FUMBLE!" : "MISS.") : `${r.roll === 20 ? "A PERFECT 20! CRITICAL HIT! " : crit ? "CRITICAL HIT! " : "HIT! "}${dmg} DAMAGE.`;
+      say(`${m.name} ATTACKS ${UP(e.name)}: ${fmtRoll(r, bonus)} VS ARMOR ${ac}. ${verdict}`, hit ? (crit ? "big" : "") : "dim", color);
       render();
       if (i < attacks - 1) await sleep(240);
     }
@@ -1626,7 +1754,7 @@ async function weaponAttacks(m, attacks) {
     const hits = results.filter((x) => x.hit);
     const crits = hits.filter((x) => x.crit).length;
     const total = hits.reduce((t, x) => t + x.dmg, 0);
-    say(`${m.name} STRIKES ${attacks}X: ${hits.length} HIT${crits ? ` (${crits} CRIT${crits > 1 ? "S" : ""})` : ""} FOR ${total} DAMAGE.`, crits ? "big" : "", color);
+    say(`${m.name} STRIKES ${attacks} TIMES: ${hits.length} HIT${crits ? ` (${crits} CRITICAL)` : ""} FOR ${total} DAMAGE.`, crits ? "big" : "", color);
   }
   reapEnemies(m);
   const total = results.reduce((t, x) => t + x.dmg, 0);
@@ -1662,11 +1790,11 @@ async function castSpell(m, key, ally) {
           const dmg = spellDamage(m, rollDice(dice, { crit }));
           hitEnemy(e, dmg, `${m.name}'s ${s.name.toLowerCase()} hit you for ${dmg}.`, crit ? "#ffe03a" : "#ff9a3d");
           if (s.effect === "lit") e.cond.lit = 2;
-          parts.push(`${who}${fmtRoll(r, bonus)} VS AC ${ac}: ${crit ? "CRIT " : ""}${dmg}${s.effect === "lit" ? ". IT GLOWS: THE NEXT ATTACK ON IT HAS ADVANTAGE" : ""}`);
+          parts.push(`${who}${fmtRoll(r, bonus)} VS ARMOR ${ac}: ${crit ? "CRITICAL HIT, " : ""}${dmg} DAMAGE${s.effect === "lit" ? ". IT GLOWS: THE NEXT ATTACK ON IT IS BETTER" : ""}`);
           sfx.play(crit ? "crit" : "hit");
         } else {
           floatOn(e, "MISS", "#8a8a8a", 9);
-          parts.push(`${who}${fmtRoll(r, bonus)} VS AC ${ac}: MISS`);
+          parts.push(`${who}${fmtRoll(r, bonus)} VS ARMOR ${ac}: MISS`);
         }
       }
       break;
@@ -1681,7 +1809,7 @@ async function castSpell(m, key, ally) {
         (tally[UP(e.name)] ??= []).push(dmg);
         await sleep(90);
       }
-      for (const [n, ds] of Object.entries(tally)) parts.push(`${n} ${ds.join("+")}=${ds.reduce((a, b) => a + b, 0)}`);
+      for (const [n, ds] of Object.entries(tally)) parts.push(`${n} TAKES ${ds.join(" + ")} = ${ds.reduce((a, b) => a + b, 0)}`);
       break;
     }
     case "save": {
@@ -1690,12 +1818,12 @@ async function castSpell(m, key, ally) {
       for (const e of targets) {
         const sv = monsterSave(e, s.save);
         if (s.effect === "held") {
-          if (sv >= dc || useLegendary(e)) parts.push(`${UP(e.name)} ${sv} VS DC ${dc}: RESISTS`);
+          if (sv >= dc || useLegendary(e)) parts.push(`${UP(e.name)} RESISTS (${saveText(sv, dc)})`);
           else {
             e.cond.held = 1;
             e.holdDC = dc;
             floatOn(e, "PARALYZED", "#8fd3ff", 9);
-            parts.push(`${UP(e.name)} ${sv} VS DC ${dc}: PARALYZED! IT LOSES TURNS AND YOUR HITS CRIT`);
+            parts.push(`${UP(e.name)} IS PARALYZED (${saveText(sv, dc)})! IT LOSES TURNS AND YOUR HITS ARE CRITICAL`);
           }
           continue;
         }
@@ -1703,22 +1831,22 @@ async function castSpell(m, key, ally) {
         let dmg = spellDamage(m, rollDice(dice));
         if (saved) dmg = s.half ? Math.floor(dmg / 2) : 0;
         if (dmg > 0) hitEnemy(e, dmg, `${m.name}'s ${s.name.toLowerCase()} hit you for ${dmg}.`, "#ff9a3d");
-        else floatOn(e, "SAVED", "#8a8a8a", 9);
-        parts.push(`${UP(e.name)} ${saved ? "SAVES" : "FAILS"} (${sv} VS DC ${dc}): ${dmg}`);
+        else floatOn(e, "DODGED", "#8a8a8a", 9);
+        parts.push(`${UP(e.name)} ${saved ? (s.half ? "DODGES HALF" : "DODGES IT") : "IS HIT"} (${saveText(sv, dc)}): ${dmg} DAMAGE`);
       }
       break;
     }
     case "sleep": {
       // A pool of hit points: the weakest monsters drop off first. Grows with depth so it stays useful.
       let pool = Math.round(rollDice(dice) * m.mods.spell * hpScale(G.floor) * 0.7);
-      parts.push(`${pool} HP WORTH OF SLEEP`);
+      parts.push(`SLEEP STRONG ENOUGH FOR ${pool} HEALTH`);
       const slept = [];
       for (const e of [...present()].sort((a, b) => a.hp - b.hp)) {
         if (e.hp > pool) break;
         if (useLegendary(e)) continue;
         pool -= e.hp;
         e.cond.asleep = 10;
-        floatOn(e, "ZZZ", "#8fd3ff", 11);
+        floatOn(e, "ASLEEP", "#8fd3ff", 9);
         slept.push(UP(e.name));
       }
       parts.push(slept.length ? `${slept.join(" AND ")} FALL${slept.length > 1 ? "" : "S"} ASLEEP` : "NO ONE IS WEAK ENOUGH TO SLEEP");
@@ -1736,7 +1864,7 @@ async function castSpell(m, key, ally) {
     }
     case "bless":
       c.blessed = true;
-      parts.push("THE PARTY GETS +1D4 TO ATTACKS AND SAVES THIS FIGHT");
+      parts.push("THE PARTY GETS +1 TO 4 ON ATTACKS AND SAVES THIS FIGHT");
       note = "blessed the party";
       break;
     case "revive":
@@ -1767,14 +1895,14 @@ function revive(x, hp = 1) {
   x.stable = false;
   x.cond = {};
   x.hp = hp;
-  say(`${x.name} GASPS BACK TO LIFE WITH ${hp} HP!`, "big", "#ffd27a");
+  say(`${x.name} GASPS BACK TO LIFE WITH ${hp} HEALTH!`, "big", "#ffd27a");
   sfx.play("revive");
   if (G.combat) history(`${x.name} was brought back from the dead.`);
 }
 
 // ---- the party's turn
 
-// What a member does if you just press FIGHT: weapons for most, Fire Bolt for the wizard.
+// What a member does on QUICK ATTACK: weapons for most, the free Fire Bolt for the wizard.
 function defaultPlan(m) {
   if (m.cond?.prone) return { m, act: "prone" };
   if (m.kind === "monster") return { m, act: "ally" };
@@ -1782,48 +1910,52 @@ function defaultPlan(m) {
   return { m, act: "attack" };
 }
 
-// CAST: choose an action for each adventurer in turn (allies act on their own). ESC cancels the turn.
+// CHOOSE MOVES: pick an action for each adventurer in turn (allies act on their own). ESC cancels the turn.
+// Each menu shows the member's spell slots by the title; spells show the slots they'd spend, or FREE.
 async function planTurn() {
   const plans = [];
+  const orderable = conscious().filter((m) => m.kind === "human" && !m.cond.prone);
   for (const m of conscious()) {
     if (m.kind !== "human" || m.cond.prone) {
       plans.push(defaultPlan(m));
       continue;
     }
-    const opts = [{ label: `ATTACK (${CLASSES[m.clsId].weapon.name})`, value: { act: "attack" } }];
-    if (m.uses.second_wind) opts.push({ label: "SECOND WIND", value: { act: "second_wind" }, hint: "HEAL 1D10+LEVEL, THEN ATTACK. ONCE PER REST" });
-    if (m.uses.action_surge) opts.push({ label: "ACTION SURGE", value: { act: "action_surge" }, hint: "ATTACK TWICE AS MANY TIMES THIS TURN. ONCE PER REST" });
+    const w = CLASSES[m.clsId].weapon;
+    const swings = attackCount(m);
+    const opts = [{ label: `ATTACK WITH ${w.name}`, value: { act: "attack" }, hint: `HIT YOUR TARGET WITH THE ${w.name}${swings > 1 ? `, ${swings} TIMES` : ""}. ROLLS TO HIT AGAINST ITS ARMOR` }];
+    if (m.uses.second_wind) opts.push({ label: "SECOND WIND", value: { act: "second_wind" }, hint: `HEAL ${diceRange(`1d10+${m.level}`)}, THEN ATTACK. ONCE PER CAMP` });
+    if (m.uses.action_surge) opts.push({ label: "ACTION SURGE", value: { act: "action_surge" }, hint: "ATTACK TWICE AS MANY TIMES THIS TURN. ONCE PER CAMP" });
     if (m.slots) {
-      const known = spellsKnown(m.clsId, m.level);
-      for (const k of known.filter((k) => !G.spellHelp.has(k))) {
-        say(`${m.name} KNOWS ${SPELLS[k].name}${SPELLS[k].lvl ? ` (${CIRCLE[SPELLS[k].lvl]} CIRCLE)` : " (FREE)"}: ${SPELL_TEXT[k]}.`, "dim");
-        G.spellHelp.add(k);
-      }
-      for (const k of known) {
+      for (const k of spellsKnown(m.clsId, m.level)) {
         const s = SPELLS[k];
         if (s.lvl && !(m.slots[s.lvl - 1] > 0)) continue;
         if (s.target === "dead" && !G.party.some((x) => x.dead)) continue;
         if (s.kind === "bless" && G.combat.blessed) continue;
-        opts.push({ label: s.lvl ? `${s.name} ${s.lvl}` : s.name, value: { act: "spell", spell: k }, hint: SPELL_TEXT[k] });
+        const cost = s.lvl ? `USES A ${CIRCLE_WORDS[s.lvl - 1]}-CIRCLE SLOT` : "FREE, USES NO SLOT";
+        opts.push({ label: s.name, value: { act: "spell", spell: k }, cost: s.lvl, hint: `${spellText(k, m.level)}. ${cost}` });
       }
     }
-    const choice = await choose(`${m.name}${m.slots ? ` (SLOTS ${m.slots.join("/")})` : ""}:`, opts);
+    const nth = orderable.length > 1 ? ` (${orderable.indexOf(m) + 1} OF ${orderable.length})` : "";
+    const choice = await choose(`WHAT WILL ${m.name} DO?${nth}`, opts, { who: m });
     if (!choice) return null;
     const plan = { m, ...choice };
     const s = SPELLS[plan.spell];
     if (s?.target === "ally") {
-      plan.ally = await choose(`${s.name} ON WHOM?`, living().map((x) => ({ label: `${x.name} ${Math.max(0, x.hp)}/${x.maxHp}${x.down ? " DOWN" : ""}`, value: x })));
+      const whom = living().map((x) => {
+        const st = hpState(x);
+        return { label: x.name, value: x, who: x, hint: `${x.name}: ${Math.max(0, x.hp)} OF ${x.maxHp} HEALTH, ${st.word}` };
+      });
+      plan.ally = await choose(`${s.name}: HEAL WHOM?`, whom);
       if (!plan.ally) return null;
     }
     if (s?.target === "dead") {
-      plan.ally = await choose("REVIVIFY WHOM?", G.party.filter((x) => x.dead).map((x) => ({ label: x.name, value: x })));
+      plan.ally = await choose("REVIVIFY: BRING WHOM BACK?", G.party.filter((x) => x.dead).map((x) => ({ label: x.name, value: x })));
       if (!plan.ally) return null;
     }
     plans.push(plan);
   }
   return plans;
 }
-const CIRCLE = ["", "1ST", "2ND", "3RD"];
 
 async function act(p) {
   const { m } = p;
@@ -1877,7 +2009,7 @@ async function allyTurn(a) {
       let dmg = Math.max(1, Math.round(rollDice(st.dice) * (1 + 0.15 * (a.level - 1)) * a.mods.dmg));
       if (sv >= dc) dmg = Math.floor(dmg / 2);
       hitEnemy(t, dmg, `${a.name}'s special attack hit you for ${dmg}.`, colorOf(a));
-      parts.push(`${UP(t.name)} ${sv >= dc ? "SAVES" : "FAILS"} (${sv} VS DC ${dc}): ${dmg}`);
+      parts.push(`${UP(t.name)} ${sv >= dc ? "DODGES HALF" : "IS HIT"} (${saveText(sv, dc)}): ${dmg} DAMAGE`);
     }
     say(`${a.name} USES ITS SPECIAL: ${UP(sp.special.desc).replace("ONE PARTY MEMBER", "THE FOE").replace("THE WHOLE PARTY", "THE MONSTERS")}! ${parts.join(" · ")}.`, "big", colorOf(a));
     reapEnemies(a);
@@ -1909,7 +2041,7 @@ async function partyTurn(plans) {
     for (const k of ["poisoned", "restrained"])
       if (m.cond?.[k] && --m.cond[k] <= 0) {
         delete m.cond[k];
-        say(`${m.name} IS NO LONGER ${UP(k)}.`, "dim");
+        say(`${m.name} IS NO LONGER ${CONDITIONS[k].word}.`, "dim");
       }
   const cast = plans.some((p) => p.act === "spell" && !SPELLS[p.spell].cantrip);
   if (target && offensive) {
@@ -1934,7 +2066,7 @@ function charismaCheck() {
   const [mult, word] =
     r.roll === 20 ? [2, "AN INSPIRED"] : r.roll === 1 ? [0.5, "A TONGUE-TIED"] : total >= 20 ? [1.5, "A MAGNETIC"] : total >= 15 ? [1.25, "A CONFIDENT"] : total >= 10 ? [1, "A STEADY"] : [0.75, "A SHAKY"];
   rollFx(r, spotOf(f), { total });
-  say(`${f.name}'S CHARISMA: ${fmtRoll(r, bonus)}. ${word} DELIVERY (WORDS LAND X${mult}).`, "dim");
+  say(`HOW WELL ${f.name} SAYS IT (CHARISMA): ${fmtRoll(r, bonus)}. ${word} DELIVERY: WORDS LAND X${mult}.`, "dim");
   return mult;
 }
 
@@ -1964,7 +2096,7 @@ async function recruitAsk() {
   const WORD = { great: "AN IRRESISTIBLE PITCH!", success: "A CONVINCING PITCH.", close: "SO CLOSE...", fail: "A CLUMSY PITCH.", botch: "A DISASTROUS PITCH!" };
   say(text ? `YOU, TO ${UP(e.name)}: "${text}"` : `YOU ASK ${UP(e.name)} TO JOIN YOUR PARTY.`, "you");
   rollFx(r, spotOf(e), { total: r.roll + bonus });
-  say(`PERSUASION (${f.name}): ${fmtRoll(r, bonus)} VS DC ${dc}. ${WORD[pitch]}`, ["great", "success"].includes(pitch) ? "big" : pitch === "close" ? "" : "warn");
+  say(`PERSUASION (${f.name}): ${fmtRoll(r, bonus)}, NEEDED ${dc}. ${WORD[pitch]}`, ["great", "success"].includes(pitch) ? "big" : pitch === "close" ? "" : "warn");
   for (const x of present()) {
     c.spoken.add(x.species);
     vowEvent("talk", x.species, `The party talked to ${x.name}, ${aLabel(x.species)}.`);
@@ -2032,7 +2164,7 @@ async function command(cmd) {
     const r = d20();
     const ok = r.roll + dex >= dc;
     rollFx(r, { x: 224, y: 150 }, { total: r.roll + dex });
-    say(`ESCAPE: ${fmtRoll(r, dex)} VS DC ${dc}. ${ok ? "YOU FLEE!" : "YOU CAN'T GET AWAY!"}`, ok ? "" : "warn");
+    say(`ESCAPE: ${fmtRoll(r, dex)}, NEEDED ${dc}. ${ok ? "YOU FLEE!" : "YOU CAN'T GET AWAY!"}`, ok ? "" : "warn");
     if (ok) {
       sfx.play("flee");
       for (const e of here) {
@@ -2067,17 +2199,17 @@ async function beginPartyTurn() {
     if (r === 20) {
       m.down = false;
       m.hp = 1;
-      say(`${m.name}'S DEATH SAVE: NATURAL 20! BACK UP WITH 1 HP!`, "big");
+      say(`${m.name}'S DEATH SAVE: A PERFECT 20! BACK UP WITH 1 HEALTH!`, "big");
       sfx.play("revive");
     } else if (r >= 10) {
       m.saves.s++;
-      say(`${m.name}'S DEATH SAVE: ${r}. SUCCESS (${m.saves.s}/3).`, "dim");
+      say(`${m.name}'S DEATH SAVE: ROLLED ${r}, NEEDED 10. SUCCESS, ${m.saves.s} OF 3.`, "dim");
       sfx.play("save");
       if (m.saves.s >= 3) {
         m.stable = true;
         say(`${m.name} IS STABLE, BUT STILL OUT COLD.`, "dim");
       }
-    } else deathFail(m, r === 1 ? 2 : 1, `'S DEATH SAVE: ${r}${r === 1 ? " (NATURAL 1 COUNTS TWICE)" : ""}. FAILURE`);
+    } else deathFail(m, r === 1 ? 2 : 1, `'S DEATH SAVE: ROLLED ${r}, NEEDED 10${r === 1 ? " (A 1 COUNTS TWICE)" : ""}. FAILURE`);
   }
   if (!humansAlive() || !conscious().length) return gameOver();
   G.busy = false;
@@ -2086,7 +2218,7 @@ async function beginPartyTurn() {
 
 function deathFail(m, n, why) {
   m.saves.f += n;
-  say(`${m.name}${why} (${Math.min(3, m.saves.f)}/3 FAILED).`, "warn");
+  say(`${m.name}${why} (${Math.min(3, m.saves.f)} OF 3 FAILURES).`, "warn");
   if (m.saves.f >= 3) die(m);
 }
 
@@ -2123,7 +2255,7 @@ function damage(m, dmg, { crit = false } = {}) {
   m.stable = false;
   m.saves = { s: 0, f: 0 };
   m.cond = {};
-  say(`${m.name} FALLS UNCONSCIOUS! DEATH SAVES BEGIN.`, "big warn");
+  say(`${m.name} FALLS UNCONSCIOUS! HEAL THEM, OR THEY ROLL TO SURVIVE EACH TURN (DEATH SAVES).`, "big warn");
   hint("down");
   sfx.play("down");
   if (G.combat) history(`${m.name} was knocked unconscious.`);
@@ -2150,8 +2282,8 @@ async function monstersTurn(playerAction, events, did) {
       if (sv >= (e.holdDC ?? 13)) {
         delete e.cond.held;
         e.justFreed = true;
-        say(`${UP(e.name)} BREAKS THE HOLD (WIS SAVE ${sv})! IT CAN ACT NEXT ROUND.`, "warn", colorOf(e));
-      } else say(`${UP(e.name)} STRAINS AGAINST THE MAGIC (WIS SAVE ${sv}), STILL PARALYZED.`, "dim", colorOf(e));
+        say(`${UP(e.name)} BREAKS THE HOLD (WISDOM ROLL ${sv})! IT CAN ACT NEXT ROUND.`, "warn", colorOf(e));
+      } else say(`${UP(e.name)} STRAINS AGAINST THE MAGIC (WISDOM ROLL ${sv}), STILL PARALYZED.`, "dim", colorOf(e));
     }
   }
   const acting = here.filter((e) => !e.cond.asleep && !e.cond.held && !e.justFreed);
@@ -2301,7 +2433,7 @@ function monsterAttack(e, t) {
   rollFx(r, spotOf(t), { total: r.roll + e.hit });
   const crit = r.roll === 20;
   const hit = r.roll !== 1 && (crit || r.roll + e.hit >= t.ac);
-  const head = `${UP(e.name)} ATTACKS ${t.name}: ${fmtRoll(r, e.hit)} VS AC ${t.ac}.`;
+  const head = `${UP(e.name)} ATTACKS ${t.name}: ${fmtRoll(r, e.hit)} VS ARMOR ${t.ac}.`;
   if (!hit) {
     say(`${head} ${r.roll === 1 ? "FUMBLE!" : "MISS."}`, "dim");
     floatParty(t, "MISS", "#8a8a8a");
@@ -2338,7 +2470,7 @@ async function applyMonsterAction(e, r, joins) {
       const st = MONSTER_STATS[e.species].special;
       const victims = sp.special.all ? conscious() : [pickTarget(r.targetId)].filter(Boolean);
       const withCond = st.cond && floorRules(G.floor).conditions;
-      say(`${UP(e.name)}'S SPECIAL! ${st.save.toUpperCase()} SAVE, DC ${e.dc}${withCond ? `, OR ${UP(st.cond)}` : ""}.`, "warn", colorOf(e));
+      say(`${UP(e.name)}'S SPECIAL! ROLL ${e.dc}+ ON ${ABILITY_WORDS[st.save]} TO TAKE HALF${withCond ? ` AND NOT BE ${CONDITIONS[st.cond].word}` : ""}.`, "warn", colorOf(e));
       sfx.play(e.species === "dragon" ? "fireball" : "crit");
       for (const v of victims) {
         if (soak(v)) continue;
@@ -2346,7 +2478,7 @@ async function applyMonsterAction(e, r, joins) {
         const saved = sv >= e.dc;
         let dmg = Math.max(1, Math.round(rollDice(st.dice) * e.dmgMult));
         if (saved) dmg = Math.floor(dmg / 2);
-        say(`${v.name} ${saved ? "SAVES" : "FAILS"} (${sv}): ${dmg} DAMAGE${!saved && withCond ? ` AND IS ${UP(st.cond)}` : ""}.`, saved ? "" : "warn");
+        say(`${v.name} ${saved ? "MAKES IT" : "FAILS"} (ROLLED ${sv}): ${dmg} DAMAGE${!saved && withCond ? ` AND IS ${CONDITIONS[st.cond].word}` : ""}.`, saved ? "" : "warn");
         if (!saved && withCond) v.cond[st.cond] = st.rounds;
         if (dmg) damage(v, dmg);
       }
@@ -2361,14 +2493,14 @@ async function applyMonsterAction(e, r, joins) {
       if (!other.grudges.includes(e.id)) other.grudges.push(e.id);
       history(`${e.name} attacked ${other.name}.`);
       if (!hit) {
-        say(`${UP(e.name)} TURNS ON ${UP(other.name)}: ${fmtRoll(roll, e.hit)} VS AC ${other.ac}. MISS!`, "big", colorOf(e));
+        say(`${UP(e.name)} TURNS ON ${UP(other.name)}: ${fmtRoll(roll, e.hit)} VS ARMOR ${other.ac}. MISS!`, "big", colorOf(e));
         sfx.play("miss");
         other.thisRound.push(`${e.name} attacked you, but missed.`);
         break;
       }
       const dmg = Math.max(1, Math.round(rollDice(MONSTER_STATS[e.species].dmg, { crit: roll.roll === 20 }) * e.dmgMult));
       hitEnemy(other, dmg, `${e.name} attacked you for ${dmg}.`, colorOf(e));
-      say(`${UP(e.name)} TURNS ON ${UP(other.name)}: ${fmtRoll(roll, e.hit)} VS AC ${other.ac}. ${dmg} DAMAGE!`, "big", colorOf(e));
+      say(`${UP(e.name)} TURNS ON ${UP(other.name)}: ${fmtRoll(roll, e.hit)} VS ARMOR ${other.ac}. ${dmg} DAMAGE!`, "big", colorOf(e));
       sfx.play("hit");
       if (other.hp <= 0) killEnemy(other, null, e);
       break;
@@ -2401,7 +2533,7 @@ async function applyMonsterAction(e, r, joins) {
     case "leave_peacefully": {
       e.status = "left";
       const xp = Math.round(xpOf(e) / 2);
-      say(`${UP(e.name)} LETS YOU PASS. +${xp} XP FOR A PEACEFUL END.`, "", colorOf(e));
+      say(`${UP(e.name)} LETS YOU PASS. +${xp} EXPERIENCE FOR A PEACEFUL END.`, "", colorOf(e));
       sfx.play("good");
       grantXp(xp);
       history(`${e.name} and the party parted peacefully.`);
@@ -2444,7 +2576,7 @@ function recruit(e) {
   for (const v of G.vows) if (v.toId === e.id) Object.assign(v, { toId: ally.id, toName: ally.name });
   vowSig = "";
   const xp = Math.round(xpOf(e) / 2);
-  say(`${ally.name} JOINS THE PARTY! +${xp} XP FOR WINNING IT OVER.`, "big", colorOf(ally));
+  say(`${ally.name} JOINS THE PARTY! +${xp} EXPERIENCE FOR WINNING IT OVER.`, "big", colorOf(ally));
   sfx.play("join");
   hint("ally");
   if (e.shiny) {
@@ -2473,7 +2605,7 @@ async function endCombat() {
       m.down = false;
       m.stable = false;
       m.hp = Math.max(1, m.hp);
-      say(`${m.name} COMES TO WITH ${m.hp} HP.`, "dim");
+      say(`${m.name} COMES TO WITH ${m.hp} HEALTH.`, "dim");
     }
     m.cond = {};
     m.mood = null;
@@ -2555,8 +2687,8 @@ function gameOver() {
   music.setMood("explore");
   G.busy = false;
   sfx.play("death");
-  say(`YOUR PARTY HAS PERISHED ON B${G.floor}F.`, "big");
-  say(`DEEPEST FLOOR EVER REACHED: B${store.get("hallsOfJev.deepest") || G.floor}F. PRESS ENTER FOR A NEW RUN.`, "dim");
+  say(`YOUR PARTY HAS PERISHED ON ${floorName(G.floor)}.`, "big");
+  say(`DEEPEST FLOOR EVER REACHED: ${store.get("hallsOfJev.deepest") || G.floor}. PRESS ENTER FOR A NEW RUN.`, "dim");
   render();
 }
 
@@ -2632,6 +2764,7 @@ function key(k) {
   }
   if (G.mode === "over") {
     if (k === "enter") newRun();
+    else nudgeDock();
     return;
   }
   if (G.prompt) {
@@ -2651,22 +2784,49 @@ function key(k) {
     return;
   }
   if (G.menu) {
+    // Up/down (or W/S) move the highlight, left/right jump columns, Enter picks it; 1-9 and 0 pick directly
     const m = G.menu;
-    const i = Number(k) - 1;
+    const n = m.options.length;
+    const rows = n > 4 ? Math.ceil(n / 2) : n;
+    const move = { fwd: -1, back: 1, turnL: -rows, turnR: rows }[k];
+    if (move) {
+      const next = Math.abs(move) === 1 ? menuStep(m.sel, move, n) : m.sel + move;
+      if (next >= 0 && next < n && next !== m.sel) {
+        m.sel = next;
+        renderDock();
+      } else if (Math.abs(move) !== 1) nudgeDock();
+      return;
+    }
     if (k === "escape") {
       G.menu = null;
       m.resolve(null);
-    } else if (m.options[i]) {
+      return;
+    }
+    const i = k.startsWith("pick:") ? Number(k.slice(5)) : k === "enter" ? m.sel : k === "0" ? 9 : /^[1-9]$/.test(k) ? Number(k) - 1 : -1;
+    if (m.options[i]) {
       G.menu = null;
       m.resolve(m.options[i].value);
-    }
+    } else nudgeDock();
     return;
   }
-  if (G.busy && !G.input) tips.ignored(k); // the monsters are still moving: nudge the hint, don't drop it
-  if (G.busy || G.input) return;
-  if (k === "j" && DEBUG) return toggleJev();
+  if (G.input) {
+    // The talk box lost focus: the dock's buttons still work, and any other key points back at the box
+    if (k === "escape") {
+      closeInput(undefined);
+      return render();
+    }
+    if (k === "enter") return $("#inputForm").requestSubmit();
+    $("#text").focus();
+    nudgeDock();
+    return;
+  }
+  if (G.busy) return tips.ignored(k); // the monsters are still moving: nudge the hint, don't drop it
+  if (k === "j" && DEBUG) {
+    toggleJev();
+    return renderBar();
+  }
   if (k === "h") return tips.toggle(say), render();
-  if (k === "p") return music.toggle();
+  if (k === "p") return Promise.resolve(music.toggle()).then(() => renderBar());
   if (k === "o") {
     say(`SOUND EFFECTS ${sfx.toggle() ? "ON" : "OFF"}.`, "dim");
     return render();
@@ -2737,8 +2897,8 @@ function testRun(n) {
   enterFloor(n);
   G.log = [];
   sfx.on = sound;
-  say(`TEST RUN: STARTING ON B${n}F WITH A LEVEL ${n} PARTY, ${n - 1} BOONS AND ${G.gold} GOLD.`, "big", G.map.palette.accent);
-  for (const b of G.boons) say(`B${b.floor}F ${b.name}: ${b.text}`, "dim");
+  say(`TEST RUN: STARTING ON ${floorName(n)} WITH A LEVEL ${n} PARTY, ${n - 1} BOONS AND ${G.gold} GOLD.`, "big", G.map.palette.accent);
+  for (const b of G.boons) say(`${floorName(b.floor)}: ${b.name}: ${b.text}`, "dim");
   announceFloor(n);
   render();
 }
@@ -2763,9 +2923,31 @@ document.addEventListener("keydown", (ev) => {
   key(mapped);
 });
 
-$("#buttons").addEventListener("click", (ev) => {
-  const k = ev.target.closest("button")?.dataset.key;
-  if (k) key(k);
+$("#dock").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-key]");
+  if (!b) return;
+  b.blur(); // so Space/Enter later don't re-press a button that kept focus
+  key(b.dataset.key);
+});
+$("#where").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-key]");
+  if (!b || !G) return;
+  b.blur();
+  key(b.dataset.key);
+});
+// Hovering a command shows what it does; hovering a menu option highlights it
+$("#dock").addEventListener("mouseover", (ev) => {
+  const b = ev.target.closest("button[data-key]");
+  if (!b) return;
+  if (b.dataset.i !== undefined && G?.menu) {
+    G.menu.sel = Number(b.dataset.i);
+    for (const o of $("#cmds").querySelectorAll(".opt")) o.classList.toggle("sel", o === b);
+    dockHint = b.dataset.hint ?? "";
+  }
+  $("#hint").textContent = b.dataset.hint || dockHint;
+});
+$("#dock").addEventListener("mouseout", (ev) => {
+  if (ev.target.closest("button[data-key]") && !ev.relatedTarget?.closest?.("button[data-key]")) $("#hint").textContent = dockHint;
 });
 $("#modal").addEventListener("click", (ev) => {
   const k = ev.target.closest("button")?.dataset.key;
@@ -2824,5 +3006,5 @@ if (DEBUG)
       return encounter([e]);
     },
     descend: () => descend(),
-    ask: (text = `STAIRS DOWN TO B${G.floor + 1}F. DESCEND?`) => ask(text, { yes: "DESCEND", no: "STAY", walkAway: true }),
+    ask: (text = `STAIRS DOWN TO ${floorName(G.floor + 1)}. DESCEND?`) => ask(text, { yes: "DESCEND", no: "STAY", walkAway: true }),
   };

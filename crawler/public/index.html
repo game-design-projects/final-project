@@ -23,7 +23,7 @@
   <body>
     <main class="wrap">
       <section class="crt" aria-label="Donjon">
-        <div class="bar"><span id="cmds">PRESS ANY KEY</span><span id="where"></span></div>
+        <div class="bar top" id="where" aria-label="Where you are"></div>
         <div class="mid">
           <div class="viewport">
             <canvas id="view" width="448" height="288" aria-label="Dungeon view"></canvas>
@@ -38,20 +38,17 @@
             <canvas id="map" width="105" height="105" aria-label="Automap"></canvas>
           </div>
         </div>
-        <form id="inputForm" class="bar input" autocomplete="off">
-          <div id="inputRow" hidden>
-            <label for="text" id="inputLabel"></label>
-            <span class="caret">&gt;</span><input id="text" maxlength="240" spellcheck="false" />
-          </div>
-        </form>
-        <table id="party">
-          <thead>
-            <tr><th>#</th><th>CHARACTER NAME</th><th>CLASS</th><th>LV</th><th>AC</th><th>HITS</th><th>STATUS</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="foot"><span id="lvl"></span></div>
-        <div id="buttons" class="buttons"></div>
+        <section id="dock" class="dock" aria-label="Commands">
+          <form id="inputForm" class="say" autocomplete="off">
+            <div id="inputRow" hidden>
+              <label for="text" id="inputLabel"></label>
+              <span class="caret">&gt;</span><input id="text" maxlength="240" spellcheck="false" />
+            </div>
+          </form>
+          <div id="cmds" class="cmds"><p class="wait">PRESS ANY KEY TO BEGIN</p></div>
+          <div id="hint" class="hint" aria-live="polite"></div>
+        </section>
+        <div id="party" class="party" aria-label="Party"></div>
       </section>
 
       <aside id="jev" class="jev hidden" aria-label="Jev mind (debug)">

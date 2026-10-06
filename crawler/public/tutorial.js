@@ -32,14 +32,14 @@ export const HINTS = Object.freeze({
   map: { ctx: "explore", focus: ["#map"], lines: ["YOUR MAP DRAWS ITSELF AS YOU WALK.", "{!M} SHOWS OR HIDES IT."] },
   stairs: { ctx: "explore", focus: ["#map"], lines: ["STAIRS! THEY'RE ON YOUR MAP NOW.", "GOING DOWN EARNS A ROLL OF FATE."] },
   boss: { ctx: "explore", focus: ["#map"], lines: ["THE RED MARK ON YOUR MAP: A CHAMPION.", "OPTIONAL. BRUTAL. CAN BE TALKED DOWN."] },
-  combat: { ctx: "combat", lines: ["{F} FIGHT  {C} CAST  {E} ESCAPE", "OR {!T} TALK. IT LISTENS. WORDS MATTER."] },
+  combat: { ctx: "combat", lines: ["{F} QUICK ATTACK  {C} CHOOSE MOVES", "{E} ESCAPE, OR {!T} TALK. IT LISTENS."] },
   target: { ctx: "combat", lines: ["{!1}{2}{3} PICK WHICH ONE YOU AIM AT.", "WHEN YOU TALK, THEY ALL HEAR IT."] },
   feeling: { ctx: "combat", focus: ["#log"], lines: ["IT FEELS SOMETHING, AND FEELINGS BITE:", "EACH ONE CHANGES HOW IT FIGHTS."] },
   recruit: { ctx: "combat", lines: ["IT'S WARMING TO YOU. {!R} ASKS IT TO JOIN.", "THE FRIENDLIER IT IS, THE EASIER."] },
   ally: { ctx: "explore", focus: ["#party"], lines: ["YOUR ALLY FIGHTS ON ITS OWN, AND JUDGES", "WHAT YOU DO. {!E} TALKS TO IT."] },
-  camp: { ctx: "explore", focus: ["#party"], lines: ["HURT? {!C} MAKES CAMP: HP AND SPELLS", "COME BACK. SOMETHING MAY FIND YOU."] },
-  levelup: { ctx: "any", keys: false, focus: ["#party"], lines: ["LEVEL UP! MORE HP. CASTERS MAY LEARN", "NEW SPELLS: CAST WITH {C} IN A FIGHT."] },
-  down: { ctx: "combat", focus: ["#party .down"], lines: ["DOWN, NOT DEAD: A DEATH SAVE EACH TURN.", "HEAL THEM BEFORE THREE SAVES FAIL."] },
+  camp: { ctx: "explore", focus: ["#party"], lines: ["HURT? {!C} MAKES CAMP: HEALTH AND SPELLS", "COME BACK. SOMETHING MAY FIND YOU."] },
+  levelup: { ctx: "any", keys: false, focus: ["#party"], lines: ["LEVEL UP! MORE HEALTH. CASTERS MAY LEARN", "SPELLS: {C} CHOOSE MOVES IN A FIGHT."] },
+  down: { ctx: "combat", focus: ["#party .dying"], lines: ["DOWN, NOT DEAD: A DEATH SAVE EACH TURN.", "HEAL THEM BEFORE THREE SAVES FAIL."] },
 });
 
 // "PRESS {!T} NOW" -> [{ text: "PRESS " }, { key: "T", hot: true }, { text: " NOW" }]
