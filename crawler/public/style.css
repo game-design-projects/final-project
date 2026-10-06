@@ -23,10 +23,17 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 /* Pixel icons from status.js: 7x7 dots, drawn crisp at whole-pixel sizes */
 .ico { width: 7px; height: 7px; flex: none; display: inline-block; vertical-align: middle; image-rendering: pixelated; }
 /* The status line on top: where you are, not what to press */
-.bar.top { font-size: 9px; color: var(--dim); align-items: center; min-height: 25px; flex-wrap: wrap; gap: 6px 12px; }
-.bar.top > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* One row, fixed slots: the font is monospace, so each slot is sized in characters and nothing shifts when
+   the facing, gold or boons change. Only the floor's name gives way (with an ellipsis) when space is short. */
+.bar.top { font-size: 9px; color: var(--dim); align-items: center; min-height: 25px; flex-wrap: nowrap; gap: 12px; }
+.bar.top > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
 .bar.top .ico { width: 14px; height: 14px; }
-.bar.top .loc { margin-right: auto; }
+.bar.top .loc { flex: 1 1 auto; min-width: 8ch; overflow: hidden; }
+.bar.top .loc .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bar.top .dir { width: calc(5ch + 24px); }
+.bar.top .gold { width: calc(9ch + 24px); }
+.bar.top .boons { width: calc(8ch + 24px); }
+.bar.top .ach-cap .cmd .lbl { min-width: 5ch; }
 .bar.top .loc b { font-weight: normal; }
 .bar.top .gold { color: #ffd27a; }
 .bar.top .fight { color: var(--warn); }
@@ -438,7 +445,8 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .log { max-height: 160px; min-height: 100px; }
   #map { width: 84px; height: 84px; }
   .bar { font-size: 9px; flex-wrap: wrap; }
-  .bar.top { gap: 6px 12px; }
+  .bar.top { gap: 6px 12px; flex-wrap: wrap; }
+  .bar.top .loc { flex-basis: 100%; }
   .menu { grid-auto-flow: row; grid-template-rows: none !important; grid-template-columns: 1fr; }
   .sys { margin-left: 0; }
   .cmd { min-height: 40px; }

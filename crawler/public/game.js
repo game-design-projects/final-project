@@ -646,11 +646,12 @@ function renderBar() {
   const c = G.combat;
   const n = G.boons.length;
   $("#where").innerHTML = [
-    `<span class="loc"><b style="color:${pal.accent}">${floorName(G.floor)}</b> ${esc(pal.name)}</span>`,
+    // Every slot has a fixed width (the font is monospace), so nothing shifts as the numbers and words change
+    `<span class="loc" title="${floorName(G.floor)}: ${esc(pal.name)}"><b style="color:${pal.accent}">${floorName(G.floor)}</b> <span class="nm">${esc(pal.name)}</span></span>`,
     c
-      ? `<span class="fight">${iconSvg("flame", "#ff5a4a")}IN A FIGHT</span>`
-      : `<span class="face" title="THE WAY YOU ARE LOOKING (UP ON THE MAP IS NORTH)">${iconSvg(["up", "right", "down", "left"][G.dir], "#8a8a8a")}FACING ${facingWord(G.dir)}</span>`,
-    `<span class="gold">${iconSvg("coin", "#ffd27a")}${G.gold} GOLD</span>`,
+      ? `<span class="dir fight" title="IN A FIGHT">${iconSvg("flame", "#ff5a4a")}FIGHT</span>`
+      : `<span class="dir face" title="FACING ${facingWord(G.dir)} (UP ON THE MAP IS NORTH)">${iconSvg(["up", "right", "down", "left"][G.dir], "#8a8a8a")}${facingWord(G.dir)}</span>`,
+    `<span class="gold" title="${G.gold} GOLD">${iconSvg("coin", "#ffd27a")}${G.gold} GOLD</span>`,
     `<span class="boons" title="ROLL OF FATE BOONS YOU HAVE WON. PRESS B TO LIST THEM">${iconSvg("star", n ? "#ffd27a" : "#5a5a5a")}${n} BOON${n === 1 ? "" : "S"}</span>`,
     // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
     // (J, the Jev mind panel, exists only in debug runs)
