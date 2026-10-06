@@ -1,10 +1,13 @@
 # Donjon
 
+![Donjon cover: an orange slime waiting down a torch-lit wireframe corridor](assets/donjon-cover.png)
+
 A Wizardry-style wireframe dungeon crawler with roguelike runs. You can talk to the monsters, SMT-style. Every enemy decision comes from **Jev**: what your words meant, whether it fights, flees, haggles or joins you, who it attacks, and what it says. Monsters you befriend join the party. They judge what you do and may walk out, or turn on you, mid-run.
 
 ```bash
 npm run crawler              # http://localhost:5174
-npm run crawler:scenarios    # scripted encounters against the live API
+npm test                     # view geometry, music, tips (node:test, no API calls)
+npm run crawler:scenarios    # scripted encounters against the live API (spends credits)
 ```
 
 The key comes from the project's `.env` (`TYPESAFE_API_KEY`) and stays on the server.
@@ -39,6 +42,8 @@ To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML
 | Exploring | ↑/W forward · ↓/S back · ←/A and →/D turn · **C** camp (long rest; may be ambushed) · **E** talk to an ally · **V** make a vow to an ally · **B** boons · **M** map |
 | Combat | **F** fight (everyone uses their default) · **C** cast: choose each adventurer's action, spell or skill · **T** talk (everyone hears) · **R** recruit the target · **G** give gold · **V** vow to the target · **E** escape · **1–3** pick target |
 | Anywhere | **J** Jev mind panel · **P** music on/off · **O** sound effects on/off · **H** tips off / back on from the start |
+
+**Questions wait where you're looking.** When the game needs a yes or no (stairs down, Revivify, a monster asking to join), a box lights up over the view in the floor's accent color with clickable answers. **Y**/**Enter** says yes, **N**/**Esc** no, and any other key shakes the box so you can't miss it. At the stairs you can simply walk away.
 
 **Tips.** New players get one short hint at a time, the first time each thing matters: how to walk, the automap, the stairs, your first fight (and that you can talk), targeting, feelings, a monster warming to you, your first ally, camping when hurt, levelling up, someone going down, a champion's floor. Each shows once, in a framed note over the bottom of the view, and lights up what it talks about (the keys' buttons, the map, the party). It never blocks anything: your next key does its job and clears the hint, and a key that does nothing nudges it instead. **H** turns tips off; **H** again turns them back on from the start. Seen tips are remembered in `localStorage` (`hallsOfJev.tipsSeen`, `hallsOfJev.tipsOff`). The hints and their wording live in `public/tutorial.js`.
 
@@ -101,6 +106,7 @@ The rules follow D&D 5e, simplified (`public/dnd.js`). Every roll is shown in th
   Press **B** to list your boons, or hover a party row to see that member's stats.
 - **Balance:** monster HP grows 1.3× per floor and damage 1.1× per floor. Armor and to-hit creep up slowly, as in 5e, so your dice keep mattering.
 - **Levels:** each party member earns XP and levels up on their own, gaining HP, proficiency, spell slots and new spells, as in 5e. Recruited monsters join at the current floor's level.
+- **The view** (`public/render.js`) is a true perspective projection of the maze, six cells deep: walls are painted far to near so nearer ones hide what's behind, side passages open into the rooms and halls that are really there, and lines fade into the dark with distance. The automap fills in only floor you have actually seen, and draws the walls beside it as lines.
 - **Floors:** each one gets a random color theme (Bone Crypt, Blood Vault, Frost Warrens and others). Walls carry torches that flicker and glow, chains, banners, barred windows, skull niches and cracks. Placement is seeded per floor, so decorations stay put as you move.
 - **Sound effects** (`public/sfx.js`) are synthesized live, with no sound files: hits, crits, misses, kills, spells, heals, dice, feelings, joins, level-ups, and the Roll of Fate's ticking spin and landing fanfare.
 
@@ -159,29 +165,24 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 ## Music
 
-**The dungeon plays `public/ambient.m4a`**, a 96-second dark ambient loop made for the game: a warm low pad drifting between minor chords a third apart (Dm, B♭m, F♯m, ending on a tense A7♭9 that falls back to Dm), a sub drone, a soft glass-bell melody with echo, a distant heartbeat thump and cave air, all in a long dark reverb. `public/ambient.js` loops it seamlessly; **P** turns it on and off.
+The music follows the moment (`public/ambient.js`). **P** turns it on and off.
 
-The track is synthesised from scratch by `scripts/build-ambient.py` (Python with numpy and scipy; no samples). The chords, bell notes and mix levels are tables at the top of the script. To change it and rebuild:
+**Exploring: `public/ambient.m4a`**, a 96-second dark ambient loop: a warm low pad drifting between minor chords a third apart (Dm, B♭m, F♯m, ending on a tense A7♭9 that falls back to Dm), a sub drone, a soft glass-bell melody with echo, a distant heartbeat thump and cave air, all in a long dark reverb. It comes and goes: about a minute and a half of music, then a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it.
+
+**Fights: `public/battle.m4a`**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums. The tune is the game's own melody (A B C D D D E D E D C C C D D D, see *Older notes* below) moved from A minor into D major, D E F♯ G G G · A G A G · F♯ F♯ F♯ · G G G over I–IV–vi–V7, played twice, then lifted into B♭ and C before an A7 swings it back to D. It cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place. Each fight starts the loop from bar one.
+
+**Good news: one-shot cues** in the same 8-bit voice. `fanfare.m4a`, the melody's opening rushed up to a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet. `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). After a fight the dungeon stays quiet for ten seconds before the ambient may return.
+
+Every track is synthesised from scratch in Python (numpy and scipy, no samples). The notes, chords and mix levels are tables at the top of each script; the 8-bit voices (pulse, triangle, kick, noise hits) live in `scripts/chip.py`. To change one and rebuild:
 
 ```bash
 python3 crawler/scripts/build-ambient.py /tmp/ambient.wav
-afconvert -f m4af -d aac -b 160000 /tmp/ambient.wav crawler/public/ambient.m4a
-```
-
-**The ambient comes and goes.** It plays for a minute and a half or so, fades out, and leaves a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it.
-
-**Good news gets its own cue** (`scripts/build-stings.py`, in the battle loop's 8-bit voice): `fanfare.m4a`, the same melody's opening rushed up to a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet; `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run).
-
-**Fights play `public/battle.m4a` instead**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums. The tune is the game's own melody (A B C D D D E D E D C C C D D D, see below) moved from A minor into D major — D E F♯ G G G · A G A G · F♯ F♯ F♯ · G G G over I–IV–vi–V7 — played twice, then lifted into B♭ and C before an A7 swings it back to D. When a fight starts it cuts in within a third of a second and the ambient fades out underneath (keeping its place); when the fight ends the battle loop fades and the dungeon creeps back. Each fight starts the loop from bar one. Rebuild it the same way:
-
-```bash
 python3 crawler/scripts/build-battle.py /tmp/battle.wav
-afconvert -f m4af -d aac -b 160000 /tmp/battle.wav crawler/public/battle.m4a
-python3 crawler/scripts/build-stings.py /tmp     # fanfare.wav and victory.wav
-for n in fanfare victory; do afconvert -f m4af -d aac -b 160000 /tmp/$n.wav crawler/public/$n.m4a; done
+python3 crawler/scripts/build-stings.py /tmp                 # fanfare.wav and victory.wav
+for n in ambient battle fanfare victory; do afconvert -f m4af -d aac -b 160000 /tmp/$n.wav crawler/public/$n.m4a; done
 ```
 
-The 8-bit voices (pulse, triangle, kick, noise hits) live in `scripts/chip.py`, shared by both scripts.
+Loop files hold one loop plus a repeat of its first second, so the player loops inside the file and the encoder's padding at the edges is never heard. If you change the battle loop's length, update `TRACKS.battle.loopSeconds` in `public/ambient.js`.
 
 **The beat maker and its engine are separate now.** The dungeon no longer plays what follows; it is still there for `beatmaker.html`.
 
@@ -191,7 +192,7 @@ The game's theme is **Beethoven's Symphony No. 7, Allegretto, bars 3–50**: the
 
 **Older notes:**
 
-`public/music.js`, soundfont samples (FluidR3 GM: warm pad, synth bass, saw lead) plus a synthesized kick for the thumps. Your melody **A B C D D D E D E D C C C D D D** is kept note for note:
+`public/music.js`, soundfont samples (FluidR3 GM: warm pad, synth bass, saw lead) plus a synthesized kick for the thumps. Your melody **A B C D D D E D E D C C C D D D** is kept note for note (the battle loop and the fanfares now play it in major keys):
 - It's set in A minor over **Am | F | Dm | E**.
 - It's given a rhythm (the D-D-D repeats land as short-short-long), and each 4-bar phrase gets an ending (E D C B, then E D C B G#) that pulls back to A.
 - The second phrase lifts to F over the F chord.
