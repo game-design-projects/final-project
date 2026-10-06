@@ -41,3 +41,16 @@ test("copy buttons find the right piece", () => {
   assert.equal(copyValue(log, "3").n, 3);
   assert.equal(copyValue(log, "9:request"), null);
 });
+
+test("JSON is colored by token kind: keys, strings, numbers, true/false/null", async () => {
+  const { highlightJson } = await import("../public/inspector.js");
+  const h = highlightJson({ name: "Drip <3", hp: -7, p: 0.25, ok: true, none: null, id: "e0" });
+  assert.ok(h.includes('<i class="k">&quot;name&quot;</i>:'));
+  assert.ok(h.includes('<i class="s">&quot;Drip &lt;3&quot;</i>'));
+  assert.ok(h.includes('<i class="n">-7</i>') && h.includes('<i class="n">0.25</i>'));
+  assert.ok(h.includes('<i class="b">true</i>') && h.includes('<i class="b">null</i>'));
+  assert.ok(h.includes('<i class="s">&quot;e0&quot;</i>'), "digits inside strings stay part of the string");
+  // Stripping the markup gives back exactly the pretty JSON
+  const plain = h.replace(/<[^>]+>/g, "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+  assert.equal(plain, JSON.stringify({ name: "Drip <3", hp: -7, p: 0.25, ok: true, none: null, id: "e0" }, null, 2));
+});

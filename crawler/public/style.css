@@ -485,7 +485,8 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .pxtip .stats i.up { color: #6bd36b; }
 .pxtip .stats i.down { color: var(--warn); }
 
-/* ---- Debug: the Jev panel's tabs and the REQUESTS log */
+/* ---- Debug: the Jev panel's tabs and the REQUESTS log, in the same pixel language as the rest:
+   keycap tabs, framed sections with a label tab (like the tips), square scrollbars, a pixel JSON palette */
 .jtabs { display: flex; gap: 4px; margin: 0 0 10px; }
 .jtabs[hidden] { display: none; }
 .jtabs button { font: 8px "Press Start 2P", ui-monospace, monospace; color: var(--dim); background: #000; border: 2px solid var(--faint); padding: 6px 8px; cursor: pointer; }
@@ -493,22 +494,57 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .jtabs button span { margin-left: 4px; }
 .reqs[hidden] { display: none; }
 .reqs .meta { font-size: 18px; }
-.req { border: 1px solid var(--faint); margin: 0 0 6px; }
-.req > summary { cursor: pointer; list-style: none; padding: 6px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font: 8px/1.6 "Press Start 2P", ui-monospace, monospace; }
-.req > summary::-webkit-details-marker { display: none; }
-.req > summary::before { content: "▸"; color: var(--dim); }
-.req[open] > summary::before { content: "▾"; }
+.req { border: 2px solid var(--faint); margin: 0 0 8px; background: #000; }
+.req[open] { border-color: var(--ink); box-shadow: 4px 4px 0 #1d1d1d; }
+.req > summary, .jcall > summary { cursor: pointer; list-style: none; }
+.req > summary::-webkit-details-marker, .jcall > summary::-webkit-details-marker { display: none; }
+.req > summary { padding: 6px 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font: 8px/1.6 "Press Start 2P", ui-monospace, monospace; }
+/* a pixel triangle in a keycap, pointing right when shut and down when open */
+.req > summary::before, .jcall > summary::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: none;
+  background: var(--faint);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 30% 20%, 30% 80%, 75% 50%, 30% 20%, 0 0);
+}
+.req > summary::before { background: linear-gradient(var(--ink), var(--ink)) center / 100% 100%; clip-path: polygon(25% 15%, 80% 50%, 25% 85%); }
+.req[open] > summary::before { clip-path: polygon(15% 25%, 85% 25%, 50% 80%); }
+summary:focus { outline: none; }
+summary:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
 .req .name { color: var(--ink); }
 .req .st { padding: 0 4px; color: #000; background: #6bd36b; }
 .req.bad .st { background: var(--warn); }
 .req.pending .st { background: var(--dim); }
 .req .ms { color: var(--dim); }
 .req .sub { flex-basis: 100%; color: var(--dim); font: 16px/1 "VT323", ui-monospace, monospace; display: flex; justify-content: space-between; }
-.req .body { padding: 0 8px 8px; }
-.jsec h4 { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 4px; font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--dim); font-weight: normal; }
-.jsec pre { margin: 0; max-height: 260px; overflow: auto; padding: 6px; background: #0b0b0b; border: 1px solid #1d1d1d; color: #cfe8ff; font: 14px/1.15 "VT323", ui-monospace, monospace; white-space: pre; }
-.copy { font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--ink); background: #000; border: 1px solid var(--faint); padding: 3px 5px; cursor: pointer; }
+.req .body { padding: 2px 8px 10px; }
+.jsec { position: relative; margin: 16px 0 0; border: 2px solid var(--faint); }
+.jsec h4 { position: absolute; top: -9px; left: 6px; right: 6px; margin: 0; display: flex; justify-content: space-between; align-items: center; font: 7px "Press Start 2P", ui-monospace, monospace; font-weight: normal; }
+.jsec h4 .tab { color: #000; background: var(--dim); padding: 2px 4px; }
+.jsec pre { margin: 0; max-height: 260px; overflow: auto; padding: 12px 8px 8px; background: #000; color: var(--ink); font: 16px/1.1 "VT323", ui-monospace, monospace; white-space: pre; tab-size: 2; }
+.jsec pre i { font-style: normal; }
+.jsec pre .k { color: #7fd6ff; }
+.jsec pre .s { color: #f2e6c4; }
+.jsec pre .n { color: #6bd36b; }
+.jsec pre .b { color: #ff9de2; }
+.copy { font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--ink); background: #000; border: 2px solid var(--faint); padding: 2px 5px; cursor: pointer; }
 .copy:hover { border-color: var(--ink); }
-.jcall { margin-top: 8px; border-left: 2px solid var(--faint); padding-left: 8px; }
-.jcall > summary { cursor: pointer; font: 7px/1.8 "Press Start 2P", ui-monospace, monospace; color: #9ad0ff; }
+.copy:focus { outline: none; }
+.copy:focus-visible { outline: 2px solid var(--ink); }
+.jcall { margin-top: 14px; border: 2px solid #1f3b52; background: #000; }
+.jcall[open] { border-color: #9ad0ff; }
+.jcall > summary { display: flex; align-items: center; gap: 8px; padding: 5px 6px; font: 7px/1.8 "Press Start 2P", ui-monospace, monospace; color: #9ad0ff; }
+.jcall > summary::before { background: #9ad0ff; clip-path: polygon(25% 15%, 80% 50%, 25% 85%); width: 10px; height: 10px; }
+.jcall[open] > summary::before { clip-path: polygon(15% 25%, 85% 25%, 50% 80%); }
+.jcall > .jsec { margin: 16px 6px 8px; }
 .reqs .bad { color: var(--warn); font-size: 18px; margin: 6px 0; }
+
+/* Square pixel scrollbars everywhere (log, panels, JSON): a hard-edged thumb on a dark track */
+* { scrollbar-width: thin; scrollbar-color: #5a5a5a #0b0b0b; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0b0b0b; box-shadow: inset 2px 0 0 #1d1d1d; }
+::-webkit-scrollbar-thumb { background: #5a5a5a; border: 2px solid #0b0b0b; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink); }
+::-webkit-scrollbar-corner { background: #0b0b0b; }
+::-webkit-scrollbar-button { display: none; }

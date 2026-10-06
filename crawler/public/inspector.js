@@ -22,8 +22,23 @@ export function summarize(e) {
   };
 }
 
+// Pretty JSON with each token wrapped for the pixel palette: keys, strings, numbers, true/false/null
+const TOKEN = /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*")(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+export function highlightJson(value) {
+  const text = JSON.stringify(value, null, 2) ?? "undefined";
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(TOKEN)) {
+    out += esc(text.slice(last, m.index));
+    const cls = m[1] ? (m[2] ? "k" : "s") : m[3] ? "b" : "n";
+    out += m[1] && m[2] ? `<i class="k">${esc(m[1])}</i>${esc(m[2])}` : `<i class="${cls}">${esc(m[0])}</i>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(text.slice(last));
+}
+
 export function jsonBlock(label, value, key) {
-  return `<div class="jsec"><h4>${esc(label)}<button type="button" class="copy" data-copy="${esc(key)}">COPY</button></h4><pre>${esc(JSON.stringify(value, null, 2))}</pre></div>`;
+  return `<div class="jsec"><h4><span class="tab">${esc(label)}</span><button type="button" class="copy" data-copy="${esc(key)}">COPY</button></h4><pre>${highlightJson(value)}</pre></div>`;
 }
 
 // The body of one request, built only when it's opened (the JSON can be large)
