@@ -10,10 +10,15 @@
 //
 // When the party talks, gives gold, or asks a monster to join, Jev also picks how that monster FEELS
 // (public/emotions.js). Every feeling moves its mood and has a mechanical effect, so words always matter.
+//
+// Whenever joining is possible, Jev also says whether it wants to, and (speculatively, both ways) its main reason
+// to say yes and to say no. Code settles the answer from the mood AFTER this round's pitch, words and feeling
+// (resolveJoin), then keeps the reason that matches it, so the narration in the log never contradicts the outcome.
 
 import { choice, noul, score } from "./q.js";
 import { SPECIES, fill } from "../public/species.js";
 import { EMOTIONS, PACIFYING, PITCH } from "../public/emotions.js";
+import { JOIN_NO, JOIN_YES, reasonOptions, joinLine, moodOf } from "../public/narrate.js";
 import { jev } from "./jev.js";
 
 // Structured, contrastive options: what each action is, and when it fits. Plain one-liners made Jev
@@ -57,6 +62,10 @@ const healthWord = (hp, max) => (hp / max > 0.7 ? "healthy" : hp / max > 0.35 ? 
 // Which side a monster is on, from its meters. Code owns this; Jev sees the words.
 const FRIENDLY = 55;
 const HOSTILE = 40;
+const JOIN_ANGER = 30; // at or above this, a monster won't join anyone
+const WILLING = 0.5; // Jev's "wants to say yes" needed to accept an invitation
+const GLAD = new Set(["touched", "delighted"]); // feelings strong enough to make it ask to come along unasked
+const ANGRY_REASONS = new Set(["still_angry", "bad_pitch", "burned", "pride"]); // fit a refusal made in anger
 function stance(m) {
   if (m.meters.friendliness >= FRIENDLY && m.meters.anger < 40) return "friendly with the party";
   if (m.meters.friendliness < HOSTILE) return "hostile to the party";
@@ -103,6 +112,11 @@ function applyPitch(req, m) {
   const p = PITCH[pa.pitch];
   m.meters.friendliness += p.friendliness;
   m.meters.anger += p.anger;
+  // A pitch that beat the DC brings it up to its bar for joining: now it's open to it, and Jev says yes or no
+  if (p.reach != null) {
+    m.meters.friendliness = Math.max(m.meters.friendliness, joinThreshold(m) + p.reach);
+    m.meters.anger = Math.min(m.meters.anger, JOIN_ANGER - 5 - p.reach);
+  }
   for (const k of Object.keys(m.meters)) m.meters[k] = clamp(m.meters[k]);
   m.thisRound = [...(m.thisRound ?? []), `The party asked you to join them, with ${p.words}.`];
 }
@@ -127,7 +141,31 @@ function context(req, m, monsters) {
     readyToJoin: m.meters.friendliness >= joinThreshold(m) && m.meters.anger < 30,
     living: req.party.filter((p) => !p.dead),
     others: monsters.filter((o) => o.id !== m.id),
+    // Monsters of its own kind already traveling with the party
+    kin: req.party.filter((p) => !p.dead && p.kind === "monster" && p.species === m.species).map((p) => p.name),
   };
+}
+
+// The answer to "join us?", settled from the mood after this round's pitch, words and feeling, and Jev's own
+// willingness. Returns null when nobody asked and it isn't moved to ask itself.
+//   { asked, accepted, moved, reason }: reason is a JOIN_YES id when accepted, a JOIN_NO id otherwise
+export function resolveJoin({ invited, meters, threshold, room = true, emotion = null, willing = 0, rolledJoin = false, yesWhy, noWhy, pitch = null }) {
+  if (!room) return null;
+  const eligible = meters.friendliness >= threshold && meters.anger < JOIN_ANGER;
+  // Jev's explicit answer decides; its action roll landing on "join" tips a near-even answer
+  const wants = willing >= WILLING || (rolledJoin && willing >= 0.3);
+  const yes = JOIN_YES[yesWhy] ? yesWhy : "likes_you";
+  if (!invited) {
+    const moved = eligible && GLAD.has(emotion?.id) && wants;
+    return moved ? { asked: true, accepted: true, moved: true, reason: yes } : null;
+  }
+  // Feeling offended, enraged or baffled this very round rules out a yes, whatever the meters say
+  const soured = emotion?.tone === "bad" || emotion?.id === "confused";
+  if (eligible && wants && !soured) return { asked: true, accepted: true, moved: false, reason: yes };
+  let reason = JOIN_NO[noWhy] && !JOIN_NO[noWhy].code ? noWhy : "not_yet";
+  if (emotion?.id === "confused") reason = "confused";
+  else if ((soured || meters.anger >= JOIN_ANGER) && !ANGRY_REASONS.has(reason)) reason = ["fail", "botch"].includes(pitch) ? "bad_pitch" : "still_angry";
+  return { asked: true, accepted: false, moved: false, reason };
 }
 
 function feasibleActions(c) {
@@ -150,7 +188,7 @@ function feasibleActions(c) {
 
 function monsterState(req, c) {
   const { m, sp } = c;
-  const kin = c.living.filter((p) => p.kind === "monster" && p.species === m.species).map((p) => p.name);
+  const { kin } = c;
   return {
     name: m.name,
     kind: sp.label,
@@ -229,12 +267,18 @@ function buildQuestions(c, feasible, q) {
     q[k("asks_for_peace")] = noul(`In \`party.latest_message\`, does the party ask ${name} to stop fighting, make peace, or let them pass?`);
     if (c.speechOfferPossible) q[k("offers_gold")] = noul(`In \`party.latest_message\`, is the party offering gold or money to ${name} right now?`);
   }
-  // Joining is its own narrow judgment: asked only when code says the monster likes the party enough.
-  if (feasible.join_party && c.readyToJoin && (c.message || c.recruitMe))
+  // Joining is its own narrow judgment, plus its reason either way, so the log can say why it agreed or refused.
+  // Asked whenever joining is possible: this round's pitch and feelings can carry it over its bar.
+  if (feasible.join_party) {
     q[k("would_join")] = noul({
       question: `If the party is inviting ${name} to join them, does ${name} want to say yes?`,
       consider: [`\`monsters.${m.id}.ready_to_join_party\``, `${me}`, "`party.latest_message`", "`party.this_round`"],
     });
+    const why = { others: c.others.map((o) => o.name), kin: c.kin, formerAlly: !!m.formerAlly };
+    const consider = [`Its nature, traits, mood, impressions and kin in ${me}`, `\`monsters.${m.id}.this_round\``, "`group`", "`party`"];
+    q[k("join_yes")] = choice({ question: `If ${name} agrees to join the party now, what is its main reason?`, consider }, reasonOptions(JOIN_YES, why));
+    q[k("join_no")] = choice({ question: `If ${name} turns down an invitation to join the party now, what is its main reason?`, consider }, reasonOptions(JOIN_NO, why));
+  }
   if (c.feels)
     q[k("emotion")] = choice(
       {
@@ -326,6 +370,8 @@ function policy(action, conf, req, c, a, meters, offer, target, emotion) {
   const asks = c.recruitMe ? 1 : (a[`${m.id}__asks_to_join`]?.noul ?? 0);
   if (emotion?.cond && PACIFYING.has(emotion.cond) && ["attack", "special", "attack_monster"].includes(action))
     return { why: `it is ${emotion.label.toLowerCase()}: ${emotion.effect.toLowerCase()}`, fallback: "converse" };
+  // "Its heart opens to you" followed by a club to the face would contradict what the log just said
+  if (emotion?.id === "touched" && ["attack", "special"].includes(action)) return { why: "it is touched: its heart opens to the party", fallback: "converse" };
   switch (action) {
     case "join_party":
       if (meters.friendliness < joinThreshold(m))
@@ -403,17 +449,42 @@ export async function groupTurn(req) {
     if (!offer && (a[id("offers_gold")]?.noul ?? 0) >= 0.6) offer = Math.min(req.partyGold, Math.max(c.sp.minTribute, 1));
 
     const monsterTarget = c.others.find((o) => o.id === a[id("monster_target")]?.choice) ?? c.others[0];
-    let picked = roll(a[id("action")].probabilities);
-    // A clear invitation to a monster that's ready and wants to come overrides small talk. So does a monster
-    // that was so touched or delighted that it now likes the party enough to come along.
+    const picked = roll(a[id("action")].probabilities);
+    // An invitation (the recruit command, or words that ask it along) gets a real answer; so does a monster so
+    // touched or delighted that it asks to come along on its own. The answer overrides the rolled action.
     const invited = c.recruitMe || (a[id("asks_to_join")]?.noul ?? 0) >= 0.6;
-    const accepts = invited && (a[id("would_join")]?.noul ?? 0) >= 0.55;
-    const ready = meters.friendliness >= joinThreshold(m) && meters.anger < 30 && c.room;
-    const moved = ready && ["touched", "delighted"].includes(emotion?.id);
-    if ((accepts || moved) && ["converse", "defend", "leave_peacefully", "demand_tribute"].includes(picked)) picked = "join_party";
-    const block = policy(picked, a[id("action")].confidence, req, c, a, meters, offer, monsterTarget, emotion);
+    const join = feasible[i].join_party
+      ? resolveJoin({
+          invited,
+          meters,
+          threshold: joinThreshold(m),
+          room: c.room,
+          emotion,
+          willing: a[id("would_join")]?.noul ?? 0,
+          rolledJoin: picked === "join_party",
+          yesWhy: a[id("join_yes")]?.choice,
+          noWhy: a[id("join_no")]?.choice,
+          pitch: c.recruitMe ? req.playerAction.pitch : null,
+        })
+      : null;
+    if (join) {
+      Object.assign(join, { others: c.others.map((o) => o.name), kin: c.kin });
+      console.info(
+        `[join] ${m.name} (${m.species}) ${join.moved ? "asks to come" : join.accepted ? "accepts" : "refuses"}: ${join.reason}` +
+          ` | f${meters.friendliness}/${joinThreshold(m)} a${meters.anger} feels ${emotion?.id ?? "-"} would_join ${(a[id("would_join")]?.noul ?? 0).toFixed(2)} rolled ${picked}`,
+      );
+    }
     let final = picked;
-    if (block) final = options[i].includes(block.fallback) ? block.fallback : "converse";
+    let block = null;
+    if (join?.accepted) final = "join_party";
+    else {
+      if (join && picked === "join_party") block = { why: `it turned the invitation down (${join.reason})`, fallback: "converse" };
+      // It likes the party and was asked: it says no, it doesn't swing at them
+      else if (join && ["attack", "special"].includes(picked) && moodOf(meters, emotion) === "warm")
+        block = { why: `it declined (${join.reason}) but likes the party too much to attack`, fallback: "converse" };
+      else block = policy(picked, a[id("action")].confidence, req, c, a, meters, offer, monsterTarget, emotion);
+      if (block) final = options[i].includes(block.fallback) ? block.fallback : "converse";
+    }
 
     if (final === "accept_tribute") {
       meters.friendliness = clamp(meters.friendliness + c.sp.weights.gold);
@@ -429,6 +500,20 @@ export async function groupTurn(req) {
     const recent = req.conversation.slice(-3).map((l) => l.text);
     const fillLine = (j) => fill(lines[j], { name: m.name, target: named ?? "someone" });
     const pick = ranked.find((j) => !recent.includes(fillLine(j))) ?? ranked[0];
+    // Turning down an invitation: say the reason. "Not yet" in its own words if the species has them; otherwise
+    // the narrated answer is its reply (spoken: false), so no cheerful small-talk line undercuts the refusal.
+    let line = fillLine(pick);
+    let spoken = true;
+    if (join && !join.accepted && final === "converse") {
+      const own = ["not_yet", "wants_more"].includes(join.reason) ? c.sp.lines.not_ready?.[0] : null;
+      if (own) line = fill(own, { name: m.name, target: "someone" });
+      else {
+        spoken = false;
+        line = joinLine(m.species, m.name, join, { meters, emotion });
+      }
+    }
+    const tributeRefusal =
+      final === "refuse_tribute" ? (offer && offer < c.sp.minTribute && !m.paid ? "too_little" : meters.anger >= 45 ? "angry" : "not_for_sale") : null;
 
     return {
       id: m.id,
@@ -441,7 +526,10 @@ export async function groupTurn(req) {
         .sort((x, y) => y.p - x.p),
       targetId: target?.id ?? null,
       monsterTargetId: final === "attack_monster" ? monsterTarget?.id : null,
-      line: fillLine(pick),
+      line,
+      spoken,
+      join,
+      tributeRefusal,
       offer: final === "accept_tribute" ? offer : 0,
       meters,
       moodDelta: Object.fromEntries(Object.keys(meters).map((k) => [k, meters[k] - before[k]])),

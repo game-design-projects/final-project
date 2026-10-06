@@ -3,6 +3,7 @@
 
 import { choice, score } from "./q.js";
 import { SPECIES, fill } from "../public/species.js";
+import { reactionLineIndex } from "../public/narrate.js";
 import { jev } from "./jev.js";
 
 export const BUFFS = {
@@ -41,6 +42,11 @@ function pickLine(answer, lines, name) {
   return fill(lines[i] ?? lines[0], { name });
 }
 
+// A reaction line that agrees with how the words or promise landed (level 0..4), not just Jev's overall favorite.
+function reactionLine(answer, sp, level, name) {
+  return fill(reactionLines(sp)[reactionLineIndex(answer?.probabilities, sp.reactions, level)], { name });
+}
+
 const lineChoice = (question, lines, name) =>
   choice(question, Object.fromEntries(lines.map((l, i) => [`line_${i}`, fill(l, { name })])));
 
@@ -69,7 +75,7 @@ export async function allyTalk({ ally, message, vows }) {
     loyaltyDelta: TALK_DELTA[level],
     buff: level >= 3 ? BUFFS[ally.species] : null,
     outcome: TALK_OUTCOME[level],
-    line: pickLine(a.line, lines, ally.name),
+    line: reactionLine(a.line, sp, level, ally.name),
     ms: res.ms,
   };
 }
@@ -87,8 +93,8 @@ export async function vowMade({ monster, vow }) {
     line: lineChoice({ question: "How does `monster.name` react to `promise`?", judge_by: "`monster.personality`" }, lines, monster.name),
   };
   const res = await jev(state, questions);
-  const level = Math.round(res.answers.liking.score);
-  return { liking: res.answers.liking.score, level, line: pickLine(res.answers.line, lines, monster.name), ms: res.ms };
+  const level = Math.max(0, Math.min(4, Math.round(res.answers.liking.score)));
+  return { liking: res.answers.liking.score, level, line: reactionLine(res.answers.line, sp, level, monster.name), ms: res.ms };
 }
 
 const RESPONSES = {
