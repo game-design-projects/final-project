@@ -1,36 +1,37 @@
 // The game's music. Two pre-rendered loops crossfaded by mood, plus one-shot stings for good moments.
-//   explore: ambient.m4a, the dark dungeon ambient (scripts/build-ambient.py). It does not play nonstop:
-//            a stretch of music, then a stretch of quiet, like a mood that comes and goes.
-//   battle:  battle-*.m4a, four bright 8-bit fight loops on the game's melody in different keys, tempos and
-//            grooves (scripts/build-battle.py). A fight picks one at random (never the last one), and after
-//            two times round it crossfades into another, so no single tune wears out.
+// All of it is baroque, played by one sampled band (harpsichord, organ, strings, choir, music box, bells,
+// kettle drums) in one stone hall, and all of it is built on the game's own melody.
+//   explore: ambient.m4a, a slow passacaglia in D minor (scripts/build-ambient.py). It does not play
+//            nonstop: a stretch of music, then a stretch of quiet, like a mood that comes and goes.
+//   battle:  battle-*.m4a, four toccata-style fight loops in different keys, tempos, leads and grooves
+//            (scripts/build-battle.py). A fight picks one at random (never the last one) and keeps it for
+//            the whole fight: changing tune mid-fight was jarring.
 //   stings:  fanfare.m4a when you go down the stairs, victory.m4a when you win a fight (scripts/build-stings.py)
 // Each loop file holds one loop plus a repeat of its first second, so we loop inside it and the
 // encoder's padding at the file's edges is never heard.
 
 const LOOP_START = 0.25;
 export const TRACKS = {
-  // volume evens out the renders: the 8-bit cues are mastered ~10 dB hotter than the ambient
-  explore: { url: "ambient.m4a", loopSeconds: 96, volume: 0.9 },
+  // The renders are mastered to -19 dBFS RMS (explore) and -17 dBFS RMS (fights and stings). These
+  // volumes put a fight at about -19.5 dB, as loud against the sound effects as the music it replaced,
+  // and the exploring music about 2.6 dB under it.
+  explore: { url: "ambient.m4a", loopSeconds: 112.5, volume: 0.7 }, // 40 bars of 3/4 at 64 BPM
   battle: {
-    volume: 0.35,
-    // 16 bars of 8 eighths at each tempo
+    volume: 0.75,
+    // 16 bars of 4/4 at each tempo: 3840 / BPM seconds
     variants: [
-      { name: "heroic", url: "battle-heroic.m4a", loopSeconds: 3840 / 124 },
-      { name: "fury", url: "battle-fury.m4a", loopSeconds: 3840 / 132 },
-      { name: "march", url: "battle-march.m4a", loopSeconds: 3840 / 112 },
+      { name: "toccata", url: "battle-toccata.m4a", loopSeconds: 3840 / 132 },
+      { name: "charge", url: "battle-charge.m4a", loopSeconds: 3840 / 126 },
+      { name: "crusade", url: "battle-crusade.m4a", loopSeconds: 3840 / 112 },
       { name: "gallop", url: "battle-gallop.m4a", loopSeconds: 3840 / 120 },
     ],
   },
 };
 // Under a monster's spoken line the music drops to this share of its level, quickly, and comes back slowly
 export const DUCK = { level: 0.25, down: 0.15, up: 0.6 };
-// How many times a battle loop goes round before the fight moves on to another
-export const BATTLE_LOOPS = 2;
-const BATTLE_SWAP_FADE = 1.5;
 export const STINGS = {
-  fanfare: { url: "fanfare.m4a", volume: 0.4 },
-  victory: { url: "victory.m4a", volume: 0.35 },
+  fanfare: { url: "fanfare.m4a", volume: 0.75 },
+  victory: { url: "victory.m4a", volume: 0.75 },
 };
 // Seconds to fade a track in or out. A fight cuts in fast and the ambient gets out of its way just as fast
 // (underFight), so the two never play together; between stretches of exploring the ambient fades out slowly.
@@ -121,7 +122,7 @@ export class Ambient {
     if (this.mood === "explore") this.restFor(this.buffers[name].duration + PACE.afterSting);
   }
 
-  // ---- battle: a random loop per fight, moving on to another after BATTLE_LOOPS times round
+  // ---- battle: a random loop per fight, kept for the whole fight
 
   pickBattle() {
     const all = this.tracks.battle.variants;
@@ -142,9 +143,8 @@ export class Ambient {
       return;
     }
     console.debug(`music: battle loop ${v.name}`);
-    this.fadeOut("battle", fade); // the loop it replaces, if any
+    this.fadeOut("battle", fade); // a loop still fading from the last fight, if any
     this.startLoop("battle", this.buffers[key], v.loopSeconds, this.tracks.battle.volume, fade);
-    this.schedule(v.loopSeconds * BATTLE_LOOPS, () => this.mood === "battle" && this.battleIn(BATTLE_SWAP_FADE));
   }
 
   // ---- the explore rhythm: play a stretch, rest a stretch

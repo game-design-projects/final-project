@@ -1,7 +1,7 @@
 // Music mood switching (explore <-> battle), against a fake Web Audio graph: run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Ambient, TRACKS, FADES, PACE, STINGS, BATTLE_LOOPS, DUCK } from "../public/ambient.js";
+import { Ambient, TRACKS, FADES, PACE, STINGS, DUCK } from "../public/ambient.js";
 
 // Just enough of AudioContext to record what the player schedules
 class FakeParam {
@@ -135,10 +135,10 @@ test("the ambient comes and goes: a stretch of music, then a stretch of quiet", 
   assert.equal(level(music, "explore"), TRACKS.explore.volume, "and comes back");
 });
 
-test("a fight cancels the ambient's comings and goings; only the battle loop change is pending", () => {
+test("a fight cancels the ambient's comings and goings; nothing else is pending", () => {
   const music = started();
   music.setMood("battle");
-  assert.deepEqual(music.timer.pending, [music.battle.loopSeconds * BATTLE_LOOPS * 1000]);
+  assert.deepEqual(music.timer.pending, []);
 });
 
 test("each fight picks a battle loop at random, never the same one twice in a row", () => {
@@ -155,16 +155,17 @@ test("each fight picks a battle loop at random, never the same one twice in a ro
   assert.ok(new Set(heard).size >= 3, `only heard ${[...new Set(heard)]}`);
 });
 
-test("a long fight moves on to another loop after it has gone round twice, crossfading", () => {
+test("a long fight keeps its one loop: the tune never changes mid-fight", () => {
   const music = started();
   music.setMood("battle");
   const first = music.battle;
-  const firstVoice = music.voices.battle;
-  music.timer.advance(first.loopSeconds * BATTLE_LOOPS * 1000);
-  assert.notEqual(music.battle, first);
-  assert.notEqual(music.voices.battle, firstVoice);
-  assert.deepEqual(firstVoice.gain.gain.ramps.at(-1)[0], 0, "the old loop fades out");
-  assert.equal(music.voices.battle.gain.gain.ramps.at(-1)[0], TRACKS.battle.volume, "the new one fades in");
+  const voice = music.voices.battle;
+  music.timer.advance(10 * 60 * 1000);
+  assert.equal(music.battle, first);
+  assert.equal(music.voices.battle, voice);
+  assert.equal(voice.src.stoppedAt, undefined, "still playing");
+  assert.equal(voice.src.loop, true);
+  assert.equal(level(music, "battle"), TRACKS.battle.volume, "never faded out");
 });
 
 test("the stairs fanfare silences the ambient and leaves quiet after it", () => {
@@ -201,8 +202,10 @@ test("no battle loop runs faster than 132 BPM", () => {
   for (const v of TRACKS.battle.variants) assert.ok(3840 / v.loopSeconds <= 132 + 1e-9, `${v.name} is ${(3840 / v.loopSeconds).toFixed(1)} BPM`);
 });
 
-test("battle loop lengths match the renders: 16 bars at each tempo", () => {
-  const want = { heroic: 30.968, fury: 29.091, march: 34.286, gallop: 32 };
+test("battle loop lengths match the renders: 16 bars of 4/4 at each tempo", () => {
+  // scripts/build-battle.py: toccata 132, charge 126, crusade 112, gallop 120 BPM
+  const want = { toccata: 29.091, charge: 30.476, crusade: 34.286, gallop: 32 };
+  assert.deepEqual(TRACKS.battle.variants.map((v) => v.name).sort(), Object.keys(want).sort());
   for (const v of TRACKS.battle.variants) assert.ok(Math.abs(v.loopSeconds - want[v.name]) < 0.001, v.name);
 });
 
@@ -212,4 +215,17 @@ test("ducking pulls the music down under speech and brings it back", () => {
   assert.equal(music.master.gain.ramps.at(-1)[0], DUCK.level);
   music.duck(false);
   assert.equal(music.master.gain.ramps.at(-1)[0], 1);
+});
+
+test("the explore loop length matches the render: 40 bars of 3/4 at 64 BPM", () => {
+  assert.equal(TRACKS.explore.loopSeconds, 112.5);
+});
+
+test("explore sits a little under the fights, and stings match the fights", () => {
+  // The renders are mastered to -19 dBFS RMS (explore) and -17 dBFS RMS (fights and stings): scripts/sampler.py
+  const db = (rms, volume) => rms + 20 * Math.log10(volume);
+  const explore = db(-19, TRACKS.explore.volume);
+  const battle = db(-17, TRACKS.battle.volume);
+  assert.ok(battle - explore >= 1.5 && battle - explore <= 4, `explore is ${(battle - explore).toFixed(1)} dB under battle`);
+  for (const s of Object.values(STINGS)) assert.equal(s.volume, TRACKS.battle.volume);
 });

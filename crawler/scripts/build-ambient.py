@@ -1,207 +1,203 @@
 #!/usr/bin/env python3
-"""Renders the dungeon's background music: a slow, dark ambient loop.
+"""Renders the dungeon's exploring music: "Passacaglia of the Deep", a slow baroque passacaglia in D minor.
 
-Everything is synthesised here (no samples): a warm low pad that drifts between minor chords a
-third apart, a sub drone, a soft glassy bell melody with echo, a distant heartbeat thump and
-cave air, all in a long dark reverb. The render is circular, so the loop point is seamless.
+Form: five variations on an eight-bar ground bass, 3/4 at 64 BPM, 40 bars = 112.5 s, one seamless loop.
+The ground starts with the lament bass (D C Bb A, the falling fourth of every baroque lament), then
+Bb A D A, ending on the dominant so each variation falls back into the next and the last into the first.
 
-Needs numpy and scipy:  python3 scripts/build-ambient.py out.wav
-Then encode:            afconvert -f m4af -d aac -b 160000 out.wav public/ambient.m4a
+The game's melody (A B C D D D E D E D C C C D D D, written in A minor over Am | F | Dm | E) is set in
+D minor over the ground, note for note, with its short-short-long repeats:
+
+    bar  bass  chord    melody (eighths)            the owner's harmony, moved to D minor
+     1   D     Dm       D  E  F   (quarters)        Am  -> Dm
+     2   C     C        G G G--                     (C, the modal flat-seventh chord)
+     3   Bb    Bb       A G A G                     F   -> Bb, A and G as 7-6 colour over it
+     4   A     F/A      F F F--                     Dm  -> F/A (the same notes, F on top)
+     5   Bb    Gm/Bb    G G G--                     E   -> Gm/Bb, then
+     6   A     A7       A G F E                     a cadence: E D C B -> A G F E
+     7   D     Dm       D---
+     8   A     Asus4 A  (rest: the harpsichord fills)
+
+Variations (the melody comes and goes on a different voice each time):
+  I   the ground alone: soft organ chords, low strings, harpsichord broken chords in quarters, a far bell.
+  II  the melody on music box, high, over harpsichord arpeggios in eighths.
+  III the melody on the strings, the harpsichord drops to a low continuo; the choir starts to rise.
+  IV  the fullest: choir swelling bar by bar, the melody on harpsichord doubled by music box an octave
+      up, a strings counter-line falling in tenths with the bass, organ pedal; a bell.
+  V   it thins out: the melody's first bars on high strings, then only organ, ground and harpsichord,
+      back to the quiet of variation I.
+
+Instruments are real samples (scripts/sampler.py: MusyngKite harpsichord, church organ, string
+ensemble, choir aahs, music box, tubular bells), all in the same stone hall as the fights and fanfares.
+No synth pads, no sub drones.
+
+Needs numpy and scipy:  python3 crawler/scripts/build-ambient.py /tmp      (writes /tmp/ambient.wav)
+     (or a .wav path)
+Then encode:            afconvert -f m4af -d aac -b 160000 /tmp/ambient.wav crawler/public/ambient.m4a
 """
+import os
 import sys
-import numpy as np
-from scipy.io import wavfile
 
-SR = 44100
-CHORD = 12.0  # seconds per chord
-BEAT = 1.5  # the slow pulse the bell and the echo sit on
-FADE = 3.0  # crossfade between chords
-TAIL = 1.0  # the file repeats its first second at the end, so players can loop inside it
-rng = np.random.default_rng(7)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from sampler import EXPLORE_RMS_DB, INSTRUMENTS, Score, check_outer_voices, highpass, log_samples, lowpass, master, midi, mix, name, report, voice, write  # noqa: E402
 
-hz = lambda m: 440.0 * 2 ** ((m - 69) / 12)
+BPM = 64
+BEAT = 60 / BPM
+EIGHTH = BEAT / 2
+BAR = 3 * BEAT
+BARS = 40
+LOOP = BAR * BARS  # 112.5 s; public/ambient.js TRACKS.explore.loopSeconds must match
 
-# (pad notes as (midi, level), sub fundamental in Hz, bell notes as (beat, midi, level))
-SONG = [
-    ("Dm", [(38, 1.0), (45, 0.8), (50, 0.7), (53, 0.6), (57, 0.5), (64, 0.3)], hz(26), [(1, 69, 0.8), (2, 74, 0.8), (3, 76, 0.9), (4, 77, 1.0)]),
-    ("Bbm", [(46, 1.0), (53, 0.8), (58, 0.65), (61, 0.6), (65, 0.45)], hz(34), [(1, 77, 0.8), (3, 73, 0.8), (4, 70, 0.7), (6, 65, 0.8)]),
-    ("Dm", [(38, 1.0), (45, 0.8), (50, 0.7), (53, 0.6), (57, 0.5), (64, 0.3)], hz(26), [(1, 69, 0.8), (2, 74, 0.8), (3, 77, 1.0), (4.5, 76, 0.8), (6, 69, 0.7)]),
-    ("F#m", [(42, 1.0), (49, 0.8), (54, 0.7), (57, 0.6), (61, 0.5), (68, 0.3)], hz(30), [(1, 73, 0.8), (3, 68, 0.8), (4, 69, 0.9), (6, 81, 0.45)]),
-    ("Dm", [(38, 1.0), (45, 0.8), (50, 0.7), (53, 0.6), (57, 0.5), (64, 0.3)], hz(26), [(2, 81, 0.6), (4, 77, 0.7), (5, 74, 0.8), (6.5, 69, 0.8)]),
-    ("F#m", [(42, 1.0), (49, 0.8), (54, 0.7), (57, 0.6), (61, 0.5), (68, 0.3)], hz(30), [(1, 73, 0.8), (2, 78, 0.9), (4, 76, 0.8), (6, 73, 0.8)]),
-    ("Bbm", [(46, 1.0), (53, 0.8), (58, 0.65), (61, 0.6), (65, 0.45)], hz(34), [(1, 77, 0.9), (3, 73, 0.8), (4, 70, 0.7), (6, 73, 0.8)]),
-    ("A7b9", [(45, 1.0), (52, 0.8), (57, 0.6), (61, 0.6), (64, 0.45), (67, 0.25), (70, 0.2)], hz(33), [(1, 76, 0.8), (2.5, 73, 0.8), (4, 70, 0.9), (5.5, 69, 0.9)]),
+GROUND = ["D3", "C3", "Bb2", "A2", "Bb2", "A2", "D3", "A2"]
+# Per bar: (beat, chord tones root first, label)
+HARMONY = [
+    [(0, "D F A", "Dm")],
+    [(0, "C E G", "C")],
+    [(0, "Bb D F", "Bb")],
+    [(0, "F A C", "F/A")],
+    [(0, "G Bb D", "Gm/Bb")],
+    [(0, "A C# E G", "A7")],
+    [(0, "D F A", "Dm")],
+    [(0, "A D E", "Asus4"), (2, "A C# E", "A")],
 ]
-LOOP = CHORD * len(SONG)
-N = int(LOOP * SR)
+# The melody, per bar: (start in eighths, length in eighths, note)
+MELODY = [
+    [(0, 2, "D4"), (2, 2, "E4"), (4, 2, "F4")],
+    [(0, 1, "G4"), (1, 1, "G4"), (2, 4, "G4")],
+    [(0, 1, "A4"), (1, 1, "G4"), (2, 2, "A4"), (4, 2, "G4")],
+    [(0, 1, "F4"), (1, 1, "F4"), (2, 4, "F4")],
+    [(0, 1, "G4"), (1, 1, "G4"), (2, 4, "G4")],
+    [(0, 1, "A4"), (1, 1, "G4"), (2, 2, "F4"), (4, 2, "E4")],
+    [(0, 6, "D4")],
+    [],
+]
+# Variation IV's strings counter-line: tenths over the ground, half + quarter
+COUNTER = ["F4", "E4", "D4", "C4", "D4", "C#4", "D4", "C#4"]
+
+PC = {"C": 0, "C#": 1, "Db": 1, "D": 2, "Eb": 3, "E": 4, "F": 5, "F#": 6, "G": 7, "Ab": 8, "A": 9, "Bb": 10, "B": 11}
+DM = (10, 3)  # spell Bb and Eb flat, C# sharp
+INSTRUMENTS["choir_swell"] = dict(INSTRUMENTS["choir"], attack=0.9, release=1.4)
+INSTRUMENTS["organ_soft"] = dict(INSTRUMENTS["organ"], attack=0.35, release=0.8)
+
+# name: (melody voice, melody octave shift, dynamics 0..1, harpsichord figure and range, extras)
+VARIATIONS = [
+    dict(title="I   the ground", melody=None, dyn=0.78, harp="pulse", harp_range=(57, 72), organ=0.55, choir=None, bell={0: "D4", 4: "A3"}),
+    dict(title="II  music box", melody=("music_box", 12, 0.75), dyn=0.68, harp="arp", harp_range=(57, 72), organ=0.4, choir=None, bell={}),
+    dict(title="III strings", melody=("strings", 0, 0.8), dyn=0.8, harp="arp", harp_range=(45, 59), organ=0.5, choir=[0, 0, 0, 0, 0, 0, 0.45, 0.6], bell={}),
+    dict(title="IV  choir", melody=("harpsichord", 12, 0.9), dyn=0.84, harp=None, harp_range=None, organ=0.0, choir=[0.7, 0.75, 0.8, 0.85, 0.85, 0.8, 0.75, 0.65], bell={0: "D4"}, counter=True, pedal=True),
+    dict(title="V   dissolving", melody=("strings", 12, 0.62), melody_bars=3, dyn=0.74, harp="pulse", harp_range=(57, 72), organ=0.55, choir=None, bell={4: "A3"}),
+]
+assert len(VARIATIONS) * len(GROUND) == BARS
 
 
-def place(buf, sig, start_s):
-    """Add a (2, M) signal into the loop at start_s seconds, wrapping around the end."""
-    i = int(round(start_s * SR)) % N
-    idx = (i + np.arange(sig.shape[1])) % N
-    buf[:, idx] += sig
+def pcs(tones):
+    return [PC[t] for t in tones.split()]
 
 
-def swell(n, fade_s):
-    f = int(fade_s * SR)
-    env = np.ones(n)
-    ramp = np.sin(np.linspace(0, np.pi / 2, f)) ** 2
-    env[:f] = ramp
-    env[-f:] = ramp[::-1]
-    return env
+def chord_at(bar, beat):
+    current = HARMONY[bar][0]
+    for c in HARMONY[bar]:
+        if c[0] <= beat:
+            current = c
+    return current
 
 
-def pad_chord(notes, bright=1.0):
-    """Additive 'analog' pad: detuned saw-like voices whose filter slowly opens and closes."""
-    n = int((CHORD + FADE) * SR)
-    t = np.arange(n) / SR
-    arc = np.sin(np.pi * t / t[-1]) ** 2  # each chord opens up, then closes again
-    fc = 240 + 900 * bright * arc
-    out = np.zeros((2, n))
-    for m, level in notes:
-        for v in range(4):
-            f = hz(m) * 2 ** (rng.uniform(-7, 7) / 1200)
-            drift = rng.uniform(0.8, 1.8) * np.sin(2 * np.pi * rng.uniform(0.08, 0.25) * t + rng.uniform(0, 6.28))
-            ph = 2 * np.pi * f * t + drift
-            breathe = 1 - 0.3 * (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(0.07, 0.2) * t + rng.uniform(0, 6.28)))
-            sig = np.zeros(n)
-            for h in range(1, int(2600 / f) + 1):
-                amp = (1 / h) / np.sqrt(1 + (h * f / fc) ** 4)
-                sig += amp * np.sin(h * ph + rng.uniform(0, 6.28))
-            sig *= level * breathe
-            pan = 0.18 if v % 2 == 0 else 0.82
-            out[0] += sig * np.cos(pan * np.pi / 2)
-            out[1] += sig * np.sin(pan * np.pi / 2)
-    return out * swell(n, FADE) * (0.6 + 0.4 * arc)
+def compose(score):
+    organ_prev, harp_prev, choir_prev = None, None, None
+    pairs = []  # (time, melody, bass) for the outer-voice check
+    table = []
+    for v, var in enumerate(VARIATIONS):
+        dyn = var["dyn"]
+        for b in range(len(GROUND)):
+            bar = v * len(GROUND) + b
+            t0 = bar * BAR
+            bass = midi(GROUND[b])
+            # Ground: low strings in octaves, legato
+            score.note("ground", "strings", bass, t0, BAR * 0.97, vel=0.72 * dyn)
+            score.note("ground", "strings", bass - 12, t0, BAR * 0.97, vel=0.62 * dyn)
+            if var.get("pedal"):
+                score.note("organ", "organ_soft", bass - 12, t0, BAR * 0.98, vel=0.5)
+            # Chords
+            for k, (beat, tones, _label) in enumerate(HARMONY[b]):
+                start = t0 + beat * BEAT
+                end = t0 + (HARMONY[b][k + 1][0] * BEAT if k + 1 < len(HARMONY[b]) else BAR)
+                organ_prev = voice(pcs(tones), organ_prev, 50, 65)
+                if var["organ"]:
+                    for m in organ_prev:
+                        score.note("organ", "organ_soft", m, start, (end - start) * 0.99, vel=var["organ"] * dyn, pan=-0.25)
+                if var["choir"] and var["choir"][b]:
+                    choir_prev = voice(pcs(tones), choir_prev, 55, 69, n=3)
+                    for m in choir_prev:
+                        score.note("choir", "choir_swell", m, start, (end - start) * 0.98, vel=var["choir"][b], pan=0.2)
+            # Harpsichord figuration
+            if var["harp"]:
+                lo, hi = var["harp_range"]
+                steps = 3 if var["harp"] == "pulse" else 6
+                for s in range(steps):
+                    beat = s * 3 / steps
+                    _, tones, _ = chord_at(b, beat)
+                    harp_prev = voice(pcs(tones), harp_prev, lo, hi)
+                    fig = [harp_prev[0], harp_prev[1], harp_prev[2], harp_prev[0] + 12, harp_prev[2], harp_prev[1]] if steps == 6 else harp_prev
+                    m = fig[s]
+                    length = BEAT if steps == 3 else EIGHTH
+                    accent = 1.0 if s == 0 else 0.85
+                    score.note("harpsichord", "harpsichord", m, t0 + beat * BEAT, length * 0.95, vel=0.7 * dyn * accent, pan=0.3)
+            # Melody
+            mel = var["melody"]
+            notes = []
+            if mel and b < var.get("melody_bars", 8):
+                inst, octave, vel = mel
+                for start, length, note in MELODY[b]:
+                    m = midi(note) + octave
+                    legato = 0.98 if inst in ("strings", "choir") else 0.9
+                    if inst == "strings" and length == 1:
+                        legato = 0.8  # repeated notes need a breath to be heard as repeats
+                    score.note(f"lead {inst}", inst, m, t0 + start * EIGHTH, length * EIGHTH * legato, vel=vel * (1.0 if start == 0 else 0.92), pan=0.0)
+                    if var["title"].startswith("IV"):
+                        score.note("lead sparkle", "music_box", m + 12, t0 + start * EIGHTH, length * EIGHTH, vel=0.55, pan=0.15)
+                    notes.append((t0 + start * EIGHTH, m))
+            if var.get("counter"):
+                c = midi(COUNTER[b])
+                score.note("counter", "strings", c, t0, BEAT * 2 * 0.97, vel=0.55)
+                score.note("counter", "strings", c, t0 + 2 * BEAT, BEAT * 0.95, vel=0.48)
+            if b in var["bell"]:
+                score.note("bells", "bells", var["bell"][b], t0 + 0.02, BAR, vel=0.6)
+            # outer voices: every melody onset, and every bar line, against the ground
+            if notes:
+                pairs.append((t0, notes[0][1], bass))
+                pairs += [(t, m, bass) for t, m in notes[1:]]
+            else:
+                pairs.append((t0, None, bass))
+            labels = " ".join(c[2] for c in HARMONY[b])
+            mel_txt = " ".join(name(m, DM) for _, m in notes) if notes else "-"
+            table.append(f"    {bar + 1:2d} {name(bass, DM):4s} {labels:10s} organ {'/'.join(name(m, DM) for m in organ_prev):12s} melody {mel_txt}")
+    return pairs, table
 
 
-def sub_drone(f):
-    n = int((CHORD + FADE) * SR)
-    t = np.arange(n) / SR
-    low = f if f > 45 else f * 2  # keep the weight where speakers can play it
-    sig = 0.55 * np.sin(2 * np.pi * f * t) + 0.8 * np.sin(2 * np.pi * low * t + 1.0) + 0.16 * np.sin(2 * np.pi * low * 2 * t) + 0.06 * np.sin(2 * np.pi * low * 3 * t)
-    sig *= 1 - 0.22 * (0.5 - 0.5 * np.cos(2 * np.pi * t / 6))
-    sig = np.tanh(1.2 * sig) * swell(n, FADE)
-    return np.stack([sig, sig])
+def main():
+    out = sys.argv[1] if len(sys.argv) > 1 else "ambient.wav"
+    if os.path.isdir(out):
+        out = os.path.join(out, "ambient.wav")
+    score = Score(LOOP, loop=True)
+    pairs, table = compose(score)
+    print(f"explore: passacaglia in D minor, 3/4 at {BPM} BPM, {BARS} bars = {LOOP:.3f}s, {score.count} notes", file=sys.stderr)
+    for v, var in enumerate(VARIATIONS):
+        print(f"  variation {var['title']}", file=sys.stderr)
+        print("\n".join(table[v * 8 : v * 8 + 8]), file=sys.stderr)
+    check_outer_voices("explore", pairs)
+    log_samples()
+    levels = {"ground": -3.0, "organ": -1.0, "harpsichord": -1.0, "bells": -12.0, "lead music_box": 0.0, "lead strings": 0.0,
+              "lead harpsichord": 2.0, "lead sparkle": -6.0, "counter": -4.0, "choir": -8.0}
+    sends = {"ground": 0.35, "organ": 0.45, "harpsichord": 0.4, "bells": 1.0, "lead music_box": 0.5, "lead strings": 0.45,
+             "lead harpsichord": 0.4, "lead sparkle": 0.6, "counter": 0.4, "choir": 0.6}
+    eq = {"organ": lowpass(2400, 1), "bells": lowpass(2200, 2), "ground": highpass(40, 2), "choir": lowpass(5000, 1)}
+    sections = [(v["title"][:3].strip(), i * 8 * BAR, (i + 1) * 8 * BAR) for i, v in enumerate(VARIATIONS)]
+    x = mix(score, levels, sends, eq=eq, wet=0.9, sections=sections)
+    x, hits = master(x, EXPLORE_RMS_DB)
+    report("explore", x, hits, loop=True)
+    write(out, x, loop=True)
+    print(f"wrote {out}: {LOOP:.3f}s loop + 1s tail", file=sys.stderr)
 
 
-def bell(m, level):
-    """A soft glass bell: nearly a sine, two slightly detuned copies left and right, with a low octave under it."""
-    n = int(7 * SR)
-    t = np.arange(n) / SR
-    attack = 1 - np.exp(-t / 0.012)
-    out = np.zeros((2, n))
-    for ch, cents in enumerate((-4, 4)):
-        f = hz(m) * 2 ** (cents / 1200)
-        sig = np.sin(2 * np.pi * f * t) * np.exp(-t / 2.0)
-        sig += 0.3 * np.sin(2 * np.pi * 2 * f * t) * np.exp(-t / 1.2)
-        sig += 0.12 * np.sin(2 * np.pi * 3 * f * t) * np.exp(-t / 0.7)
-        sig += 0.05 * np.sin(2 * np.pi * 4 * f * t) * np.exp(-t / 0.4)
-        sig += 0.08 * np.sin(2 * np.pi * 2.76 * f * t) * np.exp(-t / 0.3)
-        sig += 0.3 * np.sin(2 * np.pi * 0.5 * f * t) * np.exp(-t / 2.6) * (1 - np.exp(-t / 0.08))
-        out[ch] = sig * attack * level
-    out[:, -2000:] *= np.linspace(1, 0, 2000)
-    return out
-
-
-def thump(level, pitch=1.0):
-    n = int(1.6 * SR)
-    t = np.arange(n) / SR
-    f = pitch * (44 + 50 * np.exp(-t / 0.05))
-    ph = 2 * np.pi * np.cumsum(f) / SR
-    sig = (np.sin(ph) + 0.35 * np.sin(2 * ph) + 0.1 * np.sin(3 * ph)) * np.exp(-t / 0.32)
-    sig *= 1 - np.exp(-t / 0.004)
-    sig[-2000:] *= np.linspace(1, 0, 2000)
-    return np.stack([sig, sig]) * level
-
-
-def spectrum_filter(x, gain_of_freq):
-    """Filter a whole-loop signal in the frequency domain (circular, so it stays seamless)."""
-    freqs = np.fft.rfftfreq(x.shape[-1], 1 / SR)
-    return np.fft.irfft(np.fft.rfft(x, axis=-1) * gain_of_freq(freqs), x.shape[-1], axis=-1)
-
-
-def cave_air():
-    """Low, slow-moving filtered noise, like air moving through tunnels."""
-    out = np.zeros((2, N))
-    t = np.arange(N) / SR
-    for ch in range(2):
-        noise = rng.standard_normal(N)
-        shape = lambda f: (f / 240) ** 2 / (1 + (f / 240) ** 2) / (1 + (f / 700) ** 4) / np.sqrt(np.maximum(f, 20) / 240)
-        air = spectrum_filter(noise, shape)
-        gust = 0.55 + 0.25 * np.sin(2 * np.pi * 5 * t / LOOP + ch) + 0.2 * np.sin(2 * np.pi * 13 * t / LOOP + 2 * ch)
-        out[ch] = air * gust
-    return out
-
-
-def echo(x, delays=(BEAT * 0.75, BEAT), feedback=0.42):
-    """Feedback echo with a dark tail, a different time on each side."""
-    freqs = np.fft.rfftfreq(N, 1 / SR)
-    w = 2 * np.pi * freqs
-    out = np.zeros_like(x)
-    for ch, d in enumerate(delays):
-        loop = feedback * np.exp(-1j * w * d) / (1 + 1j * freqs / 1800)
-        out[ch] = np.fft.irfft(np.fft.rfft(x[ch]) * (1 + 0.8 * loop / (1 - loop)), N)
-    return out
-
-
-def reverb_ir(seconds=9.0):
-    """A long dark hall: noise that decays slower in the lows than in the highs."""
-    n = int(seconds * SR)
-    t = np.arange(n) / SR
-    freqs = np.fft.rfftfreq(n, 1 / SR)
-    edge = lambda f0: 1 / (1 + (freqs / f0) ** 6)
-    bands = [(0, 400, 7.0, 0.8), (400, 1500, 6.5, 1.0), (1500, 4000, 4.5, 0.8), (4000, 9000, 2.2, 0.4)]
-    ir = np.zeros((2, n))
-    for ch in range(2):
-        spec = np.fft.rfft(rng.standard_normal(n))
-        for lo, hi, rt60, gain in bands:
-            mask = edge(hi) * (1 - edge(lo) if lo else 1)
-            ir[ch] += gain * np.fft.irfft(spec * mask, n) * np.exp(-6.91 * t / rt60)
-    ir *= 1 - np.exp(-t / 0.03)
-    ir = np.concatenate([np.zeros((2, int(0.025 * SR))), ir], axis=1)
-    return ir / np.sqrt((ir**2).sum() / 2)
-
-
-def reverb(x, ir):
-    return np.fft.irfft(np.fft.rfft(x, axis=-1) * np.fft.rfft(ir, N, axis=-1), N, axis=-1)
-
-
-rms = lambda x: np.sqrt((x**2).mean())
-
-pad, sub, bells, thumps = (np.zeros((2, N)) for _ in range(4))
-for k, (name, notes, sub_f, melody) in enumerate(SONG):
-    start = k * CHORD
-    place(pad, pad_chord(notes, bright=1.15 if k >= 4 else 1.0), start - FADE / 2)
-    place(sub, sub_drone(sub_f), start - FADE / 2)
-    for beat, m, level in melody:
-        place(bells, bell(m, level), start + beat * BEAT)
-    for at, level in ((0, 1.0), (6, 0.6)):
-        place(thumps, thump(level), start + at)
-        place(thumps, thump(level * 0.55, 0.92), start + at + 0.36)
-    print(f"  chord {k + 1}/{len(SONG)} {name}", file=sys.stderr)
-air = cave_air()
-bells = echo(bells)
-
-# Balance the parts against each other, then send each into the hall by a different amount.
-LEVEL = {"pad": 1.0, "sub": 0.5, "bells": 0.55, "thumps": 0.3, "air": 0.14}
-SEND = {"pad": 0.4, "sub": 0.0, "bells": 0.9, "thumps": 0.3, "air": 0.35}
-stems = {"pad": pad, "sub": sub, "bells": bells, "thumps": thumps, "air": air}
-dry = np.zeros((2, N))
-to_hall = np.zeros((2, N))
-for name, x in stems.items():
-    x = x * (LEVEL[name] / rms(x))
-    dry += x
-    to_hall += x * SEND[name]
-mix = dry + 0.8 * reverb(to_hall, reverb_ir())
-
-# Master: clear out rumble and fizz, round off peaks, leave headroom.
-mix = spectrum_filter(mix, lambda f: (f / 28) ** 4 / (1 + (f / 28) ** 4) / np.sqrt(1 + (f / 9000) ** 4))
-mix *= 10 ** (-20 / 20) / rms(mix)  # background level, with room above it
-mix = np.tanh(mix / 0.8) * 0.8  # only the rare peak gets rounded
-out = np.concatenate([mix, mix[:, : int(TAIL * SR)]], axis=1)
-dither = (rng.random(out.shape) - rng.random(out.shape)) / 32768
-path = sys.argv[1] if len(sys.argv) > 1 else "ambient.wav"
-wavfile.write(path, SR, np.round((out + dither).T * 32767).clip(-32768, 32767).astype(np.int16))
-print(f"wrote {path}: {LOOP:.0f}s loop + {TAIL:.0f}s tail", file=sys.stderr)
+if __name__ == "__main__":
+    main()

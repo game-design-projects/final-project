@@ -2,9 +2,13 @@ DONJON: CREDITS
 
 Monster AI: Jev, the System One model by TypeSafe (https://typesafe.ai)
 
-Background music (ambient.m4a)
-- Original dark ambient loop made for this game. Fully synthesised by scripts/build-ambient.py,
-  no samples or third-party recordings.
+Music (ambient.m4a, battle-*.m4a, fanfare.m4a, victory.m4a)
+- Original music made for this game, on the game's own melody. Rendered offline by
+  scripts/build-ambient.py, build-battle.py and build-stings.py (the sampler is scripts/sampler.py).
+- Instruments: harpsichord, church organ, string ensemble, choir aahs, music box and tubular bells
+  samples from the MusyngKite soundfont, via gleitz/midi-js-soundfonts. CC BY-SA 3.0:
+  https://creativecommons.org/licenses/by-sa/3.0/
+- Kettle drums and tabor: synthesised in scripts/sampler.py, no samples.
 
 Sound effects: synthesised live in the browser (sfx.js), no samples.
 
