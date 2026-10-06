@@ -1,5 +1,5 @@
 import { SPECIES } from "./species.js";
-import { DIRS, DIR_NAMES, DEPTH, PALETTES, drawCorridor, drawMap, drawTitle, clear } from "./render.js";
+import { DIRS, DIR_NAMES, VIEW, scaleAt, PALETTES, drawCorridor, drawMap, drawTitle, clear } from "./render.js";
 import { drawMonster, SLOTS, SHINY_COLOR, BOSS_COLOR, ART } from "./art.js";
 import { Ambient } from "./ambient.js";
 import { Sfx } from "./sfx.js";
@@ -453,12 +453,13 @@ function drawBossAhead(t) {
   const b = G.map.boss;
   if (!b || b.defeated) return;
   const [fx, fy] = DIRS[G.dir];
-  for (let dd = 1; dd < 4; dd++) {
+  for (let dd = 1; dd <= VIEW; dd++) {
     const cx = G.x + fx * dd;
     const cy = G.y + fy * dd;
     if (G.map.grid[cy]?.[cx] !== 1) return;
     if (cx === b.x && cy === b.y) {
-      const s = (DEPTH[dd] + DEPTH[dd + 1]) / 2;
+      // Standing in the middle of its cell, feet on the floor there
+      const s = scaleAt(dd + 0.5);
       drawMonster(view, b.species, t, 0, { cx: 224, s: s * 0.92, by: 144 + 140 * s }, ART.pixel, { color: BOSS_COLOR });
       return;
     }

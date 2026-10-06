@@ -9,7 +9,18 @@ export const DIRS = [
 export const DIR_NAMES = ["N", "E", "S", "W"];
 
 const INK = "#e8e8e8";
-export const DEPTH = [1, 0.62, 0.38, 0.23, 0.14];
+// Camera: the eye sits EYE cells behind the near edge of your cell (about a 44° field of view),
+// and you see VIEW cells ahead. Size falls off as 1/distance, like a real corridor.
+export const EYE = 1.25;
+export const VIEW = 6;
+export const scaleAt = (z) => EYE / (EYE + z);
+export const DEPTH = Array.from({ length: VIEW + 2 }, (_, d) => scaleAt(d));
+
+// World point -> canvas point. The cell you stand in fills the canvas (less a 4px border) at z = 0.
+export function project(W, H, X, z, Y) {
+  const s = scaleAt(z);
+  return [W / 2 + X * (W - 8) * s, H / 2 + Y * (H - 8) * s];
+}
 
 function frame(W, H, d) {
   const f = DEPTH[d];
@@ -71,8 +82,10 @@ function decorate(ctx, face, kind, t, palette, seed) {
   if (kind === "torch") {
     const f = Math.sin(t / 90 + seed * 40) * 0.012 + Math.sin(t / 37 + seed * 17) * 0.008;
     const [gx, gy] = P(0.5, 0.36);
-    const [ex] = P(0.62, 0.36);
-    const glowR = Math.max(6, Math.abs(ex - gx) * 3.2);
+    // Glow sized by the face's height where the torch hangs, which shrinks properly with distance
+    const [, top] = P(0.5, 0);
+    const [, bottom] = P(0.5, 1);
+    const glowR = Math.max(6, Math.abs(bottom - top) * 0.6);
     const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, glowR);
     glow.addColorStop(0, palette.accent + "55");
     glow.addColorStop(1, palette.accent + "00");
@@ -114,110 +127,187 @@ function decorate(ctx, face, kind, t, palette, seed) {
   ctx.restore();
 }
 
-const lerp = (a, b, t) => a + (b - a) * t;
-// A face as four corners: top-left, top-right, bottom-right, bottom-left -> (u, v) mapper
-const faceOf = (tl, tr, br, bl) => (u, v) => {
-  const top = [lerp(tl[0], tr[0], u), lerp(tl[1], tr[1], u)];
-  const bot = [lerp(bl[0], br[0], u), lerp(bl[1], br[1], u)];
-  return [lerp(top[0], bot[0], v), lerp(top[1], bot[1], v)];
-};
+// ---------------------------------------------------------------- 3D corridor
+// The view is a real perspective projection of the grid. World coordinates, relative to you:
+//   X across (cells, 0 = the middle of your cell, + = right), z ahead (0 = the near edge of your cell),
+//   Y down (-0.5 = ceiling, +0.5 = floor). The eye sits EYE cells behind z = 0.
+// Walls are painted far to near as black-filled faces, so nearer walls hide what is behind them.
 
-// Draws the corridor from (x,y) facing dir. Returns the cells that were visible (for the automap).
+// The surrounding cells, relative to you: d steps ahead, k steps to the right.
+const cellAt = (x, y, dir, d, k) => {
+  const [fx, fy] = DIRS[dir];
+  const [rx, ry] = DIRS[(dir + 1) % 4];
+  return [x + fx * d + rx * k, y + fy * d + ry * k];
+};
+const isOpen = (map, [cx, cy]) => map.grid[cy]?.[cx] === 1;
+// How many cells to each side can fall inside the view at the far end
+const REACH = Math.ceil((0.5 * (EYE + VIEW + 1)) / EYE);
+// Outer columns first, then inward: within one row, an inner wall may overlap an outer one, never the reverse
+const COLUMNS = [...Array.from({ length: REACH }, (_, i) => [-(REACH - i), REACH - i]).flat(), 0];
+
+// Every face to draw, in painting order (far to near). Pure: no canvas, so it can be tested.
+// front: the wall cell's face toward you, at z = d. side: its face toward your column, from z = d to d + 1.
+// `wall` is the wall cell and `from` the floor cell it is seen from (the pair keys its decoration).
+export function corridorFaces(map, x, y, dir) {
+  const faces = [];
+  for (let d = VIEW; d >= 0; d--) {
+    for (const k of COLUMNS) {
+      const here = cellAt(x, y, dir, d, k);
+      if (isOpen(map, here)) {
+        if (map.stairs.x === here[0] && map.stairs.y === here[1]) faces.push({ type: "stairs", d, k, wall: here, from: here });
+        continue;
+      }
+      const inner = k < 0 ? k + 1 : k - 1;
+      if (k !== 0) {
+        const beside = cellAt(x, y, dir, d, inner);
+        if (isOpen(map, beside)) faces.push({ type: "side", d, k, wall: here, from: beside });
+      }
+      if (d > 0) {
+        const before = cellAt(x, y, dir, d - 1, k);
+        if (isOpen(map, before)) faces.push({ type: "front", d, k, wall: here, from: before });
+      }
+    }
+  }
+  return faces;
+}
+
+// Floor cells you can actually see from here (for the automap): a ray from the eye must reach some
+// part of the cell through open floor only, and the cell must be inside the view.
+export function visibleCells(map, x, y, dir) {
+  const out = [];
+  const openRel = (X, z) => isOpen(map, cellAt(x, y, dir, Math.floor(z), Math.round(X)));
+  const sees = (tx, tz) => {
+    if (Math.abs(tx) > (0.5 * (EYE + tz)) / EYE) return false; // off the side of the screen
+    const steps = Math.ceil(tz / 0.08);
+    for (let i = 0; i < steps; i++) {
+      const z = (tz * i) / steps;
+      const X = (tx * (EYE + z)) / (EYE + tz);
+      if (!openRel(X, z)) return false;
+    }
+    return true;
+  };
+  for (let d = 0; d <= VIEW; d++) {
+    for (let k = -REACH; k <= REACH; k++) {
+      const c = cellAt(x, y, dir, d, k);
+      if (!isOpen(map, c)) continue;
+      const samples = [[k, d + 0.5], [k - 0.4, d + 0.1], [k + 0.4, d + 0.1], [k - 0.4, d + 0.9], [k + 0.4, d + 0.9]];
+      if ((d === 0 && k === 0) || samples.some(([sx, sz]) => sees(sx, sz))) out.push(c);
+    }
+  }
+  return out;
+}
+
+// A face's (u, v) -> screen mapper, perspective-correct: u runs left to right as you see the face,
+// v from its top (0) to its bottom (1).
+export function faceMapper(W, H, face) {
+  const { d, k } = face;
+  if (face.type === "front") return (u, v) => project(W, H, k - 0.5 + u, d, v - 0.5);
+  const X = k < 0 ? k + 0.5 : k - 0.5;
+  // A wall on your left reads near-to-far left to right; one on your right, far-to-near
+  return (u, v) => project(W, H, X, k < 0 ? d + u : d + 1 - u, v - 0.5);
+}
+
+// Lines fade with distance, like torchlight that doesn't reach far
+const fog = (z) => Math.max(0.15, Math.min(1, 1.15 - z * 0.16));
+const alpha = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, "0");
+
+function paintFace(ctx, W, H, face, palette) {
+  const P = faceMapper(W, H, face);
+  const pts = [P(0, 0), P(1, 0), P(1, 1), P(0, 1)];
+  const outline = new Path2D();
+  pts.forEach(([px, py], i) => (i ? outline.lineTo(px, py) : outline.moveTo(px, py)));
+  outline.closePath();
+  P.outline = outline;
+  ctx.fillStyle = "#000";
+  ctx.fill(outline);
+  if (face.type === "front") ctx.strokeStyle = alpha(palette.wall, fog(face.d));
+  else {
+    // A side wall spans a whole cell of depth, so its lines fade along it
+    const zl = face.k < 0 ? face.d : face.d + 1;
+    const zr = face.k < 0 ? face.d + 1 : face.d;
+    const g = ctx.createLinearGradient(pts[0][0], 0, pts[1][0], 0);
+    g.addColorStop(0, alpha(palette.wall, fog(zl)));
+    g.addColorStop(1, alpha(palette.wall, fog(zr)));
+    ctx.strokeStyle = g;
+  }
+  ctx.lineWidth = face.d >= 3 ? 1.5 : 2;
+  ctx.stroke(outline);
+  return P;
+}
+
+// Stairs down: a hole in the floor, steps dropping away inside it.
+function paintStairs(ctx, W, H, { d, k }, palette) {
+  const at = (X, z, Y = 0.5) => project(W, H, X, z, Y);
+  const [x0, x1, z0, z1] = [k - 0.38, k + 0.38, d + 0.08, d + 0.92];
+  const rim = [at(x0, z0), at(x1, z0), at(x1, z1), at(x0, z1)];
+  ctx.save();
+  ctx.strokeStyle = alpha(palette.wall, fog(d + 0.5));
+  ctx.lineWidth = d >= 3 ? 1 : 1.5;
+  ctx.beginPath();
+  rim.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+  ctx.closePath();
+  ctx.fillStyle = "#000";
+  ctx.fill();
+  ctx.stroke();
+  ctx.clip();
+  // Each step a little lower and a little narrower than the one before, so the hole reads as going down.
+  // Steps in the accent color: from the floor at a grazing angle the hole is thin, and it has to stand out.
+  ctx.strokeStyle = alpha(palette.accent, fog(d + 0.5));
+  for (let i = 1; i <= 4; i++) {
+    const z = z1 - (i / 5) * (z1 - z0);
+    const inset = i * 0.02;
+    const [ax, ay] = at(x0 + inset, z, 0.5 + i * 0.012);
+    const [bx, by] = at(x1 - inset, z, 0.5 + i * 0.012);
+    line(ctx, ax, ay, bx, by);
+  }
+  ctx.restore();
+}
+
+// Draws the view from (x,y) facing dir. Returns the floor cells you can see (for the automap).
 // `t` animates torch flames.
+const seenCache = new WeakMap();
 export function drawCorridor(ctx, map, x, y, dir, t = 0) {
   const { width: W, height: H } = ctx.canvas;
   const palette = map.palette ?? PALETTES[0];
   clear(ctx);
-  ctx.strokeStyle = palette.wall;
-  ctx.lineWidth = 2;
-  const seen = [];
-  const [fx, fy] = DIRS[dir];
-  const [lx, ly] = DIRS[(dir + 3) % 4];
-  const [rx, ry] = DIRS[(dir + 1) % 4];
-  const open = (cx, cy) => map.grid[cy]?.[cx] === 1;
   // A decoration, if this wall face (wall cell seen from floor cell) has one
-  const decorFor = (wx, wy, cx, cy) => {
+  const decorFor = ([wx, wy], [cx, cy]) => {
     const r = hash(wx, wy, cx, cy, map.seed ?? 0);
     return r < 0.32 ? { kind: DECOR[Math.floor(hash(wy, wx, map.seed ?? 0, 7) * DECOR.length)], seed: r } : null;
   };
-  const decor = [];
 
-  const outer = frame(W, H, 0);
-  ctx.strokeRect(outer.l + 0.5, outer.t + 0.5, outer.r - outer.l, outer.b - outer.t);
-
-  for (let d = 0; d < 4; d++) {
-    const cx = x + fx * d;
-    const cy = y + fy * d;
-    if (!open(cx, cy)) break;
-    seen.push([cx, cy]);
-    const near = frame(W, H, d);
-    const far = frame(W, H, d + 1);
-
-    // Left side
-    if (open(cx + lx, cy + ly)) {
-      seen.push([cx + lx, cy + ly]);
-      line(ctx, near.l, far.t, far.l, far.t);
-      line(ctx, near.l, far.b, far.l, far.b);
-      if (d > 0) line(ctx, near.l, far.t, near.l, far.b);
-    } else {
-      line(ctx, near.l, near.t, far.l, far.t);
-      line(ctx, near.l, near.b, far.l, far.b);
-      const dec = decorFor(cx + lx, cy + ly, cx, cy);
-      if (dec) decor.push([faceOf([near.l, near.t], [far.l, far.t], [far.l, far.b], [near.l, near.b]), dec]);
-    }
-    line(ctx, far.l, far.t, far.l, far.b);
-
-    // Right side
-    if (open(cx + rx, cy + ry)) {
-      seen.push([cx + rx, cy + ry]);
-      line(ctx, near.r, far.t, far.r, far.t);
-      line(ctx, near.r, far.b, far.r, far.b);
-      if (d > 0) line(ctx, near.r, far.t, near.r, far.b);
-    } else {
-      line(ctx, near.r, near.t, far.r, far.t);
-      line(ctx, near.r, near.b, far.r, far.b);
-      const dec = decorFor(cx + rx, cy + ry, cx, cy);
-      if (dec) decor.push([faceOf([far.r, far.t], [near.r, near.t], [near.r, near.b], [far.r, far.b]), dec]);
-    }
-    line(ctx, far.r, far.t, far.r, far.b);
-
-    if (map.stairs.x === cx && map.stairs.y === cy) drawStairs(ctx, near, far);
-
-    if (!open(cx + fx, cy + fy)) {
-      line(ctx, far.l, far.t, far.r, far.t);
-      line(ctx, far.l, far.b, far.r, far.b);
-      const dec = decorFor(cx + fx, cy + fy, cx, cy);
-      if (dec) decor.push([faceOf([far.l, far.t], [far.r, far.t], [far.r, far.b], [far.l, far.b]), dec]);
-      break;
-    }
-  }
-  // Decorations last, nearest first is fine: they never overlap across faces
-  ctx.lineWidth = 1.5;
-  for (const [face, dec] of decor) decorate(ctx, face, dec.kind, t, palette, dec.seed);
-  ctx.lineWidth = 2;
-  return seen;
-}
-
-// A hole in the floor with steps going down.
-function drawStairs(ctx, near, far) {
   ctx.save();
-  ctx.strokeStyle = ctx.strokeStyle;
-  const inset = (a, b, t) => a + (b - a) * t;
-  const y1 = inset(near.b, far.b, 0.25);
-  const y2 = inset(near.b, far.b, 0.8);
-  const lx1 = inset(near.l, far.l, 0.25) + (far.r - far.l) * 0.18;
-  const rx1 = inset(near.r, far.r, 0.25) - (far.r - far.l) * 0.18;
-  const lx2 = inset(near.l, far.l, 0.8) + (far.r - far.l) * 0.2;
-  const rx2 = inset(near.r, far.r, 0.8) - (far.r - far.l) * 0.2;
-  line(ctx, lx1, y1, rx1, y1);
-  line(ctx, lx2, y2, rx2, y2);
-  line(ctx, lx1, y1, lx2, y2);
-  line(ctx, rx1, y1, rx2, y2);
-  for (let i = 1; i < 4; i++) {
-    const t = i / 4;
-    line(ctx, inset(lx1, lx2, t), inset(y1, y2, t), inset(rx1, rx2, t), inset(y1, y2, t));
+  ctx.beginPath();
+  ctx.rect(4, 4, W - 8, H - 8);
+  ctx.clip();
+  for (const face of corridorFaces(map, x, y, dir)) {
+    if (face.type === "stairs") {
+      paintStairs(ctx, W, H, face, palette);
+      continue;
+    }
+    const P = paintFace(ctx, W, H, face, palette);
+    const dec = decorFor(face.wall, face.from);
+    if (!dec) continue;
+    // Decorations go on with their wall, so nearer walls still cover them, and stay inside it (a torch's glow
+    // must not leak around the corner of the wall that hides it)
+    ctx.save();
+    ctx.clip(P.outline);
+    ctx.strokeStyle = palette.wall;
+    ctx.globalAlpha = fog(face.d + (face.type === "side" ? 0.5 : 0));
+    ctx.lineWidth = face.d >= 2 ? 1 : 1.5;
+    decorate(ctx, P, dec.kind, t, palette, dec.seed);
+    ctx.restore();
   }
   ctx.restore();
+
+  ctx.strokeStyle = palette.wall;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(4.5, 4.5, W - 8, H - 8);
+
+  const key = `${x},${y},${dir}`;
+  let cached = seenCache.get(map);
+  if (cached?.key !== key) seenCache.set(map, (cached = { key, cells: visibleCells(map, x, y, dir) }));
+  return cached.cells;
 }
 
 export function drawMap(ctx, map, seen, visited, x, y, dir) {
