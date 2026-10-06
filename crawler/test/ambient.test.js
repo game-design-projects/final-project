@@ -1,7 +1,7 @@
 // Music mood switching (explore <-> battle), against a fake Web Audio graph: run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Ambient, TRACKS, FADES, PACE, STINGS } from "../public/ambient.js";
+import { Ambient, TRACKS, FADES, PACE, STINGS, BATTLE_LOOPS } from "../public/ambient.js";
 
 // Just enough of AudioContext to record what the player schedules
 class FakeParam {
@@ -60,12 +60,13 @@ function fakeTimer() {
   };
 }
 
-function started() {
+function started({ random = () => 0.5 } = {}) {
   const timer = fakeTimer();
-  const music = new Ambient({ timer, random: () => 0.5 });
+  const music = new Ambient({ timer, random });
   music.ctx = new FakeCtx();
   music.master = music.ctx.createGain();
-  music.buffers = { explore: { name: "explore" }, battle: { name: "battle" }, fanfare: { name: "fanfare", duration: 3.6 }, victory: { name: "victory", duration: 2.2 } };
+  music.buffers = { explore: { name: "explore" }, fanfare: { name: "fanfare", duration: 3.6 }, victory: { name: "victory", duration: 2.2 } };
+  for (const v of TRACKS.battle.variants) music.buffers[`battle:${v.name}`] = { name: `battle:${v.name}` };
   music.exploreIn(4);
   return music;
 }
@@ -75,7 +76,7 @@ test("a fight fades the battle loop in fast and the ambient out", () => {
   const music = started();
   music.setMood("battle");
   const { battle, explore } = music.voices;
-  assert.equal(battle.src.buffer.name, "battle");
+  assert.match(battle.src.buffer.name, /^battle:/);
   assert.deepEqual(battle.gain.gain.ramps.at(-1), [TRACKS.battle.volume, 10 + FADES.battle.in]);
   assert.deepEqual(explore.gain.gain.ramps.at(-1), [0, 10 + FADES.explore.out]);
   assert.equal(explore.src.stoppedAt, undefined, "the ambient keeps its place under the fight");
@@ -118,10 +119,36 @@ test("the ambient comes and goes: a stretch of music, then a stretch of quiet", 
   assert.equal(level(music, "explore"), TRACKS.explore.volume, "and comes back");
 });
 
-test("a fight cancels the ambient's comings and goings", () => {
+test("a fight cancels the ambient's comings and goings; only the battle loop change is pending", () => {
   const music = started();
   music.setMood("battle");
-  assert.deepEqual(music.timer.pending, []);
+  assert.deepEqual(music.timer.pending, [music.battle.loopSeconds * BATTLE_LOOPS * 1000]);
+});
+
+test("each fight picks a battle loop at random, never the same one twice in a row", () => {
+  let r = 0;
+  const seq = [0.1, 0.1, 0.9, 0.5, 0.5, 0.3, 0.7, 0.2];
+  const music = started({ random: () => seq[r++ % seq.length] });
+  const heard = [];
+  for (let i = 0; i < 8; i++) {
+    music.setMood("battle");
+    heard.push(music.battle.name);
+    music.setMood("explore");
+  }
+  for (let i = 1; i < heard.length; i++) assert.notEqual(heard[i], heard[i - 1], `fight ${i} repeated ${heard[i]}`);
+  assert.ok(new Set(heard).size >= 3, `only heard ${[...new Set(heard)]}`);
+});
+
+test("a long fight moves on to another loop after it has gone round twice, crossfading", () => {
+  const music = started();
+  music.setMood("battle");
+  const first = music.battle;
+  const firstVoice = music.voices.battle;
+  music.timer.advance(first.loopSeconds * BATTLE_LOOPS * 1000);
+  assert.notEqual(music.battle, first);
+  assert.notEqual(music.voices.battle, firstVoice);
+  assert.deepEqual(firstVoice.gain.gain.ramps.at(-1)[0], 0, "the old loop fades out");
+  assert.equal(music.voices.battle.gain.gain.ramps.at(-1)[0], TRACKS.battle.volume, "the new one fades in");
 });
 
 test("the stairs fanfare silences the ambient and leaves quiet after it", () => {
@@ -154,6 +181,7 @@ test("mood changes before the music starts are remembered, not played", () => {
   assert.deepEqual(music.voices, {});
 });
 
-test("the battle loop length matches the render: 16 bars at 152 BPM", () => {
-  assert.ok(Math.abs(TRACKS.battle.loopSeconds - 25.263) < 0.001);
+test("battle loop lengths match the renders: 16 bars at each tempo", () => {
+  const want = { heroic: 25.263, fury: 23.415, march: 29.091, gallop: 21.818 };
+  for (const v of TRACKS.battle.variants) assert.ok(Math.abs(v.loopSeconds - want[v.name]) < 0.001, v.name);
 });

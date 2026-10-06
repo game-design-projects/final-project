@@ -198,7 +198,16 @@ The music follows the moment (`public/ambient.js`). **P** turns it on and off.
 
 **Exploring: `public/ambient.m4a`**, a 96-second dark ambient loop: a warm low pad drifting between minor chords a third apart (Dm, B♭m, F♯m, ending on a tense A7♭9 that falls back to Dm), a sub drone, a soft glass-bell melody with echo, a distant heartbeat thump and cave air, all in a long dark reverb. It comes and goes: about a minute and a half of music, then a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it.
 
-**Fights: `public/battle.m4a`**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums. The tune is the game's own melody (A B C D D D E D E D C C C D D D, see *Older notes* below) moved from A minor into D major, D E F♯ G G G · A G A G · F♯ F♯ F♯ · G G G over I–IV–vi–V7, played twice, then lifted into B♭ and C before an A7 swings it back to D. It cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place. Each fight starts the loop from bar one.
+**Fights: four 8-bit loops, picked at random** (`public/battle-*.m4a`), all built on the game's own melody (A B C D D D E D E D C C C D D D, see *Older notes* below) with a pulse-wave lead and ping-pong echo, a pulse arpeggio, a triangle bass and noise drums:
+
+| Loop | Key and route | Tempo | Feel |
+| --- | --- | --- | --- |
+| heroic | D major, twice, then lifted into B♭ and C | 152 BPM | rock beat, octave bass |
+| fury | E minor (the melody's own minor colour), through C and D | 164 BPM | four-on-the-floor kick |
+| march | F major, through D minor and B♭ | 132 BPM | snare march, reedy narrow-pulse lead |
+| gallop | A major, through F and G | 176 BPM | galloping kick, thin lead |
+
+Each fight picks one at random, never the one you heard last, and after it has gone round twice it crossfades into another, so a long fight doesn't loop the same tune. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
 
 **Good news: one-shot cues** in the same 8-bit voice. `fanfare.m4a`, the melody's opening rushed up to a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet. `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). After a fight the dungeon stays quiet for ten seconds before the ambient may return.
 
@@ -206,12 +215,14 @@ Every track is synthesised from scratch in Python (numpy and scipy, no samples).
 
 ```bash
 python3 crawler/scripts/build-ambient.py /tmp/ambient.wav
-python3 crawler/scripts/build-battle.py /tmp/battle.wav
+python3 crawler/scripts/build-battle.py /tmp                 # battle-heroic/fury/march/gallop.wav
 python3 crawler/scripts/build-stings.py /tmp                 # fanfare.wav and victory.wav
-for n in ambient battle fanfare victory; do afconvert -f m4af -d aac -b 160000 /tmp/$n.wav crawler/public/$n.m4a; done
+for n in ambient battle-heroic battle-fury battle-march battle-gallop fanfare victory; do
+  afconvert -f m4af -d aac -b 160000 /tmp/$n.wav crawler/public/$n.m4a
+done
 ```
 
-Loop files hold one loop plus a repeat of its first second, so the player loops inside the file and the encoder's padding at the edges is never heard. If you change the battle loop's length, update `TRACKS.battle.loopSeconds` in `public/ambient.js`.
+Loop files hold one loop plus a repeat of its first second, so the player loops inside the file and the encoder's padding at the edges is never heard. If you change a battle loop's tempo or length, update its `loopSeconds` in `TRACKS.battle.variants` (`public/ambient.js`); a test checks they match.
 
 **The beat maker and its engine are separate now.** The dungeon no longer plays what follows; it is still there for `beatmaker.html`.
 

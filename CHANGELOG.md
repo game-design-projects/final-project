@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 - Fights have their own music, built on the game's own melody (A B C D D D E D E D C C C D D D) moved into D major and lifted through B♭ and C: a bright, driving 8-bit loop (`battle.m4a`, rendered by `scripts/build-battle.py`) crossfades in when a fight starts, and the dark ambient comes back when it ends. No more creepy ambient under combat.
+- Four battle loops instead of one, each the melody in a different key, mode, tempo and groove (heroic D major, fury E minor, march F major, gallop A major). Each fight picks one at random, never the last one, and a long fight crossfades into another after two times round.
 - The dark ambient no longer plays nonstop: about 90 seconds of music, then a minute or two of quiet, then it drifts back.
 - You see 6 cells ahead instead of 4, with lines fading into the dark with distance.
 - Stairs down are larger and drawn in the floor's accent color so they stand out from a distance.

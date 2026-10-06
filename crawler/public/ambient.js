@@ -1,7 +1,9 @@
 // The game's music. Two pre-rendered loops crossfaded by mood, plus one-shot stings for good moments.
 //   explore: ambient.m4a, the dark dungeon ambient (scripts/build-ambient.py). It does not play nonstop:
 //            a stretch of music, then a stretch of quiet, like a mood that comes and goes.
-//   battle:  battle.m4a, a bright, driving 8-bit fight loop (scripts/build-battle.py)
+//   battle:  battle-*.m4a, four bright 8-bit fight loops on the game's melody in different keys, tempos and
+//            grooves (scripts/build-battle.py). A fight picks one at random (never the last one), and after
+//            two times round it crossfades into another, so no single tune wears out.
 //   stings:  fanfare.m4a when you go down the stairs, victory.m4a when you win a fight (scripts/build-stings.py)
 // Each loop file holds one loop plus a repeat of its first second, so we loop inside it and the
 // encoder's padding at the file's edges is never heard.
@@ -10,8 +12,20 @@ const LOOP_START = 0.25;
 export const TRACKS = {
   // volume evens out the renders: the 8-bit cues are mastered ~10 dB hotter than the ambient
   explore: { url: "ambient.m4a", loopSeconds: 96, volume: 0.9 },
-  battle: { url: "battle.m4a", loopSeconds: (16 * 8 * 30) / 152, volume: 0.35 },
+  battle: {
+    volume: 0.35,
+    // 16 bars of 8 eighths at each tempo
+    variants: [
+      { name: "heroic", url: "battle-heroic.m4a", loopSeconds: 3840 / 152 },
+      { name: "fury", url: "battle-fury.m4a", loopSeconds: 3840 / 164 },
+      { name: "march", url: "battle-march.m4a", loopSeconds: 3840 / 132 },
+      { name: "gallop", url: "battle-gallop.m4a", loopSeconds: 3840 / 176 },
+    ],
+  },
 };
+// How many times a battle loop goes round before the fight moves on to another
+export const BATTLE_LOOPS = 2;
+const BATTLE_SWAP_FADE = 1.5;
 export const STINGS = {
   fanfare: { url: "fanfare.m4a", volume: 0.4 },
   victory: { url: "victory.m4a", volume: 0.35 },
@@ -38,7 +52,9 @@ export class Ambient {
     this.mood = "explore";
     this.buffers = {};
     this.voices = {}; // track -> { src, gain } while playing
-    this.next = null; // the pending explore play/rest switch
+    this.next = null; // the pending explore play/rest switch, or battle loop change
+    this.battle = null; // the battle variant playing (or about to)
+    this.lastBattle = null;
   }
 
   // Must be called from a user gesture (browsers block audio otherwise).
@@ -54,16 +70,19 @@ export class Ambient {
     // Load the ambient first so it starts quickly; the rest load behind it
     this.loading ??= this.load("explore").then(() => {
       if (this.mood === "explore") this.exploreIn(FIRST_FADE_IN);
-      else this.play(this.mood, FADES[this.mood].in);
-      for (const name of ["battle", ...Object.keys(this.stings)]) this.load(name).catch((err) => console.warn(`music: ${name}`, err));
+      else this.battleIn(FADES.battle.in);
+      const rest = [...this.tracks.battle.variants.map((v) => `battle:${v.name}`), ...Object.keys(this.stings)];
+      for (const name of rest) this.load(name).catch((err) => console.warn(`music: ${name}`, err));
     });
     await Promise.all([this.loading, resumed]);
     if (!this.on) this.ctx.suspend(); // switched off while the track was still downloading
   }
 
+  // name: "explore", "battle:<variant>", or a sting
   async load(name) {
     if (!this.buffers[name]) {
-      const url = (this.tracks[name] ?? this.stings[name]).url;
+      const variant = name.startsWith("battle:") && this.tracks.battle.variants.find((v) => `battle:${v.name}` === name);
+      const url = (variant || this.tracks[name] || this.stings[name]).url;
       const data = await (await fetch(url)).arrayBuffer();
       this.buffers[name] = await this.ctx.decodeAudioData(data);
     }
@@ -80,8 +99,7 @@ export class Ambient {
     this.fadeOut(was, FADES[was].out);
     if (mood === "explore") return this.restFor(PACE.afterFight);
     this.cancelNext();
-    if (this.buffers[mood]) this.play(mood, FADES[mood].in);
-    else this.load(mood).then(() => this.mood === mood && this.play(mood, FADES[mood].in)).catch((err) => console.warn("music:", err));
+    this.battleIn(FADES.battle.in);
   }
 
   // A one-shot cue for good news. Whatever is playing gets out of its way, then quiet for a while.
@@ -98,6 +116,32 @@ export class Ambient {
     src.connect(gain);
     src.start(now + 0.15);
     if (this.mood === "explore") this.restFor(this.buffers[name].duration + PACE.afterSting);
+  }
+
+  // ---- battle: a random loop per fight, moving on to another after BATTLE_LOOPS times round
+
+  pickBattle() {
+    const all = this.tracks.battle.variants;
+    const fresh = all.filter((v) => v !== this.lastBattle);
+    // Prefer one that's already loaded, so the fight's music starts at once
+    const ready = fresh.filter((v) => this.buffers[`battle:${v.name}`]);
+    const pool = ready.length ? ready : fresh.length ? fresh : all;
+    return pool[Math.floor(this.random() * pool.length)];
+  }
+
+  battleIn(fade, v = this.pickBattle()) {
+    this.battle = this.lastBattle = v;
+    const key = `battle:${v.name}`;
+    if (!this.buffers[key]) {
+      this.load(key)
+        .then(() => this.mood === "battle" && this.battle === v && this.battleIn(fade, v))
+        .catch((err) => console.warn("music:", err));
+      return;
+    }
+    console.debug(`music: battle loop ${v.name}`);
+    this.fadeOut("battle", fade); // the loop it replaces, if any
+    this.startLoop("battle", this.buffers[key], v.loopSeconds, this.tracks.battle.volume, fade);
+    this.schedule(v.loopSeconds * BATTLE_LOOPS, () => this.mood === "battle" && this.battleIn(BATTLE_SWAP_FADE));
   }
 
   // ---- the explore rhythm: play a stretch, rest a stretch
@@ -134,17 +178,16 @@ export class Ambient {
 
   // ---- voices
 
+  // The ambient keeps its place while silent and comes back from there
   play(track, fade) {
-    const buffer = this.buffers[track];
-    if (!buffer) return;
-    const now = this.ctx.currentTime;
+    if (!this.buffers[track]) return;
     const { volume, loopSeconds } = this.tracks[track];
+    this.startLoop(track, this.buffers[track], loopSeconds, volume, fade);
+  }
+
+  startLoop(track, buffer, loopSeconds, volume, fade) {
+    const now = this.ctx.currentTime;
     let v = this.voices[track];
-    // The ambient keeps its place while silent and comes back from there; a fight always starts at bar one
-    if (v && track === "battle") {
-      v.src.stop(now + fade);
-      v = null;
-    }
     if (!v) {
       const gain = this.ctx.createGain();
       gain.gain.setValueAtTime(0, now);
@@ -170,7 +213,7 @@ export class Ambient {
     v.gain.gain.cancelScheduledValues(now);
     v.gain.gain.setValueAtTime(v.gain.gain.value, now);
     v.gain.gain.linearRampToValueAtTime(0, now + fade);
-    // The fight track stops once silent; the ambient idles at zero so it can come back where it was
+    // A battle loop stops once silent (each fight starts a loop from bar one); the ambient idles at zero
     if (track === "battle") {
       v.src.stop(now + fade + 0.05);
       delete this.voices[track];
