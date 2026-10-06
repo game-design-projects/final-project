@@ -208,33 +208,38 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 The music follows the moment (`public/ambient.js`). **P** turns it on and off.
 
-**Exploring: `public/ambient.m4a`**, a 96-second dark ambient loop: a warm low pad drifting between minor chords a third apart (Dm, B♭m, F♯m, ending on a tense A7♭9 that falls back to Dm), a sub drone, a soft glass-bell melody with echo, a distant heartbeat thump and cave air, all in a long dark reverb. It comes and goes: about a minute and a half of music, then a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it. It fades in over two seconds, two seconds after a fight ends.
+All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: one small band of real samples (harpsichord, church organ, strings, choir, music box and tubular bells, from the MusyngKite soundfont) plus synthesised kettle drums and a tabor, all in the same stone hall. Every piece is built on the game's own melody, **A B C D D D E D E D C C C D D D**, with its repeated notes short-short-long.
 
-**Fights: four 8-bit loops, picked at random** (`public/battle-*.m4a`), all built on the game's own melody (A B C D D D E D E D C C C D D D, see *Older notes* below) with a pulse-wave lead and ping-pong echo, a pulse arpeggio, a triangle bass and noise drums:
+**Exploring: `public/ambient.m4a`**, a passacaglia in D minor: 112.5 seconds, 3/4 at 64 BPM, five variations on an eight-bar ground bass (the lament D C B♭ A, then B♭ A D A). The melody lies over it note for note (Dm | C | B♭ | F/A | Gm/B♭ | A7 | Dm | A) and comes and goes. Variation I has no melody, only organ, low strings, harpsichord and a far bell. Then the melody passes to the music box, the strings, and the harpsichord over a swelling choir, and in the last variation a fragment on high strings while the texture thins back to the start. The ambient also comes and goes in time: about a minute and a half of music, then a minute or two of quiet before it drifts back. It fades in over two seconds, two seconds after a fight ends.
 
-| Loop | Key and route | Tempo | Feel |
+**Fights: four toccata-style loops, picked at random** (`public/battle-*.m4a`). Each is 16 bars: the melody in the minor, again coming home with a string run, lifted into the relative major on a second lead, then everyone together.
+
+| Loop | Key, tempo | Lead (and the major lift) | Groove |
 | --- | --- | --- | --- |
-| heroic | D major, twice, then lifted into B♭ and C | 124 BPM | rock beat, octave bass |
-| fury | E minor (the melody's own minor colour), through C and D | 132 BPM | four-on-the-floor kick |
-| march | F major, through D minor and B♭ | 112 BPM | snare march, reedy narrow-pulse lead |
-| gallop | A major, through F and G | 120 BPM | galloping kick, thin lead |
+| toccata | D minor, 132 BPM | organ (strings, F major) | harpsichord 16ths against a pedal note, pumping bass, strings marcato |
+| charge | A minor, 126 BPM | strings (choir, C major) | harpsichord arpeggios, organ chords, driving kettle drums |
+| crusade | G minor, 112 BPM | choir (strings, B♭ major) | full organ, chugging strings, kettle drums and tabor in march time |
+| gallop | E minor, 120 BPM | harpsichord (organ, G major) | galloping strings, kettle drums and tabor |
 
-None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and after it has gone round twice it crossfades into another, so a long fight doesn't loop the same tune. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
+None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and keeps it for the whole fight, because switching tunes mid-fight was jarring. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
 
-**Good news: one-shot cues** in the same 8-bit voice. `fanfare.m4a`, the melody's opening rushed up to a high D major chord, plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). 
+**Good news: one-shot cues** by the same band. `fanfare.m4a` (3.9 s) plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.m4a` (2.3 s) plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). Both quote the melody's opening in D major (D E F♯ G G G) and land on a IV6–V7–I cadence with bells.
 
-Every track is synthesised from scratch in Python (numpy and scipy, no samples). The notes, chords and mix levels are tables at the top of each script; the 8-bit voices (pulse, triangle, kick, noise hits) live in `scripts/chip.py`. To change one and rebuild:
+**Levels.** The renders are mastered to −19 dBFS RMS (explore) and −17 dBFS RMS (fights and stings). The volumes in `TRACKS`/`STINGS` (0.7 and 0.75) put a fight at about −19.5 dB, as loud against the sound effects as the music it replaced, with exploring about 2.6 dB under it. Total music is about 5 MB.
+
+**How it's made.** `scripts/sampler.py` is an offline sampler. It decodes each soundfont key once, fixes the samples' tuning where two pitch estimators agree (the harpsichord runs up to 14 cents sharp), loops long organ, string and choir notes, and renders into a circular timeline so the loop points are seamless. The notes, chords and mix levels are tables at the top of each build script. Each build prints its bar-by-bar chord and melody table, a check of the outer voices for parallel fifths and octaves, the loudness of every part per section, and the peak, RMS, spectrum and loop seam. To change one and rebuild (needs numpy and scipy):
 
 ```bash
-python3 crawler/scripts/build-ambient.py /tmp/ambient.wav
-python3 crawler/scripts/build-battle.py /tmp                 # battle-heroic/fury/march/gallop.wav
-python3 crawler/scripts/build-stings.py /tmp                 # fanfare.wav and victory.wav
-for n in ambient battle-heroic battle-fury battle-march battle-gallop fanfare victory; do
+uv venv /tmp/donjon-music-venv && source /tmp/donjon-music-venv/bin/activate && uv pip install numpy scipy
+python3 crawler/scripts/build-ambient.py /tmp      # ambient.wav
+python3 crawler/scripts/build-battle.py /tmp       # battle-toccata/charge/crusade/gallop.wav
+python3 crawler/scripts/build-stings.py /tmp       # fanfare.wav and victory.wav
+for n in ambient battle-toccata battle-charge battle-crusade battle-gallop fanfare victory; do
   afconvert -f m4af -d aac -b 160000 /tmp/$n.wav crawler/public/$n.m4a
 done
 ```
 
-Loop files hold one loop plus a repeat of its first second, so the player loops inside the file and the encoder's padding at the edges is never heard. If you change a battle loop's tempo or length, update its `loopSeconds` in `TRACKS.battle.variants` (`public/ambient.js`); a test checks they match.
+Loop files hold one loop plus a repeat of its first second, so the player loops inside the file and the encoder's padding at the edges is never heard. If you change a loop's tempo or length, update its `loopSeconds` in `TRACKS` (`public/ambient.js`); tests check they match. The soundfonts stay out of the itch build; only the rendered `.m4a` files ship.
 
 **The beat maker and its engine are separate now.** The dungeon no longer plays what follows; it is still there for `beatmaker.html`.
 
@@ -244,7 +249,7 @@ The game's theme is **Beethoven's Symphony No. 7, Allegretto, bars 3–50**: the
 
 **Older notes:**
 
-`public/music.js`, soundfont samples (FluidR3 GM: warm pad, synth bass, saw lead) plus a synthesized kick for the thumps. Your melody **A B C D D D E D E D C C C D D D** is kept note for note (the battle loop and the fanfares now play it in major keys):
+`public/music.js`, soundfont samples (FluidR3 GM: warm pad, synth bass, saw lead) plus a synthesized kick for the thumps. Your melody **A B C D D D E D E D C C C D D D** is kept note for note:
 - It's set in A minor over **Am | F | Dm | E**.
 - It's given a rhythm (the D-D-D repeats land as short-short-long), and each 4-bar phrase gets an ending (E D C B, then E D C B G#) that pulls back to A.
 - The second phrase lifts to F over the F chord.
