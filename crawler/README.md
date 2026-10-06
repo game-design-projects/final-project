@@ -204,12 +204,12 @@ The music follows the moment (`public/ambient.js`). **P** turns it on and off.
 
 | Loop | Key and route | Tempo | Feel |
 | --- | --- | --- | --- |
-| heroic | D major, twice, then lifted into B♭ and C | 152 BPM | rock beat, octave bass |
-| fury | E minor (the melody's own minor colour), through C and D | 164 BPM | four-on-the-floor kick |
-| march | F major, through D minor and B♭ | 132 BPM | snare march, reedy narrow-pulse lead |
-| gallop | A major, through F and G | 176 BPM | galloping kick, thin lead |
+| heroic | D major, twice, then lifted into B♭ and C | 124 BPM | rock beat, octave bass |
+| fury | E minor (the melody's own minor colour), through C and D | 132 BPM | four-on-the-floor kick |
+| march | F major, through D minor and B♭ | 112 BPM | snare march, reedy narrow-pulse lead |
+| gallop | A major, through F and G | 120 BPM | galloping kick, thin lead |
 
-Each fight picks one at random, never the one you heard last, and after it has gone round twice it crossfades into another, so a long fight doesn't loop the same tune. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
+None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and after it has gone round twice it crossfades into another, so a long fight doesn't loop the same tune. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
 
 **Good news: one-shot cues** in the same 8-bit voice. `fanfare.m4a`, the melody's opening rushed up to a high D major chord, plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). 
 

@@ -16,10 +16,10 @@ export const TRACKS = {
     volume: 0.35,
     // 16 bars of 8 eighths at each tempo
     variants: [
-      { name: "heroic", url: "battle-heroic.m4a", loopSeconds: 3840 / 152 },
-      { name: "fury", url: "battle-fury.m4a", loopSeconds: 3840 / 164 },
-      { name: "march", url: "battle-march.m4a", loopSeconds: 3840 / 132 },
-      { name: "gallop", url: "battle-gallop.m4a", loopSeconds: 3840 / 176 },
+      { name: "heroic", url: "battle-heroic.m4a", loopSeconds: 3840 / 124 },
+      { name: "fury", url: "battle-fury.m4a", loopSeconds: 3840 / 132 },
+      { name: "march", url: "battle-march.m4a", loopSeconds: 3840 / 112 },
+      { name: "gallop", url: "battle-gallop.m4a", loopSeconds: 3840 / 120 },
     ],
   },
 };

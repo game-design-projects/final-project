@@ -5,10 +5,11 @@ Every loop is the game's own melody (A B C D D D E D E D C C C D D D, first writ
 Am | F | Dm | E), moved into other keys and modes, with its own tempo, groove and lead tone. A fight
 picks one at random, and long fights move on to another (public/ambient.js), so no single tune wears out.
 
-  heroic: D major, 152 BPM. Twice in D, then lifted into B-flat and C.
-  fury:   E minor (the melody's own minor colour), 164 BPM, four-on-the-floor kick. Through C and D.
-  march:  F major, 132 BPM, a reedy narrow-pulse lead over a snare march. Through D minor and B-flat.
-  gallop: A major, 176 BPM, galloping kick and a thin lead. Through F and G.
+  heroic: D major, 124 BPM. Twice in D, then lifted into B-flat and C.
+  fury:   E minor (the melody's own minor colour), 132 BPM, four-on-the-floor kick. Through C and D.
+  march:  F major, 112 BPM, a reedy narrow-pulse lead over a snare march. Through D minor and B-flat.
+  gallop: A major, 120 BPM, galloping kick and a thin lead. Through F and G.
+No loop goes faster than 132 BPM.
 
 Chiptune voices, synthesised band-limited (no samples): a pulse-wave lead with a little vibrato and echo,
 a pulse arpeggio, a triangle bass and noise/sine drums (scripts/chip.py). Each render is circular, so its
@@ -42,12 +43,13 @@ CADENCE = [(0, 1, 3), (1, 1, 2), (2, 1, 1), (3, 5, 0)]
 PHRASE_CHORDS = {"maj": [(0, "maj"), (5, "maj"), (9, "min"), (7, "dom7")], "min": [(0, "min"), (8, "maj"), (5, "min"), (7, "dom7")]}
 QUALITY = {"maj": [0, 4, 7], "min": [0, 3, 7], "dom7": [4, 7, 10]}
 
+MAX_BPM = 132  # battle music stays at or under this
 PC = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "Bb": 10}
 VARIANTS = {
-    "heroic": dict(bpm=152, keys=[("D", "maj"), ("D", "maj", "home"), ("Bb", "maj"), ("C", "maj")], duty=0.5, arp="up", drums="rock", bass="octave"),
-    "fury": dict(bpm=164, keys=[("E", "min"), ("E", "min", "home"), ("C", "maj"), ("D", "maj")], duty=0.5, arp="down", drums="drive", bass="octave"),
-    "march": dict(bpm=132, keys=[("F", "maj"), ("F", "maj", "home"), ("D", "min"), ("Bb", "maj")], duty=0.25, arp="broken", drums="march", bass="fifth"),
-    "gallop": dict(bpm=176, keys=[("A", "maj"), ("A", "maj", "home"), ("F", "maj"), ("G", "maj")], duty=0.125, arp="updown", drums="gallop", bass="octave"),
+    "heroic": dict(bpm=124, keys=[("D", "maj"), ("D", "maj", "home"), ("Bb", "maj"), ("C", "maj")], duty=0.5, arp="up", drums="rock", bass="octave"),
+    "fury": dict(bpm=132, keys=[("E", "min"), ("E", "min", "home"), ("C", "maj"), ("D", "maj")], duty=0.5, arp="down", drums="drive", bass="octave"),
+    "march": dict(bpm=112, keys=[("F", "maj"), ("F", "maj", "home"), ("D", "min"), ("Bb", "maj")], duty=0.25, arp="broken", drums="march", bass="fifth"),
+    "gallop": dict(bpm=120, keys=[("A", "maj"), ("A", "maj", "home"), ("F", "maj"), ("G", "maj")], duty=0.125, arp="updown", drums="gallop", bass="octave"),
 }
 # Drum grooves, in eighths within a bar
 DRUMS = {
@@ -67,6 +69,9 @@ def chord(tonic_pc, root, quality):
 def lead_tonic(pc):
     """The key's tonic in the lead's register (G4 to F#5), so every key sits in the same range."""
     return 67 + (pc - 7) % 12
+
+
+assert all(v["bpm"] <= MAX_BPM for v in VARIANTS.values())
 
 
 def compose(spec):

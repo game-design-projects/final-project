@@ -181,7 +181,11 @@ test("mood changes before the music starts are remembered, not played", () => {
   assert.deepEqual(music.voices, {});
 });
 
+test("no battle loop runs faster than 132 BPM", () => {
+  for (const v of TRACKS.battle.variants) assert.ok(3840 / v.loopSeconds <= 132 + 1e-9, `${v.name} is ${(3840 / v.loopSeconds).toFixed(1)} BPM`);
+});
+
 test("battle loop lengths match the renders: 16 bars at each tempo", () => {
-  const want = { heroic: 25.263, fury: 23.415, march: 29.091, gallop: 21.818 };
+  const want = { heroic: 30.968, fury: 29.091, march: 34.286, gallop: 32 };
   for (const v of TRACKS.battle.variants) assert.ok(Math.abs(v.loopSeconds - want[v.name]) < 0.001, v.name);
 });
