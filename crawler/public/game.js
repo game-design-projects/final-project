@@ -482,7 +482,13 @@ function speak(who, line) {
 }
 // Monsters read their lines aloud with the browser's text to speech: on by itself once you've spoken to the
 // game (hold Space), and L turns it on or off for good
-const narrator = new Narrator({ store });
+const narrator = new Narrator({
+  store,
+  onDuck: (on) => {
+    music.duck(on);
+    sfx.duck(on);
+  },
+});
 
 const hurtUntil = {}; // hurt flash window: [until - 300, until)
 function render() {

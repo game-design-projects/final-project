@@ -23,6 +23,8 @@ export const TRACKS = {
     ],
   },
 };
+// Under a monster's spoken line the music drops to this share of its level, quickly, and comes back slowly
+export const DUCK = { level: 0.25, down: 0.15, up: 0.6 };
 // How many times a battle loop goes round before the fight moves on to another
 export const BATTLE_LOOPS = 2;
 const BATTLE_SWAP_FADE = 1.5;
@@ -219,6 +221,16 @@ export class Ambient {
       v.src.stop(now + fade + 0.05);
       delete this.voices[track];
     }
+  }
+
+  // Make room for speech (text to speech can't be turned up, so everything else turns down)
+  duck(on) {
+    if (!this.master) return;
+    const g = this.master.gain;
+    const now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(on ? DUCK.level : 1, now + (on ? DUCK.down : DUCK.up));
   }
 
   stop() {

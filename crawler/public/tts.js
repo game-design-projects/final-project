@@ -49,11 +49,16 @@ export function ttsOn({ choice = null, usedVoice = false } = {}) {
 const MAX_QUEUE = 2; // more than this waiting and the oldest are dropped, so speech keeps up with the fight
 
 export class Narrator {
-  constructor({ synth = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance, store } = {}) {
+  // onDuck(true) when a monster starts speaking, onDuck(false) once it (and any line right after) is done:
+  // speech can't go louder than the browser's full volume, so the music and effects make room instead
+  constructor({ synth = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance, store, onDuck = () => {} } = {}) {
     this.synth = synth;
     this.Utterance = Utterance;
     this.store = store;
-    this.queued = 0;
+    this.onDuck = onDuck;
+    this.queued = 0; // lines waiting or being spoken
+    this.ducked = false;
+    this.gen = 0; // bumped by hush(): late events from cancelled lines are ignored
   }
 
   get supported() {
@@ -86,8 +91,16 @@ export class Narrator {
     if (voice) u.voice = voice;
     u.lang = voice?.lang ?? "en-US";
     Object.assign(u, VOICES[species] ?? DEFAULT_VOICE);
+    u.volume = 1;
     this.queued++;
-    u.onend = u.onerror = () => (this.queued = Math.max(0, this.queued - 1));
+    const gen = this.gen;
+    u.onstart = () => gen === this.gen && this.setDuck(true);
+    // Back up only when nothing else is waiting to be said, so two lines in a row stay ducked
+    u.onend = u.onerror = () => {
+      if (gen !== this.gen) return;
+      this.queued = Math.max(0, this.queued - 1);
+      if (!this.queued) this.setDuck(false);
+    };
     this.synth.speak(u);
     console.debug(`tts: ${species ?? "?"} "${words}"`);
     return u;
@@ -95,7 +108,15 @@ export class Narrator {
 
   // Stop at once (e.g. while the microphone listens, so the game doesn't hear itself)
   hush() {
+    this.gen++;
     this.synth?.cancel();
     this.queued = 0;
+    this.setDuck(false);
+  }
+
+  setDuck(on) {
+    if (on === this.ducked) return;
+    this.ducked = on;
+    this.onDuck(on);
   }
 }

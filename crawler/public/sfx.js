@@ -90,6 +90,16 @@ export class Sfx {
   }
 
   // An output node: dry to the mix, plus some into the room.
+  // Duck under a monster's spoken line (see tts.js): effects drop to half, then come back
+  duck(on) {
+    if (!this.out) return;
+    const g = this.out.gain;
+    const now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(this.volume * (on ? 0.5 : 1), now + (on ? 0.15 : 0.6));
+  }
+
   bus(at, room = 0.4) {
     const g = this.ctx.createGain();
     g.connect(this.out);

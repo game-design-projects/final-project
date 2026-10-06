@@ -1,7 +1,7 @@
 // Music mood switching (explore <-> battle), against a fake Web Audio graph: run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Ambient, TRACKS, FADES, PACE, STINGS, BATTLE_LOOPS } from "../public/ambient.js";
+import { Ambient, TRACKS, FADES, PACE, STINGS, BATTLE_LOOPS, DUCK } from "../public/ambient.js";
 
 // Just enough of AudioContext to record what the player schedules
 class FakeParam {
@@ -204,4 +204,12 @@ test("no battle loop runs faster than 132 BPM", () => {
 test("battle loop lengths match the renders: 16 bars at each tempo", () => {
   const want = { heroic: 30.968, fury: 29.091, march: 34.286, gallop: 32 };
   for (const v of TRACKS.battle.variants) assert.ok(Math.abs(v.loopSeconds - want[v.name]) < 0.001, v.name);
+});
+
+test("ducking pulls the music down under speech and brings it back", () => {
+  const music = started();
+  music.duck(true);
+  assert.equal(music.master.gain.ramps.at(-1)[0], DUCK.level);
+  music.duck(false);
+  assert.equal(music.master.gain.ramps.at(-1)[0], 1);
 });

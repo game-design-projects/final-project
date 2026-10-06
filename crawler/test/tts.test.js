@@ -96,3 +96,36 @@ test("without speechSynthesis it is simply off", () => {
   assert.equal(n.on, false);
   assert.equal(n.say("Hello.", "slime"), null);
 });
+
+test("while a monster speaks, the rest of the game ducks under it, and comes back when it's done", () => {
+  const synth = fakeSynth();
+  const ducks = [];
+  const n = new Narrator({ synth, Utterance: FakeUtterance, store: memStore({ "donjon.tts": "on" }), onDuck: (on) => ducks.push(on) });
+  const a = n.say("One.", "slime");
+  const b = n.say("Two.", "slime");
+  assert.equal(a.volume, 1, "speech at full volume");
+  a.onstart();
+  assert.deepEqual(ducks, [true]);
+  a.onend();
+  b.onstart();
+  assert.deepEqual(ducks, [true], "still ducked between two lines in a row");
+  b.onend();
+  assert.deepEqual(ducks, [true, false]);
+  n.say("Three.", "slime").onstart();
+  n.hush();
+  assert.deepEqual(ducks, [true, false, true, false], "hushing lifts the duck too");
+});
+
+test("a cancelled line ending late doesn't lift the duck from under the next one", () => {
+  const ducks = [];
+  const n = new Narrator({ synth: fakeSynth(), Utterance: FakeUtterance, store: memStore({ "donjon.tts": "on" }), onDuck: (on) => ducks.push(on) });
+  const old = n.say("Old.", "slime");
+  old.onstart();
+  n.hush();
+  const fresh = n.say("New.", "slime");
+  fresh.onstart();
+  old.onerror(); // the browser reports the cancelled one late
+  assert.deepEqual(ducks, [true, false, true], "still ducked for the new line");
+  fresh.onend();
+  assert.deepEqual(ducks, [true, false, true, false]);
+});
