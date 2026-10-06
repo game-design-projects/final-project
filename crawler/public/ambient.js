@@ -31,15 +31,15 @@ export const STINGS = {
   victory: { url: "victory.m4a", volume: 0.35 },
 };
 // Seconds to fade a track in or out. A fight cuts in fast; the dungeon creeps back slowly.
-export const FADES = { battle: { in: 0.35, out: 1.2 }, explore: { in: 6, out: 6 } };
+export const FADES = { battle: { in: 0.35, out: 1.2 }, explore: { in: 2, out: 5 } };
 // The ambient's rhythm while exploring, in seconds: play a while, rest a while
 export const PACE = {
   play: [80, 110],
   rest: [60, 120],
-  afterFight: 10, // quiet after a fight before the ambient may return
-  afterSting: 20, // quiet after a fanfare: let the good news ring
+  afterFight: 2, // a breath after a fight before the ambient returns
+  afterSting: 4, // let the good news ring a moment
 };
-const FIRST_FADE_IN = 4;
+const FIRST_FADE_IN = 1.5;
 
 export class Ambient {
   constructor({ tracks = TRACKS, stings = STINGS, timer = globalThis, random = Math.random } = {}) {

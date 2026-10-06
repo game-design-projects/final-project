@@ -57,6 +57,8 @@ To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML
 
 Hover any of them for the details (exact numbers, ability scores, boons).
 
+**Hold to talk.** Instead of typing to a monster, hold the key that opens the talk box (**T** to talk, **R** to recruit, **E** to talk to an ally) or press and hold the **HOLD TO SPEAK** button beside the box, say it, and let go: the words fill the box as you speak and are sent when you let go. A quick tap still opens the box for typing. It uses the browser's built-in speech recognition (Web Speech API: Chrome, Edge and Safari; Chrome sends the audio to Google's recognizer, Safari to Apple's), in the browser's language, and asks for the microphone the first time. Where it's missing (Firefox) the button hides and holding acts like a tap. The logic is `public/voice.js`.
+
 **Tips.** New players get one short hint at a time, the first time each thing matters: how to walk, the automap, the stairs, your first fight (and that you can talk), targeting, feelings, a monster warming to you, your first ally, camping when hurt, levelling up, someone going down, a champion's floor. Each shows once, in a framed note over the bottom of the view, and lights up what it talks about (the keys' buttons, the map, the party). It never blocks anything: your next key does its job and clears the hint, and a key that does nothing nudges it instead. **H** turns tips off; **H** again turns them back on from the start. Seen tips are remembered in `localStorage` (`hallsOfJev.tipsSeen`, `hallsOfJev.tipsOff`). The hints and their wording live in `public/tutorial.js`.
 
 ### D&D-style combat
@@ -196,7 +198,7 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 The music follows the moment (`public/ambient.js`). **P** turns it on and off.
 
-**Exploring: `public/ambient.m4a`**, a 96-second dark ambient loop: a warm low pad drifting between minor chords a third apart (Dm, B♭m, F♯m, ending on a tense A7♭9 that falls back to Dm), a sub drone, a soft glass-bell melody with echo, a distant heartbeat thump and cave air, all in a long dark reverb. It comes and goes: about a minute and a half of music, then a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it.
+**Exploring: `public/ambient.m4a`**, a 96-second dark ambient loop: a warm low pad drifting between minor chords a third apart (Dm, B♭m, F♯m, ending on a tense A7♭9 that falls back to Dm), a sub drone, a soft glass-bell melody with echo, a distant heartbeat thump and cave air, all in a long dark reverb. It comes and goes: about a minute and a half of music, then a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it. It fades in over two seconds, two seconds after a fight ends.
 
 **Fights: four 8-bit loops, picked at random** (`public/battle-*.m4a`), all built on the game's own melody (A B C D D D E D E D C C C D D D, see *Older notes* below) with a pulse-wave lead and ping-pong echo, a pulse arpeggio, a triangle bass and noise drums:
 
@@ -209,7 +211,7 @@ The music follows the moment (`public/ambient.js`). **P** turns it on and off.
 
 Each fight picks one at random, never the one you heard last, and after it has gone round twice it crossfades into another, so a long fight doesn't loop the same tune. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
 
-**Good news: one-shot cues** in the same 8-bit voice. `fanfare.m4a`, the melody's opening rushed up to a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet. `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). After a fight the dungeon stays quiet for ten seconds before the ambient may return.
+**Good news: one-shot cues** in the same 8-bit voice. `fanfare.m4a`, the melody's opening rushed up to a high D major chord, plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run). 
 
 Every track is synthesised from scratch in Python (numpy and scipy, no samples). The notes, chords and mix levels are tables at the top of each script; the 8-bit voices (pulse, triangle, kick, noise hits) live in `scripts/chip.py`. To change one and rebuild:
 

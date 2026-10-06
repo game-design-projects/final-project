@@ -293,6 +293,28 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   caret-color: var(--you);
 }
 
+/* Hold to talk: the mic button beside the talk box, and the dock while it listens */
+.mic {
+  font: 9px "Press Start 2P", ui-monospace, monospace;
+  color: var(--ink);
+  background: #000;
+  border: 2px solid var(--faint);
+  padding: 6px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  touch-action: none;
+  user-select: none;
+}
+.mic:hover { border-color: var(--accent); }
+.mic[hidden] { display: none; }
+.rec { width: 8px; height: 8px; background: var(--warn); border-radius: 50%; display: inline-block; flex: none; }
+.ask.listening { color: var(--ink); }
+.listening .rec, .mic:active .rec { animation: rec 0.8s ease-in-out infinite; box-shadow: 0 0 8px var(--warn); }
+@keyframes rec { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .listening .rec, .mic:active .rec { animation: none; } }
+
 /* ---- The party: health as a bar (length + color + a word once it matters), armor a shield,
    spell slots pips colored by circle, conditions icon chips */
 .party { margin-top: 8px; }
