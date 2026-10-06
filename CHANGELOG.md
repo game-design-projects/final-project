@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- Monster allies no longer crowd the log out of view: each ally takes one compact line in the party panel (name, health, mood, armor; its kind and level on hover) instead of a two-line card, so a full party of six leaves about twice as much room for the log.
+
+### Added
+- An "ALLIES 2/3" line above your monster allies: how many have joined and how many seats are left (the party holds six, so three beside your adventurers), lit when the party is full.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added

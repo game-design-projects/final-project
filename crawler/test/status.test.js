@@ -128,3 +128,15 @@ test("menu highlight wraps around both ways", () => {
   assert.equal(menuStep(2, 1, 5), 3);
   assert.equal(menuStep(undefined, 1, 3), 0);
 });
+
+import { PARTY_MAX, allyRoom } from "../public/status.js";
+
+test("the party holds six: allies get whatever seats the adventurers leave", () => {
+  const h = (dead = false) => ({ kind: "human", dead });
+  const a = () => ({ kind: "monster" });
+  assert.equal(PARTY_MAX, 6);
+  assert.deepEqual(allyRoom([h(), h(), h()]), { allies: 0, max: 3, full: false });
+  assert.deepEqual(allyRoom([h(), h(), h(), a(), a()]), { allies: 2, max: 3, full: false });
+  assert.deepEqual(allyRoom([h(), h(), h(), a(), a(), a()]), { allies: 3, max: 3, full: true });
+  assert.deepEqual(allyRoom([h(), h(true), h(), a()]), { allies: 1, max: 3, full: false }, "a fallen adventurer keeps their seat");
+});

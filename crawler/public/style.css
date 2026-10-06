@@ -364,6 +364,17 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   border-bottom-color: #1a1a1a;
 }
 .prow .num { grid-area: num; align-self: start; }
+/* Monster allies: one line each */
+.prow.ally { grid-template-columns: 14px minmax(0, 0.8fr) minmax(0, 1fr) auto auto; grid-template-areas: "num who hp st ac"; padding: 3px 4px; }
+.prow.ally .num { align-self: center; }
+.prow.ally .hp { display: flex; align-items: center; gap: 6px; }
+.prow.ally .hp .hpbar { flex: 1; min-width: 24px; }
+.prow.ally .hp small { margin: 0; min-width: 5ch; text-align: right; }
+.prow.ally .chips { flex-wrap: nowrap; }
+.pdiv { display: flex; gap: 6px; align-items: center; margin: 4px 0 1px; font-size: 7px; color: var(--dim); }
+.pdiv::after { content: ""; flex: 1; border-top: 1px dashed var(--faint); }
+.pdiv b { font-weight: normal; color: var(--ink); }
+.pdiv.full b { color: var(--accent); }
 .prow .who { grid-area: who; }
 .prow .hp { grid-area: hp; }
 .prow .ac { grid-area: ac; }

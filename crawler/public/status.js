@@ -117,3 +117,11 @@ export function iconSvg(name, color = "currentColor") {
 
 // Moving the highlight in a menu: wraps at both ends.
 export const menuStep = (sel, delta, count) => (((sel ?? -delta) + delta) % count + count) % count;
+
+// The party holds six. Adventurers keep their seats (even fallen ones); monster allies fill the rest.
+export const PARTY_MAX = 6;
+export function allyRoom(party) {
+  const allies = party.filter((m) => m.kind === "monster").length;
+  const max = PARTY_MAX - (party.length - allies);
+  return { allies, max, full: party.length >= PARTY_MAX };
+}

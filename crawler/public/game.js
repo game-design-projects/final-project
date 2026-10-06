@@ -5,7 +5,7 @@ import { Ambient } from "./ambient.js";
 import { Sfx } from "./sfx.js";
 import { DicePops, dieTier, landPunch, DIE_TUMBLE_MS, DIE_ANIM_MS } from "./dice.js";
 import { d, d20, rollDice, fmtRoll, diceRange, prof, CLASSES, SPELLS, spellText, ABILITY_WORDS, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
-import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg } from "./status.js";
+import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg, PARTY_MAX, allyRoom } from "./status.js";
 import { initTutorial, GUIDE, guideAllows, shouldGuide } from "./tutorial.js";
 import { initAchievements, badgeSvg } from "./achievements.js";
 import { Listener, HOLD_MS, spaceHold } from "./voice.js";
@@ -771,11 +771,23 @@ function partyRow(m, i) {
   const armor = `<span class="ac" title="ARMOR ${m.ac}: AN ATTACKER NEEDS ${m.ac} OR MORE, WITH ITS BONUS, TO HIT">${iconSvg("shield", "#9fb0c0")}${m.ac}</span>`;
   const acting = G.menu?.who === m ? " acting" : "";
   const picked = G.menu?.options[G.menu.sel]?.who === m ? " picked" : "";
+  // Monster allies take one line each (name, health, mood, armor; kind and level on hover), so a full
+  // party of six still leaves the log room to breathe
+  if (m.kind === "monster") {
+    const name = `<span class="who"${ink} title="${esc(`${m.name}: ${classWord(m)} ALLY · LEVEL ${m.level ?? 1}`)}"><b>${m.dead ? iconSvg("skull", "#8a8a8a") : ""}${esc(m.name)}</b></span>`;
+    return `<div class="prow ally ${st.id}${picked}"${boonTitle(m)}><span class="num">${i + 1}</span>${name}${health}<span class="chips">${statusChips(m)}</span>${armor}</div>`;
+  }
   return `<div class="prow ${st.id}${acting}${picked}"${boonTitle(m)}><span class="num">${acting ? "▶" : i + 1}</span>${who}${health}${armor}<span class="pw">${powersCell(m)}</span><span class="chips">${statusChips(m)}</span></div>`;
 }
 
 function renderParty() {
-  $("#party").innerHTML = G.party.map(partyRow).join("");
+  const room = allyRoom(G.party);
+  const first = G.party.findIndex((m) => m.kind === "monster");
+  const rows = G.party.map(partyRow);
+  // How many monsters can still join, right where they'd go
+  if (first >= 0)
+    rows.splice(first, 0, `<div class="pdiv${room.full ? " full" : ""}" title="${esc(`YOUR PARTY HOLDS ${PARTY_MAX}: ROOM FOR ${room.max} MONSTER ALLIES BESIDE YOUR ADVENTURERS${room.full ? ". FULL: NO ONE ELSE CAN JOIN" : ""}`)}">ALLIES <b>${room.allies}/${room.max}</b></div>`);
+  $("#party").innerHTML = rows.join("");
   $("#party").style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
   // The map under the view steps aside in a fight (keeping its space, so nothing jumps)
   $(".mid").classList.toggle("fighting", !!G.combat);
@@ -2237,7 +2249,7 @@ function charismaCheck() {
 async function recruitAsk() {
   const c = G.combat;
   const e = targetEnemy();
-  if (G.party.length >= 6) {
+  if (G.party.length >= PARTY_MAX) {
     say("YOUR PARTY IS FULL (6).", "dim");
     return render();
   }
@@ -2550,7 +2562,7 @@ async function monstersTurn(playerAction, events, did) {
   if (!G.combat) return;
   for (const e of joins) {
     if (e.status !== "here") continue;
-    if (G.party.length >= 6) {
+    if (G.party.length >= PARTY_MAX) {
       say(`${UP(e.name)} WANTS TO JOIN, BUT YOUR PARTY IS FULL.`, "dim");
       continue;
     }
