@@ -678,21 +678,22 @@ function renderBar() {
     `<span class="boons" title="ROLL OF FATE BOONS YOU HAVE WON. PRESS B TO LIST THEM">${iconSvg("star", n ? "#ffd27a" : "#5a5a5a")}${n} BOON${n === 1 ? "" : "S"}</span>`,
     // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
     // (J, the Jev mind panel, exists only in debug runs)
-    achCap(),
     `<span class="sys">${sysToggles()}</span>`,
   ].join("");
 }
 
-// The rarely-touched switches: a keycap and a pixel icon each (slashed when off), the words in the tooltip
+// The rarely-touched switches: a keycap and a pixel icon each (slashed when off), the words in the tooltip.
+// Laid out in keyboard order, H J K L O P, so the caps read like the keys under your right hand.
 function sysToggles() {
   const sw = (k, icon, name, on, what) =>
     cmd(k, iconSvg(icon, on ? "#e8e8e8" : "#5a5a5a"), { cls: `ico-only${on ? "" : " off"}`, title: `${name} ${on ? "ON" : "OFF"} · ${what} · PRESS ${k.toUpperCase()}` });
   return [
-    DEBUG && sw("j", "eye", "JEV MIND PANEL", !$("#jev").classList.contains("hidden"), "WHAT JEV DECIDED, AND EVERY API REQUEST"),
     sw("h", "question", "TIPS", tips.on(), "ONE SHORT HINT AT A TIME, THE FIRST TIME SOMETHING MATTERS"),
-    sw("p", "note", "MUSIC", music.on, "THE DUNGEON AND BATTLE MUSIC"),
-    sw("o", "speaker", "SOUND", sfx.on, "HITS, SPELLS, DICE AND MONSTER VOICES"),
+    DEBUG && sw("j", "eye", "JEV MIND PANEL", !$("#jev").classList.contains("hidden"), "WHAT JEV DECIDED, AND EVERY API REQUEST"),
+    achCap(),
     narrator.supported && sw("l", "bubble", "VOICES", narrator.on, "MONSTERS READ THEIR LINES ALOUD. ON BY ITSELF ONCE YOU SPEAK (HOLD SPACE)"),
+    sw("o", "speaker", "SOUND", sfx.on, "HITS, SPELLS, DICE AND MONSTER VOICES"),
+    sw("p", "note", "MUSIC", music.on, "THE DUNGEON AND BATTLE MUSIC"),
   ]
     .filter(Boolean)
     .join("");
@@ -701,7 +702,7 @@ function sysToggles() {
 // K: the achievements, a trophy and how many you've earned (lit while the list is open)
 function achCap() {
   const { earned, total } = ach.count();
-  return `<span class="sys ach-cap" title="ACHIEVEMENTS: ${earned} OF ${total} EARNED. PRESS K">${cmd("k", `${badgeSvg("trophy", earned ? "#ffd27a" : "#5a5a5a")}${earned}/${total}`, { cls: ach.isOpen() ? "on" : "" })}</span>`;
+  return `<span class="ach-cap" title="ACHIEVEMENTS: ${earned} OF ${total} EARNED. PRESS K">${cmd("k", `${badgeSvg("trophy", earned ? "#ffd27a" : "#5a5a5a")}${earned}/${total}`, { cls: ach.isOpen() ? "on" : "" })}</span>`;
 }
 
 function renderLog() {

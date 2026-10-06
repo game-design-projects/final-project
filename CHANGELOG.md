@@ -10,6 +10,9 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - An "ALLIES 2/3" line above your monster allies: how many have joined and how many seats are left (the party holds six, so three beside your adventurers), lit when the party is full.
 
+### Changed
+- The switches in the top bar follow keyboard order, H J K L O P (tips, Jev mind, achievements, voices, sound, music), so each keycap sits where its key is.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added
