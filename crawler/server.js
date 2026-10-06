@@ -19,8 +19,8 @@ if (MOCK) {
     process.loadEnvFile(new URL("../.env", import.meta.url));
   } catch {}
 }
-if (!process.env.TYPESAFE_API_KEY) {
-  console.error("Missing TYPESAFE_API_KEY. Put it in the project's .env, or run with JEV_MOCK=1.");
+if (!process.env.TYPESAFE_API_KEY && !process.env.OPENROUTER_API_KEY) {
+  console.error("Missing TYPESAFE_API_KEY (or OPENROUTER_API_KEY). Put one in the project's .env, or run with JEV_MOCK=1.");
   process.exit(1);
 }
 

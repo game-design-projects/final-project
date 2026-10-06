@@ -4,6 +4,7 @@
 // The answers are random, not sensible: this exercises the game's plumbing and rules, not Jev's judgement.
 
 export const JEV_URL = "https://api.typesafe.ai/v1/systemone";
+export const JEV_URLS = [JEV_URL, "https://openrouter.ai/api/alpha/decisions"];
 
 // Small seeded PRNG (mulberry32), so a seed gives the same answers every run
 export function seeded(seed = 1) {
@@ -52,7 +53,7 @@ export function mockFetch({ seed = 1, latency = 0, realFetch = globalThis.fetch 
   const rand = seeded(seed);
   const calls = [];
   const fake = async (url, init = {}) => {
-    if (String(url) !== JEV_URL) return realFetch(url, init);
+    if (!JEV_URLS.includes(String(url))) return realFetch(url, init);
     const body = JSON.parse(init.body);
     calls.push(body);
     if (latency) await new Promise((r) => setTimeout(r, latency));

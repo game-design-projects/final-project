@@ -20,8 +20,12 @@ const mapCtx = $("#map").getContext("2d");
 const music = new Ambient();
 const sfx = new Sfx();
 
-// Where the Jev API lives: this server locally, or the Cloudflare Worker in the itch.io build (see config.js).
+// Where the Jev API lives: this server locally, or the Cloudflare Worker in the itch.io build (see config.js),
+// or nowhere: the OpenRouter itch build runs the server's rules in the page (scripts/build-itch.js --openrouter).
 const API = window.HALLS_CONFIG?.apiBase ?? "";
+const OPENROUTER_KEY = window.HALLS_CONFIG?.openrouterKey ?? null;
+let serverModule = null;
+const localServer = () => (serverModule ??= import("./server/api.js"));
 
 // In debug mode every call is recorded for the Jev panel's REQUESTS tab, and the server is asked (?debug=1)
 // to send back each raw Jev call behind it.
@@ -32,11 +36,12 @@ async function api(path, body) {
   const t0 = performance.now();
   if (entry) recordRequest(entry);
   try {
-    const res = await fetch(API + path + (DEBUG ? "?debug=1" : ""), {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body ?? {}),
-    });
+    const init = { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) };
+    const query = DEBUG ? "?debug=1" : "";
+    // The OpenRouter itch build has no server: the same rules run here (server/api.js) and call Jev on OpenRouter
+    const res = OPENROUTER_KEY
+      ? await (await localServer()).handleApi(new Request(new URL(path + query, location.href), init), { OPENROUTER_API_KEY: OPENROUTER_KEY })
+      : await fetch(API + path + query, init);
     const out = await res.json().catch(() => ({}));
     const { _debug, ...clean } = out;
     if (entry) Object.assign(entry, { status: res.status, ms: Math.round(performance.now() - t0), response: clean, jev: _debug?.jev ?? null });

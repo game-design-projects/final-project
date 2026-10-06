@@ -31,7 +31,9 @@ cd ../..
 npm run crawler:itch -- https://halls-of-jev-api.<you>.workers.dev
 ```
 
-**CI publishes automatically.** `.github/workflows/ci.yml` runs `npm test` and builds and validates the itch bundle on every push and pull request; every push to `main` that passes is pushed with butler to https://aalfalasi.itch.io/donjon (channel `html5`, version = the commit SHA). It needs the `BUTLER_API_KEY` repository secret, and pull requests never see it.
+**The itch build calls Jev on OpenRouter, from the browser.** OpenRouter serves TypeSafe's Jev (`~typesafe/jev-latest`, `POST https://openrouter.ai/api/alpha/decisions`, same questions and answers), and it allows calls from any web page. So the itch build needs no server: `OPENROUTER_API_KEY=... npm run crawler:itch -- --openrouter` ships the game's rules (`crawler/src` as `server/`) in the zip and puts the OpenRouter key in `config.js`. **That key is public** to anyone who opens the files, so it is a key with a small credit limit on purpose (cap it at openrouter.ai/settings/keys); rotate it if it's abused. The key is never committed: it lives in `.env` locally and in the `OPENROUTER_API_KEY` repository secret for CI. The local server also prefers `OPENROUTER_API_KEY` over `TYPESAFE_API_KEY` when both are set, and the Worker accepts either.
+
+**CI publishes automatically.** `.github/workflows/ci.yml` runs `npm test` and builds and validates the itch bundle on every push and pull request; every push to `main` that passes is built with the OpenRouter key and pushed with butler to https://aalfalasi.itch.io/donjon (channel `html5`, version = the commit SHA). It needs the `BUTLER_API_KEY` and `OPENROUTER_API_KEY` repository secrets, and pull requests never see them.
 
 To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". The itch build turns debug mode on by default (its `config.js` sets `debug: true`), so the Jev mind panel shows beside the game: an embed size of about 1180 × 820 fits both; enable the fullscreen button too. Add `?nodebug` to the URL to play without it.
 

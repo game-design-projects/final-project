@@ -79,3 +79,17 @@ test("the same seed gives the same answers", () => {
   const q = { type: "choice", criteria: { a: 1, b: 2, c: 3 } };
   assert.deepEqual(mockAnswer(q, seeded(9)), mockAnswer(q, seeded(9)));
 });
+
+test("with an OpenRouter key, Jev is reached through OpenRouter (same answers, model ~typesafe/jev-latest)", async () => {
+  const before = fake.calls.length;
+  const res = await handleApi(
+    new Request("http://local/api/vow?debug=1", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(ENDPOINTS["/api/vow"]) }),
+    { OPENROUTER_API_KEY: "or-test-key" },
+  );
+  assert.equal(res.status, 200);
+  const out = await res.json();
+  assert.equal(fake.calls.at(-1).model, "~typesafe/jev-latest");
+  assert.equal(out._debug.jev[0].via, "openrouter");
+  assert.ok(fake.calls.length > before);
+  assert.ok(!JSON.stringify(out).includes("or-test-key"));
+});

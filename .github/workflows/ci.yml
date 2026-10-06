@@ -1,6 +1,7 @@
 # Tests on every push and pull request; on main, a passing build is published to itch.io
-# (https://aalfalasi.itch.io/donjon, channel html5). The publish job alone sees the BUTLER_API_KEY secret
-# (inherited from the game-design-projects org), and never runs for pull requests.
+# (https://aalfalasi.itch.io/donjon, channel html5). The publish job alone sees the secrets and never runs for
+# pull requests: BUTLER_API_KEY to push, and OPENROUTER_API_KEY, which the itch build ships in the page so the
+# browser can call Jev on OpenRouter itself (a low-credit key on purpose; see crawler/scripts/build-itch.js).
 name: CI
 on:
   push:
@@ -36,15 +37,11 @@ jobs:
             node crawler/scripts/scenarios.js --seed=$seed > /dev/null
             node crawler/scripts/social-scenarios.js --seed=$seed > /dev/null
           done
+      # A keyless build, to validate the bundle on every push and PR
       - name: Build the itch bundle
         run: node crawler/scripts/build-itch.js "$JEV_API"
       - name: Validate the HTML5 bundle
         run: node crawler/scripts/check-html5.mjs dist/donjon
-      - uses: actions/upload-artifact@v4
-        with:
-          name: donjon-html5
-          path: dist/donjon
-          retention-days: 14
 
   publish:
     needs: test
@@ -58,10 +55,20 @@ jobs:
       name: itch-production
       url: https://aalfalasi.itch.io/donjon
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
         with:
-          name: donjon-html5
-          path: dist/donjon
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the itch bundle (Jev via OpenRouter, from the browser)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$OPENROUTER_API_KEY" || { echo '::error::Missing OPENROUTER_API_KEY secret'; exit 1; }
+          node crawler/scripts/build-itch.js --openrouter
+          node crawler/scripts/check-html5.mjs dist/donjon
       - name: Install official butler
         run: |
           set -euo pipefail

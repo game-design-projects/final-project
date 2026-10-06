@@ -72,7 +72,9 @@ export async function handleApi(request, env) {
     const raw = await request.text();
     if (raw.length > 64_000) return json({ error: "Request too large" }, 413);
     const body = JSON.parse(raw || "{}");
-    configureJev(env.TYPESAFE_API_KEY);
+    // An OpenRouter key, when there is one, reaches the same Jev through OpenRouter
+    if (env.OPENROUTER_API_KEY) configureJev(env.OPENROUTER_API_KEY, { via: "openrouter" });
+    else configureJev(env.TYPESAFE_API_KEY);
     // Debug mode (?debug=1): every Jev call behind this request, what went to TypeSafe and what came back,
     // is returned under _debug. Per request, so concurrent requests never mix. A query flag rather than a
     // header, so it adds no CORS preflight requirement (and older Workers simply ignore it).
