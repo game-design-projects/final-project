@@ -3,6 +3,7 @@ import { DIRS, DIR_NAMES, VIEW, scaleAt, PALETTES, drawCorridor, drawMap, drawTi
 import { drawMonster, SLOTS, SHINY_COLOR, BOSS_COLOR, ART } from "./art.js";
 import { Ambient } from "./ambient.js";
 import { Sfx } from "./sfx.js";
+import { DicePops, dieTier, landPunch, DIE_TUMBLE_MS, DIE_ANIM_MS } from "./dice.js";
 import { d, d20, rollDice, fmtRoll, prof, CLASSES, SPELLS, SPELL_TEXT, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
 import { initTutorial } from "./tutorial.js";
 
@@ -362,7 +363,13 @@ function say(text, cls = "", color) {
   if (G.log.length > 150) G.log.shift();
 }
 
-const hurtUntil = {};
+// A monster's spoken line gets its voice (RAAH, a hiss, a blorp...), chosen from the wording and the species (shout.js).
+function speak(who, line) {
+  const plan = who?.species && sfx.shout(line, who.species, { key: who.id, boss: !!who.boss });
+  if (plan) console.debug("shout", who.species, plan.kind, JSON.stringify(line));
+}
+
+const hurtUntil = {}; // hurt flash window: [until - 300, until)
 function render() {
   if (!G) return;
   drawView(performance.now());
@@ -377,11 +384,38 @@ function render() {
 
 // Numbers and words that float up from monsters and party members: damage, misses, feelings.
 const floaters = [];
-let shakeUntil = 0;
+let shakeUntil = 0; // screen shake window: [until - 220, until)
 function floatText(text, x, y, color = "#e8e8e8", size = 10) {
-  const now = performance.now();
+  const now = fxNow();
   const stacked = floaters.filter((f) => Math.abs(f.x - x) < 30 && now - f.t0 < 350).length;
   floaters.push({ text, x, y: y + stacked * 14, color, size, t0: now });
+}
+
+// Dice: every d20 the player sees tumbles on the view for 200ms (dice.js). What the roll causes (sounds, floating
+// numbers, hurt flashes, screen shake) is held back by fxLag so it lands together with the die, not before it.
+const dice = new DicePops();
+let fxLag = 0;
+let lastRattle = 0;
+const fxNow = () => performance.now() + fxLag;
+// (The small total under a die is skipped in the party row, which is busy with floating numbers.)
+function rollFx(r, spot, { total, label = total != null && spot.y < 200 ? `=${total}` : "" } = {}) {
+  const now = performance.now();
+  dice.add({ ...spot, rolls: r.rolls, kept: r.roll, label, now });
+  if (now - lastRattle > 60) sfx.play("dice", { delay: 0 }); // several dice thrown together rattle once
+  lastRattle = now;
+  sfx.play("diceLand", { delay: DIE_TUMBLE_MS / 1000, tier: dieTier(r.roll) });
+  fxLag = DIE_TUMBLE_MS;
+  sfx.lag = DIE_TUMBLE_MS / 1000;
+  queueMicrotask(() => {
+    fxLag = 0;
+    sfx.lag = 0;
+  });
+  console.debug("roll", r.rolls.join("/"), "kept", r.roll, JSON.stringify(label), JSON.stringify(spot));
+}
+// Where a die sits: on the monster that is the target, or in the party row (the bottom of the view).
+function spotOf(x) {
+  const i = G.party.indexOf(x);
+  return i >= 0 ? { x: (448 / (G.party.length + 1)) * (i + 1), y: 226 } : { x: slotOf(x).cx, y: 160 };
 }
 function slotOf(e) {
   const here = present();
@@ -399,6 +433,7 @@ function drawFloaters(t) {
   for (let i = floaters.length - 1; i >= 0; i--) {
     const f = floaters[i];
     const age = (t - f.t0) / 1000;
+    if (age < 0) continue; // waiting for its die to land
     if (age > 1.3) {
       floaters.splice(i, 1);
       continue;
@@ -440,7 +475,7 @@ const condTags = (x, max = 3) =>
     .join(" ");
 
 function drawView(t) {
-  const shaking = t < shakeUntil;
+  const shaking = t < shakeUntil && t >= shakeUntil - 220;
   if (shaking) {
     view.save();
     view.translate((Math.random() - 0.5) * 7, (Math.random() - 0.5) * 7);
@@ -451,7 +486,8 @@ function drawView(t) {
     const slots = SLOTS[Math.min(3, Math.max(1, here.length))];
     here.forEach((e, i) => {
       const slot = slots[i];
-      drawMonster(view, e.species, t, t < (hurtUntil[e.id] ?? 0) ? 1 : 0, slot, ART.pixel, { shiny: e.shiny, color: e.boss ? BOSS_COLOR : undefined });
+      const until = hurtUntil[e.id] ?? 0;
+      drawMonster(view, e.species, t, t < until && t >= until - 300 ? 1 : 0, slot, ART.pixel, { shiny: e.shiny, color: e.boss ? BOSS_COLOR : undefined });
       drawMonsterTag(e, slot, i, here.length);
     });
   } else {
@@ -460,6 +496,7 @@ function drawView(t) {
     if (G.roll) drawRoll(t);
     for (const [x, y] of seen) G.seen.add(y * G.map.n + x);
   }
+  dice.draw(view, t, { ink: G.map.palette.wall, hot: G.map.palette.accent });
   drawFloaters(t);
   if (shaking) view.restore();
 }
@@ -711,6 +748,7 @@ async function talkToAlly() {
     ally.loyalty = clamp(ally.loyalty + r.loyaltyDelta);
     const color = colorOf(ally);
     say(`${ally.name}: ${r.line}`, "npc", color);
+    speak(ally, r.line);
     if (r.buff) {
       ally.buff = r.buff;
       say(`${ally.name} IS ${r.buff.id}: ${UP(r.buff.desc)}.`, "big", color);
@@ -808,6 +846,7 @@ async function makeVow() {
     const r = await api("/api/vow", { monster: { species: to.species, name: to.name, traits: to.traits }, vow: { text: text.toLowerCase() } });
     const color = colorOf(to);
     say(`${UP(to.name)}: ${r.line}`, "npc", color);
+    speak(to, r.line);
     const shift = r.level - 2;
     if (inCombat) {
       to.meters.friendliness = clamp(to.meters.friendliness + shift * 9);
@@ -878,6 +917,7 @@ async function flushBreaks() {
     showJev({ kind: "broken", ally, v, r });
     const color = colorOf(ally);
     say(`${ally.name}: ${r.line}`, "npc", color);
+    speak(ally, r.line);
     ally.loyalty = r.loyalty;
     if (r.response === "forgive") say(`${ally.name} STAYS. FOR NOW.`, "dim", color);
     if (r.response === "leave_party") {
@@ -1107,6 +1147,8 @@ async function rollOfFate(tier, great = false, kind = "floor") {
   render();
   await sleep(great ? 2800 : 1900);
   G.roll.landed = true;
+  G.roll.landedAt = performance.now();
+  console.debug("roll of fate landed", boon.name, great ? "great" : kind);
   sfx.play(great ? "great" : "land");
   say(`${great ? "GREAT " : kind === "shiny" ? "SHINY " : ""}ROLL OF FATE: ${boon.name}! ${text}.`, "big", great ? BOSS_COLOR : kind === "shiny" ? SHINY_COLOR : G.map.palette.accent);
   render();
@@ -1145,7 +1187,23 @@ function drawRoll(t) {
   const name = r.landed ? r.result.name : r.names[idx];
   ctx.fillStyle = r.landed ? hot : ink;
   ctx.font = `${name.length > 14 ? 15 : 18}px "Press Start 2P", monospace`;
-  ctx.fillText(name, W / 2, 136);
+  // The landing: the name slams down (scale punch), the panel flashes, and a great roll glows
+  const since = r.landed ? t - r.landedAt : -1;
+  if (since >= 0 && since < DIE_ANIM_MS) {
+    ctx.globalAlpha = (r.great ? 0.4 : 0.25) * (1 - since / DIE_ANIM_MS);
+    ctx.fillRect(37, 37, W - 74, H - 74);
+    ctx.globalAlpha = 1;
+  }
+  const punch = landPunch(since, r.great ? 0.7 : 0.45);
+  ctx.save();
+  ctx.translate(W / 2, 136);
+  ctx.scale(punch, punch);
+  if (r.landed && r.great) {
+    ctx.shadowColor = hot;
+    ctx.shadowBlur = 12;
+  }
+  ctx.fillText(name, 0, 0);
+  ctx.restore();
   if (r.landed) {
     ctx.fillStyle = ink;
     ctx.font = `8px "Press Start 2P", monospace`;
@@ -1339,11 +1397,14 @@ async function encounter(group = makeGroup(), opts = {}) {
   // Initiative: the party's quickest member against the quickest monster
   const pDex = Math.max(...conscious().map((m) => m.abil?.dex ?? 1));
   const mDex = Math.max(...present().map((e) => MONSTER_STATS[e.species].dex + (e.boss ? 2 : 0)), -5);
-  const pr = d(20) + pDex;
-  const mr = d(20) + mDex;
+  const pd = d20();
+  const md = d20();
+  const pr = pd.roll + pDex;
+  const mr = md.roll + mDex;
   const first = pr >= mr;
+  rollFx(pd, { x: 112, y: 226 }, { label: `PARTY ${pr}` });
+  rollFx(md, { x: 336, y: 226 }, { label: `FOES ${mr}` });
   say(`INITIATIVE: PARTY ${pr} VS MONSTERS ${mr}. ${first ? "YOU ACT FIRST!" : "THEY ACT FIRST!"}`, first ? "" : "warn");
-  sfx.play("dice");
   hint("combat");
   if (present().length > 1) hint("target");
   render();
@@ -1414,7 +1475,7 @@ function hitEnemy(e, dmg, note, color = "#ffffff") {
   e.hp -= dmg;
   e.damageTaken = (e.damageTaken ?? 0) + dmg;
   e.thisRound.push(note);
-  hurtUntil[e.id] = performance.now() + 300;
+  hurtUntil[e.id] = fxNow() + 300;
   floatOn(e, `-${dmg}`, color, 13);
   if (e.cond.asleep) {
     delete e.cond.asleep;
@@ -1485,12 +1546,19 @@ const attackCount = (m) => (m.clsId === "fighter" && m.level >= 5 ? 2 : 1) * m.m
 const spellDC = (m) => 8 + prof(m.level) + m.abil[CLASSES[m.clsId].caster];
 const spellAttack = (m) => prof(m.level) + m.abil[CLASSES[m.clsId].caster] + m.mods.hitBonus;
 const spellDamage = (m, total) => Math.max(1, Math.round(total * m.mods.spell * m.mods.dmg));
-const monsterSave = (e, stat) => d(20) + MONSTER_STATS[e.species].saves[stat] + e.saveBonus;
+function monsterSave(e, stat) {
+  const r = d20();
+  const total = r.roll + MONSTER_STATS[e.species].saves[stat] + e.saveBonus;
+  rollFx(r, spotOf(e), { total });
+  return total;
+}
 
 function partySave(v, stat) {
   const bless = G.combat?.blessed ? d(4) : 0;
-  if (v.kind === "human") return d(20) + v.abil[stat] + (CLASSES[v.clsId].saves.includes(stat) ? prof(v.level) : 0) + bless;
-  return d(20) + 2 + Math.floor(v.level / 4) + bless;
+  const r = d20();
+  const total = r.roll + bless + (v.kind === "human" ? v.abil[stat] + (CLASSES[v.clsId].saves.includes(stat) ? prof(v.level) : 0) : 2 + Math.floor(v.level / 4));
+  rollFx(r, spotOf(v), { total });
+  return total;
 }
 
 // Bosses can refuse to fail: the first two times a spell would sleep or hold them.
@@ -1516,6 +1584,7 @@ async function weaponAttacks(m, attacks) {
     }
     const r = d20(advVs(e, m));
     const bonus = attackBonus(m) + (e.cond.weakspot ? 2 : 0) + (c.blessed ? d(4) : 0);
+    if (attacks <= 3) rollFx(r, spotOf(e), { total: r.roll + bonus });
     const ac = effAC(e);
     const helpless = e.cond.asleep || e.cond.held;
     const meets = r.roll + bonus >= ac;
@@ -1568,6 +1637,7 @@ async function castSpell(m, key, ally) {
         if (!e) break;
         const r = d20(advVs(e, m));
         const bonus = spellAttack(m) + (e.cond.weakspot ? 2 : 0) + (c.blessed ? d(4) : 0);
+        rollFx(r, spotOf(e), { total: r.roll + bonus });
         const ac = effAC(e);
         const crit = r.roll !== 1 && r.roll >= m.mods.critMin;
         const hit = r.roll !== 1 && (crit || r.roll + bonus >= ac);
@@ -1848,8 +1918,8 @@ function charismaCheck() {
   const total = r.roll + bonus;
   const [mult, word] =
     r.roll === 20 ? [2, "AN INSPIRED"] : r.roll === 1 ? [0.5, "A TONGUE-TIED"] : total >= 20 ? [1.5, "A MAGNETIC"] : total >= 15 ? [1.25, "A CONFIDENT"] : total >= 10 ? [1, "A STEADY"] : [0.75, "A SHAKY"];
+  rollFx(r, spotOf(f), { total });
   say(`${f.name}'S CHARISMA: ${fmtRoll(r, bonus)}. ${word} DELIVERY (WORDS LAND X${mult}).`, "dim");
-  sfx.play("dice");
   return mult;
 }
 
@@ -1878,8 +1948,8 @@ async function recruitAsk() {
   const pitch = r.roll === 20 || margin >= 8 ? "great" : r.roll === 1 || margin <= -12 ? "botch" : margin >= 0 ? "success" : margin >= -4 ? "close" : "fail";
   const WORD = { great: "AN IRRESISTIBLE PITCH!", success: "A CONVINCING PITCH.", close: "SO CLOSE...", fail: "A CLUMSY PITCH.", botch: "A DISASTROUS PITCH!" };
   say(text ? `YOU, TO ${UP(e.name)}: "${text}"` : `YOU ASK ${UP(e.name)} TO JOIN YOUR PARTY.`, "you");
+  rollFx(r, spotOf(e), { total: r.roll + bonus });
   say(`PERSUASION (${f.name}): ${fmtRoll(r, bonus)} VS DC ${dc}. ${WORD[pitch]}`, ["great", "success"].includes(pitch) ? "big" : pitch === "close" ? "" : "warn");
-  sfx.play("dice");
   for (const x of present()) {
     c.spoken.add(x.species);
     vowEvent("talk", x.species, `The party talked to ${x.name}, ${aLabel(x.species)}.`);
@@ -1946,6 +2016,7 @@ async function command(cmd) {
     const dc = 10 + (here.some((e) => e.boss) ? 5 : 0) + (here.some((e) => e.species === "dragon") ? 3 : 0) + Math.floor(G.floor / 3);
     const r = d20();
     const ok = r.roll + dex >= dc;
+    rollFx(r, { x: 224, y: 150 }, { total: r.roll + dex });
     say(`ESCAPE: ${fmtRoll(r, dex)} VS DC ${dc}. ${ok ? "YOU FLEE!" : "YOU CAN'T GET AWAY!"}`, ok ? "" : "warn");
     if (ok) {
       sfx.play("flee");
@@ -1975,7 +2046,9 @@ async function beginPartyTurn() {
   if (!G.combat) return;
   for (const m of G.party) {
     if (!m.down || m.dead || m.stable) continue;
-    const r = d(20);
+    const dr = d20();
+    const r = dr.roll;
+    rollFx(dr, spotOf(m));
     if (r === 20) {
       m.down = false;
       m.hp = 1;
@@ -2021,7 +2094,7 @@ function damage(m, dmg, { crit = false } = {}) {
   }
   m.hp = Math.max(0, m.hp - dmg);
   floatParty(m, `-${dmg}`, "#ff5a4a");
-  shakeUntil = performance.now() + 220;
+  shakeUntil = fxNow() + 220;
   sfx.play("hurt");
   if (m.hp > 0) return;
   if (m.phoenix) {
@@ -2125,6 +2198,7 @@ async function monstersTurn(playerAction, events, did) {
     c.lastLines[e.id] = r.line;
     c.conversation.push({ speaker: e.name, text: r.line });
     say(`${UP(e.name)}: ${r.line}`, "npc", colorOf(e));
+    speak(e, r.line);
     if (r.emotion) showEmotion(e, r.emotion);
     if (e.cooldown > 0) e.cooldown--;
     // Someone switching sides is news to the rest of the group
@@ -2209,6 +2283,7 @@ function monsterAttack(e, t) {
   const adv = e.cond.enraged || t.cond?.restrained || t.cond?.prone ? 1 : 0;
   const dis = e.cond.demoralized || e.cond.frightened ? 1 : 0;
   const r = d20(adv - dis);
+  rollFx(r, spotOf(t), { total: r.roll + e.hit });
   const crit = r.roll === 20;
   const hit = r.roll !== 1 && (crit || r.roll + e.hit >= t.ac);
   const head = `${UP(e.name)} ATTACKS ${t.name}: ${fmtRoll(r, e.hit)} VS AC ${t.ac}.`;
@@ -2266,6 +2341,7 @@ async function applyMonsterAction(e, r, joins) {
       const other = c.enemies.find((x) => x.id === r.monsterTargetId && x.status === "here" && x.hp > 0);
       if (!other) break;
       const roll = d20();
+      rollFx(roll, spotOf(other), { total: roll.roll + e.hit });
       const hit = roll.roll !== 1 && (roll.roll === 20 || roll.roll + e.hit >= other.ac);
       if (!other.grudges.includes(e.id)) other.grudges.push(e.id);
       history(`${e.name} attacked ${other.name}.`);
@@ -2441,6 +2517,7 @@ async function allyReactionsAfter(c) {
     m.loyalty = x.loyalty;
     const color = colorOf(m);
     say(`${m.name}: ${x.line}`, "npc", color);
+    speak(m, x.line);
     if (x.decision === "leave_party") {
       G.party = G.party.filter((p) => p !== m);
       say(`${m.name} LEAVES THE PARTY.`, "warn", color);
