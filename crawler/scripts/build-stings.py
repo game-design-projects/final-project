@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Renders the short one-shot music cues ("stings") for good moments, in the battle loop's 8-bit voice.
 
-  fanfare: going down the stairs to a new floor. The classic da-da-da-DAAA pickup, D - C - A - D,
-           landing on a high D major chord with a crash. About 3.5 seconds.
-  victory: winning a fight. A quick rising D major arpeggio and a held chord. About 2 seconds.
+  fanfare: going down the stairs to a new floor. The game's melody, quick, climbing to a high D major
+           chord with a snare roll and a crash. About 3.5 seconds.
+  victory: winning a fight. The melody's first notes, rushed, and a held chord. About 2 seconds.
 
 Needs numpy and scipy:  python3 scripts/build-stings.py /tmp   (writes /tmp/fanfare.wav and /tmp/victory.wav)
 Then encode each:       afconvert -f m4af -d aac -b 160000 /tmp/fanfare.wav public/fanfare.m4a
@@ -18,22 +18,24 @@ from chip import SR, rng, hz, env, pulse, triangle, kick, noise_hit, snare
 BPM = 150
 EIGHTH = 30 / BPM
 
+# Both cues quote the game's melody (A B C D D D ..., here in D major: D E F# G G G, A G A) and land on
+# a high D major chord.
 STINGS = {
     "fanfare": {
         # (start in eighths, length in eighths, midi)
-        "lead": [(0, 0.5, 69), (0.5, 0.5, 69), (1, 0.5, 69), (1.5, 2.5, 74), (4, 1.5, 72), (5.5, 0.5, 72), (6, 2, 76),
-                 (8, 0.5, 74), (8.5, 0.5, 78), (9, 0.5, 81), (9.5, 5, 86)],
+        "lead": [(0, 0.5, 74), (0.5, 0.5, 76), (1, 0.5, 78), (1.5, 0.5, 79), (2, 0.5, 79), (2.5, 1.5, 79),
+                 (4, 0.5, 81), (4.5, 0.5, 79), (5, 1, 81), (6, 0.5, 83), (6.5, 0.5, 85), (7, 7, 86)],
         # (start, length, chord tones, bass root)
-        "chords": [(1.5, 2.5, [62, 66, 69], 38), (4, 2, [60, 64, 67], 36), (6, 2, [61, 64, 69], 45), (8, 7, [62, 66, 69, 74], 38)],
-        "roll": (6, 8),  # snare roll into the landing
-        "crash": 9.5,
-        "length": 15,
+        "chords": [(0, 2.5, [62, 66, 69], 38), (2.5, 1.5, [62, 67, 71], 43), (4, 3, [61, 64, 67, 69], 45), (7, 7, [62, 66, 69, 74], 38)],
+        "roll": (5, 7),  # snare roll into the landing
+        "crash": 7,
+        "length": 14,
     },
     "victory": {
-        "lead": [(0, 0.5, 74), (0.5, 0.5, 78), (1, 0.5, 81), (1.5, 0.5, 86), (2, 0.5, 83), (2.5, 4, 86)],
-        "chords": [(0, 2, [62, 67, 71], 43), (2, 4.5, [62, 66, 69, 74], 38)],
+        "lead": [(0, 0.5, 74), (0.5, 0.5, 76), (1, 0.5, 78), (1.5, 0.5, 79), (2, 0.5, 79), (2.5, 0.5, 81), (3, 4, 86)],
+        "chords": [(0, 2.5, [62, 67, 71], 43), (2.5, 0.5, [61, 64, 69], 45), (3, 4.5, [62, 66, 69, 74], 38)],
         "roll": None,
-        "crash": 2.5,
+        "crash": 3,
         "length": 8,
     },
 }

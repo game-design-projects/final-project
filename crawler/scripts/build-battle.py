@@ -2,9 +2,9 @@
 """Renders the battle music: a bright, driving 8-bit loop, the opposite of the dungeon's dark ambient.
 
 Chiptune voices, synthesised band-limited (no samples): a pulse-wave lead with a little vibrato and
-echo, a 25% pulse arpeggio, a triangle bass pumping octaves, and noise/sine drums. 152 BPM in D,
-on the heroic D - C - G - A progression, with a B minor bridge. The render is circular, so the loop
-point is seamless.
+echo, a 25% pulse arpeggio, a triangle bass pumping octaves, and noise/sine drums. 152 BPM. The tune is
+the game's own melody (A B C D D D E D E D C C C D D D) moved from A minor into D major, then lifted
+through B-flat and C before swinging back. The render is circular, so the loop point is seamless.
 
 Needs numpy and scipy:  python3 scripts/build-battle.py out.wav
 Then encode:            afconvert -f m4af -d aac -b 160000 out.wav public/battle.m4a
@@ -21,35 +21,44 @@ EIGHTH = 30 / BPM  # seconds
 BAR = EIGHTH * 8
 TAIL = 1.0  # the file repeats its first second at the end, so players can loop inside it
 
-# One chord per bar: (root for the bass, chord tones for the arpeggio)
+# The game's own melody, A B C D D D E D E D C C C D D D (first written in A minor over Am | F | Dm | E),
+# moved to major keys. As scale steps from the key's tonic, with the original rhythm: the repeated notes
+# land short-short-long. One 4-bar phrase, bar by bar: (start in eighths, length in eighths, semitones).
+THEME = [
+    [(0, 1, 0), (1, 1, 2), (2, 1, 4), (3, 1, 5), (4, 1, 5), (5, 3, 5)],  # D E F# G G G
+    [(0, 1, 7), (1, 1, 5), (2, 1, 7), (3, 3, 5), (6, 1, 4), (7, 1, 2)],  # A G A G (and a run down)
+    [(0, 1, 4), (1, 1, 4), (2, 6, 4)],  # F# F# F#
+    [(0, 1, 5), (1, 1, 5), (2, 4, 5), (6, 1, 7), (7, 1, 9)],  # G G G (and a pickup up)
+]
+# The same phrase, landing home instead of hanging on the 4th
+CADENCE = [(0, 1, 5), (1, 1, 4), (2, 1, 2), (3, 5, 0)]
+
+
+def phrase(tonic, last=None):
+    bars = [[(a, b, tonic + c) for a, b, c in bar] for bar in THEME]
+    if last is not None:
+        bars[3] = [(a, b, tonic + c) for a, b, c in last]
+    return bars
+
+
+# One chord per bar: (root for the bass, chord tones for the arpeggio). Each phrase runs I - IV - vi - V7.
 CHORDS = {
     "D": (38, [62, 66, 69]),
-    "C": (36, [60, 64, 67]),
     "G": (43, [62, 67, 71]),
-    "A": (45, [61, 64, 69]),
     "Bm": (47, [62, 66, 71]),
+    "A7": (45, [61, 64, 67]),
+    "Bb": (46, [62, 65, 70]),
+    "Eb": (39, [63, 67, 70]),
+    "Gm": (43, [62, 67, 70]),
+    "F7": (41, [63, 65, 69]),
+    "C": (36, [60, 64, 67]),
+    "F": (41, [60, 65, 69]),
+    "Am": (45, [60, 64, 69]),
 }
-PROGRESSION = ["D", "C", "G", "A", "D", "C", "G", "A", "Bm", "G", "D", "A", "Bm", "G", "A", "A"]
-
-# The lead, bar by bar: (start in eighths, length in eighths, midi note)
-MELODY = [
-    [(0, 1, 69), (1, 1, 74), (2, 1, 78), (3, 2, 81), (5, 1, 78), (6, 2, 74)],
-    [(0, 1, 79), (1, 1, 76), (2, 1, 72), (3, 2, 76), (5, 1, 79), (6, 2, 76)],
-    [(0, 2, 74), (2, 1, 71), (3, 1, 74), (4, 2, 79), (6, 1, 78), (7, 1, 79)],
-    [(0, 3, 81), (3, 1, 79), (4, 1, 78), (5, 1, 76), (6, 2, 73)],
-    [(0, 1, 69), (1, 1, 74), (2, 1, 78), (3, 2, 81), (5, 1, 83), (6, 2, 86)],
-    [(0, 2, 84), (2, 1, 83), (3, 1, 81), (4, 2, 79), (6, 2, 76)],
-    [(0, 1, 79), (1, 1, 81), (2, 1, 83), (3, 3, 86), (6, 1, 83), (7, 1, 79)],
-    [(0, 4, 81), (4, 1, 76), (5, 1, 78), (6, 1, 79), (7, 1, 81)],
-    [(0, 3, 83), (3, 1, 81), (4, 2, 78), (6, 2, 74)],
-    [(0, 2, 79), (2, 1, 78), (3, 1, 79), (4, 2, 83), (6, 2, 79)],
-    [(0, 3, 78), (3, 1, 76), (4, 2, 74), (6, 1, 69), (7, 1, 74)],
-    [(0, 4, 76), (4, 2, 73), (6, 2, 69)],
-    [(0, 1, 71), (1, 1, 74), (2, 1, 78), (3, 3, 83), (6, 2, 81)],
-    [(0, 2, 79), (2, 1, 81), (3, 1, 83), (4, 2, 86), (6, 2, 83)],
-    [(0, 2, 85), (2, 2, 81), (4, 2, 76), (6, 2, 73)],
-    [(0, 4, 81), (4, 1, 76), (5, 1, 73), (6, 1, 71), (7, 1, 73)],
-]
+# Twice in D, then the key lifts: up to B-flat (the bright flat-six), up again to C, and an A7 at the very
+# end swings back to D for the loop.
+PROGRESSION = ["D", "G", "Bm", "A7", "D", "G", "Bm", "D", "Bb", "Eb", "Gm", "F7", "C", "F", "Am", "A7"]
+MELODY = phrase(74) + phrase(74, CADENCE) + phrase(70) + phrase(72)
 assert len(MELODY) == len(PROGRESSION)
 
 LOOP = BAR * len(PROGRESSION)

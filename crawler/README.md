@@ -168,9 +168,9 @@ afconvert -f m4af -d aac -b 160000 /tmp/ambient.wav crawler/public/ambient.m4a
 
 **The ambient comes and goes.** It plays for a minute and a half or so, fades out, and leaves a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it.
 
-**Good news gets its own cue** (`scripts/build-stings.py`, in the battle loop's 8-bit voice): `fanfare.m4a`, a bright da-da-da-DAAA landing on a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet; `victory.m4a`, a quick rising arpeggio, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run).
+**Good news gets its own cue** (`scripts/build-stings.py`, in the battle loop's 8-bit voice): `fanfare.m4a`, the same melody's opening rushed up to a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet; `victory.m4a`, its first five notes and a held chord, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run).
 
-**Fights play `public/battle.m4a` instead**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums, on the heroic D–C–G–A progression with a B minor bridge. When a fight starts it cuts in within a third of a second and the ambient fades out underneath (keeping its place); when the fight ends the battle loop fades and the dungeon creeps back. Each fight starts the loop from bar one. Rebuild it the same way:
+**Fights play `public/battle.m4a` instead**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums. The tune is the game's own melody (A B C D D D E D E D C C C D D D, see below) moved from A minor into D major — D E F♯ G G G · A G A G · F♯ F♯ F♯ · G G G over I–IV–vi–V7 — played twice, then lifted into B♭ and C before an A7 swings it back to D. When a fight starts it cuts in within a third of a second and the ambient fades out underneath (keeping its place); when the fight ends the battle loop fades and the dungeon creeps back. Each fight starts the loop from bar one. Rebuild it the same way:
 
 ```bash
 python3 crawler/scripts/build-battle.py /tmp/battle.wav
