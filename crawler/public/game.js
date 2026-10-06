@@ -7,6 +7,7 @@ import { DicePops, dieTier, landPunch, DIE_TUMBLE_MS, DIE_ANIM_MS } from "./dice
 import { d, d20, rollDice, fmtRoll, diceRange, prof, CLASSES, SPELLS, spellText, ABILITY_WORDS, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
 import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg } from "./status.js";
 import { initTutorial } from "./tutorial.js";
+import { initAchievements, badgeSvg } from "./achievements.js";
 import { Listener, HOLD_MS } from "./voice.js";
 import { installTooltips } from "./tooltip.js";
 import { requestsHtml, requestDetail, copyValue } from "./inspector.js";
@@ -100,6 +101,17 @@ const tips = initTutorial({
   onShow: () => sfx.play("tick"),
 });
 const hint = (id) => tips.hint(id);
+
+// Achievements (achievements.js): earned once, kept across runs. Game moments below send events (ach.on);
+// an unlock slides a toast over the view with a jingle, and K opens the list.
+const ach = initAchievements({
+  store,
+  view: $("#view"),
+  accent: () => G?.map?.palette?.accent,
+  jingle: () => sfx.play("achieve"),
+  onUnlock: (a) => G && say(`ACHIEVEMENT UNLOCKED: ${a.name}.${ach.count().earned === 1 ? " PRESS K TO SEE THEM ALL." : ""}`, "", "#ffd27a"),
+  onToggle: () => G && renderBar(),
+});
 
 function newRun() {
   G = {
@@ -642,8 +654,15 @@ function renderBar() {
     `<span class="boons" title="ROLL OF FATE BOONS YOU HAVE WON. PRESS B TO LIST THEM">${iconSvg("star", n ? "#ffd27a" : "#5a5a5a")}${n} BOON${n === 1 ? "" : "S"}</span>`,
     // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
     // (J, the Jev mind panel, exists only in debug runs)
+    achCap(),
     `<span class="sys">${!DEBUG ? "" : cmd("j", "JEV", { cls: $("#jev").classList.contains("hidden") ? "off" : "", hint: "SHOW OR HIDE THE JEV PANEL" })}${cmd("h", "TIPS", { cls: tips.on() ? "" : "off" })}${cmd("p", "MUSIC", { cls: music.on ? "" : "off" })}${cmd("o", "SOUND", { cls: sfx.on ? "" : "off" })}</span>`,
   ].join("");
+}
+
+// K: the achievements, a trophy and how many you've earned (lit while the list is open)
+function achCap() {
+  const { earned, total } = ach.count();
+  return `<span class="sys ach-cap" title="ACHIEVEMENTS: ${earned} OF ${total} EARNED. PRESS K">${cmd("k", `${badgeSvg("trophy", earned ? "#ffd27a" : "#5a5a5a")}${earned}/${total}`, { cls: ach.isOpen() ? "on" : "" })}</span>`;
 }
 
 function renderLog() {
@@ -894,6 +913,7 @@ async function descend() {
   music.sting("fanfare");
   await rollOfFate(G.floor);
   enterFloor(G.floor + 1);
+  ach.on("descend", { floor: G.floor, keptVows: G.vows.filter((v) => v.status === "active" && G.party.some((m) => m.id === v.toId && !m.dead)).length });
   G.graceSteps = 4;
   say(`YOU DESCEND TO ${floorName(G.floor)}: THE ${G.map.palette.name}. THE MONSTERS HERE ARE TOUGHER.`, "", G.map.palette.accent);
   announceFloor(G.floor);
@@ -1140,6 +1160,7 @@ async function flushBreaks() {
     say(`${ally.name}: ${r.line}`, "npc", color);
     speak(ally, r.line);
     ally.loyalty = r.loyalty;
+    ach.on("vow-broken", { response: r.response, stolen: !!r.stolen });
     if (r.response === "forgive") say(`${ally.name} STAYS. FOR NOW.`, "dim", color);
     if (r.response === "leave_party") {
       G.party = G.party.filter((m) => m !== ally);
@@ -1372,6 +1393,7 @@ async function rollOfFate(tier, great = false, kind = "floor") {
   console.debug("roll of fate landed", boon.name, great ? "great" : kind);
   sfx.play(great ? "great" : "land");
   say(`${great ? "GREAT " : kind === "shiny" ? "SHINY " : ""}ROLL OF FATE: ${boon.name}! ${text}.`, "big", great ? BOSS_COLOR : kind === "shiny" ? SHINY_COLOR : G.map.palette.accent);
+  ach.on("boon", { name: boon.name, great, legendary: LEGENDARY.includes(boon) });
   render();
   await waitKey();
   G.roll = null;
@@ -1598,6 +1620,7 @@ async function encounter(group = makeGroup(), opts = {}) {
   sfx.play(opts.boss ? "boss" : "encounter");
   music.setMood("battle");
   G.combat = { enemies: [], nextId: 0, target: null, round: 0, conversation: [], history: [], rounds: {}, spoken: new Set(), vowed: false, kills: 0, recruits: [], boss: !!opts.boss };
+  ach.on("fight-start");
   G.mode = "combat";
   G.graceSteps = 5;
   for (const e of group) {
@@ -1823,6 +1846,7 @@ async function weaponAttacks(m, attacks) {
       if (crit) floatOn(e, "CRITICAL!", "#ffe03a", 9);
     } else floatOn(e, r.roll === 1 ? "FUMBLE" : "MISS", "#8a8a8a", 9);
     sfx.play(crit ? "crit" : hit ? "hit" : "miss");
+    ach.on("attack-roll", { roll: r.roll });
     results.push({ e, hit, crit, dmg });
     if (attacks <= 3) {
       const verdict = !hit ? (r.roll === 1 ? "A 1 ALWAYS MISSES. FUMBLE!" : "MISS.") : `${r.roll === 20 ? "A PERFECT 20! CRITICAL HIT! " : crit ? "CRITICAL HIT! " : "HIT! "}${dmg} DAMAGE.`;
@@ -1865,6 +1889,7 @@ async function castSpell(m, key, ally) {
         const ac = effAC(e);
         const crit = r.roll !== 1 && r.roll >= m.mods.critMin;
         const hit = r.roll !== 1 && (crit || r.roll + bonus >= ac);
+        ach.on("attack-roll", { roll: r.roll });
         delete e.cond.lit;
         const who = `${UP(e.name)} `;
         if (hit) {
@@ -2105,6 +2130,7 @@ async function partyTurn(plans) {
   render();
   const target = targetEnemy();
   const offensive = plans.some((p) => p.act !== "prone" && !(p.spell && ["heal", "bless", "revive"].includes(SPELLS[p.spell].kind)));
+  if (offensive) ach.on("attack");
   if (offensive && target) {
     if (!c.spoken.has(target.species)) vowEvent("attack_unspoken", target.species, `The party attacked ${target.name} without saying a word to it first.`);
     vowEvent("attack", target.species, `The party attacked ${target.name}, ${aLabel(target.species)}.`);
@@ -2147,6 +2173,7 @@ function charismaCheck() {
   const [mult, word] =
     r.roll === 20 ? [2, "AN INSPIRED"] : r.roll === 1 ? [0.5, "A TONGUE-TIED"] : total >= 20 ? [1.5, "A MAGNETIC"] : total >= 15 ? [1.25, "A CONFIDENT"] : total >= 10 ? [1, "A STEADY"] : [0.75, "A SHAKY"];
   rollFx(r, spotOf(f), { total });
+  ach.on("talk-roll", { roll: r.roll });
   say(`HOW WELL ${f.name} SAYS IT (CHARISMA): ${fmtRoll(r, bonus)}. ${word} DELIVERY: WORDS LAND X${mult}.`, "dim");
   return mult;
 }
@@ -2177,6 +2204,7 @@ async function recruitAsk() {
   const WORD = { great: "AN IRRESISTIBLE PITCH!", success: "A CONVINCING PITCH.", close: "SO CLOSE...", fail: "A CLUMSY PITCH.", botch: "A DISASTROUS PITCH!" };
   say(text ? `YOU, TO ${UP(e.name)}: "${text}"` : `YOU ASK ${UP(e.name)} TO JOIN YOUR PARTY.`, "you");
   rollFx(r, spotOf(e), { total: r.roll + bonus });
+  ach.on("talk-roll", { roll: r.roll });
   say(`PERSUASION (${f.name}): ${fmtRoll(r, bonus)}, NEEDED ${dc}. ${WORD[pitch]}`, ["great", "success"].includes(pitch) ? "big" : pitch === "close" ? "" : "warn");
   for (const x of present()) {
     c.spoken.add(x.species);
@@ -2291,6 +2319,7 @@ async function beginPartyTurn() {
         say(`${m.name} IS STABLE, BUT STILL OUT COLD.`, "dim");
       }
     } else deathFail(m, r === 1 ? 2 : 1, `'S DEATH SAVE: ROLLED ${r}, NEEDED 10${r === 1 ? " (A 1 COUNTS TWICE)" : ""}. FAILURE`);
+    ach.on("death-save", { roll: r, stable: !!m.stable });
   }
   if (!humansAlive() || !conscious().length) return gameOver();
   G.busy = false;
@@ -2487,6 +2516,7 @@ function showEmotion(e, em) {
   const color = colorOf(e);
   floatOn(e, `${em.label}!`, color, 10);
   hint("feeling");
+  ach.on("feel", { feeling: em.id, species: e.species });
   sfx.play({ good: "good", bad: "bad", fear: "fear", sad: "sad", odd: "odd" }[em.tone] ?? "good");
   if (em.cond) e.cond[em.cond] = Math.max(e.cond[em.cond] ?? 0, em.rounds);
   if (em.id === "terrified") {
@@ -2568,6 +2598,7 @@ async function applyMonsterAction(e, r, joins) {
     case "attack_monster": {
       const other = c.enemies.find((x) => x.id === r.monsterTargetId && x.status === "here" && x.hp > 0);
       if (!other) break;
+      ach.on("mutiny", { species: e.species });
       const roll = d20();
       rollFx(roll, spotOf(other), { total: roll.roll + e.hit });
       const hit = roll.roll !== 1 && (roll.roll === 20 || roll.roll + e.hit >= other.ac);
@@ -2599,6 +2630,7 @@ async function applyMonsterAction(e, r, joins) {
       say(`${UP(e.name)} TAKES ${r.offer} GOLD.`);
       sfx.play("gold");
       history(`The party paid ${e.name} ${r.offer} gold, and it accepted.`);
+      ach.on("paid", { species: e.species, gold: r.offer });
       vowEvent("give", e.species, `The party gave ${r.offer} gold to ${e.name}, ${aLabel(e.species)}.`);
       break;
     case "refuse_tribute":
@@ -2618,6 +2650,7 @@ async function applyMonsterAction(e, r, joins) {
       sfx.play("good");
       grantXp(xp);
       history(`${e.name} and the party parted peacefully.`);
+      ach.on("peace", { species: e.species, boss: !!e.boss });
       vowEvent("spare", e.species, `The party let ${e.name}, ${aLabel(e.species)}, walk away alive.`);
       break;
     }
@@ -2667,6 +2700,7 @@ function recruit(e) {
   grantXp(xp);
   history(`The party befriended ${e.name}, who joined them.`);
   G.combat.recruits.push(ally.id);
+  ach.on("recruit", { species: e.species, shiny: !!e.shiny, boss: !!e.boss, allies: allies().length });
   vowEvent("recruit", e.species, `The party recruited ${e.name}, ${aLabel(e.species)}, into the party.`);
   vowEvent("spare", e.species, `The party let ${e.name}, ${aLabel(e.species)}, live and join them.`);
 }
@@ -2700,6 +2734,7 @@ async function endCombat() {
       great = true;
     } else if (e) say(`${UP(e.name)} STILL HOLDS THE HEART OF THIS FLOOR.`, "dim", BOSS_COLOR);
   }
+  ach.on("fight-end", { won: c.enemies.length > 0 && c.enemies.every((e) => e.status !== "here"), kills: c.kills, boss: c.boss ? G.map.boss?.enemy?.status : null });
   if (living().some((m) => m.hp < m.maxHp / 2)) hint("camp");
   render();
   await flushBreaks();
@@ -2750,6 +2785,7 @@ async function allyReactionsAfter(c) {
     const felt = allyLine(m.species, m.name, x);
     if (felt) say(felt, "", color);
     dbg(`${m.name} APPROVAL ${x.approval.toFixed(1)}/4, LOYALTY ${x.delta >= 0 ? "+" : ""}${x.delta} → ${x.loyalty}${x.blocked ? `; ${x.blocked}` : ""}`);
+    ach.on("ally-decision", { decision: x.decision });
     if (x.decision === "leave_party") {
       G.party = G.party.filter((p) => p !== m);
       say(`${m.name} LEAVES THE PARTY.`, "warn", color);
@@ -2769,6 +2805,7 @@ function gameOver() {
   G.busy = false;
   sfx.play("death");
   say(`YOUR PARTY HAS PERISHED ON ${floorName(G.floor)}.`, "big");
+  ach.on("wipe", { floor: G.floor });
   say(`DEEPEST FLOOR EVER REACHED: ${store.get("hallsOfJev.deepest") || G.floor}. PRESS ENTER FOR A NEW RUN.`, "dim");
   render();
 }
@@ -2891,6 +2928,9 @@ $("#inputForm").addEventListener("submit", (ev) => {
 
 function key(k) {
   if (!G) return;
+  // The achievements list (K) takes every key while it's open: K/Esc close it, anything else nudges it
+  if (ach.isOpen()) return ach.key(k);
+  if (k === "k" && !(G.waitKey || G.prompt || G.menu || G.input || G.busy)) return ach.open();
   if (G.waitKey) {
     const r = G.waitKey;
     G.waitKey = null;
@@ -3155,6 +3195,7 @@ if (DEBUG)
     music,
     sfx,
     tips, // e.g. halls.tips.reset(), halls.tips.hint("map")
+    ach, // e.g. halls.ach.unlock("charmed"), halls.ach.reset()
     roll: (great = false, kind) => rollOfFate(G.floor, great, kind),
     shiny: (species = "slime") => {
       let e;

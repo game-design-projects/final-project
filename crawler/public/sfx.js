@@ -436,6 +436,13 @@ const SOUNDS = {
     s.arp(t, [60, 64, 67, 72, 76, 79, 84], { step: 0.055, type: "square", dur: 0.25, vol: 0.05 });
     s.tone(t + 0.4, { type: "triangle", f0: NOTE(84), dur: 0.8, vol: 0.12, room: 0.9 });
   },
+  // An achievement: a quick 8-bit run up to a bright held chord, with a sparkle on top
+  achieve(s, t) {
+    s.arp(t, [72, 76, 79, 84], { step: 0.065, type: "square", dur: 0.16, vol: 0.055, room: 0.35 });
+    [79, 84, 88].forEach((n) => s.tone(t + 0.28, { type: "square", f0: NOTE(n), dur: 0.75, vol: 0.035, lp: [5000, 1800], room: 0.6 }));
+    s.tone(t + 0.28, { type: "triangle", f0: NOTE(96), dur: 0.9, vol: 0.07, room: 0.9, vibrato: { rate: 7, depth: 8 } });
+    s.noise(t + 0.28, { dur: 0.5, vol: 0.05, type: "highpass", f0: 7000, q: 0.5, room: 0.6 });
+  },
   slash(s, t) {
     s.noise(t, { dur: 0.25, vol: 0.4, f0: 6000, f1: 500, q: 3, attack: 0.01, room: 0.4 });
     s.tone(t + 0.05, { type: "sawtooth", f0: 160, f1: 70, dur: 0.5, vol: 0.12, lp: [1200, 300], room: 0.6 });
