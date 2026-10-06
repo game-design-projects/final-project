@@ -38,7 +38,9 @@ To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML
 | --- | --- |
 | Exploring | ↑/W forward · ↓/S back · ←/A and →/D turn · **C** camp (long rest; may be ambushed) · **E** talk to an ally · **V** make a vow to an ally · **B** boons · **M** map |
 | Combat | **F** fight (everyone uses their default) · **C** cast: choose each adventurer's action, spell or skill · **T** talk (everyone hears) · **R** recruit the target · **G** give gold · **V** vow to the target · **E** escape · **1–3** pick target |
-| Anywhere | **J** Jev mind panel · **P** music on/off · **O** sound effects on/off |
+| Anywhere | **J** Jev mind panel · **P** music on/off · **O** sound effects on/off · **H** tips off / back on from the start |
+
+**Tips.** New players get one short hint at a time, the first time each thing matters: how to walk, the automap, the stairs, your first fight (and that you can talk), targeting, feelings, a monster warming to you, your first ally, camping when hurt, levelling up, someone going down, a champion's floor. Each shows once, in a framed note over the bottom of the view, and lights up what it talks about (the keys' buttons, the map, the party). It never blocks anything: your next key does its job and clears the hint, and a key that does nothing nudges it instead. **H** turns tips off; **H** again turns them back on from the start. Seen tips are remembered in `localStorage` (`hallsOfJev.tipsSeen`, `hallsOfJev.tipsOff`). The hints and their wording live in `public/tutorial.js`.
 
 ### D&D-style combat
 
