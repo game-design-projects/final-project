@@ -9,6 +9,7 @@ import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, flo
 import { initTutorial } from "./tutorial.js";
 import { initAchievements, badgeSvg } from "./achievements.js";
 import { Listener, HOLD_MS, spaceHold } from "./voice.js";
+import { Narrator } from "./tts.js";
 import { installTooltips } from "./tooltip.js";
 import { requestsHtml, requestDetail, copyValue } from "./inspector.js";
 import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
@@ -321,11 +322,16 @@ function listen(how) {
   if (!inp || inp.numeric || inp.listening || !voice.supported) return;
   inp.listening = how;
   $("#text").value = "";
+  narrator.hush(); // the microphone mustn't hear the monsters talking
   render();
   voice.start().then((text) => {
     if (G?.input !== inp) return; // closed while listening
     inp.listening = null;
     if (text) {
+      if (narrator.supported && !narrator.on && store.get("donjon.tts") === null) {
+        narrator.heardPlayer();
+        say("YOU SPOKE, SO THE MONSTERS WILL ANSWER OUT LOUD. L TURNS VOICES OFF.", "dim");
+      } else narrator.heardPlayer();
       $("#text").value = text;
       return $("#inputForm").requestSubmit();
     }
@@ -472,7 +478,11 @@ function say(text, cls = "", color) {
 function speak(who, line) {
   const plan = who?.species && sfx.shout(line, who.species, { key: who.id, boss: !!who.boss });
   if (plan) console.debug("shout", who.species, plan.kind, JSON.stringify(line));
+  narrator.say(line, who?.species); // read aloud, if voices are on (see tts.js)
 }
+// Monsters read their lines aloud with the browser's text to speech: on by itself once you've spoken to the
+// game (hold Space), and L turns it on or off for good
+const narrator = new Narrator({ store });
 
 const hurtUntil = {}; // hurt flash window: [until - 300, until)
 function render() {
@@ -657,7 +667,9 @@ function renderBar() {
     // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
     // (J, the Jev mind panel, exists only in debug runs)
     achCap(),
-    `<span class="sys">${!DEBUG ? "" : cmd("j", "JEV", { cls: $("#jev").classList.contains("hidden") ? "off" : "", hint: "SHOW OR HIDE THE JEV PANEL" })}${cmd("h", "TIPS", { cls: tips.on() ? "" : "off" })}${cmd("p", "MUSIC", { cls: music.on ? "" : "off" })}${cmd("o", "SOUND", { cls: sfx.on ? "" : "off" })}</span>`,
+    `<span class="sys">${!DEBUG ? "" : cmd("j", "JEV", { cls: $("#jev").classList.contains("hidden") ? "off" : "", hint: "SHOW OR HIDE THE JEV PANEL" })}${cmd("h", "TIPS", { cls: tips.on() ? "" : "off" })}${cmd("p", "MUSIC", { cls: music.on ? "" : "off" })}${cmd("o", "SOUND", { cls: sfx.on ? "" : "off" })}${
+      narrator.supported ? cmd("l", "VOICES", { cls: narrator.on ? "" : "off", hint: "MONSTERS READ THEIR LINES ALOUD. ON BY ITSELF ONCE YOU SPEAK (HOLD SPACE)" }) : ""
+    }</span>`,
   ].join("");
 }
 
@@ -3006,6 +3018,10 @@ function key(k) {
   if (k === "p") return Promise.resolve(music.toggle()).then(() => renderBar());
   if (k === "o") {
     say(`SOUND EFFECTS ${sfx.toggle() ? "ON" : "OFF"}.`, "dim");
+    return render();
+  }
+  if (k === "l" && narrator.supported) {
+    say(`VOICES ${narrator.toggle() ? "ON: MONSTERS READ THEIR LINES ALOUD" : "OFF"}.`, "dim");
     return render();
   }
   if (G.combat) return command(k);
