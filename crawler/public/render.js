@@ -310,6 +310,22 @@ export function drawCorridor(ctx, map, x, y, dir, t = 0) {
   return cached.cells;
 }
 
+// The walls you have seen, as edges of seen floor cells: [x, y, side] with side 0..3 = N E S W.
+// In the view walls are faces with no thickness, so the map draws them as lines, not as blocks
+// (a block would look the same as unexplored dark).
+export function wallEdges(map, seen) {
+  const w = map.grid[0].length;
+  const edges = [];
+  for (const k of seen) {
+    const cx = k % w;
+    const cy = Math.floor(k / w);
+    DIRS.forEach(([dx, dy], side) => {
+      if (map.grid[cy + dy]?.[cx + dx] !== 1) edges.push([cx, cy, side]);
+    });
+  }
+  return edges;
+}
+
 export function drawMap(ctx, map, seen, visited, x, y, dir) {
   const n = map.grid.length;
   const s = Math.floor(ctx.canvas.width / n);
@@ -318,9 +334,18 @@ export function drawMap(ctx, map, seen, visited, x, y, dir) {
     for (let cx = 0; cx < n; cx++) {
       const k = cy * n + cx;
       if (!seen.has(k)) continue;
-      ctx.fillStyle = visited.has(k) ? "#6a6a6a" : "#2e2e2e";
+      ctx.fillStyle = visited.has(k) ? "#5a5a5a" : "#262626";
       ctx.fillRect(cx * s, cy * s, s, s);
     }
+  }
+  // Walls: a bright line along each side of seen floor that faces one, in the floor's wall color
+  ctx.fillStyle = (map.palette ?? PALETTES[0]).wall;
+  for (const [cx, cy, side] of wallEdges(map, seen)) {
+    const [px, py] = [cx * s, cy * s];
+    if (side === 0) ctx.fillRect(px, py, s, 1);
+    else if (side === 1) ctx.fillRect(px + s - 1, py, 1, s);
+    else if (side === 2) ctx.fillRect(px, py + s - 1, s, 1);
+    else ctx.fillRect(px, py, 1, s);
   }
   const sk = map.stairs.y * n + map.stairs.x;
   if (seen.has(sk)) {

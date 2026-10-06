@@ -100,3 +100,19 @@ test("decorations on a side wall are foreshortened: the middle of the wall sits 
   assert.ok(xNear < xMid && xMid < xFar);
   assert.ok(xMid - xNear > xFar - xMid, "the near half of the wall should look wider than the far half");
 });
+
+test("automap walls: an edge for every side of seen floor that faces a wall, none toward unseen floor", async () => {
+  const { wallEdges } = await import("../public/render.js");
+  const map = mapOf(
+    "#####",
+    "#...#",
+    "#.#.#",
+    "#####",
+  );
+  const at = (x, y) => y * 5 + x; // cells are keyed y * width + x, as in the game
+  // Seen: the top row of floor only
+  const seen = new Set([at(1, 1), at(2, 1), at(3, 1)]);
+  const edges = wallEdges(map, seen).map((e) => e.join(",")).sort();
+  // (x, y, side) with side 0..3 = N E S W
+  assert.deepEqual(edges, ["1,1,0", "1,1,3", "2,1,0", "2,1,2", "3,1,0", "3,1,1"].sort());
+});
