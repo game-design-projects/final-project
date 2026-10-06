@@ -17,7 +17,7 @@ const BETRAY_BELOW = 15;
 
 const loyaltyWord = (v) => (v >= 75 ? "devoted" : v >= 50 ? "content" : v >= 30 ? "uneasy" : v >= 15 ? "resentful" : "on the verge of leaving");
 
-export async function allyReactions({ allies, events }) {
+export async function allyReactions({ allies, events, trace = null }) {
   const state = {
     events,
     allies: Object.fromEntries(
@@ -78,7 +78,7 @@ export async function allyReactions({ allies, events }) {
     }
   }
 
-  const res = await jev(state, questions);
+  const res = await jev(state, questions, trace);
   const a = res.answers;
 
   const reactions = allies.map((al) => {

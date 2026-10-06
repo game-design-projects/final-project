@@ -65,7 +65,7 @@ function sanitizeAllies(b) {
 
 export async function handleApi(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-  const { pathname } = new URL(request.url);
+  const { pathname, searchParams } = new URL(request.url);
   if (request.method !== "POST" || !pathname.startsWith("/api/")) return json({ error: "Not found" }, 404);
 
   try {
@@ -73,14 +73,19 @@ export async function handleApi(request, env) {
     if (raw.length > 64_000) return json({ error: "Request too large" }, 413);
     const body = JSON.parse(raw || "{}");
     configureJev(env.TYPESAFE_API_KEY);
-    if (pathname === "/api/enemy-turn") return json(await enemyTurn(sanitizeEnemy(body)));
-    if (pathname === "/api/ally-reactions") return json(await allyReactions(sanitizeAllies(body)));
-    if (pathname === "/api/group-turn") return json(await groupTurn(sanitizeGroup(body)));
+    // Debug mode (?debug=1): every Jev call behind this request, what went to TypeSafe and what came back,
+    // is returned under _debug. Per request, so concurrent requests never mix. A query flag rather than a
+    // header, so it adds no CORS preflight requirement (and older Workers simply ignore it).
+    const trace = searchParams.get("debug") === "1" ? [] : null;
+    const reply = (out) => json(trace ? { ...out, _debug: { jev: trace } } : out);
+    if (pathname === "/api/enemy-turn") return reply(await enemyTurn({ ...sanitizeEnemy(body), trace }));
+    if (pathname === "/api/ally-reactions") return reply(await allyReactions({ ...sanitizeAllies(body), trace }));
+    if (pathname === "/api/group-turn") return reply(await groupTurn({ ...sanitizeGroup(body), trace }));
     if (pathname === "/api/ally-talk")
-      return json(await allyTalk({ ally: okSpecies(body.ally), message: short(body.message), vows: (body.vows ?? []).slice(0, 12) }));
-    if (pathname === "/api/vow") return json(await vowMade({ monster: okSpecies(body.monster), vow: { text: short(body.vow?.text, 80) } }));
+      return reply(await allyTalk({ ally: okSpecies(body.ally), message: short(body.message), vows: (body.vows ?? []).slice(0, 12), trace }));
+    if (pathname === "/api/vow") return reply(await vowMade({ monster: okSpecies(body.monster), vow: { text: short(body.vow?.text, 80) }, trace }));
     if (pathname === "/api/vow-broken")
-      return json(await vowBroken({ monster: okSpecies(body.monster), vow: { text: short(body.vow?.text, 80) }, how: short(body.how, 200), gold: Number(body.gold) || 0 }));
+      return reply(await vowBroken({ monster: okSpecies(body.monster), vow: { text: short(body.vow?.text, 80) }, how: short(body.how, 200), gold: Number(body.gold) || 0, trace }));
     return json({ error: "Not found" }, 404);
   } catch (err) {
     console.error(err);

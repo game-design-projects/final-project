@@ -1,9 +1,22 @@
-// Scripted encounters against the live Jev API. Usage: node crawler/scripts/scenarios.js [filter]
-try {
-  process.loadEnvFile(new URL("../../.env", import.meta.url));
-} catch {}
+// Scripted encounters. Usage: node crawler/scripts/scenarios.js [filter] [--live] [--seed=N]
+// By default Jev is mocked (src/mock-jev.js): random but well-formed answers, no key, no credits, repeatable
+// with --seed. That checks the plumbing and the game's rules, not Jev's judgement; pass --live for real calls.
+const args = process.argv.slice(2);
+const live = args.includes("--live");
+const seed = Number(args.find((a) => a.startsWith("--seed="))?.slice(7) ?? 1);
 const { configureJev } = await import("../src/jev.js");
-configureJev(process.env.TYPESAFE_API_KEY);
+if (live) {
+  try {
+    process.loadEnvFile(new URL("../../.env", import.meta.url));
+  } catch {}
+  configureJev(process.env.TYPESAFE_API_KEY);
+  console.log("LIVE Jev: every call is billed.");
+} else {
+  const { mockFetch } = await import("../src/mock-jev.js");
+  globalThis.fetch = mockFetch({ seed });
+  configureJev("mock");
+  console.log(`MOCK Jev (seed ${seed}): random answers, no credits. Add --live for real calls.`);
+}
 const { enemyTurn } = await import("../src/enemy.js");
 const { allyReactions } = await import("../src/allies.js");
 const { SPECIES } = await import("../public/species.js");
@@ -49,7 +62,7 @@ async function reactions(title, allies, events) {
 }
 
 const talk = (message) => ({ type: "talk", message });
-const only = process.argv[2];
+const only = args.find((a) => !a.startsWith("--"));
 const run = (name, fn) => (!only || name.includes(only) ? fn() : null);
 
 await run("slime_friend", () =>

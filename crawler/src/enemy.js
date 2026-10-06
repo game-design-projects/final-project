@@ -432,7 +432,7 @@ export async function groupTurn(req) {
   const state = buildState(req, monsters, ctxs);
   const questions = {};
   const options = ctxs.map((c, i) => buildQuestions(c, feasible[i], questions));
-  const res = await jev(state, questions);
+  const res = await jev(state, questions, req.trace);
   const a = res.answers;
 
   const results = ctxs.map((c, i) => {

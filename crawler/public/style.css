@@ -414,6 +414,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   top: 16px;
 }
 .jev.hidden { display: none; }
+.jev.wide { width: 440px; }
 .jev h2 { margin: 0 0 8px; font-size: 11px; }
 .jev h2 small { color: var(--dim); font-size: 9px; }
 .jev h3 { margin: 12px 0 6px; font-size: 9px; color: var(--dim); font-weight: normal; }
@@ -483,3 +484,31 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .pxtip .stats i { font-style: normal; }
 .pxtip .stats i.up { color: #6bd36b; }
 .pxtip .stats i.down { color: var(--warn); }
+
+/* ---- Debug: the Jev panel's tabs and the REQUESTS log */
+.jtabs { display: flex; gap: 4px; margin: 0 0 10px; }
+.jtabs[hidden] { display: none; }
+.jtabs button { font: 8px "Press Start 2P", ui-monospace, monospace; color: var(--dim); background: #000; border: 2px solid var(--faint); padding: 6px 8px; cursor: pointer; }
+.jtabs button.on { color: #000; background: var(--ink); border-color: var(--ink); }
+.jtabs button span { margin-left: 4px; }
+.reqs[hidden] { display: none; }
+.reqs .meta { font-size: 18px; }
+.req { border: 1px solid var(--faint); margin: 0 0 6px; }
+.req > summary { cursor: pointer; list-style: none; padding: 6px 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font: 8px/1.6 "Press Start 2P", ui-monospace, monospace; }
+.req > summary::-webkit-details-marker { display: none; }
+.req > summary::before { content: "▸"; color: var(--dim); }
+.req[open] > summary::before { content: "▾"; }
+.req .name { color: var(--ink); }
+.req .st { padding: 0 4px; color: #000; background: #6bd36b; }
+.req.bad .st { background: var(--warn); }
+.req.pending .st { background: var(--dim); }
+.req .ms { color: var(--dim); }
+.req .sub { flex-basis: 100%; color: var(--dim); font: 16px/1 "VT323", ui-monospace, monospace; display: flex; justify-content: space-between; }
+.req .body { padding: 0 8px 8px; }
+.jsec h4 { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 4px; font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--dim); font-weight: normal; }
+.jsec pre { margin: 0; max-height: 260px; overflow: auto; padding: 6px; background: #0b0b0b; border: 1px solid #1d1d1d; color: #cfe8ff; font: 14px/1.15 "VT323", ui-monospace, monospace; white-space: pre; }
+.copy { font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--ink); background: #000; border: 1px solid var(--faint); padding: 3px 5px; cursor: pointer; }
+.copy:hover { border-color: var(--ink); }
+.jcall { margin-top: 8px; border-left: 2px solid var(--faint); padding-left: 8px; }
+.jcall > summary { cursor: pointer; font: 7px/1.8 "Press Start 2P", ui-monospace, monospace; color: #9ad0ff; }
+.reqs .bad { color: var(--warn); font-size: 18px; margin: 6px 0; }

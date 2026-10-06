@@ -9,6 +9,7 @@ import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, flo
 import { initTutorial } from "./tutorial.js";
 import { Listener, HOLD_MS } from "./voice.js";
 import { installTooltips } from "./tooltip.js";
+import { requestsHtml, requestDetail, copyValue } from "./inspector.js";
 import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
 
 const $ = (s) => document.querySelector(s);
@@ -20,15 +21,34 @@ const sfx = new Sfx();
 // Where the Jev API lives: this server locally, or the Cloudflare Worker in the itch.io build (see config.js).
 const API = window.HALLS_CONFIG?.apiBase ?? "";
 
+// In debug mode every call is recorded for the Jev panel's REQUESTS tab, and the server is asked (?debug=1)
+// to send back each raw Jev call behind it.
+const apiLog = [];
+let apiSeq = 0;
 async function api(path, body) {
-  const res = await fetch(API + path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body ?? {}),
-  });
-  const out = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
-  return out;
+  const entry = DEBUG ? { n: ++apiSeq, path, at: new Date(), request: body ?? {}, status: null, ms: null, jev: null } : null;
+  const t0 = performance.now();
+  if (entry) recordRequest(entry);
+  try {
+    const res = await fetch(API + path + (DEBUG ? "?debug=1" : ""), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    });
+    const out = await res.json().catch(() => ({}));
+    const { _debug, ...clean } = out;
+    if (entry) Object.assign(entry, { status: res.status, ms: Math.round(performance.now() - t0), response: clean, jev: _debug?.jev ?? null });
+    if (!res.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    return clean;
+  } catch (err) {
+    if (entry && entry.status == null) Object.assign(entry, { status: "FAILED", ms: Math.round(performance.now() - t0), error: String(err.message ?? err) });
+    throw err;
+  } finally {
+    if (entry) {
+      console.debug(`api #${entry.n} ${path} ${entry.status} ${entry.ms}ms, ${entry.jev?.length ?? "no"} jev calls`);
+      renderRequests();
+    }
+  }
 }
 
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -2761,6 +2781,60 @@ function bar(v, max = 1) {
   return `<span class="meter"><span style="width:${Math.max(0, Math.min(1, v / max)) * 100}%"></span></span>`;
 }
 const words = (s) => esc(UP(String(s).replaceAll("_", " ")));
+
+// ---- the REQUESTS tab: every API call, newest first, opened to show the raw Jev calls behind it
+const openRequests = new Set();
+function recordRequest(entry) {
+  apiLog.unshift(entry);
+  if (apiLog.length > 100) apiLog.pop();
+  renderRequests();
+}
+function renderRequests() {
+  if (!DEBUG) return;
+  $("#reqCount").textContent = apiLog.length;
+  if ($("#reqBody").hidden) return;
+  $("#reqBody").innerHTML = requestsHtml(apiLog, openRequests);
+}
+function jevTab(tab) {
+  for (const b of document.querySelectorAll(".jtabs button")) b.classList.toggle("on", b.dataset.tab === tab);
+  $("#jevBody").hidden = tab !== "mind";
+  $("#reqBody").hidden = tab !== "requests";
+  $("#jev").classList.toggle("wide", tab === "requests");
+  store.set("donjon.jevTab", tab);
+  renderRequests();
+}
+if (DEBUG) {
+  document.querySelector(".jtabs").hidden = false;
+  document.querySelector(".jtabs").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-tab]");
+    if (b) jevTab(b.dataset.tab);
+  });
+  $("#reqBody").addEventListener(
+    "toggle",
+    (ev) => {
+      const d = ev.target;
+      if (!d.matches?.("details.req")) return;
+      const n = Number(d.dataset.n);
+      if (d.open) {
+        openRequests.add(n);
+        const e = apiLog.find((x) => x.n === n);
+        if (e) d.querySelector(".body").innerHTML = requestDetail(e);
+      } else openRequests.delete(n);
+    },
+    true,
+  );
+  $("#reqBody").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button.copy");
+    if (!b) return;
+    ev.preventDefault();
+    const value = copyValue(apiLog, b.dataset.copy);
+    navigator.clipboard?.writeText(JSON.stringify(value, null, 2)).then(
+      () => ((b.textContent = "COPIED"), setTimeout(() => (b.textContent = "COPY"), 1200)),
+      () => (b.textContent = "COPY FAILED"),
+    );
+  });
+  jevTab(store.get("donjon.jevTab") === "requests" ? "requests" : "mind");
+}
 
 function showJev(x) {
   if (!DEBUG) return;

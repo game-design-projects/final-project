@@ -51,7 +51,7 @@ const lineChoice = (question, lines, name) =>
   choice(question, Object.fromEntries(lines.map((l, i) => [`line_${i}`, fill(l, { name })])));
 
 // The once-per-floor talk with an ally. Lands well → loyalty and a species buff for the next fight.
-export async function allyTalk({ ally, message, vows }) {
+export async function allyTalk({ ally, message, vows, trace = null }) {
   const sp = SPECIES[ally.species];
   const lines = reactionLines(sp);
   const state = {
@@ -66,7 +66,7 @@ export async function allyTalk({ ally, message, vows }) {
     ),
     line: lineChoice({ question: "What does `ally.name` say or do in reply to `party_says`?", judge_by: "`ally.personality`" }, lines, ally.name),
   };
-  const res = await jev(state, questions);
+  const res = await jev(state, questions, trace);
   const a = res.answers;
   const level = Math.max(0, Math.min(4, Math.round(a.resonance.score)));
   return {
@@ -81,7 +81,7 @@ export async function allyTalk({ ally, message, vows }) {
 }
 
 // A vow is made to a monster (an enemy mid-fight or an ally). How much does it like the promise?
-export async function vowMade({ monster, vow }) {
+export async function vowMade({ monster, vow, trace = null }) {
   const sp = SPECIES[monster.species];
   const lines = reactionLines(sp);
   const state = { monster: persona(monster), promise: `The party swears to ${monster.name}: "${vow.text}"` };
@@ -92,7 +92,7 @@ export async function vowMade({ monster, vow }) {
     ),
     line: lineChoice({ question: "How does `monster.name` react to `promise`?", judge_by: "`monster.personality`" }, lines, monster.name),
   };
-  const res = await jev(state, questions);
+  const res = await jev(state, questions, trace);
   const level = Math.max(0, Math.min(4, Math.round(res.answers.liking.score)));
   return { liking: res.answers.liking.score, level, line: reactionLine(res.answers.line, sp, level, monster.name), ms: res.ms };
 }
@@ -105,7 +105,7 @@ const RESPONSES = {
 };
 
 // A vow made to this ally was just broken. Jev picks the response; code applies penalties and the steal odds.
-export async function vowBroken({ monster, vow, how, gold }) {
+export async function vowBroken({ monster, vow, how, gold, trace = null }) {
   const sp = SPECIES[monster.species];
   const loyalty = Math.max(0, monster.loyalty - BREAK_PENALTY);
   const options = Object.keys(RESPONSES).filter((r) => r !== "steal_gold" || gold > 0);
@@ -127,7 +127,7 @@ export async function vowBroken({ monster, vow, how, gold }) {
       monster.name,
     );
   }
-  const res = await jev(state, questions);
+  const res = await jev(state, questions, trace);
   const a = res.answers;
   const picked = a.response.choice;
   let response = picked;

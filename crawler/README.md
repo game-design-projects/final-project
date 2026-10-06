@@ -6,9 +6,13 @@ A Wizardry-style wireframe dungeon crawler with roguelike runs. You can talk to 
 
 ```bash
 npm run crawler              # http://localhost:5174
-npm test                     # view geometry, music, tips (node:test, no API calls)
-npm run crawler:scenarios    # scripted encounters against the live API (spends credits)
+npm run crawler:mock         # the same, with Jev mocked: monsters act at random, no key, no credits
+npm test                     # unit + API tests (node:test, mock Jev, no credits)
+npm run crawler:scenarios    # scripted encounters, mock Jev by default; add -- --live to call the real API
+npm run crawler:social       # group fights, ally talk and vows, likewise (-- --live for real calls)
 ```
+
+The mock (`src/mock-jev.js`) answers every Jev question with a random but well-formed answer of the right type, seeded (`--seed=N`, or `JEV_SEED` for the server) so a run repeats. It exercises the plumbing and the game's rules, not Jev's judgement: use `--live` when you want to see what Jev actually decides.
 
 The key comes from the project's `.env` (`TYPESAFE_API_KEY`) and stays on the server.
 
@@ -148,6 +152,8 @@ The rules follow D&D 5e, simplified (`public/dnd.js`). Every roll is shown in th
 Test these against the live API with `node crawler/scripts/social-scenarios.js`, or in the browser in debug mode with `halls.meet("goblin", "slime")`, `halls.hostile("slime")`, `halls.ally("slime", "Glop")`.
 
 ### Debug mode (developers only)
+
+**Every API request, in detail.** In debug mode the Jev panel has a **REQUESTS** tab: every call the game makes to its server, newest first, with its status, time, how many Jev calls it took, questions and tokens. Open one to read exactly what was sent and answered, and below it each raw Jev call: the `state` Jev was given, the `questions`, and its `answers` with all their probabilities, each with a COPY button. The game asks the server for this with `?debug=1`; the server then records every Jev call for that request alone and returns them under `_debug` (never the key). A server or Worker older than this sends no details, and the tab says so.
 
 Locally, players never see Jev's raw output. Open the game with `?debug` or `#debug` in the URL (e.g. `http://localhost:5174/?debug` or `#floor5-debug`), or set `localStorage["donjon.debug"] = "1"`, to get the following (the itch.io build has it on by default; `?nodebug` turns it off):
 - the **Jev mind panel** (toggle with **J**): every monster's meters, what it heard, Jev's action odds, its feeling odds, its answer to an invitation and the reason, every choice code blocked, and how allies scored each fight;

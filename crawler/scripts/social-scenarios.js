@@ -1,9 +1,22 @@
-// Live checks for group encounters, ally talk, and vows. Usage: node crawler/scripts/social-scenarios.js [filter]
-try {
-  process.loadEnvFile(new URL("../../.env", import.meta.url));
-} catch {}
+// Group encounters, ally talk and vows. Usage: node crawler/scripts/social-scenarios.js [filter] [--live] [--seed=N]
+// By default Jev is mocked (src/mock-jev.js): random but well-formed answers, no key, no credits, repeatable
+// with --seed. That checks the plumbing and the game's rules, not Jev's judgement; pass --live for real calls.
+const args = process.argv.slice(2);
+const live = args.includes("--live");
+const seed = Number(args.find((a) => a.startsWith("--seed="))?.slice(7) ?? 1);
 const { configureJev } = await import("../src/jev.js");
-configureJev(process.env.TYPESAFE_API_KEY);
+if (live) {
+  try {
+    process.loadEnvFile(new URL("../../.env", import.meta.url));
+  } catch {}
+  configureJev(process.env.TYPESAFE_API_KEY);
+  console.log("LIVE Jev: every call is billed.");
+} else {
+  const { mockFetch } = await import("../src/mock-jev.js");
+  globalThis.fetch = mockFetch({ seed });
+  configureJev("mock");
+  console.log(`MOCK Jev (seed ${seed}): random answers, no credits. Add --live for real calls.`);
+}
 const { groupTurn } = await import("../src/enemy.js");
 const { allyTalk, vowMade, vowBroken } = await import("../src/bonds.js");
 const { SPECIES } = await import("../public/species.js");
@@ -17,7 +30,7 @@ const mon = (id, species, name, extra = {}) => {
   const sp = SPECIES[species];
   return { id, species, name, traits: sp.traits.slice(0, 2), hp: sp.hp[1], maxHp: sp.hp[1], meters: { ...sp.start }, specialReady: true, paid: false, demanded: false, impressions: [], formerAlly: false, grudges: [], thisRound: [], ...extra };
 };
-const only = process.argv[2];
+const only = args.find((a) => !a.startsWith("--"));
 const run = async (name, fn) => (!only || name.includes(only) ? fn() : null);
 
 await run("group", async () => {
@@ -31,6 +44,10 @@ await run("group", async () => {
     { type: "fight", targetId: "e0" },
   ];
   for (const [i, t] of turns.entries()) {
+    if (!monsters.length) {
+      console.log("  (every monster has left)");
+      break;
+    }
     const out = await groupTurn({ monsters, party: PARTY, round: i + 1, playerAction: t, events: t.type === "fight" ? ["The party attacked Grok."] : t.type === "talk" ? ["The party spoke."] : [], conversation, partyGold: 30, vows: [] });
     console.log(`> ${t.message ? `“${t.message}”` : `[${t.type}]`}   (${out.ms} ms, ${out.questionCount} q)`);
     for (const r of out.results) {
@@ -40,7 +57,7 @@ await run("group", async () => {
       Object.assign(m, { meters: r.meters, impressions: r.impressions, thisRound: [] });
     }
     if (t.message) conversation.push({ speaker: "Party", text: t.message });
-    if (t.type === "fight") monsters[0].thisRound = ["The party hit it for 6."];
+    if (t.type === "fight" && monsters[0]) monsters[0].thisRound = ["The party hit it for 6."];
     monsters = monsters.filter((m) => !out.results.find((r) => r.id === m.id && ["flee", "leave_peacefully", "join_party"].includes(r.action)));
   }
 });

@@ -6,11 +6,21 @@ import { readFile, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-try {
-  process.loadEnvFile(new URL("../.env", import.meta.url));
-} catch {}
+// JEV_MOCK=1: answer Jev from src/mock-jev.js (random but well-formed, no key, no credits) to work on the game
+// without spending anything. Monsters then act at random, not sensibly.
+const MOCK = process.env.JEV_MOCK === "1";
+if (MOCK) {
+  const { mockFetch } = await import("./src/mock-jev.js");
+  globalThis.fetch = mockFetch({ seed: Number(process.env.JEV_SEED) || Date.now() % 1e6, latency: 150 });
+  process.env.TYPESAFE_API_KEY ||= "mock";
+  console.log("JEV_MOCK=1: Jev is mocked. Random answers, no credits.");
+} else {
+  try {
+    process.loadEnvFile(new URL("../.env", import.meta.url));
+  } catch {}
+}
 if (!process.env.TYPESAFE_API_KEY) {
-  console.error("Missing TYPESAFE_API_KEY. Put it in the project's .env.");
+  console.error("Missing TYPESAFE_API_KEY. Put it in the project's .env, or run with JEV_MOCK=1.");
   process.exit(1);
 }
 

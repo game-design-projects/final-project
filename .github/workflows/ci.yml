@@ -28,6 +28,14 @@ jobs:
           node-version: '22'
       # The tests and the itch build use only Node built-ins, so there is nothing to install
       - run: npm test
+      # Every scripted encounter, against the mock Jev (random answers, no key, no credits), on two seeds
+      - name: Scenarios (mock Jev)
+        run: |
+          set -euo pipefail
+          for seed in 1 2; do
+            node crawler/scripts/scenarios.js --seed=$seed > /dev/null
+            node crawler/scripts/social-scenarios.js --seed=$seed > /dev/null
+          done
       - name: Build the itch bundle
         run: node crawler/scripts/build-itch.js "$JEV_API"
       - name: Validate the HTML5 bundle

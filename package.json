@@ -8,7 +8,9 @@
     "crawler": "node crawler/server.js",
     "crawler:scenarios": "node crawler/scripts/scenarios.js",
     "crawler:itch": "node crawler/scripts/build-itch.js",
-    "test": "node --test crawler/test/*.test.js"
+    "test": "node --test crawler/test/*.test.js",
+    "crawler:mock": "JEV_MOCK=1 node crawler/server.js",
+    "crawler:social": "node crawler/scripts/social-scenarios.js"
   },
   "engines": {
     "node": ">=20"

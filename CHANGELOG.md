@@ -24,6 +24,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Stairs down are larger and drawn in the floor's accent color so they stand out from a distance.
 
 ### Added
+- Debug REQUESTS tab in the Jev panel: every API request with status, time, Jev calls, questions and tokens; open one for the exact request and response and each raw Jev call (state, questions, answers), with COPY buttons. The server returns the Jev calls for a request when asked with `?debug=1` (`public/inspector.js`).
+- Mock Jev (`src/mock-jev.js`): seeded, well-formed random answers. `npm run crawler:mock` runs the game on it; the scenario scripts use it by default (`--live` for real calls); `npm test` now covers every API endpoint with it, and CI runs the scenarios on it.
 - Hold to talk: hold T, R or E (or the HOLD TO SPEAK button) and speak instead of typing; the browser's built-in speech recognition fills the box live and sends it when you let go (`public/voice.js`).
 - GitHub Actions CI (`.github/workflows/ci.yml`): tests and a validated itch bundle on every push and pull request; pushes to `main` publish to https://aalfalasi.itch.io/donjon with butler.
 - Music cues for good news, both quoting the same melody: a bright 8-bit fanfare when you go down the stairs, and a short victory jingle when you win a fight.
