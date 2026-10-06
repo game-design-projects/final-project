@@ -29,7 +29,7 @@ export const EMOTIONS = {
     what: "Moved, touched, or deeply understood",
     when: "The party showed real care, respect, or understanding of what it values",
     meters: { friendliness: 26, anger: -16 },
-    effect: "ITS HEART OPENS. IT MAY ASK TO JOIN YOU",
+    effect: "ITS HEART OPENS TO YOU",
     tone: "good",
   },
   flattered: {
@@ -108,9 +108,12 @@ export const EMOTIONS = {
 export const PACIFYING = new Set(["charmed", "laughing", "confused"]);
 
 // How the party's "please join us" landed, from the Charisma (Persuasion) roll. Code applies these.
+// reach: a pitch that beats the DC brings the monster at least this far past its join bar (and cools its anger
+// below the bar for joining), so "A CONVINCING PITCH" really convinces it; Jev still decides whether it says yes,
+// and why. Without this, a passed check often left the monster short of its bar and it refused with no reason.
 export const PITCH = {
-  great: { friendliness: 30, anger: -10, words: "an irresistible pitch" },
-  success: { friendliness: 18, anger: -5, words: "a convincing pitch" },
+  great: { friendliness: 30, anger: -10, reach: 10, words: "an irresistible pitch" },
+  success: { friendliness: 18, anger: -5, reach: 0, words: "a convincing pitch" },
   close: { friendliness: 6, anger: 0, words: "a pitch that almost convinced it" },
   fail: { friendliness: -6, anger: 12, words: "a clumsy, off-putting pitch" },
   botch: { friendliness: -14, anger: 25, words: "an insulting, disastrous pitch" },

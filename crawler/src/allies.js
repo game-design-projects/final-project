@@ -2,10 +2,12 @@
 //   - approval Score per ally (how it feels about the events, by its own values)
 //   - a reaction line Choice per ally
 //   - for allies whose loyalty is already shaky, a speculative Choice: stay, leave, or turn on the party
+//   - which event it reacted to most, so the log can say what pleased or upset it ("can't stomach how you...")
 // Code turns approval into loyalty and decides whether leaving or betrayal is allowed.
 
 import { choice, score } from "./q.js";
 import { SPECIES, fill } from "../public/species.js";
+import { reactionLineIndex } from "../public/narrate.js";
 import { jev } from "./jev.js";
 
 const LOYALTY_DELTA = [-18, -9, 0, 7, 12]; // by approval level 0..4
@@ -53,6 +55,14 @@ export async function allyReactions({ allies, events }) {
       },
       Object.fromEntries(lines.map((l, i) => [`line_${i}`, fill(l, { name: al.name })])),
     );
+    if (events.length > 1)
+      questions[`moment__${al.id}`] = choice(
+        {
+          question: `Which event in \`events\` does \`allies.${al.id}.name\` react to most strongly, for better or worse?`,
+          judge_by: [`\`allies.${al.id}.values\``, `\`allies.${al.id}.personality\``],
+        },
+        Object.fromEntries(events.map((e, i) => [`event_${i}`, e])),
+      );
     if (al.loyalty < SHAKY) {
       questions[`decision__${al.id}`] = choice(
         {
@@ -94,8 +104,9 @@ export async function allyReactions({ allies, events }) {
 
     let line;
     if (decision === "stay") {
+      // A grumbling stay (it wanted out) sounds unhappy whatever the score says
       const lines = [...sp.reactions.approve, ...sp.reactions.neutral, ...sp.reactions.disapprove];
-      line = lines[Number(a[`line__${al.id}`].choice.split("_")[1])];
+      line = lines[reactionLineIndex(a[`line__${al.id}`]?.probabilities, sp.reactions, picked === "stay" ? level : Math.min(level, 1))];
     } else {
       const bank = decision === "leave_party" ? sp.reactions.leave : sp.reactions.betray;
       line = bank[Math.floor(Math.random() * bank.length)];
@@ -109,6 +120,8 @@ export async function allyReactions({ allies, events }) {
       picked,
       decision,
       blocked,
+      level,
+      moment: events.length > 1 ? (events[Number(a[`moment__${al.id}`]?.choice?.split("_")[1])] ?? null) : (events[0] ?? null),
       line: fill(line, { name: al.name }),
     };
   });
