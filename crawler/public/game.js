@@ -673,10 +673,23 @@ function renderBar() {
     // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
     // (J, the Jev mind panel, exists only in debug runs)
     achCap(),
-    `<span class="sys">${!DEBUG ? "" : cmd("j", "JEV", { cls: $("#jev").classList.contains("hidden") ? "off" : "", hint: "SHOW OR HIDE THE JEV PANEL" })}${cmd("h", "TIPS", { cls: tips.on() ? "" : "off" })}${cmd("p", "MUSIC", { cls: music.on ? "" : "off" })}${cmd("o", "SOUND", { cls: sfx.on ? "" : "off" })}${
-      narrator.supported ? cmd("l", "VOICES", { cls: narrator.on ? "" : "off", hint: "MONSTERS READ THEIR LINES ALOUD. ON BY ITSELF ONCE YOU SPEAK (HOLD SPACE)" }) : ""
-    }</span>`,
+    `<span class="sys">${sysToggles()}</span>`,
   ].join("");
+}
+
+// The rarely-touched switches: a keycap and a pixel icon each (slashed when off), the words in the tooltip
+function sysToggles() {
+  const sw = (k, icon, name, on, what) =>
+    cmd(k, iconSvg(icon, on ? "#e8e8e8" : "#5a5a5a"), { cls: `ico-only${on ? "" : " off"}`, title: `${name} ${on ? "ON" : "OFF"} · ${what} · PRESS ${k.toUpperCase()}` });
+  return [
+    DEBUG && sw("j", "eye", "JEV MIND PANEL", !$("#jev").classList.contains("hidden"), "WHAT JEV DECIDED, AND EVERY API REQUEST"),
+    sw("h", "question", "TIPS", tips.on(), "ONE SHORT HINT AT A TIME, THE FIRST TIME SOMETHING MATTERS"),
+    sw("p", "note", "MUSIC", music.on, "THE DUNGEON AND BATTLE MUSIC"),
+    sw("o", "speaker", "SOUND", sfx.on, "HITS, SPELLS, DICE AND MONSTER VOICES"),
+    narrator.supported && sw("l", "bubble", "VOICES", narrator.on, "MONSTERS READ THEIR LINES ALOUD. ON BY ITSELF ONCE YOU SPEAK (HOLD SPACE)"),
+  ]
+    .filter(Boolean)
+    .join("");
 }
 
 // K: the achievements, a trophy and how many you've earned (lit while the list is open)
@@ -793,8 +806,8 @@ function renderVows() {
 
 const ARROWS = { fwd: "up", back: "down", turnL: "left", turnR: "right" };
 const capOf = (k) => (ARROWS[k] ? iconSvg(ARROWS[k]) : { escape: "ESC", enter: "ENTER" }[k] ?? esc(k.toUpperCase()));
-function cmd(k, label, { hint = "", sub = "", cls = "", cap, style = "" } = {}) {
-  return `<button type="button" class="cmd ${cls}" data-key="${k}"${hint ? ` data-hint="${esc(hint)}"` : ""}${style ? ` style="${style}"` : ""}><kbd>${cap ?? capOf(k)}</kbd>${
+function cmd(k, label, { hint = "", sub = "", cls = "", cap, style = "", title = "" } = {}) {
+  return `<button type="button" class="cmd ${cls}" data-key="${k}"${hint ? ` data-hint="${esc(hint)}"` : ""}${title ? ` title="${esc(title)}"` : ""}${style ? ` style="${style}"` : ""}><kbd>${cap ?? capOf(k)}</kbd>${
     label ? `<span class="lbl">${label}${sub ? `<small>${sub}</small>` : ""}</span>` : ""
   }</button>`;
 }

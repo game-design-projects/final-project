@@ -25,7 +25,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 /* The status line on top: where you are, not what to press */
 /* One row, fixed slots: the font is monospace, so each slot is sized in characters and nothing shifts when
    the facing, gold or boons change. Only the floor's name gives way (with an ellipsis) when space is short. */
-.bar.top { font-size: 9px; color: var(--dim); align-items: center; min-height: 25px; flex-wrap: nowrap; gap: 12px; }
+.bar.top { font-size: 9px; color: var(--dim); align-items: center; height: 38px; flex-wrap: nowrap; gap: 12px; }
 .bar.top > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; }
 .bar.top .ico { width: 14px; height: 14px; }
 .bar.top .loc { flex: 1 1 auto; min-width: 8ch; overflow: hidden; }
@@ -156,8 +156,10 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .tip { font-size: 7px; padding: 11px 26px 7px 10px; left: 6px; right: 6px; bottom: 6px; }
   .tip kbd.key { min-width: 13px; height: 13px; }
 }
-.side { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-.log { flex: 1; min-height: 160px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+/* The side column never sets the row's height (contain: size): it takes exactly the height of the view and
+   map beside it, and the log scrolls inside, so a long log or a bigger party never pushes the dock down */
+.side { display: flex; flex-direction: column; gap: 8px; min-height: 0; contain: size; }
+.log { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; }
 .log p { margin: 0 0 4px; }
 .log .dim { color: var(--dim); }
 .log .warn { color: var(--warn); }
@@ -200,7 +202,8 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .mapbox { display: flex; align-items: flex-end; gap: 12px; }
 .mid.fighting .mapbox { visibility: hidden; }
 #map { width: 105px; height: 105px; image-rendering: pixelated; border: 1px solid var(--faint); background: #000; flex: none; }
-#map.hidden, #map.hidden + .legend { display: none; }
+/* hidden but keeping its place, so M doesn't move everything below it */
+#map.hidden, #map.hidden + .legend { visibility: hidden; }
 .legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--dim); }
 .legend li { display: flex; align-items: center; gap: 6px; }
 .legend i { width: 8px; height: 8px; display: inline-block; }
@@ -213,6 +216,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .dock {
   --accent: #ffb347;
   position: relative;
+  min-height: 80px; /* the same from the title screen to exploring to a fight with several targets */
   margin: 8px 0 0;
   padding: 8px 8px 4px;
   border: 2px solid var(--faint);
@@ -270,6 +274,12 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .sys { display: inline-flex; gap: 2px; }
 .sys .cmd { border-color: transparent; color: var(--dim); padding: 2px 4px 2px 2px; min-height: 0; font-size: 8px; gap: 5px; }
 .sys .cmd.off { opacity: 0.45; text-decoration: line-through; }
+/* icon-only switches: a keycap and a 14px pixel icon; off = dimmed with a red slash through the icon */
+.sys .cmd.ico-only { gap: 4px; padding-right: 3px; }
+.sys .cmd.ico-only .lbl { position: relative; display: inline-flex; }
+.sys .cmd.ico-only .ico { width: 14px; height: 14px; }
+.sys .cmd.ico-only.off { opacity: 1; text-decoration: none; }
+.sys .cmd.ico-only.off .lbl::after { content: ""; position: absolute; left: -2px; right: -2px; top: 6px; height: 2px; background: var(--warn); transform: rotate(-40deg); }
 .sys .cmd kbd { background: var(--faint); color: var(--ink); }
 .sys .cmd:hover { color: var(--ink); }
 .targets .cmd { color: var(--c); }
@@ -442,6 +452,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .wrap { padding: 8px; }
   .crt { padding: 8px; }
   .mid { grid-template-columns: 1fr; }
+  .side { contain: none; }
   .log { max-height: 160px; min-height: 100px; }
   #map { width: 84px; height: 84px; }
   .bar { font-size: 9px; flex-wrap: wrap; }
