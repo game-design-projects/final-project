@@ -443,3 +443,43 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .cmd { min-height: 40px; }
   .pad .cmd { min-width: 40px; min-height: 40px; justify-content: center; }
 }
+
+/* ---- Pixel-art tooltips (public/tooltip.js): a framed note with stepped corners and a hard shadow */
+.pxtip {
+  --accent: #ffb347;
+  position: absolute;
+  z-index: 50;
+  max-width: 320px;
+  padding: 8px 10px 9px;
+  background: #000;
+  color: var(--ink);
+  font: 18px/1.05 "VT323", ui-monospace, monospace;
+  pointer-events: none;
+  /* a 2px pixel border with notched corners, then a hard 4px drop shadow */
+  box-shadow:
+    -2px 0 0 0 var(--accent), 2px 0 0 0 var(--accent), 0 -2px 0 0 var(--accent), 0 2px 0 0 var(--accent),
+    4px 4px 0 2px #000, 4px 4px 0 3px color-mix(in srgb, var(--accent) 35%, #000);
+  image-rendering: pixelated;
+}
+.pxtip[hidden] { display: none; }
+.pxtip::after {
+  /* a pixel arrow toward the thing you're hovering */
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: calc(var(--arrow-x, 50%) - 4px);
+  width: 8px;
+  height: 6px;
+  background: var(--accent);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.pxtip.above::after { top: auto; bottom: -8px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.pxtip p { margin: 0 0 3px; }
+.pxtip p:last-child { margin-bottom: 0; }
+.pxtip p.head { font: 9px/1.6 "Press Start 2P", ui-monospace, monospace; color: var(--accent); margin-bottom: 5px; }
+.pxtip .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 2px 12px; margin-top: 6px; padding-top: 6px; border-top: 2px dotted #333; }
+.pxtip .stats span { display: flex; justify-content: space-between; gap: 6px; }
+.pxtip .stats b { font: 7px/2 "Press Start 2P", ui-monospace, monospace; font-weight: normal; color: var(--dim); }
+.pxtip .stats i { font-style: normal; }
+.pxtip .stats i.up { color: #6bd36b; }
+.pxtip .stats i.down { color: var(--warn); }

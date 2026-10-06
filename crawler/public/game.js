@@ -8,6 +8,7 @@ import { d, d20, rollDice, fmtRoll, diceRange, prof, CLASSES, SPELLS, spellText,
 import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg } from "./status.js";
 import { initTutorial } from "./tutorial.js";
 import { Listener, HOLD_MS } from "./voice.js";
+import { installTooltips } from "./tooltip.js";
 import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
 
 const $ = (s) => document.querySelector(s);
@@ -51,6 +52,9 @@ const store = {
 // Developer mode: the Jev mind panel (J), raw numbers in the log, and the `halls` console hooks. Players never see
 // any of it; monsters' minds reach them through what they say and do. Turn it on with ?debug or #debug in the URL
 // (e.g. #floor5-debug), or for good with localStorage "donjon.debug" = "1".
+// Every title in the game shows as a pixel-art note in the floor's color, not the browser's grey box
+installTooltips({ accent: () => G?.map?.palette?.accent ?? "#ffb347" });
+
 // Debug mode (Jev mind panel, [DEBUG] log lines, the `halls` console hooks): on with ?debug / #debug or
 // localStorage donjon.debug = "1", or by default when the build's config says so (the itch.io build does);
 // ?nodebug turns it off for one visit.
