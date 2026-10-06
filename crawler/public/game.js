@@ -1274,6 +1274,7 @@ function addEnemy(e) {
 
 async function encounter(group = makeGroup(), opts = {}) {
   sfx.play(opts.boss ? "boss" : "encounter");
+  music.setMood("battle");
   G.combat = { enemies: [], nextId: 0, target: null, round: 0, conversation: [], history: [], rounds: {}, spoken: new Set(), vowed: false, kills: 0, recruits: [], boss: !!opts.boss };
   G.mode = "combat";
   G.graceSteps = 5;
@@ -2322,6 +2323,7 @@ async function endCombat() {
   if (!c) return;
   G.combat = null;
   G.mode = "explore";
+  music.setMood("explore");
   G.busy = false; // the party's turn may have ended the fight mid-action
   // The fallen who still live come to; conditions and talk moods fade
   for (const m of G.party) {
@@ -2402,6 +2404,7 @@ async function allyReactionsAfter(c) {
 function gameOver() {
   G.mode = "over";
   G.combat = null;
+  music.setMood("explore");
   G.busy = false;
   sfx.play("death");
   say(`YOUR PARTY HAS PERISHED ON B${G.floor}F.`, "big");

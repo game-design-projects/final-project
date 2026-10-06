@@ -164,6 +164,13 @@ python3 crawler/scripts/build-ambient.py /tmp/ambient.wav
 afconvert -f m4af -d aac -b 160000 /tmp/ambient.wav crawler/public/ambient.m4a
 ```
 
+**Fights play `public/battle.m4a` instead**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums, on the heroic D–C–G–A progression with a B minor bridge. When a fight starts it cuts in within a third of a second and the ambient fades out underneath (keeping its place); when the fight ends the battle loop fades and the dungeon creeps back. Each fight starts the loop from bar one. Rebuild it the same way:
+
+```bash
+python3 crawler/scripts/build-battle.py /tmp/battle.wav
+afconvert -f m4af -d aac -b 160000 /tmp/battle.wav crawler/public/battle.m4a
+```
+
 **The beat maker and its engine are separate now.** The dungeon no longer plays what follows; it is still there for `beatmaker.html`.
 
 The engine (`public/music.js`) plays sampled instruments from the **MusyngKite** soundfont (CC BY-SA 3.0) and **FluidR3** (CC BY 3.0), plus **LinnDrum** drum samples (public domain), through a generated cathedral reverb. Every track can use any instrument. Credits are in `public/CREDITS.txt`, which ships in the itch zip; put the same credits on the itch.io page.
