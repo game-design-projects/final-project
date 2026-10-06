@@ -670,6 +670,7 @@ function deathSaves(m) {
   return `<span class="saves" title="${esc(tip)}">${[0, 1, 2].map((j) => box(j < s.s, "ok")).join("")}${[0, 1, 2].map((j) => box(j < s.f, "bad")).join("")}</span>`;
 }
 
+// While you choose moves, the member choosing glows; while you choose who to heal, the one picked lights up
 function partyRow(m, i) {
   const st = hpState(m);
   const hp = Math.max(0, m.hp);
@@ -680,11 +681,16 @@ function partyRow(m, i) {
     m.dead ? word : m.down ? `${word}${m.stable ? "" : deathSaves(m)}` : `${hp}/${m.maxHp} ${word}`
   }</small></span>`;
   const armor = `<span class="ac" title="ARMOR ${m.ac}: AN ATTACKER NEEDS ${m.ac} OR MORE, WITH ITS BONUS, TO HIT">${iconSvg("shield", "#9fb0c0")}${m.ac}</span>`;
-  return `<div class="prow ${st.id}"${boonTitle(m)}><span class="num">${i + 1}</span>${who}${health}${armor}<span class="pw">${powersCell(m)}</span><span class="chips">${statusChips(m)}</span></div>`;
+  const acting = G.menu?.who === m ? " acting" : "";
+  const picked = G.menu?.options[G.menu.sel]?.who === m ? " picked" : "";
+  return `<div class="prow ${st.id}${acting}${picked}"${boonTitle(m)}><span class="num">${acting ? "▶" : i + 1}</span>${who}${health}${armor}<span class="pw">${powersCell(m)}</span><span class="chips">${statusChips(m)}</span></div>`;
 }
 
 function renderParty() {
-  $("#party").innerHTML = `<div class="prow phead" aria-hidden="true"><span></span><span>PARTY</span><span>HEALTH</span><span>ARMOR</span><span>SPELLS</span><span>STATUS</span></div>${G.party.map(partyRow).join("")}`;
+  $("#party").innerHTML = G.party.map(partyRow).join("");
+  $("#party").style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
+  // The map sits over the corner of the view; in a fight that corner belongs to the monsters
+  $(".viewport").classList.toggle("fighting", !!G.combat);
 }
 
 // The vow ledger. Re-rendered only when something changes, so a fresh slash animates exactly once.
@@ -3010,6 +3016,7 @@ $("#dock").addEventListener("mouseover", (ev) => {
     G.menu.sel = Number(b.dataset.i);
     for (const o of $("#cmds").querySelectorAll(".opt")) o.classList.toggle("sel", o === b);
     dockHint = b.dataset.hint ?? "";
+    renderParty(); // the member this option is about lights up
   }
   $("#hint").textContent = b.dataset.hint || dockHint;
 });

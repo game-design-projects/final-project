@@ -44,11 +44,11 @@ To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML
 | Menus | ↑/↓ (or W/S) move the highlight, ←/→ jump columns, **Enter** picks it · **1–9** and **0** pick directly · **Esc** goes back |
 | Anywhere | **H** tips off / back on from the start · **P** music on/off · **O** sound effects on/off · (**J** Jev mind panel, debug runs only) |
 
-**The screen.** The top line says where you are: the floor, the way you face (or that you're in a fight), gold, boons, and the H/P/O toggles (dimmed and struck through when off). Everything you can do sits in the **command dock right under the view**, next to the log and the party, as keycap buttons: press the key or click the button. Hover a button to read what it does on the line beneath. When the game waits on you (a menu like CHOOSE MOVES' spell list, the talk box, "any key" after a Roll of Fate), the dock lights up in the floor's color, and a key it doesn't take shakes it instead of vanishing.
+**The screen.** The top line says where you are: the floor, the way you face (or that you're in a fight), gold, boons, and the H/P/O toggles (dimmed and struck through when off). Beside the view sit **the party** (top) and the log; the automap is a small translucent square over the view's top-right corner while you explore, and hides in a fight. Everything you can do sits in the **command dock right under the view**, as keycap buttons: press the key or click the button. Hover a button to read what it does on the line beneath. When the game waits on you (a menu like CHOOSE MOVES' spell list, the talk box, "any key" after a Roll of Fate), the dock lights up in the floor's color, and a key it doesn't take shakes it instead of vanishing.
 
 **Questions wait where you're looking.** When the game needs a yes or no (stairs down, Revivify, a monster asking to join), a box lights up over the view in the floor's accent color with clickable answers. **Y**/**Enter** says yes, **N**/**Esc** no, and any other key shakes the box so you can't miss it. At the stairs you can simply walk away.
 
-**The party panel** reads at a glance, mostly without words:
+**The party panel** reads at a glance, mostly without words. While you choose moves, the member choosing glows with a ▶; while you pick who to heal or revive, the one highlighted in the menu lights up here too:
 
 - **Health** is a segmented bar: its length and color say how hurt someone is (green healthy, yellow HURT, red CRITICAL). At 0 it reads DYING (blinking) with their death saves as boxes, three green for successes and three red for failures; STABLE once three succeed; the dead get a skull and a struck-through name.
 - **Armor** is a shield with the number an attacker has to reach.

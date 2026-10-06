@@ -188,8 +188,18 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 @media (prefers-reduced-motion: reduce) {
   .vows li.broken.fresh::after, .vows.shake { animation: none; }
 }
-#map { width: 105px; height: 105px; image-rendering: pixelated; border: 1px solid var(--faint); align-self: flex-end; }
-#map.hidden { display: none; }
+/* The automap: over the top-right corner of the view while exploring, out of the way in a fight */
+#map {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 105px;
+  height: 105px;
+  image-rendering: pixelated;
+  border: 1px solid var(--faint);
+  background: rgba(0, 0, 0, 0.55);
+}
+#map.hidden, .viewport.fighting #map { display: none; }
 
 /* ---- The command dock, right under the view: every command as a keycap you can press or click */
 .dock {
@@ -317,16 +327,27 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 
 /* ---- The party: health as a bar (length + color + a word once it matters), armor a shield,
    spell slots pips colored by circle, conditions icon chips */
-.party { margin-top: 8px; }
+/* Beside the view, at the top of the side column: two compact lines per member */
+.party { --accent: #ffb347; flex: none; border-bottom: 2px solid var(--faint); padding-bottom: 4px; }
 .prow {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1.2fr) 132px 42px minmax(0, 0.9fr) minmax(0, 1.5fr);
-  gap: 0 10px;
+  grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-areas: "num who hp ac" "num pw st st";
+  gap: 3px 8px;
   align-items: center;
-  padding: 4px 2px;
-  border-bottom: 1px solid #1a1a1a;
+  padding: 4px 4px;
+  border: 1px solid transparent;
+  border-bottom-color: #1a1a1a;
 }
-.prow.phead { font-size: 7px; color: var(--dim); padding: 0 2px 4px; border-bottom: 1px solid var(--faint); }
+.prow .num { grid-area: num; align-self: start; }
+.prow .who { grid-area: who; }
+.prow .hp { grid-area: hp; }
+.prow .ac { grid-area: ac; }
+.prow .pw { grid-area: pw; }
+.prow .chips { grid-area: st; }
+.prow.acting { border-color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent); }
+.prow.acting .num { color: var(--accent); }
+.prow.picked { background: color-mix(in srgb, var(--accent) 16%, #000); border-color: color-mix(in srgb, var(--accent) 60%, #000); }
 .num { color: var(--dim); font-size: 9px; }
 .who { min-width: 0; }
 .who b { display: flex; align-items: center; gap: 5px; font-weight: normal; font-size: 9px; white-space: nowrap; overflow: hidden; }
@@ -413,19 +434,11 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .crt { padding: 8px; }
   .mid { grid-template-columns: 1fr; }
   .log { max-height: 160px; min-height: 100px; }
-  #map { display: none; }
+  #map { width: 72px; height: 72px; top: 6px; right: 6px; }
   .bar { font-size: 9px; flex-wrap: wrap; }
   .bar.top { gap: 6px 12px; }
   .menu { grid-auto-flow: row; grid-template-rows: none !important; grid-template-columns: 1fr; }
   .sys { margin-left: 0; }
   .cmd { min-height: 40px; }
   .pad .cmd { min-width: 40px; min-height: 40px; justify-content: center; }
-  .prow { grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "num who hp ac" "num pw st st"; gap: 4px 8px; }
-  .prow.phead { display: none; }
-  .num { grid-area: num; align-self: start; }
-  .who { grid-area: who; }
-  .hp { grid-area: hp; }
-  .ac { grid-area: ac; }
-  .pw { grid-area: pw; }
-  .chips { grid-area: st; }
 }

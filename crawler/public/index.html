@@ -27,15 +27,16 @@
         <div class="mid">
           <div class="viewport">
             <canvas id="view" width="448" height="288" aria-label="Dungeon view"></canvas>
+            <canvas id="map" width="105" height="105" aria-label="Automap"></canvas>
             <div id="modal" class="modal" role="alertdialog" aria-live="assertive" hidden></div>
           </div>
           <div class="side">
+            <div id="party" class="party" aria-label="Party"></div>
             <div id="log" class="log" aria-live="polite"></div>
             <div id="vows" class="vows" hidden>
               <h4>VOWS</h4>
               <ol id="vowList"></ol>
             </div>
-            <canvas id="map" width="105" height="105" aria-label="Automap"></canvas>
           </div>
         </div>
         <section id="dock" class="dock" aria-label="Commands">
@@ -49,7 +50,6 @@
           <div id="cmds" class="cmds"><p class="wait">PRESS ANY KEY TO BEGIN</p></div>
           <div id="hint" class="hint" aria-live="polite"></div>
         </section>
-        <div id="party" class="party" aria-label="Party"></div>
       </section>
 
       <aside id="jev" class="jev hidden" aria-label="Jev mind (debug)">
