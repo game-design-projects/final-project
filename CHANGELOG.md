@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The automap shows walls: each side of seen floor that faces a wall gets a line in the floor's wall color, so walls no longer look the same as unexplored dark.
 
 ### Changed
+- The music is re-scored as baroque dungeon music on real sampled instruments (harpsichord, church organ, strings, choir, music box, tubular bells, kettle drums), all built on the game's melody and played in one stone hall: exploring is a D minor passacaglia (64 BPM, five variations on a lament bass); fights pick one of four toccata-style loops (toccata D minor, charge A minor, crusade G minor, gallop E minor; 112-132 BPM) and keep it for the whole fight; going downstairs and winning get organ, strings and bells resolving in D major. Replaces the synth ambient and the chiptune loops (`scripts/sampler.py`).
 - The top bar's switches (Jev panel, tips, music, sound, voices) are a keycap and a pixel icon each, slashed red when off, with the words in the tooltip, so the bar fits in one row even in debug runs.
 - Scrollbars everywhere (log, panels) are square pixel bars instead of the browser's rounded ones, and focus rings are square.
 - Tooltips are pixel art: every hover note is a framed box in the pixel fonts and the floor's color, with a pixel arrow, instead of the browser's grey system tooltip. Multi-part notes get one line each, and ability scores show as a small table (`public/tooltip.js`).
