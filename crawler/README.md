@@ -24,7 +24,9 @@ cd ../..
 npm run crawler:itch -- https://halls-of-jev-api.<you>.workers.dev
 ```
 
-Upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". An embed size of about 1180 × 820 fits the game plus the Jev panel; enable the fullscreen button too.
+**CI publishes automatically.** `.github/workflows/ci.yml` runs `npm test` and builds and validates the itch bundle on every push and pull request; every push to `main` that passes is pushed with butler to https://aalfalasi.itch.io/donjon (channel `html5`, version = the commit SHA). It needs the `BUTLER_API_KEY` repository secret, and pull requests never see it.
+
+To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". An embed size of about 1180 × 820 fits the game plus the Jev panel; enable the fullscreen button too.
 
 - The Worker runs the same code as the local server (`crawler/src/api.js`), so the monsters behave identically.
 - To test the itch build locally: `node crawler/proxy/dev.js` (Worker on port 5175), then `npm run crawler:itch -- http://localhost:5175` and serve `dist/donjon` from any static server.

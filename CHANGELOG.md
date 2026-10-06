@@ -19,5 +19,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - Stairs down are larger and drawn in the floor's accent color so they stand out from a distance.
 
 ### Added
+- GitHub Actions CI (`.github/workflows/ci.yml`): tests and a validated itch bundle on every push and pull request; pushes to `main` publish to https://aalfalasi.itch.io/donjon with butler.
 - Music cues for good news: a bright 8-bit fanfare when you go down the stairs (then quiet for a while instead of the creepy ambient), and a short victory jingle when you win a fight.
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).

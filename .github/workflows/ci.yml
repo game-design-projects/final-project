@@ -1,0 +1,71 @@
+# Tests on every push and pull request; on main, a passing build is published to itch.io
+# (https://aalfalasi.itch.io/donjon, channel html5). The publish job alone sees the BUTLER_API_KEY secret
+# (inherited from the game-design-projects org), and never runs for pull requests.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+
+env:
+  # The Cloudflare Worker that holds the Jev key; the static build only knows its address (crawler/README.md)
+  JEV_API: https://halls-of-jev-api.donjonjev.workers.dev
+  ITCH_TARGET: aalfalasi/donjon:html5
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # The tests and the itch build use only Node built-ins, so there is nothing to install
+      - run: npm test
+      - name: Build the itch bundle
+        run: node crawler/scripts/build-itch.js "$JEV_API"
+      - name: Validate the HTML5 bundle
+        run: node crawler/scripts/check-html5.mjs dist/donjon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: donjon-html5
+          path: dist/donjon
+          retention-days: 14
+
+  publish:
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: itch-production
+      cancel-in-progress: false
+    environment:
+      name: itch-production
+      url: https://aalfalasi.itch.io/donjon
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: donjon-html5
+          path: dist/donjon
+      - name: Install official butler
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            https://broth.itch.zone/butler/linux-amd64/15.31.0/archive/default -o "$RUNNER_TEMP/butler.zip"
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+      - name: Push to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$BUTLER_API_KEY" || { echo '::error::Missing BUTLER_API_KEY secret'; exit 1; }
+          "$RUNNER_TEMP/butler/butler" push dist/donjon "$ITCH_TARGET" --userversion "$GITHUB_SHA"
+          "$RUNNER_TEMP/butler/butler" status "$ITCH_TARGET"
