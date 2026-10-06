@@ -52,6 +52,7 @@ function sanitizeGroup(b) {
   };
   b.conversation = (b.conversation ?? []).slice(-10).map((l) => ({ speaker: short(l.speaker, 40), text: short(l.text) }));
   b.events = (b.events ?? []).slice(0, 12).map((e) => short(e, 200));
+  b.guided = b.guided === true;
   b.party = (b.party ?? []).slice(0, 6);
   b.vows = (b.vows ?? []).slice(0, 12).map((v) => ({ text: short(v.text, 80), toId: short(v.toId, 20), status: short(v.status, 10) }));
   return b;

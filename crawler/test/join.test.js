@@ -184,3 +184,34 @@ test("a tribute refusal carries its reason", async () => {
   });
   assert.deepEqual([out.results[0].action, out.results[0].tributeRefusal], ["refuse_tribute", "too_little"]);
 });
+
+// ---- the guided first fight: talk, then recruit, and it says yes
+
+test("resolveJoin: in the guided first fight the invitation is a sure yes (unless there's no room)", () => {
+  const cold = { invited: true, meters: { friendliness: 20, anger: 40 }, threshold: 55, willing: 0, emotion: emotion("offended"), noWhy: "pride" };
+  assert.equal(resolveJoin(cold).accepted, false);
+  assert.deepEqual(resolveJoin({ ...cold, sure: true, yesWhy: "company" }), { asked: true, accepted: true, moved: false, reason: "company" });
+  assert.equal(resolveJoin({ ...cold, sure: true, room: false }), null);
+  assert.equal(resolveJoin({ ...cold, invited: false, sure: true }), null, "only an actual invitation is sure");
+});
+
+test("guided first fight: the slime joins when asked, even if Jev is lukewarm", async () => {
+  globalThis.fetch = fakeJev({ emotion: "intrigued", would_join: 0.1, join_no: "not_yet", action: "converse" });
+  const out = await groupTurn({
+    monsters: [mon("e0", "slime", "Glop", { friendliness: 40, anger: 0, fear: 20 })],
+    party: PARTY, round: 2, playerAction: recruit("e0", "success"), events: [], conversation: [], partyGold: 30, vows: [], guided: true,
+  });
+  assert.equal(out.results[0].action, "join_party");
+  assert.equal(out.results[0].join.accepted, true);
+});
+
+test("guided first fight: it stays to hear you out instead of fleeing or wandering off", async () => {
+  for (const action of ["flee", "leave_peacefully"]) {
+    globalThis.fetch = fakeJev({ emotion: "touched", action });
+    const out = await groupTurn({
+      monsters: [mon("e0", "slime", "Glop", { friendliness: 60, anger: 0, fear: 20 })],
+      party: PARTY, round: 1, playerAction: { type: "talk", message: "Hello there, little one.", delivery: 1 }, events: [], conversation: [], partyGold: 30, vows: [], guided: true,
+    });
+    assert.notEqual(out.results[0].action, action, `${action} is blocked while guided`);
+  }
+});

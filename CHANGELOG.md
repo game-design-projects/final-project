@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- A guided first fight: a new player's first encounter is one shy orange slime, and it teaches the game's heart by doing it. Only TALK works at first (it glows; the other commands are dimmed, and pressing one shakes the dock and brings the tip back), then only RECRUIT, and the invitation is a sure yes (beginner's luck on the Persuasion roll; the server is told `guided`, so Jev's answer can't refuse and the slime doesn't wander off). Every later fight is unguided. H (tips off) skips or releases it; H again replays it. Debug: `halls.lesson()`.
+
 ### Fixed
 - No more jump when the game starts, or later: the top bar has a fixed height, the side column (party and log) always matches the view and map beside it with the log scrolling inside, hiding the map keeps its space, and the command dock has a steady minimum height. Measured identical from the title screen through exploring and fights.
 - The top status line no longer jumps around: one row, every slot (facing, gold, boons, achievements, toggles) a fixed width, so turning, earning gold or starting a fight only changes the text in place. Only the floor's name shortens (with an ellipsis, full name on hover) when space is tight.

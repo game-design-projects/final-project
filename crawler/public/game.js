@@ -6,7 +6,7 @@ import { Sfx } from "./sfx.js";
 import { DicePops, dieTier, landPunch, DIE_TUMBLE_MS, DIE_ANIM_MS } from "./dice.js";
 import { d, d20, rollDice, fmtRoll, diceRange, prof, CLASSES, SPELLS, spellText, ABILITY_WORDS, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
 import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg } from "./status.js";
-import { initTutorial } from "./tutorial.js";
+import { initTutorial, GUIDE, guideAllows, shouldGuide } from "./tutorial.js";
 import { initAchievements, badgeSvg } from "./achievements.js";
 import { Listener, HOLD_MS, spaceHold } from "./voice.js";
 import { Narrator } from "./tts.js";
@@ -239,6 +239,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // A yes/no question. It shows as a lit-up box over the view, where your eyes already are, and
 // any other key shakes it rather than being silently ignored. `walkAway`: moving answers no and moves.
+// `no: null`: yes is the only answer (the guided first fight's recruit); N and Esc shake it too.
 function ask(text, { yes = "YES", no = "NO", walkAway = false } = {}) {
   return new Promise((resolve) => {
     G.prompt = { text, resolve, yes, no, walkAway };
@@ -253,7 +254,7 @@ function renderModal() {
   el.hidden = !p;
   if (!p) return;
   el.style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
-  el.innerHTML = `<p>${esc(p.text)}</p><div class="choices"><button data-key="y"><kbd>Y</kbd> ${esc(p.yes)}</button><button data-key="n"><kbd>N</kbd> ${esc(p.no)}</button></div>${
+  el.innerHTML = `<p>${esc(p.text)}</p><div class="choices"><button data-key="y"><kbd>Y</kbd> ${esc(p.yes)}</button>${p.no ? `<button data-key="n"><kbd>N</kbd> ${esc(p.no)}</button>` : ""}</div>${
     p.walkAway ? `<p class="aside">OR JUST WALK AWAY</p>` : ""
   }`;
 }
@@ -872,15 +873,19 @@ function renderDock() {
     const here = present();
     const t = targetEnemy();
     const tn = t ? UP(t.name) : "THE TARGET";
+    // The guided first fight: the one key to press glows, the rest wait (dimmed) until the lesson is done
+    const g = GUIDE[G.combat.guide];
+    const fc = (k, opts) => cmd(k, opts.label, { ...opts, cls: `${opts.cls ?? ""}${g ? (g.key === k ? " guide" : " locked") : ""}`, hint: g && g.key !== k ? `${g.say}. THIS WAITS FOR NOW` : opts.hint });
+    if (g) hint = g.say;
     html =
       `<div class="row">` +
-      cmd("f", "QUICK ATTACK", { cls: "main", sub: "EVERYONE'S USUAL MOVE", hint: "EVERYONE DOES THEIR USUAL MOVE AT ONCE: WEAPONS, AND THE WIZARD'S FREE FIRE BOLT. USES NO SPELL SLOTS. ALLIES ACT ON THEIR OWN" }) +
-      cmd("c", "CHOOSE MOVES", { cls: "main", sub: "SPELLS AND SKILLS", hint: "PICK A MOVE FOR EACH ADVENTURER, ONE BY ONE: ATTACK, A SKILL, OR A SPELL (SPELLS USE SLOTS)" }) +
-      cmd("t", "TALK", { hint: `SAY SOMETHING. EVERY MONSTER HERE HEARS IT${voice.supported ? ". OR HOLD SPACE AND SPEAK IT OUT LOUD" : ""}` }) +
-      cmd("r", "RECRUIT", { hint: `ASK ${tn} TO JOIN YOUR PARTY` }) +
-      cmd("g", "GIVE GOLD", { hint: `OFFER ${tn} SOME GOLD` }) +
-      cmd("v", "VOW", { hint: `SWEAR A PROMISE TO ${tn}, ONCE PER FIGHT` }) +
-      cmd("e", "ESCAPE", { hint: "TRY TO RUN AWAY" }) +
+      fc("f", { label: "QUICK ATTACK", cls: "main", sub: "EVERYONE'S USUAL MOVE", hint: "EVERYONE DOES THEIR USUAL MOVE AT ONCE: WEAPONS, AND THE WIZARD'S FREE FIRE BOLT. USES NO SPELL SLOTS. ALLIES ACT ON THEIR OWN" }) +
+      fc("c", { label: "CHOOSE MOVES", cls: "main", sub: "SPELLS AND SKILLS", hint: "PICK A MOVE FOR EACH ADVENTURER, ONE BY ONE: ATTACK, A SKILL, OR A SPELL (SPELLS USE SLOTS)" }) +
+      fc("t", { label: "TALK", hint: `SAY SOMETHING. EVERY MONSTER HERE HEARS IT${voice.supported ? ". OR HOLD SPACE AND SPEAK IT OUT LOUD" : ""}` }) +
+      fc("r", { label: "RECRUIT", hint: `ASK ${tn} TO JOIN YOUR PARTY` }) +
+      fc("g", { label: "GIVE GOLD", hint: `OFFER ${tn} SOME GOLD` }) +
+      fc("v", { label: "VOW", hint: `SWEAR A PROMISE TO ${tn}, ONCE PER FIGHT` }) +
+      fc("e", { label: "ESCAPE", hint: "TRY TO RUN AWAY" }) +
       `</div>`;
     if (here.length > 1)
       html += `<div class="row targets"><span class="lab">TARGET</span>${here
@@ -935,7 +940,11 @@ function step(dir) {
     ask(`STAIRS DOWN TO ${floorName(G.floor + 1)}. DESCEND?`, { yes: "DESCEND", no: "STAY", walkAway: true }).then((yes) => (yes ? descend() : render()));
     return;
   }
-  if (--G.graceSteps <= 0 && Math.random() < floorRules(G.floor).encounter) return encounter();
+  if (--G.graceSteps <= 0 && Math.random() < floorRules(G.floor).encounter) {
+    // A new player's first fight is the lesson: one shy slime, talked to and then recruited (tutorial.js GUIDE)
+    if (shouldGuide({ floor: G.floor, tipsOn: tips.on(), seen: tips.seen })) return encounter([makeEnemy("slime")], { guide: true });
+    return encounter();
+  }
   render();
 }
 
@@ -1657,7 +1666,7 @@ function addEnemy(e) {
 async function encounter(group = makeGroup(), opts = {}) {
   sfx.play(opts.boss ? "boss" : "encounter");
   music.setMood("battle");
-  G.combat = { enemies: [], nextId: 0, target: null, round: 0, conversation: [], history: [], rounds: {}, spoken: new Set(), vowed: false, kills: 0, recruits: [], boss: !!opts.boss };
+  G.combat = { enemies: [], nextId: 0, target: null, round: 0, conversation: [], history: [], rounds: {}, spoken: new Set(), vowed: false, kills: 0, recruits: [], boss: !!opts.boss, guide: opts.guide ? "talk" : null };
   ach.on("fight-start");
   G.mode = "combat";
   G.graceSteps = 5;
@@ -1677,6 +1686,14 @@ async function encounter(group = makeGroup(), opts = {}) {
   G.combat.target = G.combat.enemies[0].id;
   G.combat.history = G.combat.history.map((h) => h.replace("joined the fight", "was met by the party"));
   applyOpeningBuffs();
+  if (G.combat.guide) {
+    // The lesson starts with you: no initiative roll, and the usual fight tips wait for the next fight
+    console.info("guide: first fight, talk then recruit");
+    say("IT HASN'T NOTICED YOU YET. YOU ACT FIRST.");
+    hint(GUIDE.talk.hint);
+    G.combat.opening = "The party just came face to face with you in a dungeon corridor. You froze, and they haven't attacked.";
+    return beginPartyTurn();
+  }
   // Initiative: the party's quickest member against the quickest monster
   const pDex = Math.max(...conscious().map((m) => m.abil?.dex ?? 1));
   const mDex = Math.max(...present().map((e) => MONSTER_STATS[e.species].dex + (e.boss ? 2 : 0)), -5);
@@ -2238,12 +2255,15 @@ async function recruitAsk() {
   const r = d20();
   const bonus = f.abil.cha + prof(f.level);
   const margin = r.roll + bonus - dc;
-  const pitch = r.roll === 20 || margin >= 8 ? "great" : r.roll === 1 || margin <= -12 ? "botch" : margin >= 0 ? "success" : margin >= -4 ? "close" : "fail";
-  const WORD = { great: "AN IRRESISTIBLE PITCH!", success: "A CONVINCING PITCH.", close: "SO CLOSE...", fail: "A CLUMSY PITCH.", botch: "A DISASTROUS PITCH!" };
+  let pitch = r.roll === 20 || margin >= 8 ? "great" : r.roll === 1 || margin <= -12 ? "botch" : margin >= 0 ? "success" : margin >= -4 ? "close" : "fail";
+  const WORD = { great: "AN IRRESISTIBLE PITCH!", success: "A CONVINCING PITCH.", close: "SO CLOSE...", fail: "A CLUMSY PITCH.", botch: "A DISASTROUS PITCH!", lucky: "BEGINNER'S LUCK: IT LANDS ANYWAY." };
+  // The guided first fight: the first invitation always lands (and says so when the dice alone wouldn't have)
+  const lucky = !!c.guide && !["great", "success"].includes(pitch);
+  if (lucky) pitch = "success";
   say(text ? `YOU, TO ${UP(e.name)}: "${text}"` : `YOU ASK ${UP(e.name)} TO JOIN YOUR PARTY.`, "you");
   rollFx(r, spotOf(e), { total: r.roll + bonus });
   ach.on("talk-roll", { roll: r.roll });
-  say(`PERSUASION (${f.name}): ${fmtRoll(r, bonus)}, NEEDED ${dc}. ${WORD[pitch]}`, ["great", "success"].includes(pitch) ? "big" : pitch === "close" ? "" : "warn");
+  say(`PERSUASION (${f.name}): ${fmtRoll(r, bonus)}, NEEDED ${dc}. ${WORD[lucky ? "lucky" : pitch]}`, ["great", "success"].includes(pitch) ? "big" : pitch === "close" ? "" : "warn");
   for (const x of present()) {
     c.spoken.add(x.species);
     vowEvent("talk", x.species, `The party talked to ${x.name}, ${aLabel(x.species)}.`);
@@ -2259,6 +2279,12 @@ async function command(cmd) {
   const c = G.combat;
   if (!c || G.busy) return;
   const here = present();
+  if (!guideAllows(c.guide, cmd)) {
+    // The lesson: only its one key works. Shake the dock and the tip so the eye goes to the lit key.
+    console.debug(`guide: ${c.guide} step, "${cmd}" waits`);
+    tips.insist(GUIDE[c.guide].hint);
+    return nudgeDock();
+  }
   if (/^[1-3]$/.test(cmd)) {
     const e = here[Number(cmd) - 1];
     if (e) c.target = e.id;
@@ -2278,6 +2304,7 @@ async function command(cmd) {
     const text = await askText(here.length > 1 ? "WHAT DO YOU SAY? (ALL OF THEM HEAR)" : "WHAT DO YOU SAY?");
     if (!text) return render();
     say(`YOU: "${text}"`, "you");
+    if (c.guide === "talk") c.guide = GUIDE.talk.next;
     const delivery = charismaCheck();
     history(`The party said: "${text}"`);
     for (const e of here) {
@@ -2361,6 +2388,7 @@ async function beginPartyTurn() {
   }
   if (!humansAlive() || !conscious().length) return gameOver();
   G.busy = false;
+  if (G.combat.guide) hint(GUIDE[G.combat.guide].hint);
   render();
 }
 
@@ -2466,6 +2494,7 @@ async function monstersTurn(playerAction, events, did) {
       events,
       conversation: c.conversation,
       partyGold: G.gold,
+      guided: !!c.guide,
       vows: G.vows.map((v) => ({ text: v.text.toLowerCase(), toId: v.toId, status: v.status })),
     });
   } catch (err) {
@@ -2489,7 +2518,7 @@ async function monstersTurn(playerAction, events, did) {
     e.meters = r.meters;
     e.impressions = r.impressions;
     e.side = r.side;
-    if (r.side === "friendly with the party") hint("recruit");
+    if (r.side === "friendly with the party" && !G.combat.guide) hint("recruit"); // the lesson has its own recruit tip
     // Its reply as the player meets it: how it reacts, what it says, and why it said yes or no to joining
     // A monster's side starts as a placeholder, so only a change after its first reply is news
     const told = groupLog(r, { name: e.name, species: e.species, sideBefore: e.replied ? before : null, debug: DEBUG });
@@ -2525,7 +2554,7 @@ async function monstersTurn(playerAction, events, did) {
       say(`${UP(e.name)} WANTS TO JOIN, BUT YOUR PARTY IS FULL.`, "dim");
       continue;
     }
-    const yes = await ask(`${UP(e.name)} WANTS TO JOIN. ACCEPT?`, { yes: "WELCOME IT", no: "TURN IT AWAY" });
+    const yes = await ask(`${UP(e.name)} WANTS TO JOIN. ACCEPT?`, { yes: "WELCOME IT", no: G.combat?.guide ? null : "TURN IT AWAY" });
     if (yes) recruit(e);
     else {
       e.status = "left";
@@ -2982,7 +3011,7 @@ function key(k) {
   }
   if (G.prompt) {
     const p = G.prompt;
-    const answer = k === "y" || k === "enter" ? true : k === "n" || k === "escape" ? false : null;
+    const answer = k === "y" || k === "enter" ? true : p.no && (k === "n" || k === "escape") ? false : null;
     if (answer !== null) {
       G.prompt = null;
       p.resolve(answer);
@@ -3038,7 +3067,11 @@ function key(k) {
     toggleJev();
     return renderBar();
   }
-  if (k === "h") return tips.toggle(say), render();
+  if (k === "h") {
+    tips.toggle(say);
+    if (G.combat && !tips.on()) G.combat.guide = null; // tips off: the first-fight lesson lets go too
+    return render();
+  }
   if (k === "p") return Promise.resolve(music.toggle()).then(() => renderBar());
   if (k === "o") {
     say(`SOUND EFFECTS ${sfx.toggle() ? "ON" : "OFF"}.`, "dim");
@@ -3132,7 +3165,7 @@ function spaceStart(plan) {
   spaceDown = { plan, listening: false };
   spaceDown.timer = setTimeout(() => {
     if (!spaceDown) return;
-    if (plan === "talk") key("t");
+    if (plan === "talk") key(G.combat?.guide === "recruit" ? "r" : "t");
     if (plan === "ally") key("e");
     // The box may open a moment later (or after you pick an ally); listen once it's there, while Space is held
     const tries = Date.now();
@@ -3249,6 +3282,7 @@ if (DEBUG)
       e.meters = { friendliness: 0, anger: 60, fear: 0 };
       return encounter([e]);
     },
+    lesson: () => encounter([makeEnemy("slime")], { guide: true }), // the guided first fight, on demand
     meet: (...species) => encounter(species.reduce((group, s) => [...group, makeEnemy(s, group.map((e) => e.name))], [])),
     state: () => G,
     ally: (species, name) => {

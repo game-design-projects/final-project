@@ -40,7 +40,22 @@ export const HINTS = Object.freeze({
   camp: { ctx: "explore", focus: ["#party"], lines: ["HURT? {!C} MAKES CAMP: HEALTH AND SPELLS", "COME BACK. SOMETHING MAY FIND YOU."] },
   levelup: { ctx: "any", keys: false, focus: ["#party"], lines: ["LEVEL UP! MORE HEALTH. CASTERS MAY LEARN", "SPELLS: {C} CHOOSE MOVES IN A FIGHT."] },
   down: { ctx: "combat", focus: ["#party .dying"], lines: ["DOWN, NOT DEAD: A DEATH SAVE EACH TURN.", "HEAL THEM BEFORE THREE SAVES FAIL."] },
+  talkFirst: { ctx: "combat", lines: ["MONSTERS HERE LISTEN. THIS ONE IS SHY.", "{!T} TALK TO IT. SAY SOMETHING KIND."] },
+  recruitNow: { ctx: "combat", lines: ["IT HEARD YOU. NOW {!R} RECRUIT:", "ASK IT TO JOIN YOUR PARTY."] },
 });
+
+// The guided first fight: a new player's first fight is a lone shy slime, and it teaches the game's heart by
+// doing it. Only one key works at each step (TALK, then RECRUIT); every other fight key waits, and pressing
+// one nudges the dock instead of doing nothing. The invitation is a sure yes (the server is told `guided`).
+export const GUIDE = Object.freeze({
+  talk: { key: "t", hint: "talkFirst", next: "recruit", say: "YOUR FIRST FIGHT: TALK TO IT FIRST. MONSTERS HERE LISTEN" },
+  recruit: { key: "r", hint: "recruitNow", next: null, say: "IT HEARD YOU. NOW ASK IT TO JOIN YOUR PARTY" },
+});
+
+export const guideAllows = (step, k) => !GUIDE[step] || GUIDE[step].key === k;
+
+// Guided once: floor 1, tips on, and the lesson's first tip never shown (H starts tips over, and the lesson too)
+export const shouldGuide = ({ floor, tipsOn, seen }) => floor === 1 && tipsOn && !seen(GUIDE.talk.hint);
 
 // "PRESS {!T} NOW" -> [{ text: "PRESS " }, { key: "T", hot: true }, { text: " NOW" }]
 export function parseLine(line) {
@@ -177,6 +192,21 @@ export function createTutorial({ store, context = () => "explore", show = () => 
     showEntry({ id: primer, wait: false }, true);
   }
 
+  // A key the game holds back for a lesson (the guided first fight): keep that lesson's tip up and nudge it,
+  // or bring it back if it was cleared. Never the generic reminder, which would point at the locked keys.
+  function insist(id) {
+    if (!HINTS[id]) return;
+    ignoredKey = true;
+    if (cur?.id === id) {
+      log("nudge", id, "insist");
+      nudge(id);
+      return;
+    }
+    hideCur("insist");
+    queue = queue.filter((q) => q.id !== id);
+    showEntry({ id, wait: false }, true);
+  }
+
   function setEnabled(value) {
     on = !!value;
     store?.set(OFF_KEY, on ? "0" : "1");
@@ -216,6 +246,7 @@ export function createTutorial({ store, context = () => "explore", show = () => 
     dismiss,
     keyed,
     ignored,
+    insist,
     setEnabled,
     reset,
     toggle,

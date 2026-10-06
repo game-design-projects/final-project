@@ -149,12 +149,14 @@ function context(req, m, monsters) {
 // The answer to "join us?", settled from the mood after this round's pitch, words and feeling, and Jev's own
 // willingness. Returns null when nobody asked and it isn't moved to ask itself.
 //   { asked, accepted, moved, reason }: reason is a JOIN_YES id when accepted, a JOIN_NO id otherwise
-export function resolveJoin({ invited, meters, threshold, room = true, emotion = null, willing = 0, rolledJoin = false, yesWhy, noWhy, pitch = null }) {
+// sure: the guided first fight, where the invitation is the lesson and always lands.
+export function resolveJoin({ invited, meters, threshold, room = true, emotion = null, willing = 0, rolledJoin = false, yesWhy, noWhy, pitch = null, sure = false }) {
   if (!room) return null;
   const eligible = meters.friendliness >= threshold && meters.anger < JOIN_ANGER;
   // Jev's explicit answer decides; its action roll landing on "join" tips a near-even answer
   const wants = willing >= WILLING || (rolledJoin && willing >= 0.3);
   const yes = JOIN_YES[yesWhy] ? yesWhy : "likes_you";
+  if (invited && sure) return { asked: true, accepted: true, moved: false, reason: yes };
   if (!invited) {
     const moved = eligible && GLAD.has(emotion?.id) && wants;
     return moved ? { asked: true, accepted: true, moved: true, reason: yes } : null;
@@ -465,6 +467,7 @@ export async function groupTurn(req) {
           yesWhy: a[id("join_yes")]?.choice,
           noWhy: a[id("join_no")]?.choice,
           pitch: c.recruitMe ? req.playerAction.pitch : null,
+          sure: !!req.guided,
         })
       : null;
     if (join) {
@@ -482,6 +485,8 @@ export async function groupTurn(req) {
       // It likes the party and was asked: it says no, it doesn't swing at them
       else if (join && ["attack", "special"].includes(picked) && moodOf(meters, emotion) === "warm")
         block = { why: `it declined (${join.reason}) but likes the party too much to attack`, fallback: "converse" };
+      // The guided first fight: it stays to be asked, rather than slipping away before the lesson's second step
+      else if (req.guided && ["flee", "leave_peacefully"].includes(picked)) block = { why: "the guided first fight: it stays to hear the party out", fallback: "converse" };
       else block = policy(picked, a[id("action")].confidence, req, c, a, meters, offer, monsterTarget, emotion);
       if (block) final = options[i].includes(block.fallback) ? block.fallback : "converse";
     }

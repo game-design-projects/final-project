@@ -293,3 +293,44 @@ test("importing the module touches no DOM (works in Node)", async () => {
   assert.equal(typeof mod.initTutorial, "function");
   assert.equal(typeof globalThis.document, "undefined");
 });
+
+// ---- the guided first fight
+import { GUIDE, guideAllows, shouldGuide } from "../public/tutorial.js";
+
+test("the first fight is a lesson: T first, then R, and every other fight key waits", () => {
+  assert.equal(guideAllows("talk", "t"), true);
+  for (const k of ["f", "c", "r", "g", "v", "e", "1"]) assert.equal(guideAllows("talk", k), false, k);
+  assert.equal(guideAllows("recruit", "r"), true);
+  for (const k of ["f", "c", "t", "g", "v", "e"]) assert.equal(guideAllows("recruit", k), false, k);
+  assert.equal(guideAllows(null, "f"), true, "no lesson, no lock");
+  assert.equal(GUIDE.talk.next, "recruit");
+  assert.equal(GUIDE.recruit.next, null);
+  for (const step of Object.values(GUIDE)) {
+    assert.ok(HINTS[step.hint], step.hint);
+    assert.deepEqual(focusOf(step.hint), [`[data-key="${step.key}"]`], "the tip lights up only the key to press");
+  }
+});
+
+test("only a new player's first ordinary fight on the first floor is guided", () => {
+  const base = { floor: 1, tipsOn: true, seen: () => false };
+  assert.equal(shouldGuide(base), true);
+  assert.equal(shouldGuide({ ...base, floor: 2 }), false);
+  assert.equal(shouldGuide({ ...base, tipsOn: false }), false, "tips off (H): no lesson");
+  assert.equal(shouldGuide({ ...base, seen: (id) => id === GUIDE.talk.hint }), false, "learned it already");
+});
+
+test("a key held back by the lesson keeps its tip up, or brings it back, never the generic reminder", () => {
+  const r = rig({ ctx: "combat" });
+  r.tips.hint("talkFirst");
+  assert.equal(r.tips.current(), "talkFirst");
+  r.wait(GRACE_MS + 10);
+  r.tips.insist("talkFirst"); // F pressed: locked
+  assert.equal(r.tips.keyed(), false, "the locked key doesn't clear the tip");
+  assert.deepEqual(r.nudged, ["talkFirst"]);
+  r.tips.dismiss({ force: true });
+  r.wait(GAP_MS + 10);
+  r.tips.insist("talkFirst");
+  r.tips.insist("talkFirst");
+  assert.equal(r.tips.current(), "talkFirst", "back up after being clicked away");
+  assert.ok(!r.shown.includes("combat"), "not the F-QUICK-ATTACK reminder");
+});
