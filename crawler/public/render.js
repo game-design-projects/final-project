@@ -329,8 +329,7 @@ export function wallEdges(map, seen) {
 export function drawMap(ctx, map, seen, visited, x, y, dir) {
   const n = map.grid.length;
   const s = Math.floor(ctx.canvas.width / n);
-  // Clear to transparent: the map sits over the view, which shows through faintly behind it
-  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  clear(ctx);
   for (let cy = 0; cy < n; cy++) {
     for (let cx = 0; cx < n; cx++) {
       const k = cy * n + cx;

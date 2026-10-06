@@ -695,8 +695,8 @@ function partyRow(m, i) {
 function renderParty() {
   $("#party").innerHTML = G.party.map(partyRow).join("");
   $("#party").style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
-  // The map sits over the corner of the view; in a fight that corner belongs to the monsters
-  $(".viewport").classList.toggle("fighting", !!G.combat);
+  // The map under the view steps aside in a fight (keeping its space, so nothing jumps)
+  $(".mid").classList.toggle("fighting", !!G.combat);
 }
 
 // The vow ledger. Re-rendered only when something changes, so a fresh slash animates exactly once.

@@ -23,7 +23,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 /* Pixel icons from status.js: 7x7 dots, drawn crisp at whole-pixel sizes */
 .ico { width: 7px; height: 7px; flex: none; display: inline-block; vertical-align: middle; image-rendering: pixelated; }
 /* The status line on top: where you are, not what to press */
-.bar.top { font-size: 9px; color: var(--dim); align-items: center; min-height: 25px; }
+.bar.top { font-size: 9px; color: var(--dim); align-items: center; min-height: 25px; flex-wrap: wrap; gap: 6px 12px; }
 .bar.top > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .bar.top .ico { width: 14px; height: 14px; }
 .bar.top .loc { margin-right: auto; }
@@ -83,7 +83,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
    whatever it talks about (keys' buttons, the map, the party) glows while it's up. */
 :root { --tip-accent: #ffb347; }
 /* The viewport hugs the canvas (not the taller log column), so overlays sit on the view itself */
-.viewport { align-self: start; }
+.main-col { align-self: start; }
 .tip {
   position: absolute;
   left: 10px;
@@ -188,18 +188,19 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 @media (prefers-reduced-motion: reduce) {
   .vows li.broken.fresh::after, .vows.shake { animation: none; }
 }
-/* The automap: over the top-right corner of the view while exploring, out of the way in a fight */
-#map {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 105px;
-  height: 105px;
-  image-rendering: pixelated;
-  border: 1px solid var(--faint);
-  background: rgba(0, 0, 0, 0.55);
-}
-#map.hidden, .viewport.fighting #map { display: none; }
+/* The automap: right under the view, with a small key; it steps aside (keeping its space) in a fight */
+.main-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mapbox { display: flex; align-items: flex-end; gap: 12px; }
+.mid.fighting .mapbox { visibility: hidden; }
+#map { width: 105px; height: 105px; image-rendering: pixelated; border: 1px solid var(--faint); background: #000; flex: none; }
+#map.hidden, #map.hidden + .legend { display: none; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font: 7px "Press Start 2P", ui-monospace, monospace; color: var(--dim); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.legend i { width: 8px; height: 8px; display: inline-block; }
+.legend .you { width: 0; height: 0; border: 5px solid transparent; border-bottom: 8px solid #fff; border-top: 0; }
+.legend .stairs { border: 2px solid var(--ink); box-sizing: border-box; }
+.legend .boss { background: #ff2a2a; }
+.legend .key { margin-top: 2px; }
 
 /* ---- The command dock, right under the view: every command as a keycap you can press or click */
 .dock {
@@ -434,7 +435,7 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .crt { padding: 8px; }
   .mid { grid-template-columns: 1fr; }
   .log { max-height: 160px; min-height: 100px; }
-  #map { width: 72px; height: 72px; top: 6px; right: 6px; }
+  #map { width: 84px; height: 84px; }
   .bar { font-size: 9px; flex-wrap: wrap; }
   .bar.top { gap: 6px 12px; }
   .menu { grid-auto-flow: row; grid-template-rows: none !important; grid-template-columns: 1fr; }
