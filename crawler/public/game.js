@@ -51,7 +51,13 @@ const store = {
 // Developer mode: the Jev mind panel (J), raw numbers in the log, and the `halls` console hooks. Players never see
 // any of it; monsters' minds reach them through what they say and do. Turn it on with ?debug or #debug in the URL
 // (e.g. #floor5-debug), or for good with localStorage "donjon.debug" = "1".
-const DEBUG = /debug/i.test(location.search + location.hash) || store.get("donjon.debug") === "1";
+// Debug mode (Jev mind panel, [DEBUG] log lines, the `halls` console hooks): on with ?debug / #debug or
+// localStorage donjon.debug = "1", or by default when the build's config says so (the itch.io build does);
+// ?nodebug turns it off for one visit.
+const DEBUG =
+  !/nodebug/i.test(location.search + location.hash) &&
+  (/debug/i.test(location.search + location.hash) || store.get("donjon.debug") === "1" || window.HALLS_CONFIG?.debug === true);
+console.debug(`debug mode ${DEBUG ? "on" : "off"}`);
 // Log lines for developers only, e.g. the numbers behind a feeling or a loyalty change.
 const dbg = (text) => DEBUG && say(`[DEBUG] ${text}`, "dim");
 

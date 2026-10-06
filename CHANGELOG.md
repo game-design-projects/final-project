@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The automap shows walls: each side of seen floor that faces a wall gets a line in the floor's wall color, so walls no longer look the same as unexplored dark.
 
 ### Changed
+- The itch.io build starts in debug mode (Jev mind panel, `[DEBUG]` log lines, console hooks); `?nodebug` turns it off. Local play is unchanged.
 - The party panel sits beside the view instead of at the bottom of the page, so you see everyone's health while choosing moves; the member choosing glows, and the one you're about to heal lights up. The automap moved over the view's corner (translucent, hidden in fights), and the whole screen fits in less height.
 - Fights have their own music, built on the game's own melody (A B C D D D E D E D C C C D D D) moved into D major and lifted through B♭ and C: a bright, driving 8-bit loop (`battle.m4a`, rendered by `scripts/build-battle.py`) crossfades in when a fight starts, and the dark ambient comes back when it ends. No more creepy ambient under combat.
 - Four battle loops instead of one, each the melody in a different key, mode, tempo and groove (heroic D major, fury E minor, march F major, gallop A major). Each fight picks one at random, never the last one, and a long fight crossfades into another after two times round.

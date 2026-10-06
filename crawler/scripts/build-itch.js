@@ -20,7 +20,8 @@ mkdirSync(stage, { recursive: true });
 // beat maker uses (its synth engine, soundfonts and songs). The game itself plays ambient.m4a.
 const DEV_ONLY = ["beatmaker.html", "beatmaker.js", "gallery.html", "cover.html", "music.js", "theme.json", "song.json", "soundfonts"];
 cpSync(`${root}crawler/public`, stage, { recursive: true, filter: (src) => !src.endsWith(".DS_Store") && !DEV_ONLY.some((f) => src.endsWith(`/${f}`)) });
-writeFileSync(`${stage}/config.js`, `// itch.io build: the Jev API is the Cloudflare Worker, which holds the key.\nwindow.HALLS_CONFIG = { apiBase: ${JSON.stringify(apiBase)} };\n`);
+// Debug mode is on by default on itch.io, so players can open the Jev mind panel (J); ?nodebug turns it off.
+writeFileSync(`${stage}/config.js`, `// itch.io build: the Jev API is the Cloudflare Worker, which holds the key. Debug mode on by default.\nwindow.HALLS_CONFIG = { apiBase: ${JSON.stringify(apiBase)}, debug: true };\n`);
 
 // index.html must sit at the top level of the zip for itch.io
 execFileSync("zip", ["-r", "-X", "-q", zip, "."], { cwd: stage });

@@ -29,7 +29,7 @@ npm run crawler:itch -- https://halls-of-jev-api.<you>.workers.dev
 
 **CI publishes automatically.** `.github/workflows/ci.yml` runs `npm test` and builds and validates the itch bundle on every push and pull request; every push to `main` that passes is pushed with butler to https://aalfalasi.itch.io/donjon (channel `html5`, version = the commit SHA). It needs the `BUTLER_API_KEY` repository secret, and pull requests never see it.
 
-To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". An embed size of about 900 × 820 fits the game (the Jev mind panel is a developer tool and stays hidden); enable the fullscreen button too.
+To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". The itch build turns debug mode on by default (its `config.js` sets `debug: true`), so the Jev mind panel shows beside the game: an embed size of about 1180 × 820 fits both; enable the fullscreen button too. Add `?nodebug` to the URL to play without it.
 
 - The Worker runs the same code as the local server (`crawler/src/api.js`), so the monsters behave identically.
 - To test the itch build locally: `node crawler/proxy/dev.js` (Worker on port 5175), then `npm run crawler:itch -- http://localhost:5175` and serve `dist/donjon` from any static server.
@@ -149,7 +149,7 @@ Test these against the live API with `node crawler/scripts/social-scenarios.js`,
 
 ### Debug mode (developers only)
 
-Players never see Jev's raw output. Open the game with `?debug` or `#debug` in the URL (e.g. `http://localhost:5174/?debug` or `#floor5-debug`), or set `localStorage["donjon.debug"] = "1"`, to get:
+Locally, players never see Jev's raw output. Open the game with `?debug` or `#debug` in the URL (e.g. `http://localhost:5174/?debug` or `#floor5-debug`), or set `localStorage["donjon.debug"] = "1"`, to get the following (the itch.io build has it on by default; `?nodebug` turns it off):
 - the **Jev mind panel** (toggle with **J**): every monster's meters, what it heard, Jev's action odds, its feeling odds, its answer to an invitation and the reason, every choice code blocked, and how allies scored each fight;
 - `[DEBUG]` lines in the log with the numbers behind feelings, ally talks, vows and loyalty changes;
 - the `halls` console hooks.
