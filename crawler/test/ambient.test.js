@@ -78,7 +78,7 @@ test("a fight fades the battle loop in fast and the ambient out", () => {
   const { battle, explore } = music.voices;
   assert.match(battle.src.buffer.name, /^battle:/);
   assert.deepEqual(battle.gain.gain.ramps.at(-1), [TRACKS.battle.volume, 10 + FADES.battle.in]);
-  assert.deepEqual(explore.gain.gain.ramps.at(-1), [0, 10 + FADES.explore.out]);
+  assert.deepEqual(explore.gain.gain.ramps.at(-1), [0, 10 + FADES.explore.underFight]);
   assert.equal(explore.src.stoppedAt, undefined, "the ambient keeps its place under the fight");
 });
 
@@ -94,6 +94,22 @@ test("after the fight the battle loop stops, a quiet beat, then the same ambient
   assert.deepEqual(ambient.gain.gain.ramps.at(-1), [TRACKS.explore.volume, 10 + FADES.explore.in]);
   assert.ok(battle.src.stoppedAt > 10, "battle loop stops once faded");
   assert.equal(music.voices.battle, undefined);
+});
+
+test("a fight silences the ambient almost at once, so the two never play together", () => {
+  const music = started();
+  music.setMood("battle");
+  const [to, at] = music.voices.explore.gain.gain.ramps.at(-1);
+  assert.equal(to, 0);
+  assert.ok(at - 10 <= 0.5, `ambient still audible ${at - 10}s into the fight`);
+});
+
+test("between stretches of exploring the ambient still fades out slowly", () => {
+  const music = started();
+  music.timer.advance(((PACE.play[0] + PACE.play[1]) / 2) * 1000);
+  const [to, at] = music.voices.explore.gain.gain.ramps.at(-1);
+  assert.equal(to, 0);
+  assert.equal(at - 10, FADES.explore.out);
 });
 
 test("each fight starts the battle loop from bar one", () => {

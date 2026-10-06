@@ -30,8 +30,9 @@ export const STINGS = {
   fanfare: { url: "fanfare.m4a", volume: 0.4 },
   victory: { url: "victory.m4a", volume: 0.35 },
 };
-// Seconds to fade a track in or out. A fight cuts in fast; the dungeon creeps back slowly.
-export const FADES = { battle: { in: 0.35, out: 1.2 }, explore: { in: 2, out: 5 } };
+// Seconds to fade a track in or out. A fight cuts in fast and the ambient gets out of its way just as fast
+// (underFight), so the two never play together; between stretches of exploring the ambient fades out slowly.
+export const FADES = { battle: { in: 0.35, out: 1.2 }, explore: { in: 2, out: 5, underFight: 0.4 } };
 // The ambient's rhythm while exploring, in seconds: play a while, rest a while
 export const PACE = {
   play: [80, 110],
@@ -96,7 +97,7 @@ export class Ambient {
     this.mood = mood;
     console.debug(`music: ${was} -> ${mood}`);
     if (!this.ctx) return; // not started yet: start() plays the current mood
-    this.fadeOut(was, FADES[was].out);
+    this.fadeOut(was, mood === "battle" ? FADES.explore.underFight : FADES[was].out);
     if (mood === "explore") return this.restFor(PACE.afterFight);
     this.cancelNext();
     this.battleIn(FADES.battle.in);
