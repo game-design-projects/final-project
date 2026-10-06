@@ -622,6 +622,7 @@ function bossEncounter() {
 
 async function descend() {
   sfx.play("stairs");
+  music.sting("fanfare");
   await rollOfFate(G.floor);
   enterFloor(G.floor + 1);
   G.graceSteps = 4;
@@ -2346,6 +2347,8 @@ async function endCombat() {
   if (!c) return;
   G.combat = null;
   G.mode = "explore";
+  // Every foe killed, driven off, won over or let go: that's a win, and it sounds like one
+  if (c.enemies.length && c.enemies.every((e) => e.status !== "here")) music.sting("victory");
   music.setMood("explore");
   G.busy = false; // the party's turn may have ended the fight mid-action
   // The fallen who still live come to; conditions and talk moods fade

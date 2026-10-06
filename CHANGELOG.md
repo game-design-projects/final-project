@@ -14,8 +14,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 - Fights have their own music: a bright, driving 8-bit loop (`battle.m4a`, rendered by `scripts/build-battle.py`) crossfades in when a fight starts, and the dark ambient comes back when it ends. No more creepy ambient under combat.
+- The dark ambient no longer plays nonstop: about 90 seconds of music, then a minute or two of quiet, then it drifts back.
 - You see 6 cells ahead instead of 4, with lines fading into the dark with distance.
 - Stairs down are larger and drawn in the floor's accent color so they stand out from a distance.
 
 ### Added
+- Music cues for good news: a bright 8-bit fanfare when you go down the stairs (then quiet for a while instead of the creepy ambient), and a short victory jingle when you win a fight.
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).

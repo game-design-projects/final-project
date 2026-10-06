@@ -164,12 +164,20 @@ python3 crawler/scripts/build-ambient.py /tmp/ambient.wav
 afconvert -f m4af -d aac -b 160000 /tmp/ambient.wav crawler/public/ambient.m4a
 ```
 
+**The ambient comes and goes.** It plays for a minute and a half or so, fades out, and leaves a minute or two of quiet before it drifts back, so the dungeon isn't wallpapered with it.
+
+**Good news gets its own cue** (`scripts/build-stings.py`, in the battle loop's 8-bit voice): `fanfare.m4a`, a bright da-da-da-DAAA landing on a high D major chord, plays when you go down the stairs, followed by twenty seconds of quiet; `victory.m4a`, a quick rising arpeggio, plays when you win a fight (every foe killed, driven off, won over or let go; not when you run).
+
 **Fights play `public/battle.m4a` instead**, a bright 25-second 8-bit loop at 152 BPM: a pulse-wave lead with a ping-pong echo, a pulse arpeggio, a triangle bass pumping octaves and noise drums, on the heroic D–C–G–A progression with a B minor bridge. When a fight starts it cuts in within a third of a second and the ambient fades out underneath (keeping its place); when the fight ends the battle loop fades and the dungeon creeps back. Each fight starts the loop from bar one. Rebuild it the same way:
 
 ```bash
 python3 crawler/scripts/build-battle.py /tmp/battle.wav
 afconvert -f m4af -d aac -b 160000 /tmp/battle.wav crawler/public/battle.m4a
+python3 crawler/scripts/build-stings.py /tmp     # fanfare.wav and victory.wav
+for n in fanfare victory; do afconvert -f m4af -d aac -b 160000 /tmp/$n.wav crawler/public/$n.m4a; done
 ```
+
+The 8-bit voices (pulse, triangle, kick, noise hits) live in `scripts/chip.py`, shared by both scripts.
 
 **The beat maker and its engine are separate now.** The dungeon no longer plays what follows; it is still there for `beatmaker.html`.
 
