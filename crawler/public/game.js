@@ -4,6 +4,7 @@ import { drawMonster, SLOTS, SHINY_COLOR, BOSS_COLOR, ART } from "./art.js";
 import { Ambient } from "./ambient.js";
 import { Sfx } from "./sfx.js";
 import { d, d20, rollDice, fmtRoll, prof, CLASSES, SPELLS, SPELL_TEXT, slotsFor, spellsKnown, cantripDice, MONSTER_STATS } from "./dnd.js";
+import { initTutorial } from "./tutorial.js";
 
 const $ = (s) => document.querySelector(s);
 const view = $("#view").getContext("2d");
@@ -48,6 +49,16 @@ const store = {
 let G;
 let uid = 0;
 
+// Tips (tutorial.js): one short hint the first time each thing matters. Hidden over questions and rolls.
+const tips = initTutorial({
+  store,
+  view: $("#view"),
+  context: () => (!G || G.mode === "over" ? "off" : G.roll || G.waitKey ? "roll" : G.prompt ? "prompt" : G.combat ? "combat" : "explore"),
+  accent: () => G?.map?.palette?.accent,
+  onShow: () => sfx.play("tick"),
+});
+const hint = (id) => tips.hint(id);
+
 function newRun() {
   G = {
     mode: "explore",
@@ -70,9 +81,10 @@ function newRun() {
   enterFloor(1);
   say("You descend into the Donjon. The monsters here listen, if you talk to them.", "dim");
   say("HORTENSE IS A FIGHTER, ROLF A CLERIC WHO HEALS, EUGENE A WIZARD. EVERY SWING, SPELL AND PLEA IS A DICE ROLL.", "dim");
-  say("MOVE: ARROWS/WASD  C: CAMP  E: TALK TO ALLY  V: VOW  B: BOONS  M: MAP  J: JEV MIND  P: MUSIC  O: SOUND", "dim");
+  if (!tips.on()) say("MOVE: ARROWS/WASD  C: CAMP  E: TALK TO ALLY  V: VOW  B: BOONS  M: MAP  J: JEV MIND  P: MUSIC  O: SOUND", "dim");
   say("FIND THE STAIRS ON EACH FLOOR. EVERY FLOOR YOU CLEAR EARNS A ROLL OF FATE.", "dim");
   announceFloor(1);
+  hint("move");
   render();
 }
 
@@ -142,7 +154,10 @@ function levelUp(m) {
 function grantXp(xp) {
   for (const m of living()) {
     m.xp += xp;
-    while (m.xp >= xpFor(m.level)) levelUp(m);
+    while (m.xp >= xpFor(m.level)) {
+      levelUp(m);
+      hint("levelup");
+    }
   }
 }
 
@@ -249,6 +264,7 @@ const NEWS = {
 };
 function announceFloor(f) {
   if (NEWS[f]) say(NEWS[f], f === 1 ? "dim" : "big", f === 1 ? undefined : G.map.palette.accent);
+  if (G.map.boss) hint("boss");
   if (G.map.boss)
     say("A RED CHAMPION WAITS AT THE HEART OF THIS FLOOR (RED ON YOUR MAP). DEFEAT IT, WIN IT OVER OR TALK IT DOWN FOR A GREAT ROLL OF FATE.", "big", BOSS_COLOR);
 }
@@ -603,6 +619,8 @@ function step(dir) {
     say(`YOU FIND ${g} GOLD.`);
     sfx.play("gold");
   }
+  if (G.visited.size >= 6) hint("map");
+  if (G.seen.has(G.map.stairs.y * G.map.n + G.map.stairs.x)) hint("stairs");
   const b = G.map.boss;
   if (b && !b.defeated && nx === b.x && ny === b.y) return bossEncounter();
   if (nx === G.map.stairs.x && ny === G.map.stairs.y) {
@@ -1326,6 +1344,8 @@ async function encounter(group = makeGroup(), opts = {}) {
   const first = pr >= mr;
   say(`INITIATIVE: PARTY ${pr} VS MONSTERS ${mr}. ${first ? "YOU ACT FIRST!" : "THEY ACT FIRST!"}`, first ? "" : "warn");
   sfx.play("dice");
+  hint("combat");
+  if (present().length > 1) hint("target");
   render();
   if (!present().length) return endCombat();
   if (first) {
@@ -1939,6 +1959,7 @@ async function command(cmd) {
     sfx.play("miss");
     return afterPartyAction({ type: "run_failed" }, ["The party tried to run away, but failed."], {});
   }
+  tips.ignored(cmd); // not a fight command: nudge the hint rather than swallow the key silently
 }
 
 async function afterPartyAction(playerAction, events, did) {
@@ -2015,6 +2036,7 @@ function damage(m, dmg, { crit = false } = {}) {
   m.saves = { s: 0, f: 0 };
   m.cond = {};
   say(`${m.name} FALLS UNCONSCIOUS! DEATH SAVES BEGIN.`, "big warn");
+  hint("down");
   sfx.play("down");
   if (G.combat) history(`${m.name} was knocked unconscious.`);
 }
@@ -2099,6 +2121,7 @@ async function monstersTurn(playerAction, events, did) {
     e.meters = r.meters;
     e.impressions = r.impressions;
     e.side = r.side;
+    if (r.side === "friendly with the party") hint("recruit");
     c.lastLines[e.id] = r.line;
     c.conversation.push({ speaker: e.name, text: r.line });
     say(`${UP(e.name)}: ${r.line}`, "npc", colorOf(e));
@@ -2161,6 +2184,7 @@ function showEmotion(e, em) {
     .join(", ");
   say(`${UP(e.name)} IS ${em.label}! ${em.effect}.${delta ? ` (${delta})` : ""}`, "big", color);
   floatOn(e, `${em.label}!`, color, 10);
+  hint("feeling");
   sfx.play({ good: "good", bad: "bad", fear: "fear", sad: "sad", odd: "odd" }[em.tone] ?? "good");
   if (em.cond) e.cond[em.cond] = Math.max(e.cond[em.cond] ?? 0, em.rounds);
   if (em.id === "terrified") {
@@ -2331,6 +2355,7 @@ function recruit(e) {
   const xp = Math.round(xpOf(e) / 2);
   say(`${ally.name} JOINS THE PARTY! +${xp} XP FOR WINNING IT OVER.`, "big", colorOf(ally));
   sfx.play("join");
+  hint("ally");
   if (e.shiny) {
     G.combat.shinyRolls = (G.combat.shinyRolls ?? 0) + 1;
     say("A SHINY JOINED YOU! FATE OWES YOU A ROLL AFTER THIS FIGHT.", "big", SHINY_COLOR);
@@ -2371,6 +2396,7 @@ async function endCombat() {
       great = true;
     } else if (e) say(`${UP(e.name)} STILL HOLDS THE HEART OF THIS FLOOR.`, "dim", BOSS_COLOR);
   }
+  if (living().some((m) => m.hp < m.maxHp / 2)) hint("camp");
   render();
   await flushBreaks();
   const traitor = await allyReactionsAfter(c);
@@ -2535,8 +2561,10 @@ function key(k) {
     }
     return;
   }
+  if (G.busy && !G.input) tips.ignored(k); // the monsters are still moving: nudge the hint, don't drop it
   if (G.busy || G.input) return;
   if (k === "j") return toggleJev();
+  if (k === "h") return tips.toggle(say), render();
   if (k === "p") return music.toggle();
   if (k === "o") {
     say(`SOUND EFFECTS ${sfx.toggle() ? "ON" : "OFF"}.`, "dim");
@@ -2555,6 +2583,7 @@ function key(k) {
   if (k === "back") return step((G.dir + 2) % 4);
   if (k === "turnL") G.dir = (G.dir + 3) % 4;
   if (k === "turnR") G.dir = (G.dir + 1) % 4;
+  else if (k !== "turnL") tips.ignored(k); // not an exploring key: nudge the hint rather than swallow it silently
   render();
 }
 
@@ -2683,6 +2712,7 @@ if (location.hash.includes("debug"))
     },
     music,
     sfx,
+    tips, // e.g. halls.tips.reset(), halls.tips.hint("map")
     roll: (great = false, kind) => rollOfFate(G.floor, great, kind),
     shiny: (species = "slime") => {
       let e;
