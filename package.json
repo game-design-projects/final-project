@@ -8,7 +8,7 @@
     "crawler": "node crawler/server.js",
     "crawler:scenarios": "node crawler/scripts/scenarios.js",
     "crawler:itch": "node crawler/scripts/build-itch.js",
-    "test": "node --test crawler/test/"
+    "test": "node --test crawler/test/*.test.js"
   },
   "engines": {
     "node": ">=20"
