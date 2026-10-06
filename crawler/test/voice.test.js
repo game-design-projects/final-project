@@ -87,3 +87,14 @@ test("without speech support, start resolves to null at once", async () => {
   assert.equal(l.supported, false);
   assert.equal(await l.start(), null);
 });
+
+test("holding Space: listen into an empty talk box, or open the right one first", async () => {
+  const { spaceHold } = await import("../public/voice.js");
+  assert.equal(spaceHold({ inputOpen: true, inputEmpty: true }), "listen");
+  assert.equal(spaceHold({ inputOpen: true, inputEmpty: false }), null, "with words in the box, Space types a space");
+  assert.equal(spaceHold({ inputOpen: true, numeric: true }), null, "not in the gold box");
+  assert.equal(spaceHold({ combat: true }), "talk");
+  assert.equal(spaceHold({ combat: true, waiting: true }), null, "not while a menu, question or the monsters' turn waits");
+  assert.equal(spaceHold({ allies: 2 }), "ally");
+  assert.equal(spaceHold({}), null, "exploring alone: nobody to talk to");
+});

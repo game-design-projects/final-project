@@ -79,3 +79,16 @@ export class Listener {
     this.rec = null;
   }
 }
+
+// What holding Space does, from the game's state (pure, so it can be tested):
+//   "listen": the talk box is open and empty, so speak into it
+//   "talk":   in a fight with nothing else waiting, open TALK (T) and listen
+//   "ally":   exploring with a monster ally, open TALK TO ALLY (E) and listen once its box opens
+//   null:     Space is just a key here (a menu, a question, "any key", the monsters' turn, a box with text in it)
+export function spaceHold({ inputOpen = false, inputEmpty = true, numeric = false, waiting = false, combat = false, allies = 0 } = {}) {
+  if (inputOpen) return inputEmpty && !numeric ? "listen" : null;
+  if (waiting) return null;
+  if (combat) return "talk";
+  if (allies > 0) return "ally";
+  return null;
+}

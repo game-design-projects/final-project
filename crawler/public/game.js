@@ -8,7 +8,7 @@ import { d, d20, rollDice, fmtRoll, diceRange, prof, CLASSES, SPELLS, spellText,
 import { hpState, condList, loyaltyState, slotGroups, classWord, facingWord, floorName, menuStep, CONDITIONS, CIRCLE_COLORS, CIRCLE_WORDS, ICONS, iconSvg } from "./status.js";
 import { initTutorial } from "./tutorial.js";
 import { initAchievements, badgeSvg } from "./achievements.js";
-import { Listener, HOLD_MS } from "./voice.js";
+import { Listener, HOLD_MS, spaceHold } from "./voice.js";
 import { installTooltips } from "./tooltip.js";
 import { requestsHtml, requestDetail, copyValue } from "./inspector.js";
 import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
@@ -301,8 +301,9 @@ function closeInput(value) {
   inp?.resolve(value);
 }
 
-// ---- hold to talk: hold the key that opened the talk box (T, R, E) or the mic button, speak, let go.
-// The browser's own speech recognition fills the box as you speak and the words are sent when you let go.
+// ---- hold to talk: hold Space (or the mic button), speak, let go. In a fight Space opens TALK, exploring it
+// opens TALK TO ALLY, and in an empty talk box it just listens. The browser's own speech recognition fills
+// the box as you speak and the words are sent when you let go. A quick tap of Space is still just a key.
 const voice = new Listener({
   onText: (text) => {
     if (G?.input?.listening) $("#text").value = text;
@@ -313,7 +314,7 @@ const voice = new Listener({
     render();
   },
 });
-let held = null; // the key held down since it opened the talk box: { code, timer }
+let spaceDown = null; // Space held down: { timer, plan, listening }
 
 function listen(how) {
   const inp = G?.input;
@@ -824,11 +825,11 @@ function renderDock() {
     hint = G.menu.options[G.menu.sel]?.hint ?? "";
   } else if (G.input?.listening) {
     waiting = true;
-    const how = G.input.listening === "key" ? "LET GO OF THE KEY" : "LET GO OF THE MIC";
+    const how = G.input.listening === "space" ? "LET GO OF SPACE" : "LET GO OF THE MIC";
     html = `<p class="ask listening"><i class="rec"></i>LISTENING. SPEAK, THEN ${how} TO SAY IT</p><div class="row">${cmd("escape", "CANCEL")}</div>`;
   } else if (G.input) {
     waiting = true;
-    const speak = !G.input.numeric && voice.supported ? `<span class="how">OR HOLD THE KEY YOU PRESSED, OR THE MIC, AND SPEAK</span>` : "";
+    const speak = !G.input.numeric && voice.supported ? `<span class="how">OR HOLD <kbd>SPACE</kbd> AND SPEAK</span>` : "";
     html = `<div class="row keys">${cmd("enter", G.input.numeric ? "GIVE" : "SAY IT", { cls: "go" })}${cmd("escape", "CANCEL")}${speak}</div>`;
   } else if (G.busy) html = `<p class="wait">${G.combat ? "THE FIGHT PLAYS OUT" : "LISTENING"}<span class="dots"></span></p>`;
   else if (G.combat) {
@@ -839,7 +840,7 @@ function renderDock() {
       `<div class="row">` +
       cmd("f", "QUICK ATTACK", { cls: "main", sub: "EVERYONE'S USUAL MOVE", hint: "EVERYONE DOES THEIR USUAL MOVE AT ONCE: WEAPONS, AND THE WIZARD'S FREE FIRE BOLT. USES NO SPELL SLOTS. ALLIES ACT ON THEIR OWN" }) +
       cmd("c", "CHOOSE MOVES", { cls: "main", sub: "SPELLS AND SKILLS", hint: "PICK A MOVE FOR EACH ADVENTURER, ONE BY ONE: ATTACK, A SKILL, OR A SPELL (SPELLS USE SLOTS)" }) +
-      cmd("t", "TALK", { hint: `SAY SOMETHING. EVERY MONSTER HERE HEARS IT${voice.supported ? ". HOLD T TO SPEAK IT OUT LOUD" : ""}` }) +
+      cmd("t", "TALK", { hint: `SAY SOMETHING. EVERY MONSTER HERE HEARS IT${voice.supported ? ". OR HOLD SPACE AND SPEAK IT OUT LOUD" : ""}` }) +
       cmd("r", "RECRUIT", { hint: `ASK ${tn} TO JOIN YOUR PARTY` }) +
       cmd("g", "GIVE GOLD", { hint: `OFFER ${tn} SOME GOLD` }) +
       cmd("v", "VOW", { hint: `SWEAR A PROMISE TO ${tn}, ONCE PER FIGHT` }) +
@@ -3079,10 +3080,45 @@ function testRun(n) {
   render();
 }
 
+// What holding Space would do right now (see spaceHold in voice.js)
+function spacePlan() {
+  if (!G || !voice.supported) return null;
+  const waiting = !!(G.prompt || G.menu || G.waitKey || G.roll || G.busy || G.mode === "over" || ach.isOpen());
+  return spaceHold({ inputOpen: !!G.input, inputEmpty: !$("#text").value, numeric: !!G.input?.numeric, waiting, combat: !!G.combat, allies: allies().length });
+}
+
+// Space went down where holding it means "speak": wait to see if it's a hold, then open the box and listen
+function spaceStart(plan) {
+  spaceDown = { plan, listening: false };
+  spaceDown.timer = setTimeout(() => {
+    if (!spaceDown) return;
+    if (plan === "talk") key("t");
+    if (plan === "ally") key("e");
+    // The box may open a moment later (or after you pick an ally); listen once it's there, while Space is held
+    const tries = Date.now();
+    const wait = () => {
+      if (!spaceDown) return;
+      if (G.input && !G.input.numeric) {
+        spaceDown.listening = true;
+        return listen("space");
+      }
+      if (Date.now() - tries < 1500 && !G.menu) setTimeout(wait, 40);
+    };
+    wait();
+  }, HOLD_MS);
+}
+
 document.addEventListener("keydown", (ev) => {
   if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
-  // A held key repeats: once it has opened the talk box it means "listen", not "type more of me"
-  if (ev.repeat && held && ev.code === held.code && G?.input) return ev.preventDefault();
+  if (ev.code === "Space" && started) {
+    // Held Space repeats: swallow the repeats while it's a talk hold
+    if (ev.repeat) return spaceDown ? ev.preventDefault() : undefined;
+    const plan = spacePlan();
+    if (plan) {
+      ev.preventDefault();
+      return spaceStart(plan);
+    }
+  }
   if (ev.target === $("#text")) {
     if (ev.key === "Escape") {
       closeInput(undefined); // undefined = cancelled; an empty submit is null
@@ -3099,18 +3135,15 @@ document.addEventListener("keydown", (ev) => {
   // Stop the key from also typing into the talk box that some commands open
   if (KEYMAP[k] || k.length === 1 || k === "enter" || k === "escape") ev.preventDefault();
   key(mapped);
-  // Still held a moment later, with the talk box open: listen instead
-  if (!ev.repeat && k.length === 1) {
-    clearTimeout(held?.timer);
-    const code = ev.code;
-    held = { code, timer: setTimeout(() => held?.code === code && listen("key"), HOLD_MS) };
-  }
 });
 document.addEventListener("keyup", (ev) => {
-  if (!held || ev.code !== held.code) return;
-  clearTimeout(held.timer);
-  held = null;
-  stopListening("key");
+  if (ev.code !== "Space" || !spaceDown) return;
+  const { timer, listening } = spaceDown;
+  clearTimeout(timer);
+  spaceDown = null;
+  if (listening) return stopListening("space");
+  // Let go before it counted as a hold: Space was just a tap
+  if (!G?.input) key(" ");
 });
 // The mic button beside the talk box: press and hold to speak, let go to say it
 const mic = $("#mic");
