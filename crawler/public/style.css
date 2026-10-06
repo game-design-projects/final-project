@@ -29,6 +29,38 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 .log .warn { color: var(--warn); }
 .log .you { color: var(--you); }
 .log .big { font-family: "Press Start 2P", monospace; font-size: 11px; line-height: 1.5; }
+/* Vow ledger: a broken vow gets a red slash drawn across it, once */
+.vows { border: 1px solid var(--faint); padding: 6px 8px; }
+.vows h4 { margin: 0 0 4px; font: 9px "Press Start 2P", monospace; color: var(--dim); font-weight: normal; }
+.vows ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.vows li { position: relative; font-size: 18px; line-height: 1.1; }
+.vow-to { font-size: 16px; }
+.vows li.broken { color: var(--dim); }
+.vows li.broken::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: 50%;
+  height: 3px;
+  background: var(--warn);
+  box-shadow: 0 0 6px var(--warn);
+  transform: rotate(-1.5deg);
+  transform-origin: left center;
+}
+.vows li.broken.fresh::after { animation: slash 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes slash {
+  from { transform: rotate(-1.5deg) scaleX(0); }
+  to { transform: rotate(-1.5deg) scaleX(1); }
+}
+.vows.shake { animation: shake 0.4s 0.35s; }
+@keyframes shake {
+  20%, 60% { transform: translateX(-4px); border-color: var(--warn); }
+  40%, 80% { transform: translateX(4px); border-color: var(--warn); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vows li.broken.fresh::after, .vows.shake { animation: none; }
+}
 #map { width: 105px; height: 105px; image-rendering: pixelated; border: 1px solid var(--faint); align-self: flex-end; }
 #map.hidden { display: none; }
 
@@ -51,6 +83,9 @@ table { width: 100%; border-collapse: collapse; margin-top: 8px; }
 th, td { text-align: left; padding: 3px 4px; font-weight: normal; white-space: nowrap; }
 th:first-child, td:first-child { width: 2ch; }
 tr.dead td { color: var(--dim); text-decoration: line-through; }
+tr.down td { color: var(--warn); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { tr.down td { animation: none; } }
 .foot { color: var(--dim); padding: 6px 4px 0; }
 
 .buttons { display: none; flex-wrap: wrap; gap: 6px; margin-top: 10px; }

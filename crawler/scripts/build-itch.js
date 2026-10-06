@@ -11,12 +11,15 @@ if (!/^https:\/\/|^http:\/\/localhost(:\d+)?$/.test(apiBase)) {
 }
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
-const stage = `${root}dist/halls-of-jev`;
-const zip = `${root}dist/halls-of-jev-itch.zip`;
+const stage = `${root}dist/donjon`;
+const zip = `${root}dist/donjon-itch.zip`;
 rmSync(stage, { recursive: true, force: true });
 rmSync(zip, { force: true });
 mkdirSync(stage, { recursive: true });
-cpSync(`${root}crawler/public`, stage, { recursive: true, filter: (src) => !src.endsWith(".DS_Store") });
+// Dev-only pages (beat maker, art gallery, cover) stay out of the upload, and so does everything only the
+// beat maker uses (its synth engine, soundfonts and songs). The game itself plays ambient.m4a.
+const DEV_ONLY = ["beatmaker.html", "beatmaker.js", "gallery.html", "cover.html", "music.js", "theme.json", "song.json", "soundfonts"];
+cpSync(`${root}crawler/public`, stage, { recursive: true, filter: (src) => !src.endsWith(".DS_Store") && !DEV_ONLY.some((f) => src.endsWith(`/${f}`)) });
 writeFileSync(`${stage}/config.js`, `// itch.io build: the Jev API is the Cloudflare Worker, which holds the key.\nwindow.HALLS_CONFIG = { apiBase: ${JSON.stringify(apiBase)} };\n`);
 
 // index.html must sit at the top level of the zip for itch.io

@@ -9,9 +9,9 @@ const { allyReactions } = await import("../src/allies.js");
 const { SPECIES } = await import("../public/species.js");
 
 const PARTY = [
-  { id: "p0", name: "ARNOLD", kind: "human", cls: "G-FIG", hp: 14, maxHp: 14 },
+  { id: "p0", name: "HORTENSE", kind: "human", cls: "G-FIG", hp: 14, maxHp: 14 },
   { id: "p1", name: "ROLF", kind: "human", cls: "G-FIG", hp: 13, maxHp: 13 },
-  { id: "p2", name: "HOUDINI", kind: "human", cls: "N-MAG", hp: 8, maxHp: 8 },
+  { id: "p2", name: "EUGENE", kind: "human", cls: "N-MAG", hp: 8, maxHp: 8 },
 ];
 
 function enemy(species, name, extra = {}) {

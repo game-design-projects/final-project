@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Beat Maker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+    <style>
+      :root { --ink: #e8e8e8; --dim: #8a8a8a; --faint: #2c2c2c; --cell: #161616; --on: #e8e8e8; --play: #ffe03a; color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #0b0b0b; color: var(--ink); font: 18px "VT323", ui-monospace, monospace; padding: 14px; }
+      h1, .ui, label.track, select, button { font-family: "Press Start 2P", ui-monospace, monospace; }
+      h1 { font-size: 14px; margin: 0 0 4px; }
+      p.help { color: var(--dim); margin: 0 0 12px; max-width: 900px; }
+      .ui { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 10px; margin-bottom: 12px; }
+      button, select { font-size: 10px; color: var(--ink); background: #000; border: 2px solid var(--ink); padding: 8px 10px; cursor: pointer; }
+      button.primary { background: var(--ink); color: #000; }
+      input[type="range"] { accent-color: var(--play); }
+      .scroller { overflow-x: auto; border: 2px solid var(--faint); background: #000; padding: 8px; }
+      .section { margin-bottom: 10px; }
+      .section h2 { font: 9px "Press Start 2P", monospace; color: var(--dim); margin: 6px 0; display: flex; gap: 10px; align-items: center; }
+      .row { display: flex; align-items: center; height: 20px; }
+      label.track { width: 64px; flex: none; font-size: 8px; color: var(--dim); position: sticky; left: 0; background: #000; z-index: 1; }
+      .cells { display: flex; }
+      .cell { width: 16px; height: 16px; margin-right: 2px; border: 0; padding: 0; background: var(--cell); cursor: pointer; }
+      .cell.beat { background: #1f1f1f; }
+      .cell.bar { margin-left: 6px; }
+      .cell.on { background: var(--on); }
+      .cell.lead.on { background: #ff8a1f; }
+      .cell.bass.on { background: #b5773c; }
+      .cell.keys.on { background: #ffe03a; }
+      .row.out label.track { color: #4a4a4a; }
+      .row.out .cell:not(.on) { background: #0e0e0e; }
+      .layers { border: 2px solid var(--faint); padding: 8px; margin-bottom: 10px; }
+      .layer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0; }
+      .layer label { min-width: 330px; }
+      .section h2 select { font-size: 9px; padding: 4px; margin-left: 6px; }
+      .cell.playing { outline: 2px solid var(--play); outline-offset: -2px; }
+      .chords { display: flex; padding-left: 64px; gap: 6px; margin-bottom: 6px; }
+      .chords select { width: calc(16 * 18px); padding: 4px; }
+      .mix { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 16px; color: var(--dim); }
+      .mix label { display: flex; gap: 6px; align-items: center; }
+      #status { color: var(--play); font-size: 10px; }
+    </style>
+    <script>
+      // Opened as a file (double-click / Finder)? Browsers block the page's scripts and sound files then.
+      if (!/^https?:$/.test(location.protocol))
+        document.addEventListener("DOMContentLoaded", () => {
+          const d = document.createElement("div");
+          d.style.cssText = "position:fixed;inset:0;z-index:99;background:#000;color:#e8e8e8;display:grid;place-items:center;padding:24px;text-align:center;font:20px/1.5 monospace";
+          d.innerHTML = '<div>This page has to be opened through the game server, not as a file.<br><br>1. In the project folder run: <b>npm run crawler</b><br>2. Open <b>http://localhost:5174/' + location.pathname.split("/").pop() + '</b></div>';
+          document.body.append(d);
+        });
+    </script>
+  </head>
+  <body>
+    <h1>BEAT MAKER · DONJON</h1>
+    <p class="help">Click cells to place drums and notes (you'll hear each one), pick a chord per bar, and choose an instrument for each track. Bright rows are in A harmonic minor; dim rows are the eerie in-between notes. "Until next" holds a note until the next one. SAVE TO GAME makes the dungeon play your beat. Or tell Claude what to change ("busier hats in bar 2", "darker melody").</p>
+    <div class="ui">
+      <button id="play" class="primary">▶ PLAY</button>
+      <label>BPM <input id="bpm" type="range" min="60" max="160" step="1" /> <span id="bpmv"></span></label>
+      <label>BARS <select id="bars"><option>1</option><option>2</option><option>4</option><option>8</option><option>16</option><option>24</option><option>32</option></select></label>
+      <label id="pageWrap" hidden>SHOW <select id="page"></select></label>
+      <label><input id="pad" type="checkbox" /> PAD</label>
+      <button id="theme">LOAD GAME THEME</button>
+      <button id="clear">CLEAR</button>
+      <button id="save" class="primary">SAVE TO GAME</button>
+      <button id="reset">RESET GAME TO BUILT-IN</button>
+      <button id="copy">COPY JSON</button>
+      <span id="status"></span>
+    </div>
+    <div class="section layers" id="layers" hidden>
+      <h2>SCORE LAYERS (THESE PLAY EXACT NOTES FROM THE ARRANGED SCORE)</h2>
+      <div id="layerList"></div>
+    </div>
+    <div class="scroller">
+      <div class="section"><h2>CHORDS (ONE PER BAR) · PAD <span id="padInst"></span></h2><div class="chords" id="chords"></div></div>
+      <div class="section"><h2>DRUMS (LINNDRUM)</h2><div id="drums"></div></div>
+      <div class="section"><h2 id="leadHead"></h2><div id="lead"></div></div>
+      <div class="section"><h2 id="keysHead"></h2><div id="keys"></div></div>
+      <div class="section"><h2 id="bassHead"></h2><div id="bass"></div></div>
+    </div>
+    <div class="mix" id="mix"></div>
+    <script type="module" src="beatmaker.js"></script>
+  </body>
+</html>

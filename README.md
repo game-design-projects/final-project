@@ -5,7 +5,7 @@ Two small games where NPC and monster decisions come from **Jev**, TypeSafe's Sy
 | Game | What it is | Run |
 | --- | --- | --- |
 | **The South Gate** (below) | Talk, bribe, bluff or fight your way past a gate guard | `npm start` → http://localhost:5173 |
-| **[Halls of Jev](crawler/README.md)** | Wizardry-style wireframe roguelike: talk to monsters, recruit them, and keep them loyal | `npm run crawler` → http://localhost:5174 |
+| **[Donjon](crawler/README.md)** | Wizardry-style wireframe roguelike: talk to monsters, recruit them, and keep them loyal | `npm run crawler` → http://localhost:5174 |
 
 **Setup:** `npm install`, then copy `.env.example` to `.env` and put your TypeSafe API key in it (get one at https://console.typesafe.ai/keys). The key stays on the server and is never sent to the browser.
 

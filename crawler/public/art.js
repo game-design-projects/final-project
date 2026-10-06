@@ -88,8 +88,24 @@ function goblin(ctx, t) {
   path(ctx, [[252, 162], [298, 172], [376, 190], [398, 214]]);
   path(ctx, [[120, 288], [132, 226], [150, 206]]);
   path(ctx, [[328, 288], [316, 226], [300, 208]]);
-  path(ctx, [[176, 234], [224, 246], [272, 234]]); // belly
-  path(ctx, [[150, 272], [224, 284], [298, 272]]);
+  // potato-sack tunic: gathered drawstring neck, rope belt, patches, frayed hem
+  path(ctx, [[176, 180], [186, 186], [196, 179], [206, 187], [216, 179], [226, 187], [236, 179], [246, 187], [256, 179], [266, 186], [274, 180]]);
+  path(ctx, [[176, 180], [158, 212], [148, 266]]);
+  path(ctx, [[274, 180], [292, 212], [302, 266]]);
+  path(ctx, [[148, 266], [156, 276], [166, 266], [176, 278], [188, 266], [200, 277], [212, 266], [224, 278], [236, 266], [248, 277], [260, 266], [272, 278], [284, 266], [294, 276], [302, 266]]);
+  path(ctx, [[188, 196], [262, 196]]); // printed stripes
+  path(ctx, [[184, 208], [266, 208]]);
+  path(ctx, [[152, 232], [224, 238], [298, 232]]); // rope belt
+  path(ctx, [[151, 240], [224, 246], [299, 240]]);
+  circle(ctx, 224, 242, 6);
+  path(ctx, [[220, 248], [214, 262]]);
+  path(ctx, [[228, 248], [234, 262]]);
+  path(ctx, [[176, 248], [198, 248], [198, 262], [176, 262]], true); // patch
+  path(ctx, [[180, 245], [180, 251]]);
+  path(ctx, [[194, 245], [194, 251]]);
+  path(ctx, [[252, 208], [270, 208], [270, 222], [252, 222]], true); // patch
+  path(ctx, [[256, 205], [256, 211]]);
+  path(ctx, [[266, 205], [266, 211]]);
   // right arm raised with a knotted club
   path(ctx, [[398, 214], [414, 162], [408, 132]]);
   path(ctx, [[376, 190], [392, 158], [390, 134]]);
@@ -147,15 +163,198 @@ function dragon(ctx, t) {
   path(ctx, [[406, 232], [428, 214], [418, 240]], true);
 }
 
-const DRAW = { slime, goblin, dragon };
+function ellipse(ctx, x, y, rx, ry) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.stroke();
+}
 
-export function drawMonster(ctx, species, t, hurt = 0) {
+// Green snake person: a hooded serpent torso rising from its coils, tongue flicking.
+function snake(ctx, t) {
+  const sway = Math.sin(t / 500) * 4;
+  ellipse(ctx, 224, 252, 112, 18);
+  ellipse(ctx, 224, 236, 90, 15);
+  ellipse(ctx, 230, 222, 66, 12);
+  path(ctx, [[322, 254], [354, 248], [374, 236], [380, 222], [370, 214]]); // tail tip
   ctx.save();
-  ctx.strokeStyle = SPECIES[species].color;
-  ctx.fillStyle = SPECIES[species].color;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = "round";
-  if (hurt > 0) ctx.translate(Math.sin(t / 20) * hurt * 6, 0);
-  DRAW[species](ctx, t);
+  ctx.translate(sway, 0);
+  path(ctx, [[202, 222], [196, 190], [204, 160], [212, 140]]); // body rising
+  path(ctx, [[254, 222], [252, 190], [244, 160], [236, 140]]);
+  for (const y of [208, 192, 176, 160]) path(ctx, [[204, y], [224, y + 6], [248, y]]); // belly scales
+  path(ctx, [[212, 140], [184, 132], [170, 140]]); // shoulders
+  path(ctx, [[236, 140], [264, 132], [278, 140]]);
+  path(ctx, [[172, 140], [150, 170], [156, 196]]); // clawed arms
+  path(ctx, [[156, 196], [148, 206]]);
+  path(ctx, [[156, 196], [156, 208]]);
+  path(ctx, [[156, 196], [164, 206]]);
+  path(ctx, [[276, 140], [300, 166], [294, 194]]);
+  path(ctx, [[294, 194], [286, 204]]);
+  path(ctx, [[294, 194], [294, 206]]);
+  path(ctx, [[294, 194], [302, 204]]);
+  path(ctx, [[214, 132], [216, 118]]); // neck
+  path(ctx, [[234, 132], [232, 118]]);
+  path(ctx, [[216, 118], [190, 104], [180, 80], [194, 56], [224, 46], [254, 56], [268, 80], [258, 104], [232, 118]]); // cobra hood
+  path(ctx, [[196, 70], [206, 86]]); // hood markings
+  path(ctx, [[252, 70], [242, 86]]);
+  path(ctx, [[210, 96], [210, 74], [224, 64], [238, 74], [238, 96], [224, 106]], true); // head
+  path(ctx, [[213, 82], [221, 84]]); // slit eyes
+  path(ctx, [[227, 84], [235, 82]]);
+  dot(ctx, 217, 83, 1.6);
+  dot(ctx, 231, 83, 1.6);
+  if (Math.sin(t / 220) > 0.2) {
+    path(ctx, [[224, 106], [224, 118], [218, 124]]); // forked tongue
+    path(ctx, [[224, 118], [230, 124]]);
+  }
   ctx.restore();
 }
+
+// Grey rock entity: a living heap of boulders with one glowing crack for an eye.
+function rock(ctx, t) {
+  const breathe = Math.sin(t / 900) * 2;
+  path(ctx, [[96, 264], [352, 264]]); // ground
+  path(ctx, [[150, 264], [160, 256], [172, 264]]); // pebbles
+  path(ctx, [[272, 264], [284, 255], [296, 264]]);
+  ctx.save();
+  ctx.translate(0, breathe);
+  path(ctx, [[142, 252], [128, 202], [146, 152], [178, 120], [224, 106], [272, 118], [304, 150], [320, 200], [308, 252]], true); // body
+  path(ctx, [[200, 142], [212, 168], [204, 190], [218, 214]]); // cracks
+  path(ctx, [[278, 152], [264, 178], [272, 202]]);
+  path(ctx, [[162, 200], [182, 212], [176, 230]]);
+  dot(ctx, 250, 230, 2);
+  dot(ctx, 190, 238, 2);
+  dot(ctx, 286, 228, 2);
+  path(ctx, [[190, 120], [184, 88], [204, 62], [238, 58], [262, 80], [262, 114]], true); // head
+  path(ctx, [[198, 90], [210, 84], [218, 92], [230, 82], [242, 90], [252, 86]]); // glowing crack eye
+  path(ctx, [[204, 94], [216, 98], [230, 92], [244, 96]]);
+  path(ctx, [[134, 160], [104, 168], [92, 202], [112, 216], [132, 202]], true); // left arm
+  path(ctx, [[96, 214], [84, 242], [100, 260], [124, 252], [120, 222]], true);
+  path(ctx, [[314, 160], [344, 168], [356, 202], [336, 216], [316, 202]], true); // right arm
+  path(ctx, [[352, 214], [364, 242], [348, 260], [324, 252], [328, 222]], true);
+  ctx.restore();
+}
+
+// Red bandit: hooded, masked, a knife in each hand.
+function bandit(ctx, t) {
+  const shift = Math.sin(t / 450) * 3;
+  ctx.save();
+  ctx.translate(shift, 0);
+  path(ctx, [[224, 38], [190, 66], [176, 106], [184, 138]]); // hood
+  path(ctx, [[224, 38], [258, 66], [272, 106], [264, 138]]);
+  ellipse(ctx, 224, 98, 26, 32); // face opening
+  path(ctx, [[208, 90], [218, 88]]); // narrowed eyes
+  path(ctx, [[230, 88], [240, 90]]);
+  dot(ctx, 213, 90, 1.8);
+  dot(ctx, 235, 90, 1.8);
+  path(ctx, [[199, 104], [249, 104]]); // bandana mask
+  path(ctx, [[200, 104], [206, 122], [224, 128], [242, 122], [248, 104]]);
+  path(ctx, [[249, 106], [268, 112], [262, 122]]); // knot tails
+  path(ctx, [[249, 106], [272, 104]]);
+  path(ctx, [[184, 138], [150, 150], [130, 190], [124, 262]]); // cloak
+  path(ctx, [[264, 138], [298, 150], [318, 190], [324, 262]]);
+  path(ctx, [[124, 262], [140, 254], [152, 264], [166, 254], [180, 262]]); // ragged hem
+  path(ctx, [[268, 262], [282, 254], [296, 264], [310, 254], [324, 262]]);
+  path(ctx, [[198, 140], [224, 170], [250, 140]]); // tunic neck
+  path(ctx, [[190, 146], [194, 252]]);
+  path(ctx, [[258, 146], [254, 252]]);
+  path(ctx, [[188, 204], [260, 204]]); // belt
+  path(ctx, [[188, 212], [260, 212]]);
+  path(ctx, [[216, 202], [232, 202], [232, 214], [216, 214]], true); // buckle
+  path(ctx, [[240, 214], [256, 214], [256, 230], [240, 230]], true); // coin pouch
+  path(ctx, [[202, 252], [198, 270]]); // legs
+  path(ctx, [[246, 252], [250, 270]]);
+  path(ctx, [[150, 150], [140, 190], [158, 212]]); // left arm, knife forward
+  circle(ctx, 162, 214, 6);
+  path(ctx, [[166, 208], [194, 184]]);
+  path(ctx, [[160, 200], [172, 212]]);
+  path(ctx, [[298, 150], [322, 128], [332, 100]]); // right arm, knife raised
+  circle(ctx, 334, 96, 6);
+  path(ctx, [[338, 90], [352, 60]]);
+  path(ctx, [[328, 88], [344, 96]]);
+  ctx.restore();
+}
+
+// Shiny variants twinkle: little four-point glints around the monster.
+const GLINTS = [[-120, -40], [118, -70], [-60, -120], [140, 30], [-140, 40], [60, -10]];
+function glints(ctx, t) {
+  GLINTS.forEach(([dx, dy], i) => {
+    const on = Math.sin(t / 260 + i * 1.7);
+    if (on < 0.35) return;
+    const r = 4 + on * 6;
+    const x = 224 + dx;
+    const y = 160 + dy;
+    path(ctx, [[x - r, y], [x + r, y]]);
+    path(ctx, [[x, y - r], [x, y + r]]);
+  });
+}
+
+export const SHINY_COLOR = "#f5b72a";
+export const BOSS_COLOR = "#ff2a2a";
+
+const DRAW = { slime, goblin, dragon, snake, rock, bandit };
+
+// How jagged the monsters look. 1 = smooth vector lines (the game's look); 2–4 = drawn at 1/N resolution
+// with no anti-aliasing, then scaled up with hard edges, like the stair-stepped lines of early dungeon crawlers.
+export const ART = { pixel: 1 };
+
+function drawVector(ctx, species, t, hurt, slot, lineWidth, look) {
+  const color = look.color ?? (look.shiny ? SHINY_COLOR : SPECIES[species].color);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineJoin = "round";
+  // slot.by moves the monster's feet up from the bottom of the view (to stand further down a corridor)
+  ctx.translate(slot.cx - 224 * slot.s, (slot.by ?? 284) - 284 * slot.s);
+  ctx.scale(slot.s, slot.s);
+  if (hurt > 0) ctx.translate(Math.sin(t / 20) * hurt * 6, 0);
+  DRAW[species](ctx, t);
+  if (look.shiny) glints(ctx, t);
+  ctx.restore();
+}
+
+const low = typeof document !== "undefined" ? document.createElement("canvas") : null;
+
+// `slot` places a monster when several share the view: cx is its center, s its scale (bottoms stay aligned).
+// `look.shiny` draws the rare gold variant with glints.
+export function drawMonster(ctx, species, t, hurt = 0, slot = { cx: 224, s: 1 }, pixel = ART.pixel, look = {}) {
+  if (pixel <= 1) return drawVector(ctx, species, t, hurt, slot, 2 / Math.max(slot.s, 0.6), look);
+  const { width: W, height: H } = ctx.canvas;
+  const w = Math.ceil(W / pixel);
+  const h = Math.ceil(H / pixel);
+  if (low.width !== w || low.height !== h) Object.assign(low, { width: w, height: h });
+  const o = low.getContext("2d", { willReadFrequently: true });
+  o.clearRect(0, 0, w, h);
+  o.save();
+  o.scale(1 / pixel, 1 / pixel);
+  // One low-res pixel wide, whatever the slot's scale
+  drawVector(o, species, t, hurt, slot, pixel / slot.s, look);
+  o.restore();
+  // Snap every pixel fully on or off: no anti-aliasing, so diagonals become stair-steps
+  const img = o.getImageData(0, 0, w, h);
+  const d = img.data;
+  const [r, g, b] = hexToRgb(look.color ?? (look.shiny ? SHINY_COLOR : SPECIES[species].color));
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] >= 90) {
+      d[i] = r;
+      d[i + 1] = g;
+      d[i + 2] = b;
+      d[i + 3] = 255;
+    } else d[i + 3] = 0;
+  }
+  o.putImageData(img, 0, 0);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(low, 0, 0, w, h, 0, 0, w * pixel, h * pixel);
+  ctx.restore();
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+export const SLOTS = {
+  1: [{ cx: 224, s: 1 }],
+  2: [{ cx: 116, s: 0.6 }, { cx: 332, s: 0.6 }],
+  3: [{ cx: 76, s: 0.46 }, { cx: 224, s: 0.46 }, { cx: 372, s: 0.46 }],
+};

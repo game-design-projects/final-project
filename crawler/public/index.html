@@ -3,21 +3,35 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Halls of Jev</title>
+    <title>Donjon</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><path d='M2 2h12v12H2zM5 5h6v6H5z' fill='none' stroke='white'/></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <script>
+      // Opened as a file (double-click / Finder)? Browsers block the page's scripts and sound files then.
+      if (!/^https?:$/.test(location.protocol))
+        document.addEventListener("DOMContentLoaded", () => {
+          const d = document.createElement("div");
+          d.style.cssText = "position:fixed;inset:0;z-index:99;background:#000;color:#e8e8e8;display:grid;place-items:center;padding:24px;text-align:center;font:20px/1.5 monospace";
+          d.innerHTML = '<div>This page has to be opened through the game server, not as a file.<br><br>1. In the project folder run: <b>npm run crawler</b><br>2. Open <b>http://localhost:5174/' + location.pathname.split("/").pop() + '</b></div>';
+          document.body.append(d);
+        });
+    </script>
   </head>
   <body>
     <main class="wrap">
-      <section class="crt" aria-label="Halls of Jev">
+      <section class="crt" aria-label="Donjon">
         <div class="bar"><span id="cmds">PRESS ANY KEY</span><span id="where"></span></div>
         <div class="mid">
           <canvas id="view" width="448" height="288" aria-label="Dungeon view"></canvas>
           <div class="side">
             <div id="log" class="log" aria-live="polite"></div>
+            <div id="vows" class="vows" hidden>
+              <h4>VOWS</h4>
+              <ol id="vowList"></ol>
+            </div>
             <canvas id="map" width="105" height="105" aria-label="Automap"></canvas>
           </div>
         </div>
@@ -29,7 +43,7 @@
         </form>
         <table id="party">
           <thead>
-            <tr><th>#</th><th>CHARACTER NAME</th><th>CLASS</th><th>AC</th><th>HITS</th><th>STATUS</th></tr>
+            <tr><th>#</th><th>CHARACTER NAME</th><th>CLASS</th><th>LV</th><th>AC</th><th>HITS</th><th>STATUS</th></tr>
           </thead>
           <tbody></tbody>
         </table>
