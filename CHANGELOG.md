@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- **Genre Halls** (`crawler/public/genre-halls.html`, http://localhost:5174/genre-halls.html): a pitch for Undertale-style battles, built on Donjon's renderer, monster art, species, feelings and synth. You explore a small wireframe floor; a fight switches into a 7×7 box where each faction attacks in its own genre, with one rule: lit squares hurt. Slimes rain goo, bandits play chess (rook, bishop, knight), snake people swing a lantern you hide from behind pillars, and rock entities stomp on the beat. The red dragon champion cycles through all four. Commands are FIGHT (a timing bar), ACT (three species-specific acts, CHECK, or typing once per fight), SPARE (when its mercy odds pass 50%) and FLEE. A spared monster may join as a passive charm (BOUNCY, KEEN EYE, SLIPPERY, STEADY, HOARD-FIRE) that judges what you do and can walk out. Reaching the stairs names your route: ghost, quiet, blood or tangled. The monster's mind answers the same choice / score / yes-no questions the main game sends to Jev, with a local stand-in, and the Jev mind panel shows each answer with its odds.
+- `crawler/public/genre-rules.js`: Genre Halls' rules without the DOM, and `crawler/test/genre-halls.test.js` (8 tests). Besides the data and the odds, they check that every floor's stairs and monsters can be reached, that every chess piece and every stomp leaves a safe square wherever you stand, and that the lantern always leaves a shadow to hide in.
+
 ## [0.2.1] - 2026-10-06
 
 ### Fixed

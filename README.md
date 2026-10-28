@@ -14,4 +14,6 @@ npm run crawler:scenarios    # scripted encounters against the live API (spends 
 
 Play it on itch.io: https://aalfalasi.itch.io/donjon. GitHub Actions (`.github/workflows/ci.yml`) tests every push and pull request, and publishes `main` there automatically. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
+**Genre Halls** (`npm run crawler`, then http://localhost:5174/genre-halls.html) is a pitch for Undertale-style battles on Donjon's dungeon. Each faction attacks in its own genre (goo rain, chess, shadow, rhythm), and you choose to FIGHT, ACT, SPARE or FLEE. See [crawler/README.md](crawler/README.md#genre-halls-undertale-style-battles).
+
 The earlier gate-guard prototype, The South Gate, lives on the `south-gate` branch.

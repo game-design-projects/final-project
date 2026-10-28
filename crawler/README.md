@@ -172,6 +172,19 @@ The server also logs one `[join]` line per invitation answer (who, yes or no, th
 
 Floors are new mazes every time you descend. Death is permanent, and your deepest floor is remembered.
 
+## Genre Halls: Undertale-style battles
+
+`public/genre-halls.html` (http://localhost:5174/genre-halls.html, also in the itch zip) is a pitch for the next version of the fights, built on the same renderer, monster art, species, feelings and synth. It runs entirely in the browser.
+
+- **One floor, five fights.** A 13×13 maze holds one slime, bandit, snake person and rock entity, plus a red dragon champion in the 5×5 hall at the center. Monsters are drawn down the corridor when you can see them, and show on the automap.
+- **One box, one rule: lit squares hurt.** When a monster attacks, you dodge on a 7×7 grid with the arrow keys. Every faction attacks in its own genre. Slimes rain goo, and the shadow of each drop shows where it will land. Bandits play chess: a rook lights its row and column, a bishop its diagonals, a knight its L-jumps. Snake people swing a lantern around the box, and you hide in a pillar's shadow. Rock entities stomp on the beat, with each pattern shown two beats ahead. The champion changes genre every turn.
+- **FIGHT, ACT, SPARE, FLEE.** FIGHT is a timing bar: strike when the line crosses the middle. ACT gives CHECK, three acts for that species (a slime likes jokes, a bandit a fair cut, a rock quiet), and SAY SOMETHING, a typed line once per fight. SPARE works when the monster's mercy odds are 50% or more. Champions can't be fled.
+- **The mind.** Each act asks the same kinds of question the main game asks Jev: how it feels (a choice over the ten feelings in `public/emotions.js`), whether it accepts mercy (yes/no), and how hard it attacks (a 0–3 score). Here a local stand-in answers them from the species' tastes, two rolled traits and its friendliness, anger and fear. Typed words are read by keyword cues and a nonsense detector. The Jev mind panel shows every answer and its odds. As in the main game, any answer at 15% or more can happen.
+- **Allies are charms.** A spared monster may ask to join, up to three. Each ally gives a passive charm: BOUNCY absorbs the first hit, KEEN EYE keeps warnings lit longer, SLIPPERY lengthens your safety after a hit, STEADY slows the strike bar, and HOARD-FIRE adds 4 damage. Allies judge what you do (killing a monster that was ready to stop, fleeing, insults) and walk out when their loyalty runs low.
+- **Routes.** The stairs name how you played: ghost (met no one), quiet (killed no one), blood (spared no one) or tangled.
+
+The rules (factions, floor, mind, word reading, box geometry) are in `public/genre-rules.js`, with no DOM, and are tested in `test/genre-halls.test.js`. Drawing and input are in `public/genre-halls.js`. In the console, `genreHalls.meet("rock")` jumps straight into that faction's fight.
+
 ## The monsters
 
 | | Likes | Hates | As an ally, it cares about |
