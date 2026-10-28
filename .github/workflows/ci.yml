@@ -13,8 +13,8 @@ permissions:
 
 env:
   # The Cloudflare Worker that holds the Jev key; the static build only knows its address (crawler/README.md)
-  JEV_API: https://halls-of-jev-api.donjonjev.workers.dev
-  ITCH_TARGET: aalfalasi/donjon:html5
+  JEV_API: https://UNSET.workers.dev
+  ITCH_TARGET: UNSET/UNSET:html5
 
 jobs:
   test:
