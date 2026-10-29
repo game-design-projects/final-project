@@ -18,7 +18,7 @@ var _t := 0.0
 func set_rows(r: Array, accent_color: Color) -> void:
 	rows = r
 	accent = accent_color
-	natural_h = _measure()
+	natural_h = measure()
 	queue_redraw()
 
 
@@ -42,7 +42,7 @@ func _second_line_h(r: Dictionary, w: float) -> float:
 	return maxf(12.0, maxf(pw_h, chips_h))
 
 
-func _measure() -> float:
+func measure() -> float:
 	var h := 0.0
 	for r in rows:
 		match r.kind:
@@ -64,7 +64,7 @@ func _cols(r: Dictionary, w: float) -> Dictionary:
 
 func paint() -> void:
 	_t = now_ms()
-	natural_h = _measure()
+	natural_h = measure()
 	var y := 0.0
 	for r in rows:
 		match r.kind:

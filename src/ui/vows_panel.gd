@@ -36,7 +36,7 @@ func set_vows(list: Array) -> void:
 		_shake_at = t + SHAKE_DELAY
 		for v in vows:
 			v.justBroken = false
-	natural_h = _measure(size.x)
+	natural_h = measure(size.x)
 	queue_redraw()
 
 
@@ -75,7 +75,7 @@ func _lines(v: Dictionary, w: float) -> Array:
 	return lines
 
 
-func _measure(w: float) -> float:
+func measure(w: float) -> float:
 	if vows.is_empty():
 		return 0.0
 	var h := 1.0 + 6.0 + 9.0 + 4.0

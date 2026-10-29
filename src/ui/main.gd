@@ -360,6 +360,8 @@ func audio_at(ms: float):
 
 ## frame(): the view repaints, the danger eases toward where the party is, the heartbeat and the shader follow
 func _process(_delta: float) -> void:
+	if game == null:
+		return # on the way to the Genre Halls
 	var now := J.now_ms()
 	view.queue_redraw()
 	var G = game.G if game != null else null
@@ -431,10 +433,10 @@ func _layout_side() -> void:
 	var side: Rect2 = L.side
 	party.position = side.position
 	party.size.x = side.size.x
-	var party_h: float = party._measure()
+	var party_h: float = party.measure()
 	party.size = Vector2(side.size.x, party_h)
 	vows.size.x = side.size.x
-	vows.natural_h = vows._measure(side.size.x)
+	vows.natural_h = vows.measure(side.size.x)
 	var vows_h: float = vows.natural_h
 	vows.visible = vows_h > 0.0
 	vows.position = Vector2(side.position.x, side.end.y - vows_h)
@@ -777,6 +779,8 @@ func open_genre_halls() -> void:
 
 
 func _input(ev: InputEvent) -> void:
+	if game == null:
+		return
 	if ev is InputEventKey:
 		if ev.pressed:
 			_key_down(ev)
