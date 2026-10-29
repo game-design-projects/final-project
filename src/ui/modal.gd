@@ -49,7 +49,7 @@ func paint() -> void:
 	var box := Rect2(((size - Vector2(w, h)) / 2.0).round(), Vector2(w, h).round())
 
 	# modal-in, then modal-glow; a nudge shakes it and flares the glow
-	var age := t - _shown_at
+	var age := Css.age(t - _shown_at)
 	var a := 1.0
 	var s := 1.0
 	if age < IN_MS:

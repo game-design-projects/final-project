@@ -286,6 +286,8 @@ func _row(b: Dictionary, x0: float, y: float, inner: float) -> Dictionary:
 				boxes.append({"kind": "lab", "text": it.text, "size": Vector2(Css.width(Css.ps(), KBD, it.text) + 8.0, 15.0)})
 			"how":
 				boxes.append({"kind": "how", "parts": it.parts, "size": Vector2(_how_size(it.parts), 15.0), "auto": true})
+			"note":
+				boxes.append({"kind": "note", "text": it.text, "size": Vector2(Css.width(Css.ps(), FONT, it.text), 30.0), "auto": true})
 	var lines := [[]]
 	var x := 0.0
 	for bx in boxes:
@@ -367,6 +369,8 @@ func paint() -> void:
 				Css.text(self, Css.ps(), KBD, it.rect.position.x + 4.0, it.rect.position.y, it.text, Css.DIM, it.rect.size.y)
 			"how":
 				_how(it)
+			"note":
+				Css.text(self, Css.ps(), FONT, it.rect.position.x, it.rect.position.y, it.text, Css.DIM, it.rect.size.y)
 			"hint":
 				var text := Css.ellipsize(Css.vt(), HINT, hint_text, it.rect.size.x - 4.0)
 				Css.text(self, Css.vt(), HINT, it.rect.position.x + 2.0, it.rect.position.y + 5.0, text, Css.DIM, 20.0)

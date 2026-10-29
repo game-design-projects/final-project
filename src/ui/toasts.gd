@@ -60,11 +60,11 @@ func paint() -> void:
 		# ach-in: steps(6) down from above the view; ach-out: steps(4) back up and gone
 		var dy := 0.0
 		var alpha := 1.0
-		var age: float = t - to.t0
+		var age: float = Css.age(t - to.t0)
 		if age < IN_MS:
 			dy = -1.3 * (h + y) * (1.0 - Css.steps(age / IN_MS, 6))
 		if to.out >= 0.0:
-			var k := Css.steps((t - to.out) / OUT_MS, 4)
+			var k := Css.steps(Css.age(t - to.out) / OUT_MS, 4)
 			dy = -1.3 * (h + y) * k
 			alpha = 1.0 - k
 		box.position.y += roundf(dy)

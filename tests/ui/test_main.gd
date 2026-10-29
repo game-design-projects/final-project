@@ -56,8 +56,9 @@ func test_every_ui_hook_game_calls_exists():
 
 func test_title_then_any_key_starts():
 	ok(main.game.G == null, "the title waits")
-	eq(main.dock.model.blocks[0].text, "PRESS ANY KEY TO BEGIN")
-	eq(main.dock.model.blocks[1].items[0].key, "g", "the genre halls keycap")
+	eq(main.dock.model.blocks[0].items[0].text, "PRESS ANY KEY TO BEGIN")
+	eq(main.dock.model.blocks[0].items[1].key, "g", "the genre halls keycap")
+	var title_h: float = main.dock.natural_h
 	ok(main.bar.model == null, "an empty bar on the title")
 	await _press(KEY_ENTER)
 	ok(main.started)
@@ -65,6 +66,7 @@ func test_title_then_any_key_starts():
 	eq(main.bar.model.loc.floor, "FLOOR 1")
 	eq(main.party.rows.size(), 3)
 	ok(main.dock.model.blocks[0].items[0].type == "pad", "the exploring dock")
+	eq(main.dock.natural_h, title_h, "no layout jump from the title screen on")
 	ok(main.log_panel.rtl.get_parsed_text().contains("You descend into the Donjon"), "the log shows the first lines")
 
 

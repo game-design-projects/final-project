@@ -24,8 +24,9 @@ func test_cap_of_arrows_and_names():
 
 func test_title_offers_genre_halls():
 	var d := Dock.title()
-	eq(d.blocks[0].text, "PRESS ANY KEY TO BEGIN")
-	eq(_keys(d.blocks[1]), ["g"])
+	eq(d.blocks.size(), 1, "one row: the dock keeps its height when the game starts")
+	eq(d.blocks[0].items[0].text, "PRESS ANY KEY TO BEGIN")
+	eq(_keys(d.blocks[0]), ["g"])
 	ok(not d.waiting)
 
 

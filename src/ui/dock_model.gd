@@ -8,7 +8,8 @@
 ##   {type: "ask", text, listening, pips}           a question line (<p class="ask">), pips: the member whose slots show
 ##   {type: "row", cls, items}                      a row of commands (cls "", "keys" or "targets")
 ##   {type: "menu", rows, options}                  a menu (options: {key, i, cap, label, sel, hint, tail})
-## Row items: {type: "cmd", ...cmd()}, {type: "pad", items, lab}, {type: "lab", text}, {type: "how", parts}.
+## Row items: {type: "cmd", ...cmd()}, {type: "pad", items, lab}, {type: "lab", text}, {type: "how", parts},
+## {type: "note", text} (a status line that pushes what follows to the right).
 extends RefCounted
 
 const J = preload("res://src/core/js.gd")
@@ -65,9 +66,9 @@ static func title() -> Dictionary:
 	return {
 		"waiting": false,
 		"hint": "",
+		# one row, so the dock is as tall as it will be once the game starts (no jump)
 		"blocks": [
-			_wait("PRESS ANY KEY TO BEGIN"),
-			_row([cmd("g", "GENRE HALLS", {"sub": "UNDERTALE-STYLE BATTLES", "hint": TITLE_HINT})]),
+			_row([{"type": "note", "text": "PRESS ANY KEY TO BEGIN"}, cmd("g", "GENRE HALLS", {"hint": TITLE_HINT})]),
 		],
 	}
 

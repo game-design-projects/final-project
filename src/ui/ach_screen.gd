@@ -143,7 +143,7 @@ static func scanlines() -> ImageTexture:
 func paint() -> void:
 	var t := now_ms()
 	var box := Rect2(Vector2.ZERO, size)
-	var age := t - _open_at
+	var age := Css.age(t - _open_at)
 	var sy := 1.0
 	var a := 1.0
 	if age < OPEN_MS:

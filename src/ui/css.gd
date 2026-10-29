@@ -314,8 +314,20 @@ static func keycap(ci: CanvasItem, pos: Vector2, cap: String, bg: Color, fg: Col
 
 # ---------------------------------------------------------------- CSS animations
 
+## prefers-reduced-motion: no shakes, no pulsing glows, no blinking, boxes appear at once (main sets it)
+static var reduced_motion := false
+
+
+## How far into an entrance/exit animation `age_ms` is, for widgets that animate in or out (done at once when
+## motion is reduced)
+static func age(age_ms: float) -> float:
+	return 1.0e9 if reduced_motion else age_ms
+
+
 ## ease-in-out between keyframes 0% and 50% (and back): 0 at the ends of the cycle, 1 at its middle
 static func pulse(t_ms: float, period_ms: float) -> float:
+	if reduced_motion:
+		return 0.0
 	var p := fposmod(t_ms, period_ms) / period_ms
 	var k := p * 2.0 if p < 0.5 else (1.0 - p) * 2.0
 	return k * k * (3.0 - 2.0 * k)
@@ -323,7 +335,7 @@ static func pulse(t_ms: float, period_ms: float) -> float:
 
 ## A nudge (keyframes 20%/60% -amp, 40%/80% +amp) at `age_ms` into a `dur_ms` animation: [dx, strength 0..1]
 static func nudge(age_ms: float, dur_ms := 350.0, amp := 6.0) -> Array:
-	if age_ms < 0.0 or age_ms >= dur_ms:
+	if reduced_motion or age_ms < 0.0 or age_ms >= dur_ms:
 		return [0.0, 0.0]
 	var p := age_ms / dur_ms
 	var keys := [[0.0, 0.0], [0.2, -amp], [0.4, amp], [0.6, -amp], [0.8, amp], [1.0, 0.0]]
@@ -337,6 +349,8 @@ static func nudge(age_ms: float, dur_ms := 350.0, amp := 6.0) -> Array:
 
 ## steps(2) blink to `low` opacity for the second half of each period
 static func blink(t_ms: float, period_ms := 800.0, low := 0.35) -> float:
+	if reduced_motion:
+		return 1.0
 	return 1.0 if fposmod(t_ms, period_ms) < period_ms / 2.0 else low
 
 

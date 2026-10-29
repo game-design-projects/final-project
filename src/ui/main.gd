@@ -123,6 +123,7 @@ func _ready() -> void:
 	if store == null:
 		store = preload("res://src/core/store.gd").Memory.new()
 	reduced_motion = _prefers_reduced_motion()
+	Css.reduced_motion = reduced_motion
 	_build_screen()
 	_make_game()
 	get_viewport().size_changed.connect(relayout)
@@ -397,6 +398,7 @@ func _process(_delta: float) -> void:
 # ---------------------------------------------------------------- layout
 
 func relayout() -> void:
+	hide_tooltip()
 	Css.set_scale(get_viewport().get_final_transform().get_scale().x)
 	L = Layout.compute(size, {"jev": debug and jev_open, "wide": jev.tab == "requests", "dock_h": dock.natural_h})
 	bar.position = L.bar.position

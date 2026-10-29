@@ -85,13 +85,13 @@ func paint() -> void:
 	# tip-in (steps(4)) from a sliver at its bottom edge, tip-out (steps(3)) back to one, tip-nudge
 	var sy := 1.0
 	var a := 1.0
-	var age := t - _in_at
+	var age := Css.age(t - _in_at)
 	if age < IN_MS:
 		var k := Css.steps(age / IN_MS, 4)
 		sy = lerpf(0.1, 1.0, k)
 		a = lerpf(0.4, 1.0, k)
 	if _out_at > 0.0:
-		var k := Css.steps((t - _out_at) / OUT_MS, 3)
+		var k := Css.steps(Css.age(t - _out_at) / OUT_MS, 3)
 		sy = lerpf(1.0, 0.1, k)
 		a = 1.0 - k
 	var n := Css.nudge(t - _nudge_at, NUDGE_MS, 6.0)
