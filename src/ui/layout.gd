@@ -44,7 +44,10 @@ static func compute(size: Vector2, opts := {}) -> Dictionary:
 	if jev and wide and size.x >= 2.0 * m + CRT_MAX + GAP + JEV_WIDE:
 		jev_w = JEV_WIDE
 	var beside := jev and size.x >= 2.0 * m + CRT_MIN + GAP + jev_w
-	var crt_w := minf(CRT_MAX, size.x - 2.0 * m - (GAP + jev_w if beside else 0.0))
+	# Beside the panel the CRT keeps its full 860 while the side margins can give way (down to 2px, as the page
+	# does in a 1180-wide window): the dock's fight commands need the width to sit on one row
+	var side_m := clampf(floorf((size.x - CRT_MAX - GAP - jev_w) / 2.0), 2.0, m) if beside else m
+	var crt_w := minf(CRT_MAX, size.x - 2.0 * side_m - (GAP + jev_w if beside else 0.0))
 	var group_w := crt_w + (GAP + jev_w if beside else 0.0)
 	var x0 := floorf((size.x - group_w) / 2.0)
 

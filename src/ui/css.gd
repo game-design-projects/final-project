@@ -22,15 +22,53 @@ const OFF_ICON := Color("#5a5a5a")
 const PS := "press start 2p"
 const VT := "vt323"
 
+const PS_PATH := "res://assets/fonts/PressStart2P-Regular.ttf"
+const VT_PATH := "res://assets/fonts/VT323-Regular.ttf"
+const ELLIPSIS := "…"
+
 static var _glows := {}
+static var _fonts := {}
+## The window is scaled by a fraction (canvas_items stretch): pixel fonts drawn without antialiasing would lose
+## strokes there, so they get grayscale antialiasing, as the browser draws them
+static var _fractional := false
 
 
+## Press Start 2P for bars, the dock, the party, headings: crisp at whole-number scales
 static func ps() -> Font:
-	return Canvas2D.pixel_font(PS)
+	return _font(PS_PATH)
 
 
+## VT323 for the body text and the log
 static func vt() -> Font:
-	return Canvas2D.pixel_font(VT)
+	return _font(VT_PATH)
+
+
+static func _font(path: String) -> FontFile:
+	if not _fonts.has(path):
+		var f: FontFile = (load(path) as FontFile).duplicate()
+		f.hinting = TextServer.HINTING_NONE
+		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		f.generate_mipmaps = false
+		_fonts[path] = f
+		_apply_aa(f, path)
+	return _fonts[path]
+
+
+static func _apply_aa(f: FontFile, path: String) -> void:
+	# VT323 reads like the page with soft edges at any size; Press Start 2P stays crisp unless the scale is fractional
+	var aa := _fractional or path == VT_PATH
+	f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY if aa else TextServer.FONT_ANTIALIASING_NONE
+
+
+## The canvas scale the window shows the 1180x820 layout at (main calls it on every resize)
+static func set_scale(s: float) -> void:
+	var frac := absf(s - roundf(s)) > 0.01
+	if frac == _fractional:
+		return
+	_fractional = frac
+	print_verbose("ui fonts: %s at scale %.3f" % ["antialiased" if frac else "crisp", s])
+	for path in _fonts:
+		_apply_aa(_fonts[path], path)
 
 
 ## A CSS colour string (or Color) as a Color
@@ -58,7 +96,18 @@ static func gray(c: Color) -> Color:
 # ---------------------------------------------------------------- text
 
 static func width(font: Font, size: int, s: String) -> float:
+	if s.ends_with(ELLIPSIS) and not font.has_char(0x2026):
+		return font.get_string_size(s.left(-1), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + _ellipsis_w(size)
 	return font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+
+
+## The pixel ellipsis drawn where a font has no "…": three square dots on the baseline
+static func _dot(size: int) -> float:
+	return maxf(1.0, roundf(size * 0.2))
+
+
+static func _ellipsis_w(size: int) -> float:
+	return 3.0 * _dot(size) + 2.0 * maxf(1.0, roundf(size * 0.12)) + 1.0
 
 
 ## The baseline that centres a line of `font` at `size` in a line box `h` tall starting at `top` (how CSS places
@@ -73,7 +122,17 @@ static func text(ci: CanvasItem, font: Font, size: int, x: float, top: float, s:
 	if s == "":
 		return 0.0
 	var lh := h if h > 0.0 else font.get_height(size)
-	ci.draw_string(font, Vector2(roundf(x), roundf(baseline(font, size, top, lh))), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+	var base := Vector2(roundf(x), roundf(baseline(font, size, top, lh)))
+	if s.ends_with(ELLIPSIS) and not font.has_char(0x2026):
+		var head := s.left(-1)
+		ci.draw_string(font, base, head, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+		var d := _dot(size)
+		var gap := maxf(1.0, roundf(size * 0.12))
+		var dx := base.x + font.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 1.0
+		for i in 3:
+			ci.draw_rect(Rect2(dx + i * (d + gap), base.y - d, d, d), color)
+		return width(font, size, s)
+	ci.draw_string(font, base, s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
 	return width(font, size, s)
 
 
@@ -83,7 +142,7 @@ static func ellipsize(font: Font, size: int, s: String, w: float) -> String:
 		return ""
 	if width(font, size, s) <= w:
 		return s
-	var dots := "…" if font.has_char(0x2026) else ".."
+	var dots := ELLIPSIS
 	var n := s.length()
 	while n > 0 and width(font, size, s.left(n).strip_edges(false, true) + dots) > w:
 		n -= 1
