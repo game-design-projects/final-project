@@ -86,22 +86,22 @@ void main() {
 
   // Phosphor glow, warmed a little toward the floor's accent
   vec3 bloom = texture2D(uBloom, uv).rgb;
-  col += bloom * mix(vec3(1.0), uAccent, 0.25) * 1.15;
+  col += bloom * mix(vec3(1.0), uAccent, 0.25) * 1.3;
 
   // Shadows lifted toward the accent: the dark is this floor's dark, not flat black
   float luma = dot(col, vec3(0.299, 0.587, 0.114));
-  col += uAccent * 0.03 * (1.0 - smoothstep(0.0, 0.35, luma));
+  col += uAccent * 0.025 * (1.0 - smoothstep(0.0, 0.35, luma));
 
   // Danger drains the color (red holds on longest) and closes in a pulsing red edge
-  float edge = smoothstep(0.25, 0.75, length(fromCenter * vec2(1.25, 1.0)));
-  col = mix(col, vec3(luma) * vec3(1.15, 0.85, 0.85), uDanger * 0.5);
-  col += vec3(0.75, 0.04, 0.03) * edge * uDanger * (0.35 + 0.65 * uPulse);
-  col += vec3(0.9, 0.08, 0.05) * edge * uHurt * 0.9;
+  float edge = smoothstep(0.36, 0.8, length(fromCenter * vec2(1.2, 1.0)));
+  col = mix(col, vec3(luma) * vec3(1.15, 0.85, 0.85), uDanger * 0.35);
+  col += vec3(0.6, 0.03, 0.02) * edge * edge * uDanger * (0.3 + 0.7 * uPulse);
+  col += vec3(0.9, 0.08, 0.05) * edge * uHurt * 0.8;
 
   // Scanlines on the game's own rows, and a soft vignette
-  float row = sin((uv.y * uSrc.y) * 6.2831853);
-  col *= 0.9 + 0.1 * row;
-  col *= mix(1.0, 0.55, smoothstep(0.35, 0.85, length(fromCenter * vec2(1.1, 1.25))));
+  float row = -cos((uv.y * uSrc.y) * 6.2831853); // dark between rows, bright through their middle
+  col *= 0.93 + 0.07 * row;
+  col *= mix(1.0, 0.68, smoothstep(0.4, 0.9, length(fromCenter * vec2(1.1, 1.25))));
 
   col += uFlash.rgb * uFlash.a;
   col += (hash(uv * uOut + uTime) - 0.5) / 160.0; // dither: no banding in the dark gradients

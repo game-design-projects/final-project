@@ -25,20 +25,22 @@ function instrument() {
   const frames = [];
   let current = null;
   const bump = (k) => (tally.calls[k] = (tally.calls[k] ?? 0) + 1);
-  const C2D = CanvasRenderingContext2D.prototype;
-  for (const k of ["fill", "stroke", "fillRect", "strokeRect", "clearRect", "fillText", "drawImage", "clip", "save", "restore", "getImageData", "putImageData", "measureText", "beginPath"]) {
-    const f = C2D[k];
-    C2D[k] = function (...a) {
-      bump(k);
-      return f.apply(this, a);
-    };
-  }
-  for (const k of ["createLinearGradient", "createRadialGradient"]) {
-    const f = C2D[k];
-    C2D[k] = function (...a) {
-      tally.gradients++;
-      return f.apply(this, a);
-    };
+  // On-screen and offscreen 2D contexts alike (the corridor's cached layer is an OffscreenCanvas)
+  for (const C2D of [window.CanvasRenderingContext2D, window.OffscreenCanvasRenderingContext2D].filter(Boolean).map((c) => c.prototype)) {
+    for (const k of ["fill", "stroke", "fillRect", "strokeRect", "clearRect", "fillText", "drawImage", "clip", "save", "restore", "getImageData", "putImageData", "measureText", "beginPath"]) {
+      const f = C2D[k];
+      C2D[k] = function (...a) {
+        bump(k);
+        return f.apply(this, a);
+      };
+    }
+    for (const k of ["createLinearGradient", "createRadialGradient"]) {
+      const f = C2D[k];
+      C2D[k] = function (...a) {
+        tally.gradients++;
+        return f.apply(this, a);
+      };
+    }
   }
   const P2D = window.Path2D;
   window.Path2D = class extends P2D {
@@ -56,6 +58,8 @@ function instrument() {
       };
     }
   }
+  // Every callback run for one frame (same timestamp) adds to that frame's record. Playwright polls with
+  // requestAnimationFrame too, so callbacks that touch nothing are not frames of their own.
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = (cb) =>
     raf((ts) => {
@@ -63,11 +67,16 @@ function instrument() {
       const t0 = performance.now();
       cb(ts);
       const ms = performance.now() - t0;
-      if (current) {
-        const b = JSON.parse(before);
-        const calls = Object.fromEntries(Object.entries(tally.calls).map(([k, v]) => [k, v - (b.calls[k] ?? 0)]).filter(([, v]) => v));
-        current.push({ ms, calls, path2d: tally.path2d - b.path2d, gradients: tally.gradients - b.gradients, glDraws: tally.gl.draws - b.gl.draws, glUploads: tally.gl.uploads - b.gl.uploads });
-      }
+      if (!current) return;
+      const b = JSON.parse(before);
+      const calls = Object.fromEntries(Object.entries(tally.calls).map(([k, v]) => [k, v - (b.calls[k] ?? 0)]).filter(([, v]) => v));
+      const rec = { ts, ms, calls, path2d: tally.path2d - b.path2d, gradients: tally.gradients - b.gradients, glDraws: tally.gl.draws - b.gl.draws, glUploads: tally.gl.uploads - b.gl.uploads };
+      const last = current.at(-1);
+      if (last?.ts === ts) {
+        last.ms += rec.ms;
+        for (const [k, v] of Object.entries(rec.calls)) last.calls[k] = (last.calls[k] ?? 0) + v;
+        for (const k of ["path2d", "gradients", "glDraws", "glUploads"]) last[k] += rec[k];
+      } else current.push(rec);
     });
   window.__bench = {
     begin: () => (current = []),
@@ -111,6 +120,17 @@ async function main() {
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   await page.addInitScript(instrument);
+  // The same dungeon, monsters and rolls on every run and in every checkout: Math.random seeded (mulberry32)
+  await page.addInitScript((seed) => {
+    let a = seed >>> 0;
+    Math.random = () => {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }, Number(args.seed ?? 7));
   await page.addInitScript(() => {
     localStorage.setItem("hallsOfJev.tipsOff", "1");
     localStorage.setItem("donjon.debug", "1");
@@ -118,7 +138,7 @@ async function main() {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Performance.enable");
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
-  await page.goto(`http://127.0.0.1:${port}/index.html?seed=7`);
+  await page.goto(`http://127.0.0.1:${port}/index.html`);
   await page.waitForFunction(() => document.fonts.status === "loaded");
   await page.keyboard.press("Enter");
   await page.waitForFunction(() => window.halls?.state()?.map);
@@ -141,7 +161,7 @@ async function main() {
     const m0 = await metrics();
     await page.evaluate(() => window.__bench.begin());
     await during();
-    await page.waitForFunction((n) => window.__bench.count() >= n, FRAMES, { timeout: 60000 });
+    await page.waitForFunction((n) => window.__bench.count() >= n, FRAMES, { timeout: 60000, polling: 100 });
     const frames = await page.evaluate(() => window.__bench.end());
     const m1 = await metrics();
     results[name] = {

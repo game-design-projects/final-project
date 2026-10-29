@@ -116,3 +116,41 @@ test("automap walls: an edge for every side of seen floor that faces a wall, non
   // (x, y, side) with side 0..3 = N E S W
   assert.deepEqual(edges, ["1,1,0", "1,1,3", "2,1,0", "2,1,2", "3,1,0", "3,1,1"].sort());
 });
+
+test("the corridor layer's key: unchanged while you stand still, ticking at the flame rate only with a torch in sight", async () => {
+  const { layerKey, FLAME_FPS } = await import("../public/render.js");
+  const frame = 1000 / FLAME_FPS;
+  assert.equal(layerKey("1,2,0", false, 0), layerKey("1,2,0", false, 99999), "no torch: one paint per position");
+  assert.equal(layerKey("1,2,0", true, 1), layerKey("1,2,0", true, frame - 1), "within one flame frame");
+  assert.notEqual(layerKey("1,2,0", true, 1), layerKey("1,2,0", true, frame + 1), "the next flame frame repaints");
+  assert.notEqual(layerKey("1,2,0", false, 0), layerKey("1,2,1", false, 0), "turning repaints");
+});
+
+test("what you see from a spot is worked out once: faces with their decorations, and whether a torch is lit", async () => {
+  const { corridorView } = await import("../public/render.js");
+  const map = { ...mapOf("#####", "#...#", "#...#", "#...#", "#####"), seed: 11 };
+  const v = corridorView(map, 2, 3, N);
+  assert.equal(v.decor.length, v.faces.length);
+  v.faces.forEach((f, i) => f.type === "stairs" && assert.equal(v.decor[i], null));
+  assert.equal(v.torches, v.decor.some((d) => d?.kind === "torch"));
+  assert.ok(v.cells.length > 0);
+});
+
+test("with nowhere to cache (no canvas in this runtime) the corridor paints straight into the view", async () => {
+  const { drawCorridor } = await import("../public/render.js");
+  globalThis.Path2D ??= class {
+    moveTo() {}
+    lineTo() {}
+    closePath() {}
+  };
+  const ops = [];
+  const ctx = new Proxy(
+    { canvas: { width: 448, height: 288 } },
+    { get: (o, k) => (k in o ? o[k] : k === "createLinearGradient" || k === "createRadialGradient" ? () => ({ addColorStop() {} }) : (...a) => ops.push(k)), set: (o, k, v) => ((o[k] = v), true) },
+  );
+  const map = { ...mapOf("###", "#.#", "#.#", "###"), seed: 1 };
+  const cells = drawCorridor(ctx, map, 1, 2, N, 0);
+  assert.ok(ops.includes("fillRect") && ops.includes("stroke"), "it drew");
+  assert.ok(!ops.includes("drawImage"), "no layer to copy");
+  assert.deepEqual(cells.map(String).sort(), ["1,1", "1,2"]);
+});

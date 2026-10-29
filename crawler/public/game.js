@@ -13,12 +13,92 @@ import { Narrator } from "./tts.js";
 import { installTooltips } from "./tooltip.js";
 import { requestsHtml, requestDetail, copyValue } from "./inspector.js";
 import { groupLog, allyLine, reactionTell, cantForgiveLine } from "./narrate.js";
+import { createBus, FX_EVENTS, Shake, traumaFor, HitStop, HITSTOP_MS, dangerOf, approach, transitionAt } from "./juice.js";
+import { Mixer, BeatScheduler, IMPACT, heartEvery } from "./mix.js";
+import { PostFx } from "./postfx.js";
 
 const $ = (s) => document.querySelector(s);
 const view = $("#view").getContext("2d");
 const mapCtx = $("#map").getContext("2d");
 const music = new Ambient();
 const sfx = new Sfx();
+
+// ---------------------------------------------------------------- presentation
+// The rules announce combat moments and moves as events (juice.js FX_EVENTS); the screen shake, the hit-stop,
+// the shader (postfx.js) and the mixing desk (mix.js) answer them here, and never reach back into the rules.
+const fx = createBus();
+const shake = new Shake();
+const hitstop = new HitStop();
+const reducedMotion = !!globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const post = PostFx.create($("#view"), { reducedMotion });
+console.debug(`postfx ${post ? "on" : "off (plain canvas)"}${reducedMotion ? ", reduced motion" : ""}`);
+let mixer = null; // the mixing desk and the heartbeat, made with the audio on the first key press
+let heart = null;
+// A performance.now() time (when a die lands) as a time on the audio clock, and back
+const audioAt = (ms) => mixer && mixer.ctx.currentTime + Math.max(0, ms - performance.now()) / 1000;
+function perfAt(at) {
+  const ts = mixer.ctx.getOutputTimestamp?.();
+  return ts?.contextTime ? ts.performanceTime + (at - ts.contextTime) * 1000 : performance.now() + (at - mixer.ctx.currentTime) * 1000;
+}
+for (const name of Object.keys(FX_EVENTS))
+  fx.on(name, (p) => {
+    const k = traumaFor(name, p);
+    if (k && !reducedMotion) shake.add(k, p.at);
+  });
+fx.on("party:hurt", (p) => {
+  post?.hurt(0.45 + 0.55 * Math.min(1, p.dmg / Math.max(1, p.maxHp)));
+  mixer?.impact(IMPACT.hurt, audioAt(p.at ?? 0));
+});
+fx.on("party:down", (p) => {
+  hitstop.freeze(p.at ?? performance.now(), HITSTOP_MS.down);
+  post?.hurt(1);
+});
+fx.on("enemy:hit", (p) => {
+  if (!p.crit) return;
+  hitstop.freeze(p.at ?? performance.now(), HITSTOP_MS.crit);
+  post?.flash("#ffe03a", 0.2);
+  mixer?.impact(IMPACT.crit, audioAt(p.at ?? 0));
+});
+fx.on("enemy:kill", (p) => {
+  hitstop.freeze(p.at ?? performance.now(), p.boss ? HITSTOP_MS.bossKill : HITSTOP_MS.kill);
+  post?.flash(p.boss ? BOSS_COLOR : "#ffffff", p.boss ? 0.45 : 0.14);
+  mixer?.impact(p.boss ? IMPACT.bossKill : IMPACT.kill, audioAt(p.at ?? 0));
+});
+fx.on("combat:start", (p) => post?.flash(p.boss ? BOSS_COLOR : (G?.map?.palette?.accent ?? "#ffffff"), 0.28));
+fx.on("view:step", (p) => beginTransition("step", p.dir));
+fx.on("view:turn", (p) => beginTransition("turn", p.dir));
+fx.on("view:bump", () => beginTransition("bump", 1));
+
+// Moving and turning ease from the old view to the new one (juice.js transitionAt): the frame on screen is kept
+// before the move, and drawn over (or beside) the new view while it lasts
+const prevFrame = Object.assign(document.createElement("canvas"), { width: 448, height: 288 });
+let transition = null;
+function beginTransition(kind, dir) {
+  if (reducedMotion) return;
+  prevFrame.getContext("2d").drawImage($("#view"), 0, 0);
+  transition = { kind, dir, t0: performance.now() };
+}
+
+// One audio context for the music and the effects (mix.js), so the heartbeat lands on the music's beat
+function startAudio() {
+  const ctx = new AudioContext({ latencyHint: "interactive" });
+  mixer = new Mixer(ctx);
+  sfx.init(ctx, mixer.sfx);
+  music.attach(ctx, mixer.music);
+  let pace = null;
+  heart = new BeatScheduler({
+    ctx,
+    clock: () => (music.on ? music.beatClock() : null),
+    onBeat: (at, k) => {
+      const every = G && G.mode !== "over" ? heartEvery(mixer.danger) : null;
+      if (every !== pace) console.debug(`heartbeat: ${every ? `every ${every === 1 ? "" : "other "}beat` : "off"} (danger ${mixer.danger.toFixed(2)})`);
+      pace = every;
+      if (!every || k % every) return;
+      sfx.play("heartbeat", { delay: Math.max(0, at - ctx.currentTime - 0.01), level: 0.45 + 0.55 * mixer.danger });
+      post?.beat(perfAt(at));
+    },
+  });
+}
 
 // Where the Jev API lives: this server locally, or the Cloudflare Worker in the itch.io build (see config.js),
 // or nowhere: the OpenRouter itch build runs the server's rules in the page (scripts/build-itch.js --openrouter).
@@ -511,7 +591,6 @@ function render() {
 
 // Numbers and words that float up from monsters and party members: damage, misses, feelings.
 const floaters = [];
-let shakeUntil = 0; // screen shake window: [until - 220, until)
 function floatText(text, x, y, color = "#e8e8e8", size = 10) {
   const now = fxNow();
   const stacked = floaters.filter((f) => Math.abs(f.x - x) < 30 && now - f.t0 < 350).length;
@@ -583,23 +662,25 @@ function drawIcon(ctx, name, x, y, color, px = 1) {
 }
 
 function drawView(t) {
-  const shaking = t < shakeUntil && t >= shakeUntil - 220;
+  const [sx, sy] = shake.offset(t);
+  const shaking = sx !== 0 || sy !== 0;
   if (shaking) {
     view.save();
-    view.translate((Math.random() - 0.5) * 7, (Math.random() - 0.5) * 7);
+    view.translate(sx, sy);
   }
   if (G.combat) {
     clear(view);
     const here = present();
     const slots = SLOTS[Math.min(3, Math.max(1, here.length))];
+    const at = hitstop.clock(t); // big blows freeze the monsters for a few frames
     here.forEach((e, i) => {
       const slot = slots[i];
       const until = hurtUntil[e.id] ?? 0;
-      drawMonster(view, e.species, t, t < until && t >= until - 300 ? 1 : 0, slot, ART.pixel, { shiny: e.shiny, color: e.boss ? BOSS_COLOR : undefined });
+      drawMonster(view, e.species, at, t < until && t >= until - 300 ? 1 : 0, slot, ART.pixel, { shiny: e.shiny, color: e.boss ? BOSS_COLOR : undefined });
       drawMonsterTag(e, slot, i, here.length);
     });
   } else {
-    const seen = drawCorridor(view, G.map, G.x, G.y, G.dir, t);
+    const seen = drawExplore(t);
     drawBossAhead(t);
     if (G.roll) drawRoll(t);
     for (const [x, y] of seen) G.seen.add(y * G.map.n + x);
@@ -607,6 +688,41 @@ function drawView(t) {
   dice.draw(view, t, { ink: G.map.palette.wall, hot: G.map.palette.accent });
   drawFloaters(t);
   if (shaking) view.restore();
+}
+
+// The corridor, eased from the last view while a step or turn plays out
+function drawExplore(t) {
+  const tr = transitionAt(transition, t);
+  if (!tr) transition = null;
+  const { width: W, height: H } = view.canvas;
+  const corridor = () => drawCorridor(view, G.map, G.x, G.y, G.dir, t);
+  if (!tr) return corridor();
+  let seen;
+  view.save();
+  if (tr.kind === "turn") {
+    // A pan: the new view slides in from the side you turned to, the old one slides out the other way
+    clear(view);
+    view.save();
+    view.translate(Math.round((tr.shift + transition.dir) * W), 0);
+    seen = corridor();
+    view.restore();
+    view.drawImage(prevFrame, Math.round(tr.shift * W), 0);
+  } else if (tr.kind === "step") {
+    // A dolly: the old view grows past you (or shrinks away, stepping back) and fades into the new one
+    seen = corridor();
+    view.globalAlpha = tr.alpha;
+    view.translate(W / 2, H / 2);
+    view.scale(tr.scale, tr.scale);
+    view.drawImage(prevFrame, -W / 2, -H / 2);
+  } else {
+    // A bump: the view lunges at the wall and springs back
+    view.translate(W / 2, H / 2);
+    view.scale(tr.scale, tr.scale);
+    view.translate(-W / 2, -H / 2);
+    seen = corridor();
+  }
+  view.restore();
+  return seen;
 }
 
 // Name, health bar and conditions above each monster in a fight.
@@ -664,11 +780,19 @@ function drawBossAhead(t) {
 
 // The status line on top: where you are, which way you face (or the fight's round), gold and boons.
 // Commands live in the dock under the view, where the eyes already are.
+// Writes HTML only when it changed: a re-render that changes nothing costs no layout, and keeps hover and focus
+function setHtml(el, html) {
+  if (el.renderedHtml === html) return false;
+  el.innerHTML = html;
+  el.renderedHtml = html;
+  return true;
+}
+
 function renderBar() {
   const pal = G.map.palette;
   const c = G.combat;
   const n = G.boons.length;
-  $("#where").innerHTML = [
+  setHtml($("#where"), [
     // Every slot has a fixed width (the font is monospace), so nothing shifts as the numbers and words change
     `<span class="loc" title="${floorName(G.floor)}: ${esc(pal.name)}"><b style="color:${pal.accent}">${floorName(G.floor)}</b> <span class="nm">${esc(pal.name)}</span></span>`,
     c
@@ -679,7 +803,7 @@ function renderBar() {
     // Settings you rarely touch sit up here, out of the way of the commands; dimmed means off
     // (J, the Jev mind panel, exists only in debug runs)
     `<span class="sys">${sysToggles()}</span>`,
-  ].join("");
+  ].join(""));
 }
 
 // The rarely-touched switches: a keycap and a pixel icon each (slashed when off), the words in the tooltip.
@@ -707,11 +831,11 @@ function achCap() {
 
 function renderLog() {
   const el = $("#log");
-  el.innerHTML = G.log
+  const html = G.log
     .slice(-50)
     .map((l) => `<p class="${l.cls}"${l.color ? ` style="color:${l.color}"` : ""}>${esc(l.text)}</p>`)
     .join("");
-  el.scrollTop = el.scrollHeight;
+  if (setHtml(el, html)) el.scrollTop = el.scrollHeight;
 }
 
 const loyaltyWord = (l) => loyaltyState(l).word;
@@ -788,7 +912,7 @@ function renderParty() {
   // How many monsters can still join, right where they'd go
   if (first >= 0)
     rows.splice(first, 0, `<div class="pdiv${room.full ? " full" : ""}" title="${esc(`YOUR PARTY HOLDS ${PARTY_MAX}: ROOM FOR ${room.max} MONSTER ALLIES BESIDE YOUR ADVENTURERS${room.full ? ". FULL: NO ONE ELSE CAN JOIN" : ""}`)}">ALLIES <b>${room.allies}/${room.max}</b></div>`);
-  $("#party").innerHTML = rows.join("");
+  setHtml($("#party"), rows.join(""));
   $("#party").style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
   // The map under the view steps aside in a fight (keeping its space, so nothing jumps)
   $(".mid").classList.toggle("fighting", !!G.combat);
@@ -919,7 +1043,7 @@ function renderDock() {
   dock.classList.toggle("waiting", waiting);
   if (!waiting) dock.classList.remove("nudge");
   dock.style.setProperty("--accent", G.map?.palette?.accent ?? "#ffb347");
-  $("#cmds").innerHTML = html;
+  setHtml($("#cmds"), html);
   dockHint = hint;
   $("#hint").textContent = hint;
 }
@@ -933,8 +1057,10 @@ function step(dir) {
   if (G.map.grid[ny]?.[nx] !== 1) {
     say("OUCH! A WALL.", "dim");
     sfx.play("bump");
+    fx.emit("view:bump");
     return render();
   }
+  fx.emit("view:step", { dir: dir === G.dir ? 1 : -1 });
   G.x = nx;
   G.y = ny;
   const k = ny * G.map.n + nx;
@@ -1678,6 +1804,7 @@ function addEnemy(e) {
 
 async function encounter(group = makeGroup(), opts = {}) {
   sfx.play(opts.boss ? "boss" : "encounter");
+  fx.emit("combat:start", { boss: !!opts.boss });
   music.setMood("battle");
   G.combat = { enemies: [], nextId: 0, target: null, round: 0, conversation: [], history: [], rounds: {}, spoken: new Set(), vowed: false, kills: 0, recruits: [], boss: !!opts.boss, guide: opts.guide ? "talk" : null };
   ach.on("fight-start");
@@ -1784,8 +1911,9 @@ function history(text) {
   if (h[h.length - 1] !== text) h.push(text);
 }
 
-function hitEnemy(e, dmg, note, color = "#ffffff") {
+function hitEnemy(e, dmg, note, color = "#ffffff", { crit = false } = {}) {
   e.hp -= dmg;
+  fx.emit("enemy:hit", { dmg, maxHp: e.maxHp, crit, at: fxNow() });
   e.damageTaken = (e.damageTaken ?? 0) + dmg;
   e.thisRound.push(note);
   hurtUntil[e.id] = fxNow() + 300;
@@ -1814,6 +1942,7 @@ function killEnemy(e, by, byMonster) {
   const xp = Math.round(xpOf(e) * (byMonster ? 0.5 : 1));
   G.gold += gold;
   sfx.play("kill");
+  fx.emit("enemy:kill", { boss: !!e.boss, at: fxNow() });
   if (byMonster) {
     say(`${UP(e.name)} IS KILLED BY ${UP(byMonster.name)}! +${xp} EXPERIENCE, +${gold} GOLD.`, "big", colorOf(e));
     history(`${byMonster.name} killed ${e.name}.`);
@@ -1910,7 +2039,7 @@ async function weaponAttacks(m, attacks) {
     if (hit) {
       dmg = weaponDamage(m, crit);
       if (m.mods.lifesteal) m.hp = Math.min(m.maxHp, m.hp + Math.ceil(dmg * m.mods.lifesteal));
-      hitEnemy(e, dmg, `${m.name} hit you${crit ? " with a critical blow" : ""} for ${dmg}.`, crit ? "#ffe03a" : "#ffffff");
+      hitEnemy(e, dmg, `${m.name} hit you${crit ? " with a critical blow" : ""} for ${dmg}.`, crit ? "#ffe03a" : "#ffffff", { crit });
       if (crit) floatOn(e, "CRITICAL!", "#ffe03a", 9);
     } else floatOn(e, r.roll === 1 ? "FUMBLE" : "MISS", "#8a8a8a", 9);
     sfx.play(crit ? "crit" : hit ? "hit" : "miss");
@@ -1962,7 +2091,7 @@ async function castSpell(m, key, ally) {
         const who = `${UP(e.name)} `;
         if (hit) {
           const dmg = spellDamage(m, rollDice(dice, { crit }));
-          hitEnemy(e, dmg, `${m.name}'s ${s.name.toLowerCase()} hit you for ${dmg}.`, crit ? "#ffe03a" : "#ff9a3d");
+          hitEnemy(e, dmg, `${m.name}'s ${s.name.toLowerCase()} hit you for ${dmg}.`, crit ? "#ffe03a" : "#ff9a3d", { crit });
           if (s.effect === "lit") e.cond.lit = 2;
           parts.push(`${who}${fmtRoll(r, bonus)} VS ARMOR ${ac}: ${crit ? "CRITICAL HIT, " : ""}${dmg} DAMAGE${s.effect === "lit" ? ". IT GLOWS: THE NEXT ATTACK ON IT IS BETTER" : ""}`);
           sfx.play(crit ? "crit" : "hit");
@@ -2430,7 +2559,7 @@ function damage(m, dmg, { crit = false } = {}) {
   }
   m.hp = Math.max(0, m.hp - dmg);
   floatParty(m, `-${dmg}`, "#ff5a4a");
-  shakeUntil = fxNow() + 220;
+  fx.emit("party:hurt", { dmg, hp: m.hp, maxHp: m.maxHp, at: fxNow() });
   sfx.play("hurt");
   if (m.hp > 0) return;
   if (m.phoenix) {
@@ -2445,6 +2574,7 @@ function damage(m, dmg, { crit = false } = {}) {
   m.saves = { s: 0, f: 0 };
   m.cond = {};
   say(`${m.name} FALLS UNCONSCIOUS! HEAL THEM, OR THEY ROLL TO SURVIVE EACH TURN (DEATH SAVES).`, "big warn");
+  fx.emit("party:down", { at: fxNow() });
   hint("down");
   sfx.play("down");
   if (G.combat) history(`${m.name} was knocked unconscious.`);
@@ -2791,7 +2921,9 @@ async function endCombat() {
   G.combat = null;
   G.mode = "explore";
   // Every foe killed, driven off, won over or let go: that's a win, and it sounds like one
-  if (c.enemies.length && c.enemies.every((e) => e.status !== "here")) music.sting("victory");
+  const won = c.enemies.length > 0 && c.enemies.every((e) => e.status !== "here");
+  if (won) music.sting("victory");
+  fx.emit("combat:end", { won });
   music.setMood("explore");
   G.busy = false; // the party's turn may have ended the fight mid-action
   // The fallen who still live come to; conditions and talk moods fade
@@ -3105,6 +3237,7 @@ function key(k) {
   if (k === "b") return listBoons();
   if (k === "fwd") return step(G.dir);
   if (k === "back") return step((G.dir + 2) % 4);
+  if (k === "turnL" || k === "turnR") fx.emit("view:turn", { dir: k === "turnL" ? -1 : 1 });
   if (k === "turnL") G.dir = (G.dir + 3) % 4;
   if (k === "turnR") G.dir = (G.dir + 1) % 4;
   else if (k !== "turnL") tips.ignored(k); // not an exploring key: nudge the hint rather than swallow it silently
@@ -3133,7 +3266,7 @@ let started = false;
 function start() {
   if (started) return;
   started = true;
-  sfx.init();
+  startAudio();
   music.start().catch((err) => console.warn("music:", err));
   newRun();
   // Test runs: open the game with #floor5 (any number) to start that deep, with a party that got there
@@ -3259,6 +3392,7 @@ $("#dock").addEventListener("mouseover", (ev) => {
   if (b.dataset.i !== undefined && G?.menu) {
     G.menu.sel = Number(b.dataset.i);
     for (const o of $("#cmds").querySelectorAll(".opt")) o.classList.toggle("sel", o === b);
+    $("#cmds").renderedHtml = null; // the highlight moved outside of renderDock: its next render must write
     dockHint = b.dataset.hint ?? "";
     renderParty(); // the member this option is about lights up
   }
@@ -3273,10 +3407,26 @@ $("#modal").addEventListener("click", (ev) => {
 });
 $("#view").addEventListener("click", () => start());
 
-// Title card, then a light animation loop (monsters wobble, the title blinks)
+// Title card, then a light animation loop (monsters wobble, the title blinks). Each frame also eases the
+// danger level the music, the heartbeat and the shader follow, and runs the shader over the finished view.
+let danger = 0;
+let lastFrame = performance.now();
+let lastAccent = null;
 function frame() {
-  if (!G) drawTitle(view, performance.now());
-  else drawView(performance.now());
+  const now = performance.now();
+  if (!G) drawTitle(view, now);
+  else {
+    drawView(now);
+    const target = G.mode === "over" ? 0.5 : dangerOf(G.party);
+    danger = approach(danger, target, now - lastFrame, 300);
+    mixer?.setDanger(target);
+    heart?.tick();
+    post?.setDanger(danger);
+  }
+  const accent = G?.map?.palette?.accent ?? "#e8e8e8";
+  if (accent !== lastAccent) post?.setAccent((lastAccent = accent));
+  lastFrame = now;
+  post?.render(now);
   requestAnimationFrame(frame);
 }
 document.fonts?.ready.then(() => requestAnimationFrame(frame)) ?? requestAnimationFrame(frame);
@@ -3315,6 +3465,8 @@ if (DEBUG)
     },
     music,
     sfx,
+    fx, // e.g. halls.fx.emit("enemy:kill", { boss: true })
+    feel: () => ({ post, mixer, heart, shake, hitstop, danger }),
     tips, // e.g. halls.tips.reset(), halls.tips.hint("map")
     ach, // e.g. halls.ach.unlock("charmed"), halls.ach.reset()
     roll: (great = false, kind) => rollOfFate(G.floor, great, kind),

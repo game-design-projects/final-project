@@ -41,6 +41,8 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
 #view { width: 100%; height: auto; display: block; border: 2px solid var(--ink); background: #000; cursor: pointer; }
 /* A question waiting on you: a lit box over the view, where your eyes already are */
 .viewport { position: relative; min-width: 0; }
+/* The shader's canvas (postfx.js) lies exactly over the view's picture and lets clicks through to it */
+.postfx { position: absolute; display: block; pointer-events: none; }
 .modal {
   --accent: #ffb347;
   position: absolute;
@@ -473,7 +475,8 @@ body { font: 20px/1.1 "VT323", ui-monospace, monospace; }
   .log { max-height: 160px; min-height: 100px; }
   #map { width: 84px; height: 84px; }
   .bar { font-size: 9px; flex-wrap: wrap; }
-  .bar.top { gap: 6px 12px; flex-wrap: wrap; }
+  /* Two rows on a phone (the place, then the switches): let the bar grow, or the switches end up behind the view */
+  .bar.top { gap: 6px 12px; flex-wrap: wrap; height: auto; min-height: 38px; }
   .bar.top .loc { flex-basis: 100%; }
   .menu { grid-auto-flow: row; grid-template-rows: none !important; grid-template-columns: 1fr; }
   .sys { margin-left: 0; }
