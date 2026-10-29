@@ -41,8 +41,9 @@ const SFX_MAKEUP_DB := 0.6
 # The JS room: a convolver with a 1.1 s noise impulse (normalised by the browser) behind a 0.22 gain. A white-noise
 # impulse like that returns about -11 dB of what goes in; the reverb below is set so the same send does too.
 const ROOM_RETURN_DB := -11.1
-# What the reverb effect returns for its input at wet = 1, measured on white noise (tests/audio/test_mix.gd checks it)
-const REVERB_NATIVE_DB := 0.0
+# What the reverb effect returns for its input at wet = 1 (room size 0.5), measured on white noise: tests/audio/test_mix.gd
+# measures it again. It decays about as fast as the JS impulse did: -22 dB half a second after the sound stops, -41 dB at 0.9 s.
+const REVERB_NATIVE_DB := 1.7
 
 
 ## The audio clock in seconds: a monotonic clock shared by the music, the effects and the beat scheduler
@@ -88,7 +89,7 @@ static func build_buses() -> void:
 		_add_bus(BUS_SFX, "Master")
 	if AudioServer.get_bus_index(BUS_ROOM) < 0:
 		var room := AudioEffectReverb.new()
-		room.room_size = 0.6
+		room.room_size = 0.5
 		room.damping = 0.5
 		room.spread = 1.0
 		room.hipass = 0.0

@@ -24,6 +24,11 @@ const FORMANT_GAIN := [1.0, 0.6, 0.3]
 const VOICE_GAIN := 3.0  # narrow band-pass filters take most of the buzz out; this puts voices on par with the other effects
 const NOISE_VOICE := 4.0  # ...and white noise loses even more through them
 
+## WebAudio normalises its built-in sawtooth and square so that the peak of their band-limited Fourier series
+## (which overshoots the ideal wave by 17.9%, the Gibbs ringing) is 1: measured in Chrome, both have an RMS of
+## 0.848 of the ideal wave's. polyBLEP waves are flat-topped, so they are scaled to match.
+const GIBBS_SCALE := 0.848
+
 ## A filter's coefficients are recomputed every this many samples while its frequency moves
 const FILTER_BLOCK := 16
 
@@ -336,7 +341,7 @@ static func osc(type: String, freq: PackedFloat32Array, rate := float(RATE)) -> 
 				elif q > 1.0 - dt:
 					var t := (q - 1.0) / dt
 					v -= t * t + t + t + 1.0
-				out[i] = v
+				out[i] = v * GIBBS_SCALE
 				ph += freq[i] * inv
 				ph -= floorf(ph)
 		"square":
@@ -358,7 +363,7 @@ static func osc(type: String, freq: PackedFloat32Array, rate := float(RATE)) -> 
 				elif h > 1.0 - dt:
 					var t := (h - 1.0) / dt
 					v -= t * t + t + t + 1.0
-				out[i] = v
+				out[i] = v * GIBBS_SCALE
 				ph += freq[i] * inv
 		_:
 			push_warning("synth: unknown oscillator type %s" % type)

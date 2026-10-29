@@ -4,6 +4,7 @@ extends "res://tests/test_case.gd"
 
 const Mix = preload("res://src/audio/mix.gd")
 const Ambient = preload("res://src/audio/ambient.gd")
+const Synth = preload("res://src/audio/synth.gd")
 
 var now := [5.0]
 var nodes: Array = []
@@ -111,15 +112,49 @@ func test_the_buses_are_laid_out_music_and_effects_into_the_master_with_a_limite
 
 
 func test_the_room_returns_about_as_much_as_the_js_convolver_did():
-	# a send of white noise into SFXRoom, its return measured on a capture at the end of the room bus
+	_mixer()
 	var idx := AudioServer.get_bus_index(Mix.BUS_ROOM)
-	if idx < 0:
-		_mixer()
-		idx = AudioServer.get_bus_index(Mix.BUS_ROOM)
 	var reverb := AudioServer.get_bus_effect(idx, 0) as AudioEffectReverb
 	eq(reverb.dry, 0.0)
 	eq(reverb.wet, 1.0)
 	near(AudioServer.get_bus_volume_db(idx), Mix.ROOM_RETURN_DB - Mix.REVERB_NATIVE_DB, 1e-6)
+	# Send two seconds of white noise (rms 0.25) into the room and capture what the reverb returns, before the bus fader.
+	var cap := AudioEffectCapture.new()
+	cap.buffer_length = 4.0
+	AudioServer.add_bus_effect(idx, cap)
+	var n := 44100 * 2
+	var noise := PackedFloat32Array()
+	noise.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in n:
+		noise[i] = (rng.randf() * 2.0 - 1.0) * 0.433
+	var player := AudioStreamPlayer.new()
+	player.stream = Synth.to_wav(noise, 44100)
+	player.bus = Mix.BUS_ROOM
+	player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+	(Engine.get_main_loop() as SceneTree).root.add_child(player)
+	nodes.append(player)
+	player.play()
+	await (Engine.get_main_loop() as SceneTree).create_timer(3.6).timeout
+	var got := cap.get_buffer(cap.get_frames_available())
+	AudioServer.remove_bus_effect(idx, AudioServer.get_bus_effect_count(idx) - 1)
+	if got.size() < 44100 * 3:
+		push_warning("test_mix: the audio server mixed too little (%d frames), room level not measured" % got.size())
+		return
+	var sum := 0.0
+	for i in range(44100, 88200):
+		sum += got[i].x * got[i].x
+	var native_db := linear_to_db(sqrt(sum / 44100.0) / Synth.rms_of(noise))
+	near(native_db, Mix.REVERB_NATIVE_DB, 1.0, "the reverb returns %.1f dB of what goes in" % native_db)
+	# half a second after the sound stops the tail is down ~20 dB and by 0.9 s ~40 dB (the JS impulse: -18 and -55)
+	var tail := func(from_ms: int) -> float:
+		var s := 0.0
+		for i in range(88200 + from_ms * 44, 88200 + (from_ms + 100) * 44):
+			s += got[i].x * got[i].x
+		return linear_to_db(sqrt(s / 4400.0) / Synth.rms_of(noise))
+	ok(tail.call(500) < -15.0 and tail.call(500) > -30.0, "tail at 0.5 s: %.1f dB" % tail.call(500))
+	ok(tail.call(900) < -30.0, "tail at 0.9 s: %.1f dB" % tail.call(900))
 
 
 func test_the_heart_beats_every_other_beat_when_hurt_every_beat_when_someone_is_about_to_die():

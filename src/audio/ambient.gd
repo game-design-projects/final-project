@@ -112,8 +112,9 @@ class Ambient:
 		mute.fade_to(0.0 if muted else 1.0, clock.call(), 0.12)
 
 	## Call at the start of the game (on the web, from the first key press or click: browsers keep audio locked until then).
-	## Resolves once the ambient is loaded and playing; the rest of the music loads behind it.
-	func start() -> void:
+	## Resolves once the ambient is loaded and playing; the rest of the music loads behind it. Returns null, or
+	## {"error": message} when the ambient can't be loaded (the music then stays off; calling start() again retries).
+	func start():
 		if not attached:
 			attach()
 		on = true
@@ -121,7 +122,11 @@ class Ambient:
 		if _loading == null:
 			_loading = J.Waiter.new()
 			# Load the ambient first so it starts quickly; the rest load behind it
-			load_stream("explore")
+			if load_stream("explore") == null:
+				var failed := _loading
+				_loading = null
+				failed.resolve()
+				return {"error": "music: can't load %s" % tracks.explore.url}
 			if mood == "explore":
 				explore_in(Self.FIRST_FADE_IN)
 			else:

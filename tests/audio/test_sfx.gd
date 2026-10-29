@@ -66,6 +66,29 @@ func test_every_sound_renders_audible_unclipped_and_a_plausible_length():
 			ok(r.send_peak > 0.0, "%s has no room send" % label)
 
 
+# Total energy (sum of squares / 44100, in dB) of the tonal recipes as the original sfx.js rendered them in Chrome's
+# OfflineAudioContext, through the effects fader (0.55) and its compressor, without the room. Measured with
+# the original code, once the compressor had settled; they are what the Godot sounds must stay faithful to.
+const CHROME_ENERGY_DB := {
+	"save": -45.3, "holy": -33.2, "sleep": -33.7, "heal": -32.1, "buff": -37.6, "fear": -42.3, "sad": -40.3, "good": -38.5,
+	"gold": -44.6, "join": -34.8, "great": -23.5, "death": -24.8, "revive": -27.7, "hold": -38.6, "missile": -43.6,
+	"tick": -58.1, "odd": -40.3, "levelup": -37.6, "achieve": -38.3, "land": -29.0, "boss": -22.4,
+}
+
+
+func test_the_tonal_sounds_are_as_loud_as_the_webaudio_originals():
+	var level := 0.55 * db_to_linear(Mix.SFX_MAKEUP_DB)
+	for name in CHROME_ENERGY_DB:
+		var s := Synth.Render.new()
+		Sfx.run_recipe(name, s, 0.0)
+		var energy := 0.0
+		for i in s.used:
+			var x: float = s.dry[i] * level
+			energy += x * x
+		var db := 10.0 * log(energy / 44100.0) / log(10.0)
+		near(db, CHROME_ENERGY_DB[name], 0.5, "%s: %.1f dB, Chrome rendered %.1f dB" % [name, db, CHROME_ENERGY_DB[name]])
+
+
 func test_nothing_in_a_sound_is_nan_or_infinite():
 	for name in ["hit", "fireball", "voice_roar", "voice_hiss", "great", "boss"]:
 		var s := Synth.Render.new()

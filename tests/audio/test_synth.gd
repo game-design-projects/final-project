@@ -180,8 +180,9 @@ func test_oscillators_run_at_their_frequency_and_stay_in_range():
 		var w := Synth.osc(type, _flat(441.0, 44100))
 		near(_hz(w), 441.0, 3.0, type)
 		var peak := Synth.peak_of(w)
-		ok(peak > 0.95 and peak < 1.2, "%s peak %s" % [type, peak])
-		near(Synth.rms_of(w), {"sine": 0.7071, "triangle": 0.5774, "sawtooth": 0.5774, "square": 1.0}[type], 0.03, type)
+		ok(peak > 0.8 and peak < 1.05, "%s peak %s" % [type, peak])
+		# the levels WebAudio's built-in oscillators have (measured in Chrome at 441 Hz)
+		near(Synth.rms_of(w), {"sine": 0.7071, "triangle": 0.5774, "sawtooth": 0.489, "square": 0.847}[type], 0.01, type)
 
 
 ## The amplitude of one frequency in buf (Goertzel)
@@ -204,7 +205,7 @@ func test_sawtooth_and_square_are_band_limited_no_aliasing_above_nyquist_folds_b
 	# inharmonic tones as loud as 1/3 and 1/5 of the note itself; band-limited, they are not there
 	var w := Synth.osc("square", _flat(9000.0, 44100))
 	var fundamental := _amp_at(w, 9000.0)
-	ok(fundamental > 1.0, "the note itself: %s" % fundamental)
+	ok(fundamental > 0.9, "the note itself: %s" % fundamental)
 	ok(_amp_at(w, 17100.0) < 0.1 * fundamental, "alias at 17.1 kHz: %s" % (_amp_at(w, 17100.0) / fundamental))
 	ok(_amp_at(w, 900.0) < 0.1 * fundamental, "alias at 0.9 kHz: %s" % (_amp_at(w, 900.0) / fundamental))
 	var saw := Synth.osc("sawtooth", _flat(7000.0, 44100))
