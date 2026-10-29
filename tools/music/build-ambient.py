@@ -31,9 +31,9 @@ Instruments are real samples (scripts/sampler.py: MusyngKite harpsichord, church
 ensemble, choir aahs, music box, tubular bells), all in the same stone hall as the fights and fanfares.
 No synth pads, no sub drones.
 
-Needs numpy and scipy:  python3 crawler/scripts/build-ambient.py /tmp      (writes /tmp/ambient.wav)
+Needs numpy and scipy:  python3 tools/music/build-ambient.py /tmp      (writes /tmp/ambient.wav)
      (or a .wav path)
-Then encode:            afconvert -f m4af -d aac -b 160000 /tmp/ambient.wav crawler/public/ambient.m4a
+Then encode:            tools/music/to_ogg.sh loop /tmp/ambient.wav assets/audio/ambient.ogg 112.5
 """
 import os
 import sys
@@ -46,7 +46,7 @@ BEAT = 60 / BPM
 EIGHTH = BEAT / 2
 BAR = 3 * BEAT
 BARS = 40
-LOOP = BAR * BARS  # 112.5 s; public/ambient.js TRACKS.explore.loopSeconds must match
+LOOP = BAR * BARS  # 112.5 s; src/audio/ambient.gd TRACKS.explore.loopSeconds must match
 
 GROUND = ["D3", "C3", "Bb2", "A2", "Bb2", "A2", "D3", "A2"]
 # Per bar: (beat, chord tones root first, label)

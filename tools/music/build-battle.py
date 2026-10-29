@@ -33,9 +33,9 @@ Sampled instruments come from scripts/sampler.py (MusyngKite); kettle drums and 
 there. All four play in the same hall as the dungeon music. Each render is circular, so the loop
 point is seamless; each file is the loop plus a repeat of its first second.
 
-Needs numpy and scipy:  python3 crawler/scripts/build-battle.py /tmp    (writes /tmp/battle-<name>.wav)
-Then encode each:       afconvert -f m4af -d aac -b 160000 /tmp/battle-toccata.wav crawler/public/battle-toccata.m4a
-Loop length = 16 bars x 4 beats x 60 / BPM = 3840 / BPM seconds: public/ambient.js TRACKS.battle.variants.
+Needs numpy and scipy:  python3 tools/music/build-battle.py /tmp    (writes /tmp/battle-<name>.wav)
+Then encode each:       tools/music/to_ogg.sh loop /tmp/battle-toccata.wav assets/audio/battle-toccata.ogg 3840/132
+Loop length = 16 bars x 4 beats x 60 / BPM = 3840 / BPM seconds: src/audio/ambient.gd TRACKS.battle.variants.
 """
 import os
 import sys

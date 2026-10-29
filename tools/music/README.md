@@ -22,9 +22,6 @@ Needs numpy and scipy for the renders, and ffmpeg (with libvorbis) for the encod
 ```bash
 uv venv /tmp/donjon-music-venv && source /tmp/donjon-music-venv/bin/activate && uv pip install numpy scipy
 
-# sampler.py reads the soundfonts from ../public/soundfonts next to this folder (tools/public/soundfonts):
-mkdir -p tools/public && ln -s ../../crawler/public/soundfonts tools/public/soundfonts   # wherever the MusyngKite sets are
-
 python3 tools/music/build-ambient.py /tmp      # /tmp/ambient.wav
 python3 tools/music/build-battle.py /tmp       # /tmp/battle-toccata.wav, -charge, -crusade, -gallop
 python3 tools/music/build-stings.py /tmp       # /tmp/fanfare.wav and /tmp/victory.wav
@@ -40,8 +37,7 @@ tools/music/to_ogg.sh sting /tmp/victory.wav         assets/audio/victory.ogg
 godot --headless --path . --import   # Godot reads the new files (the loop flag of the five loops is kept in their .import files)
 ```
 
-The code comments inside the build scripts still mention `afconvert` and `.m4a` (they are the unchanged originals);
-`to_ogg.sh` is the encode step now.
+`sampler.py` reads the six MusyngKite sets it plays (CC BY-SA 3.0) from `soundfonts/` beside it.
 
 ## How a loop file is cut
 
@@ -70,10 +66,11 @@ it should read -17 dB RMS and a peak around -2 dB.
 
 ## Converting the old `.m4a` files
 
-The Godot port started from the shipped `.m4a` files (the soundfont renders need the full MusyngKite sets). The same
-`to_ogg.sh` takes them, because ffmpeg decodes AAC and removes its priming and padding, so a decoded file is exactly
-one loop plus the one-second tail:
+The Godot port started from the web version's `.m4a` files, which live on in git history. The same `to_ogg.sh` takes
+them, because ffmpeg decodes AAC and removes its priming and padding, so a decoded file is exactly one loop plus the
+one-second tail:
 
 ```bash
-tools/music/to_ogg.sh loop crawler/public/ambient.m4a assets/audio/ambient.ogg 112.5
+git show 12d2be7:crawler/public/ambient.m4a > /tmp/ambient.m4a
+tools/music/to_ogg.sh loop /tmp/ambient.m4a assets/audio/ambient.ogg 112.5
 ```

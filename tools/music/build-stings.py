@@ -15,8 +15,8 @@ on a clear perfect cadence, IV6 - V7 - I, with tubular bells ringing on the fina
   victory: winning a fight. The same shape twice as fast (16ths at 120 BPM), a harpsichord flourish up
            into the landing, bells. About 2.3 s.
 
-Needs numpy and scipy:  python3 crawler/scripts/build-stings.py /tmp   (writes /tmp/fanfare.wav and /tmp/victory.wav)
-Then encode each:       afconvert -f m4af -d aac -b 160000 /tmp/fanfare.wav crawler/public/fanfare.m4a
+Needs numpy and scipy:  python3 tools/music/build-stings.py /tmp   (writes /tmp/fanfare.wav and /tmp/victory.wav)
+Then encode each:       tools/music/to_ogg.sh sting /tmp/fanfare.wav assets/audio/fanfare.ogg
 """
 import os
 import sys

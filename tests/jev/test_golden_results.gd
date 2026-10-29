@@ -1,5 +1,5 @@
 # The rules, decision for decision. golden/results.json has generated requests and what the JavaScript game's rules
-# made of them when Jev gave the scripted answers below (golden/gen_results.mjs). The port gets the same requests and
+# made of them when Jev gave the scripted answers below (recorded from the web version). The port gets the same requests and
 # the same scripted answers and must reach the same replies: actions, blocked reasons, mood numbers, lines, loyalty.
 extends "res://tests/test_case.gd"
 
@@ -14,7 +14,7 @@ func after_each():
 	Jev.configure_jev(null)
 
 
-## The same scripted Jev as golden/gen_results.mjs: answers depend only on the question's name and a seed.
+## The same scripted Jev the recording used: answers depend only on the question's name and a seed.
 class Scripted:
 	extends RefCounted
 	var seed: int

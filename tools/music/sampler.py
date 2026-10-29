@@ -1,7 +1,7 @@
 """An offline sampler for Donjon's music, shared by build-ambient.py, build-battle.py and build-stings.py.
 
-All three scores are played by the same small baroque band, from real samples in public/soundfonts
-(MusyngKite, CC BY-SA 3.0; see public/CREDITS.txt): harpsichord, church organ, string ensemble, choir
+All three scores are played by the same small baroque band, from real samples in tools/music/soundfonts
+(MusyngKite, CC BY-SA 3.0; see assets/CREDITS.txt): harpsichord, church organ, string ensemble, choir
 "aahs", music box and tubular bells. Only the kettle drums (timpani) and a medieval tabor are synthesised
 here. Everything plays in one generated stone hall, so the dungeon, the fights and the fanfares sound
 like one game.
@@ -39,10 +39,10 @@ from scipy.signal import correlate, resample
 SR = 44100
 TAIL = 1.0  # loop files repeat their first second, so the player can loop inside the file
 # Mastered loudness (RMS, dBFS) of each kind of track. Fights and stings share one level, so the
-# volumes in public/ambient.js treat them alike; explore is mastered softer, as background.
+# volumes in src/audio/ambient.gd treat them alike; explore is mastered softer, as background.
 EXPLORE_RMS_DB = -19.0
 BATTLE_RMS_DB = -17.0
-FONTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public", "soundfonts")
+FONTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "soundfonts")
 rng = np.random.default_rng(1981)  # the year of Wizardry
 
 # ---------------------------------------------------------------- note names
