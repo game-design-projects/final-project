@@ -41,6 +41,7 @@ static func handle(path: String, body: Dictionary, opts := {}) -> Dictionary:
 	if not Jev.is_configured():
 		JevConfig.setup()
 	var b: Dictionary = body.duplicate(true)
+	var t0 := J.now_ms()
 	# Debug mode: every Jev call behind this request, what went out and what came back, is returned under _debug.
 	# Per request, so concurrent requests never mix.
 	var trace = [] if debug else null
@@ -91,6 +92,7 @@ static func handle(path: String, body: Dictionary, opts := {}) -> Dictionary:
 		return _reply(500, failed)
 	if trace != null:
 		out["_debug"] = {"jev": trace}
+	print_verbose("api %s -> 200 in %d ms, %d jev call(s)" % [route, int(J.now_ms() - t0), trace.size() if trace != null else 1])
 	return _reply(200, out)
 
 

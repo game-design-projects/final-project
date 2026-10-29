@@ -1,0 +1,8 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "halls-of-jev-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-30",
+  // Secret (not in this file): TYPESAFE_API_KEY or OPENROUTER_API_KEY, set with `wrangler secret put`
+  "observability": { "enabled": true }
+}
