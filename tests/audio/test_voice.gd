@@ -55,7 +55,9 @@ func test_finds_the_recognizer_prefixed_or_not_and_copes_without_one():
 	# not a web build: no recognizer, so the game keeps the text box
 	if not OS.has_feature("web"):
 		eq(Voice.recognizer(), null)
-		eq(Voice.Listener.new().supported, false)
+		var l = Voice.Listener.new()
+		eq(l.supported, false)
+		l.free()
 
 
 func test_a_hold_is_long_enough_to_tell_apart_from_a_tap():
