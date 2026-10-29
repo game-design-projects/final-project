@@ -1,7 +1,6 @@
-# Tests on every push and pull request; on main, a passing build is published to itch.io
-# (https://aalfalasi.itch.io/donjon, channel html5). The publish job alone sees the secrets and never runs for
-# pull requests: BUTLER_API_KEY to push, and OPENROUTER_API_KEY, which the itch build ships in the page so the
-# browser can call Jev on OpenRouter itself (a low-credit key on purpose; see crawler/scripts/build-itch.js).
+# Tests on every push and pull request. Nothing here publishes: itch.io publishing is off (the final ships as a
+# native build; `npm run crawler:itch` still builds the browser zip by hand), and the Jev API Worker deploys from
+# worker.yml. No secrets are used.
 name: CI
 on:
   push:
@@ -11,23 +10,19 @@ on:
 permissions:
   contents: read
 
-env:
-  # The Cloudflare Worker that holds the Jev key; the static build only knows its address (crawler/README.md)
-  JEV_API: https://UNSET.workers.dev
-  ITCH_TARGET: UNSET/UNSET:html5
-
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
-      # The tests and the itch build use only Node built-ins, so there is nothing to install
+          package-manager-cache: false
+      # The tests use only Node built-ins, so there is nothing to install
       - run: npm test
       # Every scripted encounter, against the mock Jev (random answers, no key, no credits), on two seeds
       - name: Scenarios (mock Jev)
@@ -37,50 +32,3 @@ jobs:
             node crawler/scripts/scenarios.js --seed=$seed > /dev/null
             node crawler/scripts/social-scenarios.js --seed=$seed > /dev/null
           done
-      # A keyless build, to validate the bundle on every push and PR
-      - name: Build the itch bundle
-        run: node crawler/scripts/build-itch.js "$JEV_API"
-      - name: Validate the HTML5 bundle
-        run: node crawler/scripts/check-html5.mjs dist/donjon
-
-  publish:
-    needs: test
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    concurrency:
-      group: itch-production
-      cancel-in-progress: false
-    environment:
-      name: itch-production
-      url: https://aalfalasi.itch.io/donjon
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Build the itch bundle (Jev via OpenRouter, from the browser)
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$OPENROUTER_API_KEY" || { echo '::error::Missing OPENROUTER_API_KEY secret'; exit 1; }
-          node crawler/scripts/build-itch.js --openrouter
-          node crawler/scripts/check-html5.mjs dist/donjon
-      - name: Install official butler
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error --location --retry 3 \
-            https://broth.itch.zone/butler/linux-amd64/15.31.0/archive/default -o "$RUNNER_TEMP/butler.zip"
-          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
-          chmod +x "$RUNNER_TEMP/butler/butler"
-      - name: Push to itch.io
-        env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$BUTLER_API_KEY" || { echo '::error::Missing BUTLER_API_KEY secret'; exit 1; }
-          "$RUNNER_TEMP/butler/butler" push dist/donjon "$ITCH_TARGET" --userversion "$GITHUB_SHA"
-          "$RUNNER_TEMP/butler/butler" status "$ITCH_TARGET"

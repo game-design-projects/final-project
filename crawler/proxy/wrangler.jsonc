@@ -1,8 +1,14 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "halls-of-jev-api",
+  // CI's Cloudflare token is scoped to the Worker with this name; crawler/test/worker.test.js guards what else
+  // this file may hold (no routes, builds or extra bindings)
+  "name": "donjon-api",
   "main": "worker.js",
   "compatibility_date": "2026-09-30",
-  // Secret (not in this file): TYPESAFE_API_KEY, set with `wrangler secret put`
+  "workers_dev": true,
+  "preview_urls": false,
+  // Requests per IP per minute; a player makes a few per round. namespace_id is unique on the account.
+  "ratelimits": [{ "name": "LIMITER", "namespace_id": "45531", "simple": { "limit": 60, "period": 60 } }],
+  // Secret (not in this file): OPENROUTER_API_KEY or TYPESAFE_API_KEY, set with `wrangler secret put`
   "observability": { "enabled": true }
 }

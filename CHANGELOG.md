@@ -5,8 +5,14 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- The Jev API Worker, rebuilt on Steven's Cloudflare account as `donjon-api` (https://donjon-api.lishuyustevenli.workers.dev; it was `halls-of-jev-api` on an account we no longer reach). `.github/workflows/worker.yml` deploys it on every push to `main` that changes what it bundles, then checks that it answers without spending Jev credits; pull requests test and bundle it with no credentials. The deploy is scoped tight: a Cloudflare token with Workers Editor on this one Worker only, used by a `cloudflare-production` environment that deploys only from `main`. The Jev key stays a Worker secret and never passes through GitHub.
+- The Worker caps each IP at 60 requests a minute (then a 429 for a minute), and only lets outbound requests reach Jev (`api.typesafe.ai`, `openrouter.ai`) over https, so nothing in the game code can send the key elsewhere.
+- `crawler/test/worker.test.js` (7 tests): the Worker fails closed without a key, the rate limit (preflights exempt), the outbound allowlist and that it covers every Jev provider, and a guard that keeps `wrangler.jsonc` to one workers.dev Worker named `donjon-api` with no routes, builds or extra bindings.
 - **Genre Halls** (`crawler/public/genre-halls.html`, http://localhost:5174/genre-halls.html): a pitch for Undertale-style battles, built on Donjon's renderer, monster art, species, feelings and synth. You explore a small wireframe floor; a fight switches into a 7×7 box where each faction attacks in its own genre, with one rule: lit squares hurt. Slimes rain goo, bandits play chess (rook, bishop, knight), snake people swing a lantern you hide from behind pillars, and rock entities stomp on the beat. The red dragon champion cycles through all four. Commands are FIGHT (a timing bar), ACT (three species-specific acts, CHECK, or typing once per fight), SPARE (when its mercy odds pass 50%) and FLEE. A spared monster may join as a passive charm (BOUNCY, KEEN EYE, SLIPPERY, STEADY, HOARD-FIRE) that judges what you do and can walk out. Reaching the stairs names your route: ghost, quiet, blood or tangled. The monster's mind answers the same choice / score / yes-no questions the main game sends to Jev, with a local stand-in, and the Jev mind panel shows each answer with its odds.
 - `crawler/public/genre-rules.js`: Genre Halls' rules without the DOM, and `crawler/test/genre-halls.test.js` (8 tests). Besides the data and the odds, they check that every floor's stairs and monsters can be reached, that every chess piece and every stomp leaves a safe square wherever you stand, and that the lantern always leaves a shadow to hide in.
+
+### Removed
+- Publishing to itch.io from CI: the final ships as a native build. `ci.yml` now only tests, and uses no secrets. `npm run crawler:itch` still builds the browser zip by hand, through the Worker or OpenRouter.
 
 ## [0.2.1] - 2026-10-06
 

@@ -1,11 +1,11 @@
 // Builds the itch.io upload. Two ways for the game to reach Jev:
-//   Worker:     npm run crawler:itch -- https://halls-of-jev-api.<you>.workers.dev
-//               The static game calls your Cloudflare Worker, which holds the key. The zip has no secrets.
+//   Worker:     npm run crawler:itch -- https://donjon-api.lishuyustevenli.workers.dev
+//               The static game calls the Cloudflare Worker, which holds the key. The zip has no secrets.
 //   OpenRouter: OPENROUTER_API_KEY=... npm run crawler:itch -- --openrouter
 //               No server at all: the game's rules (crawler/src) ship in the zip as server/, and the browser calls
 //               Jev on OpenRouter directly WITH THAT KEY IN THE PAGE. Anyone can read it, so use a key with a small
 //               credit limit (set one on openrouter.ai/settings/keys). The key is only written into dist/, never
-//               committed; CI passes it from a repository secret.
+//               committed.
 import { cpSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -19,7 +19,7 @@ if (direct && !/^sk-or-/.test(key)) {
   process.exit(1);
 }
 if (!direct && !/^https:\/\/|^http:\/\/localhost(:\d+)?$/.test(apiBase)) {
-  console.error("Pass your Worker URL, e.g.  npm run crawler:itch -- https://halls-of-jev-api.you.workers.dev\nor build with OpenRouter:  OPENROUTER_API_KEY=... npm run crawler:itch -- --openrouter");
+  console.error("Pass your Worker URL, e.g.  npm run crawler:itch -- https://donjon-api.lishuyustevenli.workers.dev\nor build with OpenRouter:  OPENROUTER_API_KEY=... npm run crawler:itch -- --openrouter");
   process.exit(1);
 }
 

@@ -16,30 +16,42 @@ The mock (`src/mock-jev.js`) answers every Jev question with a random but well-f
 
 The key comes from the project's `.env` (`TYPESAFE_API_KEY`) and stays on the server.
 
-## Publishing on itch.io
+## The Jev API (Cloudflare Worker)
 
-itch.io only hosts static files, so the key can't go in the zip (anyone could open the files and take it). Instead, a small **Cloudflare Worker** (free tier) holds the key. The zip only knows the Worker's address.
+A build that runs away from the local server (the native final, or the browser zip) can't carry the key: anyone could open its files and take it. A small **Cloudflare Worker**, `donjon-api`, holds the key instead and answers the same `/api/*` calls with the same code as the local server (`crawler/src/api.js`), so the monsters behave identically. A build only knows its address.
 
-**It's live** at `https://halls-of-jev-api.donjonjev.workers.dev` (the Worker keeps the game's old name, so this address stays the same). The game has no password, so anyone who plays (or finds that address) uses your TypeSafe credits. Watch your usage on the TypeSafe dashboard.
+**It's live** at `https://donjon-api.lishuyustevenli.workers.dev`, on Steven's Cloudflare account. The game has no password, so anyone who plays (or finds that address) spends the key's credits. The Worker (`proxy/worker.js`) keeps that small:
+
+- Without a key it answers nothing (503). With one, it answers only `POST /api/*` and CORS preflights.
+- Each IP gets 60 requests a minute (the `LIMITER` rate limit in `proxy/wrangler.jsonc`), then a 429 for a minute. A player makes a few per round.
+- It can only call Jev (`api.typesafe.ai` and `openrouter.ai`, over https). A request from the game code to any other host is refused, so the key can't be sent anywhere else. A new Jev provider in `crawler/src/jev.js` has to be added to `ALLOWED_HOSTS` in `proxy/worker.js` on purpose; a test checks.
+- Its key should be an OpenRouter key with a credit limit (set one at openrouter.ai/settings/keys), so the worst case is that limit.
+
+Set the key once. The Worker keeps it across deploys, and it never goes through GitHub:
 
 ```bash
 cd crawler/proxy
-npx wrangler login                        # opens your browser to sign in to Cloudflare
-npx wrangler secret put TYPESAFE_API_KEY  # paste your TypeSafe key
-npx wrangler deploy                       # prints https://halls-of-jev-api.<you>.workers.dev
-cd ../..
-npm run crawler:itch -- https://halls-of-jev-api.<you>.workers.dev
+npx wrangler login                          # Steven's Cloudflare account
+npx wrangler secret put OPENROUTER_API_KEY  # paste the capped OpenRouter key (TYPESAFE_API_KEY works too)
 ```
 
-**The itch build calls Jev on OpenRouter, from the browser.** OpenRouter serves TypeSafe's Jev (`~typesafe/jev-latest`, `POST https://openrouter.ai/api/alpha/decisions`, same questions and answers), and it allows calls from any web page. So the itch build needs no server: `OPENROUTER_API_KEY=... npm run crawler:itch -- --openrouter` ships the game's rules (`crawler/src` as `server/`) in the zip and puts the OpenRouter key in `config.js`. **That key is public** to anyone who opens the files, so it is a key with a small credit limit on purpose (cap it at openrouter.ai/settings/keys); rotate it if it's abused. The key is never committed: it lives in `.env` locally and in the `OPENROUTER_API_KEY` repository secret for CI. The local server also prefers `OPENROUTER_API_KEY` over `TYPESAFE_API_KEY` when both are set, and the Worker accepts either.
+**CI deploys it.** `.github/workflows/worker.yml` tests and bundles the Worker on every pull request that touches it, with no credentials. Every push to `main` that changes what it bundles (`crawler/proxy`, `crawler/src`, `crawler/public/*.js`, the lockfile) deploys it with `wrangler deploy`, then checks that it answers. Several people write the game code, so the deploy is held to the smallest scope that works:
 
-**CI publishes automatically.** `.github/workflows/ci.yml` runs `npm test` and builds and validates the itch bundle on every push and pull request; every push to `main` that passes is built with the OpenRouter key and pushed with butler to https://aalfalasi.itch.io/donjon (channel `html5`, version = the commit SHA). It needs the `BUTLER_API_KEY` and `OPENROUTER_API_KEY` repository secrets, and pull requests never see them.
+- The `cloudflare-production` environment deploys only from `main` and holds `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. Pull requests never see them, and only the deploy step does.
+- `CLOUDFLARE_API_TOKEN` is an account API token with **Workers Editor on the `donjon-api` Worker only** (Cloudflare dashboard → Manage account → Account API tokens → Create Token; give it an expiry date). It can deploy and configure this one Worker. It can't touch the account's other Workers, create or delete Workers, or add routes. Store it with `gh secret set CLOUDFLARE_API_TOKEN --env cloudflare-production -R game-design-projects/final-project`.
+- `crawler/test/worker.test.js` keeps `proxy/wrangler.jsonc` to one workers.dev Worker named `donjon-api`, with no routes, build commands or other bindings. A change that widens what CI deploys fails the tests until someone looks at it.
+- Dependencies install from the lockfile with install scripts off, and the actions are pinned to commits.
 
-To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser". The itch build turns debug mode on by default (its `config.js` sets `debug: true`), so the Jev mind panel shows beside the game: an embed size of about 1180 × 820 fits both; enable the fullscreen button too. Add `?nodebug` to the URL to play without it.
+To run the Worker locally: `node crawler/proxy/dev.js` (Node on port 5175, key from `.env`), or `npx wrangler dev` in `crawler/proxy` (Cloudflare's runtime with the rate limit; key in `crawler/proxy/.dev.vars`, which git ignores). To take the game offline: `npx wrangler secret delete OPENROUTER_API_KEY` in `crawler/proxy` (it answers 503 until a key is back), or delete the Worker in the Cloudflare dashboard.
 
-- The Worker runs the same code as the local server (`crawler/src/api.js`), so the monsters behave identically.
-- To test the itch build locally: `node crawler/proxy/dev.js` (Worker on port 5175), then `npm run crawler:itch -- http://localhost:5175` and serve `dist/donjon` from any static server.
-- To take the game offline, remove the key (`npx wrangler secret delete TYPESAFE_API_KEY` in `crawler/proxy`) or delete the Worker in the Cloudflare dashboard.
+## The browser build (itch.io, by hand)
+
+CI no longer publishes to itch.io: the final ships as a native build. The browser zip still builds by hand, in either of two ways:
+
+- **Through the Worker:** `npm run crawler:itch -- https://donjon-api.lishuyustevenli.workers.dev`. The zip has no secrets.
+- **Straight to OpenRouter, from the browser.** OpenRouter serves TypeSafe's Jev (`~typesafe/jev-latest`, `POST https://openrouter.ai/api/alpha/decisions`, same questions and answers), and it allows calls from any web page. So this build needs no server: `OPENROUTER_API_KEY=... npm run crawler:itch -- --openrouter` ships the game's rules (`crawler/src` as `server/`) in the zip and puts the OpenRouter key in `config.js`. **That key is public** to anyone who opens the files, so use one with a small credit limit (cap it at openrouter.ai/settings/keys), and rotate it if it's abused. The key is never committed: it lives in `.env`. The local server also prefers `OPENROUTER_API_KEY` over `TYPESAFE_API_KEY` when both are set, and the Worker accepts either.
+
+Upload `dist/donjon-itch.zip` to itch.io as an **HTML** project and tick "This file will be played in the browser" (the week-4 build is at https://aalfalasi.itch.io/donjon). The browser build turns debug mode on by default (its `config.js` sets `debug: true`), so the Jev mind panel shows beside the game: an embed size of about 1180 × 820 fits both; enable the fullscreen button too. Add `?nodebug` to the URL to play without it. To test it locally: `node crawler/proxy/dev.js` (Worker on port 5175), then `npm run crawler:itch -- http://localhost:5175`, and serve `dist/donjon` from any static server.
 
 ## Playing
 

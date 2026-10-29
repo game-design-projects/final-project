@@ -1,0 +1,107 @@
+# Deploys the Jev API Worker (crawler/proxy, Cloudflare Worker donjon-api on Steven's account) whenever main changes
+# something it bundles. Pull requests only test and bundle it, with no credentials.
+#
+# The game code comes from several people, so the deploy is kept to the smallest scope that works:
+#   - CLOUDFLARE_API_TOKEN is a Cloudflare token with Workers Editor on the donjon-api Worker only: it cannot touch
+#     any other Worker on the account, create or delete Workers, or add routes. crawler/test/worker.test.js keeps
+#     wrangler.jsonc to one workers.dev Worker with no routes, builds or extra bindings.
+#   - Only main deploys, through the cloudflare-production environment (deployment branches: main), and only the
+#     deploy step sees the token.
+#   - The Jev key is a Worker secret set by hand (`wrangler secret put`); it never passes through GitHub.
+#   - Dependencies come from the lockfile with install scripts off, and actions are pinned to commits.
+name: Worker
+on:
+  push:
+    branches: [main]
+    paths:
+      - crawler/proxy/**
+      - crawler/src/**
+      - crawler/public/*.js
+      - crawler/test/worker.test.js
+      - package-lock.json
+      - .github/workflows/worker.yml
+  pull_request:
+    paths:
+      - crawler/proxy/**
+      - crawler/src/**
+      - crawler/public/*.js
+      - crawler/test/worker.test.js
+      - package-lock.json
+      - .github/workflows/worker.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Worker tests and scope guard
+        run: node --test crawler/test/worker.test.js
+      - name: Bundle the Worker (no credentials, nothing uploaded)
+        working-directory: crawler/proxy
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/worker-bundle"
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: worker-production
+      cancel-in-progress: false
+    environment:
+      name: cloudflare-production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Deploy donjon-api
+        id: deploy
+        working-directory: crawler/proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Missing CLOUDFLARE_API_TOKEN in the cloudflare-production environment'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Missing CLOUDFLARE_ACCOUNT_ID in the cloudflare-production environment'; exit 1; }
+          npx wrangler deploy --message "CI ${GITHUB_SHA}"
+          host=$(jq -r 'select(.type == "deploy") | .targets[]?' "$WRANGLER_OUTPUT_FILE_PATH" | grep -m1 'workers\.dev')
+          echo "url=https://${host#https://}" >> "$GITHUB_OUTPUT"
+      # Spends no Jev credits: an unknown monster is refused before any Jev call. 400 means the Worker is up with
+      # its key, 503 that it has no key yet (or was taken offline on purpose).
+      - name: Smoke test
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o "$RUNNER_TEMP/body" -w '%{http_code}' --retry 3 --retry-delay 3 \
+            -X POST "$URL/api/enemy-turn" -H 'content-type: application/json' -d '{"enemy":{"species":"nobody"}}')
+          case "$code" in
+            400)
+              pre=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$URL/api/enemy-turn")
+              test "$pre" = 204 || { echo "::error::CORS preflight answered $pre, expected 204"; exit 1; }
+              echo "Worker is up at $URL" ;;
+            503) echo "::warning::$URL has no Jev key. Set one: cd crawler/proxy && npx wrangler secret put OPENROUTER_API_KEY" ;;
+            *) echo "::error::Unexpected $code from $URL: $(head -c 300 "$RUNNER_TEMP/body")"; exit 1 ;;
+          esac
