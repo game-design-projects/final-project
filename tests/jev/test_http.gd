@@ -165,4 +165,4 @@ func test_nothing_listening_is_an_error_not_a_hang():
 	probe.stop()
 	Jev.configure_jev("k", {"via": "proxy", "api_base": "http://127.0.0.1:%d" % port})
 	var r := await Jev.jev({}, {"q": Q.noul("x")})
-	ok(r.has("error"), str(r))
+	ok(r.has("error") and r["error"].contains("connection error"), str(r))

@@ -32,6 +32,13 @@ static var raw_dir := ""
 
 static var _raw_seq := 0
 
+## HTTPRequest.Result, in words, for the log
+const RESULT_NAMES := {
+	1: "chunked body size mismatch", 2: "can't connect", 3: "can't resolve the host", 4: "connection error",
+	5: "TLS handshake failed", 6: "no response", 7: "body too large", 8: "can't decompress the body", 9: "request failed",
+	12: "too many redirects",
+}
+
 
 ## configureJev(key, { via }). `opts`: via ("typesafe" | "openrouter" | "proxy" | "mock"), api_base (proxy),
 ## transport (see above; `mock` makes its own MockJev.Server unless one is given), seed and latency (for `mock`).
@@ -152,8 +159,9 @@ static func _http(url: String, headers: Dictionary, body: Dictionary) -> Diction
 	var done: Array = await req.request_completed  # [result, response_code, headers, body]
 	req.queue_free()
 	if int(done[0]) != HTTPRequest.RESULT_SUCCESS:
-		var reason := "timed out after %s s" % J.num(timeout_s) if int(done[0]) == HTTPRequest.RESULT_TIMEOUT else "no response (HTTPRequest result %d)" % int(done[0])
-		return {"error": reason}
+		if int(done[0]) == HTTPRequest.RESULT_TIMEOUT:
+			return {"error": "timed out after %s s" % J.num(timeout_s)}
+		return {"error": "%s (HTTPRequest result %d)" % [RESULT_NAMES.get(int(done[0]), "request failed"), int(done[0])]}
 	return {"status": int(done[1]), "text": (done[3] as PackedByteArray).get_string_from_utf8()}
 
 
