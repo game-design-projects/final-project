@@ -1,11 +1,14 @@
-# Tests on every push and pull request; on main, a passing build is published to itch.io (channel html5).
-# The publish job alone sees the secrets and never runs for pull requests: BUTLER_API_KEY to push, and
-# OPENROUTER_API_KEY, which the web build ships in the page so the browser can call Jev on OpenRouter itself
-# (a low-credit key on purpose; see tools/build-web.sh).
+# Every push and pull request: tests, then a build for every platform (web, Windows, macOS, Linux) kept as
+# workflow artifacts. A tag vX.Y.Z (matching config/version in project.godot) builds them all again and publishes
+# a GitHub release with the zips and that version's CHANGELOG section. On main, a passing web build goes to itch.io.
+# Only the release and itch jobs see the secrets, and neither runs for pull requests: BUTLER_API_KEY to push, and
+# OPENROUTER_API_KEY, which those builds ship inside the game so it can call Jev on OpenRouter itself (a low-credit
+# key on purpose; see tools/build.sh). Every other build has no key and runs on mock Jev.
 name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -23,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install Godot and its web export templates
+      - name: Install Godot
         uses: ./.github/actions/setup-godot
         with:
           version: ${{ env.GODOT_VERSION }}
@@ -39,14 +42,85 @@ jobs:
             godot --headless --path . -s res://cli/scenarios.gd -- --seed=$seed > /dev/null
             godot --headless --path . -s res://cli/social_scenarios.gd -- --seed=$seed > /dev/null
           done
-      # A keyless build, to validate the web bundle on every push and PR
-      - name: Build the web bundle
-        run: GODOT=godot tools/build-web.sh
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [web, windows, macos, linux]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Godot and its export templates
+        uses: ./.github/actions/setup-godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+      - name: Build (no key, mock Jev)
+        run: GODOT=godot tools/build.sh ${{ matrix.platform }}
       - name: Validate the HTML5 bundle
+        if: matrix.platform == 'web'
         run: node tools/check-html5.mjs build/web
+      # The zip, not the folder: an artifact folder loses the executable bits of the Linux and macOS builds
+      - uses: actions/upload-artifact@v4
+        with:
+          name: donjon-${{ matrix.platform }}
+          path: build/donjon-*-${{ matrix.platform }}.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: The tag matches the project's version
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)
+          [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::Tag $GITHUB_REF_NAME doesn't match config/version=\"$version\" in project.godot"; exit 1; }
+      - name: Install Godot and its export templates
+        uses: ./.github/actions/setup-godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+      - name: Build every platform (Jev via OpenRouter)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$OPENROUTER_API_KEY" ]]; then
+            GODOT=godot tools/build.sh --openrouter
+          else
+            echo "::warning::No OPENROUTER_API_KEY secret: the release builds run on mock Jev"
+            GODOT=godot tools/build.sh
+          fi
+          node tools/check-html5.mjs build/web
+      - name: Release notes from the changelog
+        run: |
+          set -euo pipefail
+          version=${GITHUB_REF_NAME#v}
+          awk -v v="[$version]" '/^## \[/ { p = index($0, v) > 0; next } p' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [[ -s "$RUNNER_TEMP/notes.md" ]] || echo "Donjon $GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" build/donjon-*.zip \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Donjon $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
 
   publish:
-    needs: test
+    needs: build
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -59,7 +133,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install Godot and its web export templates
+      - name: Install Godot and its export templates
         uses: ./.github/actions/setup-godot
         with:
           version: ${{ env.GODOT_VERSION }}
@@ -69,7 +143,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$OPENROUTER_API_KEY" || { echo '::error::Missing OPENROUTER_API_KEY secret'; exit 1; }
-          GODOT=godot tools/build-web.sh --openrouter
+          GODOT=godot tools/build.sh --openrouter web
           node tools/check-html5.mjs build/web
       - name: Install official butler
         run: |
