@@ -25,7 +25,7 @@ $G --headless --path . -s res://tests/run_tests.gd                  # everything
 Other agents work in the same worktree at the same time. Only create/edit the files you own (below). If an import
 or cache error looks unrelated to your files, run `--import` again once. Never delete `.godot/`.
 
-**Commit as you go**, only your own paths: `git add <your paths> && git commit -m "feat: ..." -- <your paths>`
+**Commit as you go**, only your own paths (with the `.uid` / `.import` files Godot makes beside them): `git add <your paths> && git commit -m "feat: ..." -- <your paths>`
 (the `-- <paths>` keeps other agents' staged files out of your commit; retry if `index.lock` is busy). Commit message
 format `<type>: <description>`. Never push, never rebase, never `git checkout --`/`reset`/`stash`.
 
