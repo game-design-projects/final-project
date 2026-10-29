@@ -234,6 +234,11 @@ static func clamp100(v) -> int:
 	return maxi(0, mini(100, J.round_js(v)))
 
 
+## A number from Jev as JS would show it: 45.0 -> 45 (JSON numbers are floats in Godot)
+static func _n(x):
+	return int(x) if x is float and is_finite(x) and x == floor(x) else x
+
+
 ## JSON.stringify drops undefined: a key only when there's a value
 static func _put(d: Dictionary, k: String, v) -> Dictionary:
 	if v != null:
@@ -688,7 +693,7 @@ func roll_fx(r: Dictionary, spot: Dictionary, opts := {}) -> void:
 
 func _reset_fx_lag() -> void:
 	fx_lag = 0.0
-	sfx.lag = 0
+	sfx.lag = 0.0
 
 
 ## Where a die sits: on the monster that is the target, or in the party row (the bottom of the view).
@@ -1154,7 +1159,7 @@ func flush_breaks() -> void:
 			say(Narrate.cant_forgive_line(ally.species, ally.name), "", color)
 		say("%s: %s" % [ally.name, r.line], "npc", color)
 		speak(ally, r.line)
-		ally.loyalty = r.loyalty
+		ally.loyalty = _n(r.loyalty)
 		ach.on("vow-broken", {"response": r.response, "stolen": J.truthy(r.get("stolen"))})
 		print("vow broken: %s answers %s" % [ally.name, r.response])
 		if r.response == "forgive":
@@ -2920,7 +2925,7 @@ func ally_reactions_after(c: Dictionary):
 				break
 		if m == null:
 			continue
-		m.loyalty = x.loyalty
+		m.loyalty = _n(x.loyalty)
 		var color := color_of(m)
 		say("%s: %s" % [m.name, x.line], "npc", color)
 		speak(m, x.line)
