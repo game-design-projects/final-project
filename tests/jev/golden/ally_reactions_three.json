@@ -1,0 +1,275 @@
+{
+ "path": "/api/ally-reactions",
+ "body": {
+  "allies": [
+   {
+    "id": "a1",
+    "species": "slime",
+    "name": "Glop",
+    "traits": [
+     "shy",
+     "hungry"
+    ],
+    "loyalty": 60
+   },
+   {
+    "id": "a2",
+    "species": "goblin",
+    "name": "Grok",
+    "traits": [
+     "greedy",
+     "boastful"
+    ],
+    "loyalty": 20
+   },
+   {
+    "id": "a3",
+    "species": "dragon",
+    "name": "Vex",
+    "traits": [
+     "vain",
+     "proud"
+    ],
+    "loyalty": 12
+   }
+  ],
+  "events": [
+   "The party attacked Drip, an orange slime.",
+   "Drip begged: 'no hurt Drip. please.'",
+   "The party killed Drip anyway and took 6 gold."
+  ]
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "events": [
+    "The party attacked Drip, an orange slime.",
+    "Drip begged: 'no hurt Drip. please.'",
+    "The party killed Drip anyway and took 6 gold."
+   ],
+   "allies": {
+    "a1": {
+     "name": "Glop",
+     "kind": "orange slime",
+     "personality": [
+      "A simple slime with a blank, unblinking stare. Timidly speaks with an innocent aura.",
+      "shy",
+      "hungry"
+     ],
+     "values": "Wants a kind, gentle party. Upset by needless killing, especially of slimes or of creatures that begged for mercy. Happy when the party makes friends instead of fighting.",
+     "loyalty": "content"
+    },
+    "a2": {
+     "name": "Grok",
+     "kind": "huge brown goblin",
+     "personality": [
+      "A huge, brown, greedy goblin. Boastful and crude, respects strength and loves shiny gold. Talks in rough, simple speech.",
+      "greedy",
+      "boastful"
+     ],
+     "values": "Loves fights and loot. Upset when the party gives gold away, spares enemies for no gain, runs from fights, or orders it around. Pleased by victories and treasure.",
+     "loyalty": "resentful"
+    },
+    "a3": {
+     "name": "Vex",
+     "kind": "yellow dragon",
+     "personality": [
+      "An ancient yellow dragon, proud, vain and clever. Speaks grandly and looks down on mortals.",
+      "vain",
+      "proud"
+     ],
+     "values": "Expects a bold party worthy of a dragon. Disgusted by running away and by cruelty to the helpless; pleased by brave victories against strong foes and by treasure.",
+     "loyalty": "on the verge of leaving"
+    }
+   }
+  },
+  "questions": {
+   "approval__a1": {
+    "type": "score",
+    "instructions": {
+     "question": "How does `allies.a1.name` feel about what the party did in `events`?",
+     "judge_by": [
+      "`allies.a1.values`",
+      "`allies.a1.personality`"
+     ]
+    },
+    "criteria": [
+     "Strongly disapproves",
+     "Disapproves",
+     "Doesn't care",
+     "Approves",
+     "Strongly approves"
+    ]
+   },
+   "line__a1": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does `allies.a1.name` say or do in reaction to `events`?",
+     "judge_by": [
+      "`allies.a1.values`",
+      "`allies.a1.personality`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*jiggles happily*",
+     "line_1": "...good friends. *blorp*",
+     "line_2": "*stares blankly*",
+     "line_3": "...blorp.",
+     "line_4": "*trembles* ...no like.",
+     "line_5": "...why hurt? *blank stare*",
+     "line_6": "*shrinks away from the party*"
+    }
+   },
+   "moment__a1": {
+    "type": "choice",
+    "instructions": {
+     "question": "Which event in `events` does `allies.a1.name` react to most strongly, for better or worse?",
+     "judge_by": [
+      "`allies.a1.values`",
+      "`allies.a1.personality`"
+     ]
+    },
+    "criteria": {
+     "event_0": "The party attacked Drip, an orange slime.",
+     "event_1": "Drip begged: 'no hurt Drip. please.'",
+     "event_2": "The party killed Drip anyway and took 6 gold."
+    }
+   },
+   "approval__a2": {
+    "type": "score",
+    "instructions": {
+     "question": "How does `allies.a2.name` feel about what the party did in `events`?",
+     "judge_by": [
+      "`allies.a2.values`",
+      "`allies.a2.personality`"
+     ]
+    },
+    "criteria": [
+     "Strongly disapproves",
+     "Disapproves",
+     "Doesn't care",
+     "Approves",
+     "Strongly approves"
+    ]
+   },
+   "line__a2": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does `allies.a2.name` say or do in reaction to `events`?",
+     "judge_by": [
+      "`allies.a2.values`",
+      "`allies.a2.personality`"
+     ]
+    },
+    "criteria": {
+     "line_0": "HAH! That's how it's done!",
+     "line_1": "Heh heh. Good smashin'.",
+     "line_2": "More gold for us!",
+     "line_3": "*scratches its huge belly*",
+     "line_4": "Hmph.",
+     "line_5": "Oi! That's OUR gold you're wastin'!",
+     "line_6": "Pah. Soft. You lot are soft.",
+     "line_7": "Nobody bosses Grok."
+    }
+   },
+   "moment__a2": {
+    "type": "choice",
+    "instructions": {
+     "question": "Which event in `events` does `allies.a2.name` react to most strongly, for better or worse?",
+     "judge_by": [
+      "`allies.a2.values`",
+      "`allies.a2.personality`"
+     ]
+    },
+    "criteria": {
+     "event_0": "The party attacked Drip, an orange slime.",
+     "event_1": "Drip begged: 'no hurt Drip. please.'",
+     "event_2": "The party killed Drip anyway and took 6 gold."
+    }
+   },
+   "decision__a2": {
+    "type": "choice",
+    "instructions": {
+     "question": "After `events`, what does `allies.a2.name` do?",
+     "consider": [
+      "`allies.a2.values`",
+      "`allies.a2.loyalty`",
+      "`allies.a2.personality`"
+     ]
+    },
+    "criteria": {
+     "stay": "Stays with the party, perhaps grumbling",
+     "leave_party": "Leaves the party and goes its own way",
+     "turn_on_party": "Turns on the party and attacks them"
+    }
+   },
+   "approval__a3": {
+    "type": "score",
+    "instructions": {
+     "question": "How does `allies.a3.name` feel about what the party did in `events`?",
+     "judge_by": [
+      "`allies.a3.values`",
+      "`allies.a3.personality`"
+     ]
+    },
+    "criteria": [
+     "Strongly disapproves",
+     "Disapproves",
+     "Doesn't care",
+     "Approves",
+     "Strongly approves"
+    ]
+   },
+   "line__a3": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does `allies.a3.name` say or do in reaction to `events`?",
+     "judge_by": [
+      "`allies.a3.values`",
+      "`allies.a3.personality`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Hmm. You show a flicker of worth.",
+     "line_1": "Well struck. I am... mildly impressed.",
+     "line_2": "*studies its claws*",
+     "line_3": "...",
+     "line_4": "Pathetic.",
+     "line_5": "You try my patience, mortals.",
+     "line_6": "Cowardice. How tedious."
+    }
+   },
+   "moment__a3": {
+    "type": "choice",
+    "instructions": {
+     "question": "Which event in `events` does `allies.a3.name` react to most strongly, for better or worse?",
+     "judge_by": [
+      "`allies.a3.values`",
+      "`allies.a3.personality`"
+     ]
+    },
+    "criteria": {
+     "event_0": "The party attacked Drip, an orange slime.",
+     "event_1": "Drip begged: 'no hurt Drip. please.'",
+     "event_2": "The party killed Drip anyway and took 6 gold."
+    }
+   },
+   "decision__a3": {
+    "type": "choice",
+    "instructions": {
+     "question": "After `events`, what does `allies.a3.name` do?",
+     "consider": [
+      "`allies.a3.values`",
+      "`allies.a3.loyalty`",
+      "`allies.a3.personality`"
+     ]
+    },
+    "criteria": {
+     "stay": "Stays with the party, perhaps grumbling",
+     "leave_party": "Leaves the party and goes its own way",
+     "turn_on_party": "Turns on the party and attacks them"
+    }
+   }
+  }
+ }
+}

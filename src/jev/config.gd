@@ -75,6 +75,21 @@ static func setup(sources := {}, force := false) -> Dictionary:
 	return cfg
 
 
+## For the scenario scripts (cli/): mock Jev with this seed and no fake latency, or with `live` the real API from the
+## .env / jev_config.json (every call is billed; raw replies are saved to user://jev-raw before they are parsed).
+## Returns { ok, banner }; ok is false when `live` was asked for and no key was found.
+static func setup_tool(live: bool, seed: int, sources := {}) -> Dictionary:
+	if not live:
+		Jev.configure_jev(null, {"via": "mock", "seed": seed})
+		return {"ok": true, "banner": "MOCK Jev (seed %d): random answers, no credits. Add --live for real calls." % seed}
+	var cfg := resolve(sources.merged({"flags_text": "", "env": {}}, true))
+	if cfg["provider"] == "mock":
+		return {"ok": false, "banner": "--live needs a key in .env (OPENROUTER_API_KEY or TYPESAFE_API_KEY) or config/jev_config.json."}
+	cfg = setup(sources.merged({"flags_text": "", "env": {}}, true), true)
+	Jev.raw_dir = "user://jev-raw"
+	return {"ok": true, "banner": "LIVE Jev (%s): every call is billed." % cfg["provider"]}
+
+
 ## The config setup() settled on (empty before it ran)
 static func current() -> Dictionary:
 	return _current
@@ -102,7 +117,8 @@ static func _from_json(sources: Dictionary, out: Dictionary) -> bool:
 	var text := _read("json_text", "json_path", JSON_PATH, sources)
 	if text.strip_edges() == "":
 		return false
-	var cfg = JSON.parse_string(text)
+	var json := JSON.new()
+	var cfg = json.data if json.parse(text) == OK else null
 	if not cfg is Dictionary:
 		push_warning("jev config: %s is not a JSON object, ignoring it" % JSON_PATH)
 		return false

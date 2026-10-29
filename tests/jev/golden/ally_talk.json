@@ -1,0 +1,92 @@
+{
+ "path": "/api/ally-talk",
+ "body": {
+  "ally": {
+   "id": "a1",
+   "species": "goblin",
+   "name": "Grok",
+   "traits": [
+    "greedy",
+    "boastful"
+   ],
+   "loyalty": 50
+  },
+  "message": "Grok, you're the strongest fighter we've got.",
+  "vows": [
+   {
+    "text": "i will give gold to goblins",
+    "status": "kept"
+   }
+  ]
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "ally": {
+    "name": "Grok",
+    "kind": "huge brown goblin",
+    "personality": [
+     "A huge, brown, greedy goblin. Boastful and crude, respects strength and loves shiny gold. Talks in rough, simple speech.",
+     "greedy",
+     "boastful"
+    ],
+    "likes": [
+     "gold",
+     "a good fight",
+     "being praised for its strength",
+     "crude jokes"
+    ],
+    "dislikes": [
+     "being ordered around",
+     "insults about its smell or intelligence",
+     "cheap offers",
+     "cowards"
+    ],
+    "values": "Loves fights and loot. Upset when the party gives gold away, spares enemies for no gain, runs from fights, or orders it around. Pleased by victories and treasure.",
+    "loyalty": "content"
+   },
+   "promises_party_made_to_it": [
+    "\"i will give gold to goblins\" (kept)"
+   ],
+   "party_says": "Grok, you're the strongest fighter we've got."
+  },
+  "questions": {
+   "resonance": {
+    "type": "score",
+    "instructions": {
+     "question": "How do the words in `party_says` land with `ally.name`?",
+     "judge_by": [
+      "`ally.values`",
+      "`ally.personality`",
+      "`ally.likes`",
+      "`ally.dislikes`"
+     ]
+    },
+    "criteria": [
+     "Hurt or offend it",
+     "Leave it cold",
+     "Fine, nothing special",
+     "Please it",
+     "Move it deeply"
+    ]
+   },
+   "line": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does `ally.name` say or do in reply to `party_says`?",
+     "judge_by": "`ally.personality`"
+    },
+    "criteria": {
+     "line_0": "HAH! That's how it's done!",
+     "line_1": "Heh heh. Good smashin'.",
+     "line_2": "More gold for us!",
+     "line_3": "*scratches its huge belly*",
+     "line_4": "Hmph.",
+     "line_5": "Oi! That's OUR gold you're wastin'!",
+     "line_6": "Pah. Soft. You lot are soft.",
+     "line_7": "Nobody bosses Grok."
+    }
+   }
+  }
+ }
+}

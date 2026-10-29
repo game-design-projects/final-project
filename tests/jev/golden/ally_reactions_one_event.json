@@ -1,0 +1,95 @@
+{
+ "path": "/api/ally-reactions",
+ "body": {
+  "allies": [
+   {
+    "id": "a1",
+    "species": "bandit",
+    "name": "Vic",
+    "traits": [
+     "sly",
+     "greedy"
+    ],
+    "loyalty": 44
+   }
+  ],
+  "events": [
+   "The party gave a slime 10 gold."
+  ]
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "events": [
+    "The party gave a slime 10 gold."
+   ],
+   "allies": {
+    "a1": {
+     "name": "Vic",
+     "kind": "bandit",
+     "personality": [
+      "A wiry human bandit in a patched hood, all grins and knives. Talks fast in street slang and is always working out the take. Respects coin and a fair cut; loyal to whoever pays.",
+      "sly",
+      "greedy"
+     ],
+     "values": "Wants a party that pays well and shares the loot fairly. Pleased by profit and clever tricks. Upset by gold given away to monsters, by heroics that risk its neck, and by being treated as lesser.",
+     "loyalty": "uneasy"
+    }
+   }
+  },
+  "questions": {
+   "approval__a1": {
+    "type": "score",
+    "instructions": {
+     "question": "How does `allies.a1.name` feel about what the party did in `events`?",
+     "judge_by": [
+      "`allies.a1.values`",
+      "`allies.a1.personality`"
+     ]
+    },
+    "criteria": [
+     "Strongly disapproves",
+     "Disapproves",
+     "Doesn't care",
+     "Approves",
+     "Strongly approves"
+    ]
+   },
+   "line__a1": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does `allies.a1.name` say or do in reaction to `events`?",
+     "judge_by": [
+      "`allies.a1.values`",
+      "`allies.a1.personality`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Ha! Nice work!",
+     "line_1": "Now that's profit.",
+     "line_2": "*picks its teeth with a knife*",
+     "line_3": "Eh.",
+     "line_4": "You gave that away? Are you mad?",
+     "line_5": "Too risky, that.",
+     "line_6": "Don't look down your nose at me."
+    }
+   },
+   "decision__a1": {
+    "type": "choice",
+    "instructions": {
+     "question": "After `events`, what does `allies.a1.name` do?",
+     "consider": [
+      "`allies.a1.values`",
+      "`allies.a1.loyalty`",
+      "`allies.a1.personality`"
+     ]
+    },
+    "criteria": {
+     "stay": "Stays with the party, perhaps grumbling",
+     "leave_party": "Leaves the party and goes its own way",
+     "turn_on_party": "Turns on the party and attacks them"
+    }
+   }
+  }
+ }
+}

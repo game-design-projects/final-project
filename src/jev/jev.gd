@@ -112,7 +112,9 @@ static func jev(state: Dictionary, questions: Dictionary, trace = null) -> Dicti
 			push_warning(msg)
 			return {"error": msg}
 		if parsed == null:
-			parsed = JSON.parse_string(text)
+			var json := JSON.new()  # not JSON.parse_string: that prints an engine error for text that isn't JSON
+			if json.parse(text) == OK:
+				parsed = json.data
 		if not parsed is Dictionary:
 			var msg := "Jev (%s): the reply was not a JSON object" % _label()
 			if entry != null:

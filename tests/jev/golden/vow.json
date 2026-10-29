@@ -1,0 +1,81 @@
+{
+ "path": "/api/vow",
+ "body": {
+  "monster": {
+   "species": "dragon",
+   "name": "Vex",
+   "traits": [
+    "vain",
+    "proud"
+   ]
+  },
+  "vow": {
+   "text": "i will not run from dragons"
+  }
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "monster": {
+    "name": "Vex",
+    "kind": "yellow dragon",
+    "personality": [
+     "An ancient yellow dragon, proud, vain and clever. Speaks grandly and looks down on mortals.",
+     "vain",
+     "proud"
+    ],
+    "likes": [
+     "flattery",
+     "respect",
+     "treasure",
+     "courage",
+     "wit"
+    ],
+    "dislikes": [
+     "rudeness",
+     "cowardice",
+     "cheap offerings",
+     "threats from weaklings"
+    ],
+    "values": "Expects a bold party worthy of a dragon. Disgusted by running away and by cruelty to the helpless; pleased by brave victories against strong foes and by treasure."
+   },
+   "promise": "The party swears to Vex: \"i will not run from dragons\""
+  },
+  "questions": {
+   "liking": {
+    "type": "score",
+    "instructions": {
+     "question": "How does `monster.name` feel about the promise in `promise`?",
+     "judge_by": [
+      "`monster.values`",
+      "`monster.likes`",
+      "`monster.dislikes`"
+     ]
+    },
+    "criteria": [
+     "Hates it",
+     "Dislikes it",
+     "Doesn't care",
+     "Likes it",
+     "Loves it"
+    ]
+   },
+   "line": {
+    "type": "choice",
+    "instructions": {
+     "question": "How does `monster.name` react to `promise`?",
+     "judge_by": "`monster.personality`"
+    },
+    "criteria": {
+     "line_0": "Hmm. You show a flicker of worth.",
+     "line_1": "Well struck. I am... mildly impressed.",
+     "line_2": "*studies its claws*",
+     "line_3": "...",
+     "line_4": "Pathetic.",
+     "line_5": "You try my patience, mortals.",
+     "line_6": "Cowardice. How tedious."
+    }
+   }
+  }
+ }
+}

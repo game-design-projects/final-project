@@ -1,0 +1,264 @@
+{
+ "path": "/api/group-turn",
+ "body": {
+  "monsters": [
+   {
+    "id": "e0",
+    "species": "rock",
+    "name": "Boulder",
+    "traits": [
+     "ancient",
+     "slow to anger"
+    ],
+    "hp": 32,
+    "maxHp": 32,
+    "meters": {
+     "friendliness": 30,
+     "anger": 0,
+     "fear": 0
+    },
+    "specialReady": true,
+    "paid": false,
+    "demanded": false,
+    "impressions": [],
+    "formerAlly": false,
+    "grudges": [],
+    "thisRound": []
+   }
+  ],
+  "party": [
+   {
+    "id": "h0",
+    "name": "HORTENSE",
+    "kind": "human",
+    "cls": "G-FIG",
+    "hp": 14,
+    "maxHp": 14
+   }
+  ],
+  "round": 1,
+  "playerAction": {
+   "type": "start"
+  },
+  "events": [],
+  "conversation": [],
+  "partyGold": 5,
+  "vows": []
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "monsters": {
+    "e0": {
+     "name": "Boulder",
+     "kind": "rock entity",
+     "nature": "A slow, ancient rock entity: a living heap of stone with a single glowing crack for an eye. It speaks rarely, in few, deep words, and thinks in centuries.",
+     "traits": [
+      "ancient",
+      "slow to anger"
+     ],
+     "likes": [
+      "patience",
+      "quiet",
+      "respect for old things",
+      "being left in peace"
+     ],
+     "dislikes": [
+      "being hurried",
+      "noise",
+      "mining and digging",
+      "greed"
+     ],
+     "health": "healthy",
+     "mood": {
+      "friendliness": "unfriendly",
+      "anger": "calm",
+      "fear": "unafraid"
+     },
+     "side": "hostile to the party",
+     "impressions": [
+      "No strong impressions of this party yet."
+     ],
+     "this_round": [
+      "Nothing happened to it directly."
+     ],
+     "tribute": "not discussed",
+     "kin_in_party": "none",
+     "ready_to_join_party": "not yet: Boulder doesn't like or trust this party enough to join them",
+     "promises_party_made_to_it": [],
+     "grudges": []
+    }
+   },
+   "group": [
+    "Boulder (rock entity): hostile to the party"
+   ],
+   "party": {
+    "condition": "a lone adventurer, fresh",
+    "members": [
+     "HORTENSE: a human fighter, healthy"
+    ],
+    "this_round": [
+     "The party did nothing notable."
+    ],
+    "latest_message": "(the party said nothing this round)",
+    "offering": "nothing"
+   },
+   "recent_conversation": [
+    "(no conversation yet)"
+   ]
+  },
+  "questions": {
+   "e0__action": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does Boulder do this round?",
+     "consider": [
+      "Its nature, traits, likes, dislikes, mood and impressions in `monsters.e0`",
+      "What happened to it this round in `monsters.e0.this_round`",
+      "Which side the other monsters are on in `group`",
+      "What the party did and said in `party`"
+     ]
+    },
+    "criteria": {
+     "attack": {
+      "what": "Attack one member of the party",
+      "when": "It is hostile or angry at the party, or the party just attacked it"
+     },
+     "special": {
+      "what": "Use its special attack: bring down a rockslide on the whole party",
+      "when": "It is hostile and wants to hit hard"
+     },
+     "defend": {
+      "what": "Brace and guard itself instead of acting",
+      "when": "It is badly hurt or expects a heavy blow and wants to wait it out"
+     },
+     "flee": {
+      "what": "Run away from the fight",
+      "when": "It is scared or badly hurt, or the other monsters have turned against it"
+     },
+     "converse": {
+      "what": "Talk instead of fighting this round",
+      "when": "It is curious or undecided and wants to answer or chat rather than act"
+     },
+     "demand_tribute": {
+      "what": "Demand gold from the party in exchange for not fighting",
+      "when": "It is greedy and sees a chance to get paid"
+     },
+     "leave_peacefully": {
+      "what": "End its part in the encounter peacefully and let the party go on its way",
+      "when": "It has no quarrel with the party and would rather go"
+     }
+    }
+   },
+   "e0__line__attack": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Attack one member of the party",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*swings a boulder fist at the target*",
+     "line_1": "...MOVE. *slams into the target*"
+    }
+   },
+   "e0__line__special": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Use its special attack: bring down a rockslide on the whole party",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*the ceiling groans... and a rockslide pours down on the party*",
+     "line_1": "*stomps, and stone rains from above*"
+    }
+   },
+   "e0__line__defend": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Brace and guard itself instead of acting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*settles into the floor, still as a mountain*",
+     "line_1": "*pulls its stone arms close*"
+    }
+   },
+   "e0__line__flee": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Run away from the fight",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*sinks slowly back into the wall*",
+     "line_1": "...enough. *rumbles away*"
+    }
+   },
+   "e0__line__converse": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Talk instead of fighting this round",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "...hmm.",
+     "line_1": "Small ones. Loud ones.",
+     "line_2": "*the crack of its eye glows brighter* ...speak.",
+     "line_3": "I was here before the dungeon.",
+     "line_4": "...patience. you have none.",
+     "line_5": "Boulder. That is... what they call me."
+    }
+   },
+   "e0__line__demand_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Demand gold from the party in exchange for not fighting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "...tribute. leave something old.",
+     "line_1": "...gold is nothing. but pay."
+    }
+   },
+   "e0__line__leave_peacefully": {
+    "type": "choice",
+    "instructions": {
+     "question": "Boulder is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "End its part in the encounter peacefully and let the party go on its way",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "...go. I will sleep.",
+     "line_1": "*closes its glowing eye and becomes a wall again*"
+    }
+   }
+  }
+ }
+}

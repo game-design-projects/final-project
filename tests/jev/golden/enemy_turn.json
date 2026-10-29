@@ -1,0 +1,511 @@
+{
+ "path": "/api/enemy-turn",
+ "body": {
+  "enemy": {
+   "id": "e0",
+   "species": "slime",
+   "name": "Drip",
+   "traits": [
+    "shy",
+    "hungry"
+   ],
+   "hp": 5,
+   "maxHp": 10,
+   "meters": {
+    "friendliness": 40,
+    "anger": 0,
+    "fear": 20
+   },
+   "specialReady": true,
+   "paid": false,
+   "demanded": false,
+   "impressions": [],
+   "formerAlly": false,
+   "grudges": [],
+   "thisRound": []
+  },
+  "party": [
+   {
+    "id": "h0",
+    "name": "HORTENSE",
+    "kind": "human",
+    "cls": "G-FIG",
+    "hp": 14,
+    "maxHp": 14
+   },
+   {
+    "id": "h1",
+    "name": "ROLF",
+    "kind": "human",
+    "cls": "G-FIG",
+    "hp": 5,
+    "maxHp": 13,
+    "didThisRound": "attacked Grok"
+   },
+   {
+    "id": "h2",
+    "name": "EUGENE",
+    "kind": "human",
+    "cls": "N-MAG",
+    "hp": 0,
+    "maxHp": 8,
+    "dead": true
+   },
+   {
+    "id": "a1",
+    "name": "BLORBO",
+    "kind": "monster",
+    "species": "slime",
+    "cls": "SLIME",
+    "hp": 4,
+    "maxHp": 9
+   }
+  ],
+  "round": 1,
+  "playerAction": {
+   "type": "talk",
+   "message": "Hey little buddy."
+  },
+  "events": [
+   "The party spoke to you."
+  ],
+  "conversation": [],
+  "partyGold": 10
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "monsters": {
+    "e0": {
+     "name": "Drip",
+     "kind": "orange slime",
+     "nature": "A simple slime with a blank, unblinking stare. Timidly speaks with an innocent aura.",
+     "traits": [
+      "shy",
+      "hungry"
+     ],
+     "likes": [
+      "kindness",
+      "jokes and silly noises",
+      "peace",
+      "being included"
+     ],
+     "dislikes": [
+      "violence against slimes",
+      "cruelty to creatures begging for mercy",
+      "being diluted in a body of water"
+     ],
+     "health": "wounded",
+     "mood": {
+      "friendliness": "wary",
+      "anger": "calm",
+      "fear": "unafraid"
+     },
+     "side": "undecided about the party",
+     "impressions": [
+      "No strong impressions of this party yet."
+     ],
+     "this_round": [
+      "Nothing happened to it directly."
+     ],
+     "tribute": "not discussed",
+     "kin_in_party": "BLORBO, a orange slime like it, travels with this party",
+     "ready_to_join_party": "not yet: Drip doesn't like or trust this party enough to join them",
+     "promises_party_made_to_it": [],
+     "grudges": []
+    }
+   },
+   "group": [
+    "Drip (orange slime): undecided about the party"
+   ],
+   "party": {
+    "condition": "a small group, battered",
+    "members": [
+     "HORTENSE: a human fighter, healthy",
+     "ROLF: a human fighter, wounded; this round: attacked Grok",
+     "BLORBO: a orange slime ally, wounded"
+    ],
+    "this_round": [
+     "The party spoke to you."
+    ],
+    "latest_message": "Hey little buddy.",
+    "offering": "nothing"
+   },
+   "recent_conversation": [
+    "(no conversation yet)"
+   ]
+  },
+  "questions": {
+   "e0__threat": {
+    "type": "noul",
+    "instructions": "Does `party.latest_message` threaten to hurt or kill Drip?",
+    "criteria": {
+     "true": "An explicit or implied threat of violence toward it",
+     "false": "No threat of violence toward it (rudeness alone does not count)"
+    }
+   },
+   "e0__insult": {
+    "type": "noul",
+    "instructions": "Does `party.latest_message` insult, mock, or belittle Drip?"
+   },
+   "e0__kindness": {
+    "type": "score",
+    "instructions": "How kind, friendly, or flattering is `party.latest_message` toward Drip?",
+    "criteria": [
+     "Hostile or contemptuous toward it",
+     "Cold, businesslike, or not about it",
+     "Polite and friendly toward it",
+     "Warm, kind, or openly complimentary toward it"
+    ]
+   },
+   "e0__joke": {
+    "type": "noul",
+    "instructions": "Does `party.latest_message` contain a joke, pun, or deliberately silly remark?"
+   },
+   "e0__asks_to_join": {
+    "type": "noul",
+    "instructions": "In `party.latest_message`, does the party invite Drip to join them or travel with them?"
+   },
+   "e0__asks_for_peace": {
+    "type": "noul",
+    "instructions": "In `party.latest_message`, does the party ask Drip to stop fighting, make peace, or let them pass?"
+   },
+   "e0__offers_gold": {
+    "type": "noul",
+    "instructions": "In `party.latest_message`, is the party offering gold or money to Drip right now?"
+   },
+   "e0__would_join": {
+    "type": "noul",
+    "instructions": {
+     "question": "If the party is inviting Drip to join them, does Drip want to say yes?",
+     "consider": [
+      "`monsters.e0.ready_to_join_party`",
+      "`monsters.e0`",
+      "`party.latest_message`",
+      "`party.this_round`"
+     ]
+    }
+   },
+   "e0__join_yes": {
+    "type": "choice",
+    "instructions": {
+     "question": "If Drip agrees to join the party now, what is its main reason?",
+     "consider": [
+      "Its nature, traits, mood, impressions and kin in `monsters.e0`",
+      "`monsters.e0.this_round`",
+      "`group`",
+      "`party`"
+     ]
+    },
+    "criteria": {
+     "likes_you": "It likes and trusts the party",
+     "strength": "It respects the party's strength",
+     "gold": "It expects a share of gold and loot",
+     "company": "It is lonely and wants companions",
+     "kin": "Its own kind already travels with the party",
+     "safety": "It feels safer with the party than against it",
+     "curious": "It is curious about the adventure ahead",
+     "grateful": "It is grateful for the party's kindness or mercy"
+    }
+   },
+   "e0__join_no": {
+    "type": "choice",
+    "instructions": {
+     "question": "If Drip turns down an invitation to join the party now, what is its main reason?",
+     "consider": [
+      "Its nature, traits, mood, impressions and kin in `monsters.e0`",
+      "`monsters.e0.this_round`",
+      "`group`",
+      "`party`"
+     ]
+    },
+    "criteria": {
+     "not_yet": "It doesn't know or trust the party well enough yet",
+     "wants_more": "It wants something more first: gold, proof, or a better offer",
+     "still_angry": "It is still angry or hurt about what the party did to it",
+     "bad_pitch": "It didn't like the way the party asked",
+     "pride": "It is too proud to follow anyone",
+     "home": "It won't leave its home on this floor",
+     "afraid": "It is afraid of the dangers deeper in the dungeon"
+    }
+   },
+   "e0__emotion": {
+    "type": "choice",
+    "instructions": {
+     "question": "How does Drip feel about what the party just said or did to it this round?",
+     "consider": [
+      "What happened in `party.this_round` and `monsters.e0.this_round`",
+      "`party.latest_message`",
+      "Its nature, likes, dislikes and mood in `monsters.e0`"
+     ]
+    },
+    "criteria": {
+     "delighted": {
+      "what": "Delighted or charmed by the party",
+      "when": "The party was warm, generous, or gave it something it loves"
+     },
+     "amused": {
+      "what": "Bursts out laughing",
+      "when": "The party said something funny, silly or absurd"
+     },
+     "touched": {
+      "what": "Moved, touched, or deeply understood",
+      "when": "The party showed real care, respect, or understanding of what it values"
+     },
+     "flattered": {
+      "what": "Flattered and puffed up with pride",
+      "when": "The party praised it, its looks, or its strength"
+     },
+     "intrigued": {
+      "what": "Curious and intrigued; it lets its guard slip while it thinks",
+      "when": "The party asked it questions or said something surprising or mysterious"
+     },
+     "confused": {
+      "what": "Baffled; it doesn't understand at all",
+      "when": "The party's words made no sense to it, or were nonsense"
+     },
+     "sad": {
+      "what": "Saddened, guilty, or hurt in its feelings",
+      "when": "The party said something sad or guilt-inducing, or reminded it of a loss"
+     },
+     "offended": {
+      "what": "Offended and spiteful",
+      "when": "The party was rude, dismissive, stingy, or went against what it values"
+     },
+     "enraged": {
+      "what": "Flies into a furious rage",
+      "when": "The party insulted, threatened, or hurt it or its kind badly"
+     },
+     "terrified": {
+      "what": "Terrified or intimidated",
+      "when": "The party threatened it convincingly or showed overwhelming strength"
+     }
+    }
+   },
+   "e0__action": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does Drip do this round?",
+     "consider": [
+      "Its nature, traits, likes, dislikes, mood and impressions in `monsters.e0`",
+      "What happened to it this round in `monsters.e0.this_round`",
+      "Which side the other monsters are on in `group`",
+      "What the party did and said in `party`"
+     ]
+    },
+    "criteria": {
+     "attack": {
+      "what": "Attack one member of the party",
+      "when": "It is hostile or angry at the party, or the party just attacked it"
+     },
+     "special": {
+      "what": "Use its special attack: ooze sticky goo over one party member",
+      "when": "It is hostile and wants to hit hard"
+     },
+     "defend": {
+      "what": "Brace and guard itself instead of acting",
+      "when": "It is badly hurt or expects a heavy blow and wants to wait it out"
+     },
+     "flee": {
+      "what": "Run away from the fight",
+      "when": "It is scared or badly hurt, or the other monsters have turned against it"
+     },
+     "converse": {
+      "what": "Talk instead of fighting this round",
+      "when": "It is curious or undecided and wants to answer or chat rather than act"
+     },
+     "demand_tribute": {
+      "what": "Demand gold from the party in exchange for not fighting",
+      "when": "It is greedy and sees a chance to get paid"
+     },
+     "accept_tribute": {
+      "what": "Accept the gold the party is offering",
+      "when": "The offer satisfies it"
+     },
+     "refuse_tribute": {
+      "what": "Refuse the gold the party is offering",
+      "when": "The offer is too small or it doesn't want their gold"
+     },
+     "join_party": {
+      "what": "Agree to join the party and travel with them",
+      "when": "It likes the party enough and they invited it"
+     },
+     "leave_peacefully": {
+      "what": "End its part in the encounter peacefully and let the party go on its way",
+      "when": "It has no quarrel with the party and would rather go"
+     }
+    }
+   },
+   "e0__target": {
+    "type": "choice",
+    "instructions": {
+     "question": "If Drip attacks the party, which member does it go after?",
+     "consider": [
+      "`party.members`",
+      "`monsters.e0`"
+     ]
+    },
+    "criteria": {
+     "h0": "HORTENSE: a human fighter, healthy",
+     "h1": "ROLF: a human fighter, wounded; this round: attacked Grok",
+     "a1": "BLORBO: a orange slime ally, wounded"
+    }
+   },
+   "e0__line__attack": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Attack one member of the party",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*wobbles forward and slaps at the target*",
+     "line_1": "*blank stare* ...blorp. *lunges at the target*"
+    }
+   },
+   "e0__line__special": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Use its special attack: ooze sticky goo over one party member",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*oozes stickily over the target*",
+     "line_1": "*splorts orange goo all over the target*"
+    }
+   },
+   "e0__line__defend": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Brace and guard itself instead of acting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*hardens into a firm, shiny dome*",
+     "line_1": "*shrinks into itself, staring blankly*"
+    }
+   },
+   "e0__line__flee": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Run away from the fight",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*slorps away down the corridor*",
+     "line_1": "...scary. *slides off into the dark*"
+    }
+   },
+   "e0__line__converse": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Talk instead of fighting this round",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "...bloop?",
+     "line_1": "*stares blankly* ...hi heehee.",
+     "line_2": "*jiggles* ...hehe. funny.",
+     "line_3": "no hurt Drip. please.",
+     "line_4": "*wobbles uncertainly*",
+     "line_5": "...Drip is Drip.",
+     "line_6": "...friends? *wobbles uncertainly* ...maybe. not yet."
+    }
+   },
+   "e0__line__demand_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Demand gold from the party in exchange for not fighting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "...shiny? give shiny.",
+     "line_1": "*holds out a gooey pseudopod* ...coin?"
+    }
+   },
+   "e0__line__accept_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Accept the gold the party is offering",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*absorbs the coins with a slurp* ...yum.",
+     "line_1": "shiny! *jiggles happily*"
+    }
+   },
+   "e0__line__refuse_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Refuse the gold the party is offering",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*coins sink through and plop out the bottom* ...no want.",
+     "line_1": "*stares blankly at the gold*"
+    }
+   },
+   "e0__line__join_party": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Agree to join the party and travel with them",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "...friends? Drip come too! *jiggles*",
+     "line_1": "*blank stare softens* ...okay. go together."
+    }
+   },
+   "e0__line__leave_peacefully": {
+    "type": "choice",
+    "instructions": {
+     "question": "Drip is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "End its part in the encounter peacefully and let the party go on its way",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*waves and oozes away*",
+     "line_1": "...bye bye. *squelch*"
+    }
+   }
+  }
+ }
+}

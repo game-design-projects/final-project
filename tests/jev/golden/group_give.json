@@ -1,0 +1,665 @@
+{
+ "path": "/api/group-turn",
+ "body": {
+  "monsters": [
+   {
+    "id": "e0",
+    "species": "dragon",
+    "name": "Vexalith",
+    "traits": [
+     "vain",
+     "ancient"
+    ],
+    "hp": 56,
+    "maxHp": 56,
+    "meters": {
+     "friendliness": 10,
+     "anger": 10,
+     "fear": 0
+    },
+    "specialReady": true,
+    "paid": false,
+    "demanded": false,
+    "impressions": [],
+    "formerAlly": false,
+    "grudges": [],
+    "thisRound": []
+   },
+   {
+    "id": "e1",
+    "species": "snake",
+    "name": "Hiss",
+    "traits": [
+     "patient",
+     "secretive"
+    ],
+    "hp": 16,
+    "maxHp": 16,
+    "meters": {
+     "friendliness": 25,
+     "anger": 5,
+     "fear": 10
+    },
+    "specialReady": true,
+    "paid": false,
+    "demanded": false,
+    "impressions": [],
+    "formerAlly": false,
+    "grudges": [],
+    "thisRound": []
+   }
+  ],
+  "party": [
+   {
+    "id": "h0",
+    "name": "HORTENSE",
+    "kind": "human",
+    "cls": "G-FIG",
+    "hp": 14,
+    "maxHp": 14
+   },
+   {
+    "id": "h1",
+    "name": "ROLF",
+    "kind": "human",
+    "cls": "G-FIG",
+    "hp": 5,
+    "maxHp": 13,
+    "didThisRound": "attacked Grok"
+   },
+   {
+    "id": "h2",
+    "name": "EUGENE",
+    "kind": "human",
+    "cls": "N-MAG",
+    "hp": 0,
+    "maxHp": 8,
+    "dead": true
+   }
+  ],
+  "round": 1,
+  "playerAction": {
+   "type": "give",
+   "targetId": "e0",
+   "gold": 20
+  },
+  "events": [
+   "The party offered Vexalith 20 gold."
+  ],
+  "conversation": [
+   {
+    "speaker": "Party",
+    "text": "Take it."
+   }
+  ],
+  "partyGold": 120,
+  "vows": []
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "monsters": {
+    "e0": {
+     "name": "Vexalith",
+     "kind": "yellow dragon",
+     "nature": "An ancient yellow dragon, proud, vain and clever. Speaks grandly and looks down on mortals.",
+     "traits": [
+      "vain",
+      "ancient"
+     ],
+     "likes": [
+      "flattery",
+      "respect",
+      "treasure",
+      "courage",
+      "wit"
+     ],
+     "dislikes": [
+      "rudeness",
+      "cowardice",
+      "cheap offerings",
+      "threats from weaklings"
+     ],
+     "health": "healthy",
+     "mood": {
+      "friendliness": "hostile",
+      "anger": "calm",
+      "fear": "unafraid"
+     },
+     "side": "hostile to the party",
+     "impressions": [
+      "No strong impressions of this party yet."
+     ],
+     "this_round": [
+      "Nothing happened to it directly."
+     ],
+     "tribute": "not discussed",
+     "kin_in_party": "none",
+     "ready_to_join_party": "not yet: Vexalith doesn't like or trust this party enough to join them",
+     "promises_party_made_to_it": [],
+     "grudges": []
+    },
+    "e1": {
+     "name": "Hiss",
+     "kind": "snake person",
+     "nature": "A coiled snake person, half human and half serpent. Sly and patient, it speaks slowly with long hissing s's and loves a clever bargain.",
+     "traits": [
+      "patient",
+      "secretive"
+     ],
+     "likes": [
+      "clever bargains",
+      "secrets",
+      "compliments on its scales",
+      "patience"
+     ],
+     "dislikes": [
+      "being rushed",
+      "clumsy lies",
+      "loud brutes",
+      "being called a worm"
+     ],
+     "health": "healthy",
+     "mood": {
+      "friendliness": "unfriendly",
+      "anger": "calm",
+      "fear": "unafraid"
+     },
+     "side": "hostile to the party",
+     "impressions": [
+      "No strong impressions of this party yet."
+     ],
+     "this_round": [
+      "Nothing happened to it directly."
+     ],
+     "tribute": "not discussed",
+     "kin_in_party": "none",
+     "ready_to_join_party": "not yet: Hiss doesn't like or trust this party enough to join them",
+     "promises_party_made_to_it": [],
+     "grudges": []
+    }
+   },
+   "group": [
+    "Vexalith (yellow dragon): hostile to the party",
+    "Hiss (snake person): hostile to the party"
+   ],
+   "party": {
+    "condition": "a small group, fresh",
+    "members": [
+     "HORTENSE: a human fighter, healthy",
+     "ROLF: a human fighter, wounded; this round: attacked Grok"
+    ],
+    "this_round": [
+     "The party offered Vexalith 20 gold."
+    ],
+    "latest_message": "(the party said nothing this round)",
+    "offering": "20 gold to Vexalith, far less than Vexalith expects as tribute"
+   },
+   "recent_conversation": [
+    "Party: Take it."
+   ]
+  },
+  "questions": {
+   "e0__emotion": {
+    "type": "choice",
+    "instructions": {
+     "question": "How does Vexalith feel about what the party just said or did to it this round?",
+     "consider": [
+      "What happened in `party.this_round` and `monsters.e0.this_round`",
+      "`party.latest_message`",
+      "Its nature, likes, dislikes and mood in `monsters.e0`"
+     ]
+    },
+    "criteria": {
+     "delighted": {
+      "what": "Delighted or charmed by the party",
+      "when": "The party was warm, generous, or gave it something it loves"
+     },
+     "amused": {
+      "what": "Bursts out laughing",
+      "when": "The party said something funny, silly or absurd"
+     },
+     "touched": {
+      "what": "Moved, touched, or deeply understood",
+      "when": "The party showed real care, respect, or understanding of what it values"
+     },
+     "flattered": {
+      "what": "Flattered and puffed up with pride",
+      "when": "The party praised it, its looks, or its strength"
+     },
+     "intrigued": {
+      "what": "Curious and intrigued; it lets its guard slip while it thinks",
+      "when": "The party asked it questions or said something surprising or mysterious"
+     },
+     "confused": {
+      "what": "Baffled; it doesn't understand at all",
+      "when": "The party's words made no sense to it, or were nonsense"
+     },
+     "sad": {
+      "what": "Saddened, guilty, or hurt in its feelings",
+      "when": "The party said something sad or guilt-inducing, or reminded it of a loss"
+     },
+     "offended": {
+      "what": "Offended and spiteful",
+      "when": "The party was rude, dismissive, stingy, or went against what it values"
+     },
+     "enraged": {
+      "what": "Flies into a furious rage",
+      "when": "The party insulted, threatened, or hurt it or its kind badly"
+     },
+     "terrified": {
+      "what": "Terrified or intimidated",
+      "when": "The party threatened it convincingly or showed overwhelming strength"
+     }
+    }
+   },
+   "e0__action": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does Vexalith do this round?",
+     "consider": [
+      "Its nature, traits, likes, dislikes, mood and impressions in `monsters.e0`",
+      "What happened to it this round in `monsters.e0.this_round`",
+      "Which side the other monsters are on in `group`",
+      "What the party did and said in `party`"
+     ]
+    },
+    "criteria": {
+     "attack": {
+      "what": "Attack one member of the party",
+      "when": "It is hostile or angry at the party, or the party just attacked it"
+     },
+     "special": {
+      "what": "Use its special attack: breathe crackling lightning over the whole party",
+      "when": "It is hostile and wants to hit hard"
+     },
+     "attack_monster": {
+      "what": "Turn on another monster in this fight and attack it",
+      "when": "That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it"
+     },
+     "defend": {
+      "what": "Brace and guard itself instead of acting",
+      "when": "It is badly hurt or expects a heavy blow and wants to wait it out"
+     },
+     "flee": {
+      "what": "Run away from the fight",
+      "when": "It is scared or badly hurt, or the other monsters have turned against it"
+     },
+     "converse": {
+      "what": "Talk instead of fighting this round",
+      "when": "It is curious or undecided and wants to answer or chat rather than act"
+     },
+     "demand_tribute": {
+      "what": "Demand gold from the party in exchange for not fighting",
+      "when": "It is greedy and sees a chance to get paid"
+     },
+     "accept_tribute": {
+      "what": "Accept the gold the party is offering",
+      "when": "The offer satisfies it"
+     },
+     "refuse_tribute": {
+      "what": "Refuse the gold the party is offering",
+      "when": "The offer is too small or it doesn't want their gold"
+     },
+     "leave_peacefully": {
+      "what": "End its part in the encounter peacefully and let the party go on its way",
+      "when": "It has no quarrel with the party and would rather go"
+     }
+    }
+   },
+   "e0__target": {
+    "type": "choice",
+    "instructions": {
+     "question": "If Vexalith attacks the party, which member does it go after?",
+     "consider": [
+      "`party.members`",
+      "`monsters.e0`"
+     ]
+    },
+    "criteria": {
+     "h0": "HORTENSE: a human fighter, healthy",
+     "h1": "ROLF: a human fighter, wounded; this round: attacked Grok"
+    }
+   },
+   "e0__line__attack": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Attack one member of the party",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*snaps its great jaws at the target*",
+     "line_1": "Insolent morsel! *rakes the target with its claws*",
+     "line_2": "*lashes its tail at the target*"
+    }
+   },
+   "e0__line__special": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Use its special attack: breathe crackling lightning over the whole party",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*inhales, then unleashes crackling yellow lightning over the whole party*",
+     "line_1": "BURN IN MY STORM! *lightning floods the corridor*"
+    }
+   },
+   "e0__line__attack_monster": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Turn on another monster in this fight and attack it",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "You side with them, the target? Then burn. *rakes the target*",
+     "line_1": "*snaps at the target* Know your place."
+    }
+   },
+   "e0__line__defend": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Brace and guard itself instead of acting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*folds its golden wings around itself*",
+     "line_1": "*coils and watches you with ancient eyes*"
+    }
+   },
+   "e0__line__flee": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Run away from the fight",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*launches into the dark with a thunderclap of wings*",
+     "line_1": "This is beneath me. *vanishes into the dark*"
+    }
+   },
+   "e0__line__converse": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Talk instead of fighting this round",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Speak, little ones. You have my attention, briefly.",
+     "line_1": "Ha! Wit, from a mortal. How rare.",
+     "line_2": "Mind your tongue before a dragon.",
+     "line_3": "Flattery... I do so enjoy it. Continue.",
+     "line_4": "Your words bore me.",
+     "line_5": "I am Vexalith. Remember it, if you live."
+    }
+   },
+   "e0__line__demand_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Demand gold from the party in exchange for not fighting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Tribute. Gold, and plenty of it, or become ash.",
+     "line_1": "A dragon's toll is not cheap, mortals."
+    }
+   },
+   "e0__line__accept_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Accept the gold the party is offering",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*sniffs the gold* ...Acceptable.",
+     "line_1": "Ah, gold. The only honest language."
+    }
+   },
+   "e0__line__refuse_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Refuse the gold the party is offering",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "You insult me with these crumbs.",
+     "line_1": "Pitiful. Is this all you carry?"
+    }
+   },
+   "e0__line__leave_peacefully": {
+    "type": "choice",
+    "instructions": {
+     "question": "Vexalith is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "End its part in the encounter peacefully and let the party go on its way",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e0.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "You may pass. Today I am merciful.",
+     "line_1": "*yawns, curls up, and ignores you entirely*"
+    }
+   },
+   "e1__action": {
+    "type": "choice",
+    "instructions": {
+     "question": "What does Hiss do this round?",
+     "consider": [
+      "Its nature, traits, likes, dislikes, mood and impressions in `monsters.e1`",
+      "What happened to it this round in `monsters.e1.this_round`",
+      "Which side the other monsters are on in `group`",
+      "What the party did and said in `party`"
+     ]
+    },
+    "criteria": {
+     "attack": {
+      "what": "Attack one member of the party",
+      "when": "It is hostile or angry at the party, or the party just attacked it"
+     },
+     "special": {
+      "what": "Use its special attack: sink venomous fangs into one party member",
+      "when": "It is hostile and wants to hit hard"
+     },
+     "attack_monster": {
+      "what": "Turn on another monster in this fight and attack it",
+      "when": "That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it"
+     },
+     "defend": {
+      "what": "Brace and guard itself instead of acting",
+      "when": "It is badly hurt or expects a heavy blow and wants to wait it out"
+     },
+     "flee": {
+      "what": "Run away from the fight",
+      "when": "It is scared or badly hurt, or the other monsters have turned against it"
+     },
+     "converse": {
+      "what": "Talk instead of fighting this round",
+      "when": "It is curious or undecided and wants to answer or chat rather than act"
+     },
+     "demand_tribute": {
+      "what": "Demand gold from the party in exchange for not fighting",
+      "when": "It is greedy and sees a chance to get paid"
+     },
+     "leave_peacefully": {
+      "what": "End its part in the encounter peacefully and let the party go on its way",
+      "when": "It has no quarrel with the party and would rather go"
+     }
+    }
+   },
+   "e1__target": {
+    "type": "choice",
+    "instructions": {
+     "question": "If Hiss attacks the party, which member does it go after?",
+     "consider": [
+      "`party.members`",
+      "`monsters.e1`"
+     ]
+    },
+    "criteria": {
+     "h0": "HORTENSE: a human fighter, healthy",
+     "h1": "ROLF: a human fighter, wounded; this round: attacked Grok"
+    }
+   },
+   "e1__line__attack": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Attack one member of the party",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*lashes out and strikes at the target*",
+     "line_1": "Sssuch a shame. *whips its tail into the target*"
+    }
+   },
+   "e1__line__special": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Use its special attack: sink venomous fangs into one party member",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*sinks venomous fangs into the target*",
+     "line_1": "Hold ssstill, little one. *bites the target*"
+    }
+   },
+   "e1__line__attack_monster": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Turn on another monster in this fight and attack it",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Traitor. *strikes at the target*",
+     "line_1": "Ssstay out of my bargain, the target. *bites the target*"
+    }
+   },
+   "e1__line__defend": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Brace and guard itself instead of acting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*coils tight and watches, unblinking*",
+     "line_1": "*raises its hood and hisses a warning*"
+    }
+   },
+   "e1__line__flee": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Run away from the fight",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "*slithers into a crack in the wall*",
+     "line_1": "Thisss is not a bargain I like. *slides away*"
+    }
+   },
+   "e1__line__converse": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Talk instead of fighting this round",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Ssso. You talk before you ssstab. Interesting.",
+     "line_1": "Everything has a price, travelersss.",
+     "line_2": "*tastes the air with its tongue* ...You smell of fear.",
+     "line_3": "Flattery? Go on. I am lissstening.",
+     "line_4": "Ssspeak plainly, or don't ssspeak at all.",
+     "line_5": "I am Hiss. Remember the name. Ssso few do."
+    }
+   },
+   "e1__line__demand_tribute": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "Demand gold from the party in exchange for not fighting",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "A toll, for safe passsage. Gold, pleassse.",
+     "line_1": "Nothing is free in the dark, travelersss. Pay."
+    }
+   },
+   "e1__line__leave_peacefully": {
+    "type": "choice",
+    "instructions": {
+     "question": "Hiss is about to do what `planned_action` describes. Which line fits best right now?",
+     "planned_action": "End its part in the encounter peacefully and let the party go on its way",
+     "respond_to": [
+      "`party.latest_message`",
+      "`monsters.e1.this_round`"
+     ]
+    },
+    "criteria": {
+     "line_0": "Go. I have ssseen enough.",
+     "line_1": "*uncoils and lets you pass, never blinking*"
+    }
+   }
+  }
+ }
+}

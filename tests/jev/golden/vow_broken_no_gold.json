@@ -1,0 +1,101 @@
+{
+ "path": "/api/vow-broken",
+ "body": {
+  "monster": {
+   "species": "goblin",
+   "name": "Grok",
+   "traits": [
+    "greedy",
+    "boastful"
+   ],
+   "loyalty": 40
+  },
+  "vow": {
+   "text": "i won't give gold to goblins"
+  },
+  "how": "The party gave 25 gold to Snaggle.",
+  "gold": 0
+ },
+ "request": {
+  "model": "jev-latest",
+  "state": {
+   "monster": {
+    "name": "Grok",
+    "kind": "huge brown goblin",
+    "personality": [
+     "A huge, brown, greedy goblin. Boastful and crude, respects strength and loves shiny gold. Talks in rough, simple speech.",
+     "greedy",
+     "boastful"
+    ],
+    "likes": [
+     "gold",
+     "a good fight",
+     "being praised for its strength",
+     "crude jokes"
+    ],
+    "dislikes": [
+     "being ordered around",
+     "insults about its smell or intelligence",
+     "cheap offers",
+     "cowards"
+    ],
+    "values": "Loves fights and loot. Upset when the party gives gold away, spares enemies for no gain, runs from fights, or orders it around. Pleased by victories and treasure.",
+    "loyalty_now": "resentful"
+   },
+   "broken_promise": "The party swore to Grok: \"i won't give gold to goblins\"",
+   "how_it_was_broken": "The party gave 25 gold to Snaggle."
+  },
+  "questions": {
+   "response": {
+    "type": "choice",
+    "instructions": {
+     "question": "How does `monster.name` respond to the party breaking `broken_promise`?",
+     "consider": [
+      "`how_it_was_broken`",
+      "`monster.values`",
+      "`monster.loyalty_now`",
+      "`monster.personality`"
+     ]
+    },
+    "criteria": {
+     "forgive": "Forgive the party, grudgingly, and stay",
+     "leave_party": "Leave the party for good",
+     "attack_party": "Turn on the party and attack them"
+    }
+   },
+   "line__forgive": {
+    "type": "choice",
+    "instructions": {
+     "question": "`monster.name` is about to forgive the party, grudgingly, and stay. What does it say?",
+     "about": "`how_it_was_broken`"
+    },
+    "criteria": {
+     "line_0": "You lied to Grok. ...Fine. But you owe me.",
+     "line_1": "Hmph. One more lie and I'm gone."
+    }
+   },
+   "line__leave_party": {
+    "type": "choice",
+    "instructions": {
+     "question": "`monster.name` is about to leave the party for good. What does it say?",
+     "about": "`how_it_was_broken`"
+    },
+    "criteria": {
+     "line_0": "A goblin's word means somethin'. Yours don't. *stomps off*",
+     "line_1": "Grok don't follow liars. Bye."
+    }
+   },
+   "line__attack_party": {
+    "type": "choice",
+    "instructions": {
+     "question": "`monster.name` is about to turn on the party and attack them. What does it say?",
+     "about": "`how_it_was_broken`"
+    },
+    "criteria": {
+     "line_0": "LIAR! Grok SMASH!",
+     "line_1": "You broke your word. Now I break YOU."
+    }
+   }
+  }
+ }
+}
