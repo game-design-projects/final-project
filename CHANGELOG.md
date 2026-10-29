@@ -4,7 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-29
+
+Donjon moves from the browser to Godot. The web version's last changes, made just before the port, are listed with it (game feel, mixing, Genre Halls); file names in those entries are the web version's.
+
 ### Added
+- Builds for Windows, macOS (universal, ad-hoc signed), Linux and the web from one script (`tools/build.sh`). CI builds all four on every push and pull request (kept as workflow artifacts) and, for a `vX.Y.Z` tag matching `config/version` in `project.godot`, publishes a GitHub release with every platform's zip and this file's notes for that version.
+- No engine splash: Godot's boot logo is off, and the web build's page (`web/shell.html`) shows no loading screen, only a thin line while it loads.
+- 479 headless tests (`godot --headless --path . -s res://tests/run_tests.gd`): the old suite's assertions, Jev's questions compared word for word with the web version's, its rules compared decision for decision on 137 recorded requests (`tests/jev/golden/`), play-throughs of whole runs on mock Jev, and a test that turns any script error into a failure. Windowed screenshot scripts check the look (`cli/shots.gd`, `cli/view_shots.gd`, `cli/genre_shots.gd`).
 - **Genre Halls** (`crawler/public/genre-halls.html`, http://localhost:5174/genre-halls.html): a pitch for Undertale-style battles, built on Donjon's renderer, monster art, species, feelings and synth. You explore a small wireframe floor; a fight switches into a 7×7 box where each faction attacks in its own genre, with one rule: lit squares hurt. Slimes rain goo, bandits play chess (rook, bishop, knight), snake people swing a lantern you hide from behind pillars, and rock entities stomp on the beat. The red dragon champion cycles through all four. Commands are FIGHT (a timing bar), ACT (three species-specific acts, CHECK, or typing once per fight), SPARE (when its mercy odds pass 50%) and FLEE. A spared monster may join as a passive charm (BOUNCY, KEEN EYE, SLIPPERY, STEADY, HOARD-FIRE) that judges what you do and can walk out. Reaching the stairs names your route: ghost, quiet, blood or tangled. The monster's mind answers the same choice / score / yes-no questions the main game sends to Jev, with a local stand-in, and the Jev mind panel shows each answer with its odds.
 - `crawler/public/genre-rules.js`: Genre Halls' rules without the DOM, and `crawler/test/genre-halls.test.js` (8 tests). Besides the data and the odds, they check that every floor's stairs and monsters can be reached, that every chess piece and every stomp leaves a safe square wherever you stand, and that the lantern always leaves a shadow to hide in.
 - **The view glows like an old vector monitor** (`public/postfx.js`, a WebGL shader over the game's canvas): lines bloom, pixels stay sharp at any window size instead of blurring, faint scanlines run along the game's own rows, the edges fall into the dark, and each floor's accent tints the shadows. Without WebGL, or with `?nofx` in the address, the plain canvas shows as before.
@@ -17,9 +24,18 @@ All notable changes to this project are documented here. The format follows [Kee
 - Tests: `crawler/test/juice.test.js` (11) and `crawler/test/mix.test.js` (12), plus three for the corridor's cached layer.
 
 ### Changed
+- **Donjon is a Godot 4.7 game now.** Everything is rewritten in GDScript with the same rules, numbers, words and Jev questions: the dungeon, D&D combat, talking, recruiting, vows, boons and the Roll of Fate (`src/game/`), the wireframe view and the monster art through a Canvas 2D adapter (`src/view/`), the vector-monitor shader (`src/view/postfx.gdshader`), the CRT screen with its party panel, log, command dock, tooltips, achievements and tips (`src/ui/`), and Genre Halls (`src/genre/`, or `-- genre-halls`).
+- The game calls Jev itself (`src/jev/`): through OpenRouter or TypeSafe with the key from the project's `.env` when run from source, from `config/jev_config.json` in a build, or on mock Jev when there is no key (the log says so). The Cloudflare Worker (`proxy/`) is now a thin pass-through, for builds that shouldn't carry a key.
+- Sound effects are synthesized from the same recipes when first played (`src/audio/synth.gd`), within 0.5 dB of Chrome's WebAudio renders. The music is Ogg Vorbis (Godot can't play AAC), each loop cut to exactly one loop so it wraps without a seam.
+- Monsters speak with the operating system's text to speech; hold-Space speech recognition works in the web build.
+- Achievements, seen tips and the switches are saved in `user://store.json`. The address flags (`?debug`, `#floor5`, `?nofx`) are words after `--` on the command line (`godot --path . -- floor5 debug`), and still work in the web build's address.
+- The music's build scripts live in `tools/music/`, with the six soundfonts they sample, and encode to Ogg (`to_ogg.sh`).
 - Music and sound effects share one audio context and one mixing desk (`public/mix.js`), with a limiter at the end: they keep one clock (so the heartbeat lands on the beat) and can react to each other. Turning the music off (P) now mutes it rather than pausing the whole audio engine.
 - The corridor is painted once per step into a cached layer and copied on every other frame; with a torch in sight it repaints at the flames' own 24 frames a second. Standing still, the view went from about 120 canvas calls and 33 new paths and gradients per frame to 3 calls and none (`crawler/scripts/bench-view.mjs`, Chrome, CPU slowed 4×).
 - The top bar, party panel, log and command dock are rewritten only when their contents change, which keeps hover state and cuts layout work while walking by about two thirds (32 to 10 layouts over the same 16 moves).
+
+### Removed
+- The Node server and npm scripts, the beat maker, the monster gallery and cover pages, the `music.js` engine and the soundfonts only it used. They stay in git history (`12d2be7`).
 
 ### Fixed
 - On a phone, the switches (tips, achievements, voices, sound, music) no longer hide behind the view: the top bar grows to two rows.
