@@ -204,7 +204,7 @@ test("the heartbeat is a quiet double thump that scales with danger", () => {
   const { sfx, calls } = recordingSfx();
   sfx.play("heartbeat", { level: 0.5 });
   const loud = calls.filter((c) => c.m === "tone").map((c) => c.vol);
-  assert.equal(loud.length, 2, "lub, dub");
+  assert.equal(loud.length, 4, "lub, dub, each with its octave for small speakers");
   calls.length = 0;
   sfx.ctx.currentTime += 1;
   sfx.play("heartbeat", { level: 1 });

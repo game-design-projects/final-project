@@ -521,11 +521,14 @@ const SOUNDS = {
   },
   // Your own pulse when the party is in danger (mix.js schedules it on the music's beat): lub-dub, felt more than heard.
   // o.level 0..1 scales it with the danger.
+  // A sine body for headphones, plus its octave (triangle) so laptop speakers, which play little under 150 Hz, still carry it.
+  // It sits under the hits: quieter than a critical hit even at full danger (measured offline, peak and RMS).
   heartbeat(s, t, o = {}) {
     const level = Math.max(0, Math.min(1, o.level ?? 1));
-    s.tone(t, { f0: 62, f1: 38, dur: 0.16, vol: 0.5 * level, attack: 0.006, room: 0.05 });
-    s.tone(t + 0.17, { f0: 55, f1: 34, dur: 0.2, vol: 0.34 * level, attack: 0.006, room: 0.05 });
-    s.noise(t, { dur: 0.05, vol: 0.05 * level, type: "lowpass", f0: 220, f1: 80, room: 0 });
+    for (const [at, f0, f1, vol] of [[t, 62, 38, 0.22], [t + 0.17, 55, 34, 0.15]]) {
+      s.tone(at, { f0, f1, dur: 0.17, vol: vol * level, attack: 0.006, room: 0.05 });
+      s.tone(at, { type: "triangle", f0: f0 * 2, f1: f1 * 2, dur: 0.12, vol: vol * 0.45 * level, attack: 0.004, lp: [500, 200], room: 0.05 });
+    }
   },
   stairs(s, t) {
     for (let i = 0; i < 4; i++) s.tone(t + i * 0.13, { f0: 120 - i * 12, f1: 70 - i * 6, dur: 0.1, vol: 0.3, room: 0.5 });
