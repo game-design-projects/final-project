@@ -217,9 +217,10 @@ func test_a_lit_square_hurts_once_per_safe_window_and_bouncy_absorbs_a_hit():
 	ok(scene.D.shield)
 	t = scene.clock_override
 	scene.D.hazards.append({"cells": {here: true}, "warn": t, "hit": t + 50.0, "end": t + 3000.0, "kind": "goo", "sounded": false})
-	await _pump(200.0)
+	await _pump(100.0)
 	eq(scene.G.hp, 20, "BOUNCY takes the first hit")
 	ok(not scene.D.shield)
+	await _draw_frame() # the "BOUNCY!" flash
 	await _pump(1200.0)
 	eq(scene.G.hp, 17, "and the next one lands")
 
@@ -556,3 +557,35 @@ func test_with_the_real_sfx_the_fight_makes_its_sounds():
 	ok(names.has("tick"), str(names))
 	ok(names.has("hit") or names.has("crit") or names.has("miss"), str(names))
 	ok(scene.sfx.stats.played > 0)
+
+
+func test_a_spared_monster_can_join_and_shows_in_the_party():
+	var joined := false
+	for attempt in 40:
+		_start("bandit")
+		await _pump(800.0)
+		var m: Dictionary = scene.G.foe
+		m.meters.friendliness = 100.0
+		m.meters.anger = 0.0
+		m.meters.fear = 0.0
+		scene.on_key("3")
+		if scene.G.tally.recruited > 0:
+			joined = true
+			break
+		scene.queue_free()
+		await _tree().process_frame
+	ok(joined, "a friendly bandit joins within a few tries")
+	eq(scene.G.allies.size(), 1)
+	eq(scene.G.allies[0].species, "bandit")
+	ok(scene.G.allies[0].loyalty >= 60.0 and scene.G.allies[0].loyalty <= 80.0)
+	ok(scene.last_say.contains("It joins you: KEEN EYE, warnings stay lit longer."), scene.last_say)
+	await _draw_frame()
+	# the ally's charm shows in the next dodge, and the hints name the other monsters' tastes
+	scene.on_key("Enter")
+	scene.meet("snake")
+	await _pump(800.0)
+	scene.start_dodge(1.0)
+	await _pump(1500.0)
+	for sp in ["slime", "bandit", "snake", "rock", "dragon"]:
+		scene.G.foe = _monster(sp)
+		ok(scene.hint_for(scene.G.foe).begins_with("..."))

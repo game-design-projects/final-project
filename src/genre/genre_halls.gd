@@ -1744,7 +1744,20 @@ class BarRow:
 	func _draw() -> void:
 		var asc := font.get_ascent(16)
 		var base := (size.y - (asc + font.get_descent(16))) / 2.0 + asc
-		draw_string(font, Vector2(0, base), label, HORIZONTAL_ALIGNMENT_LEFT, 92, 16, Color("#e8e8e8") if (pick or ink_label) else Color("#e8e8e8"))
+		var ink := Color("#e8e8e8")
+		if label.contains("→"):
+			# "YES → NO": the arrow is drawn small, the pixel font's own is a block
+			var parts := label.split("→")
+			var left: String = parts[0].strip_edges()
+			var lw := font.get_string_size(left, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+			draw_string(font, Vector2(0, base), left, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, ink)
+			var ay := floorf(base - 5.0)
+			draw_line(Vector2(lw + 5.0, ay), Vector2(lw + 14.0, ay), ink, 1.0)
+			draw_line(Vector2(lw + 11.0, ay - 3.0), Vector2(lw + 14.0, ay), ink, 1.0)
+			draw_line(Vector2(lw + 11.0, ay + 3.0), Vector2(lw + 14.0, ay), ink, 1.0)
+			draw_string(font, Vector2(lw + 20.0, base), parts[1].strip_edges(), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, ink)
+		else:
+			draw_string(font, Vector2(0, base), label, HORIZONTAL_ALIGNMENT_LEFT, 92, 16, ink)
 		var x0 := 98.0
 		var x1 := size.x - 46.0
 		var ty := floorf(size.y / 2.0 - 4.0)

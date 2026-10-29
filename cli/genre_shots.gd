@@ -23,8 +23,9 @@ func _initialize() -> void:
 			sound = true
 	Flags.override = "" if sound else "nosound"
 	DirAccess.make_dir_recursive_absolute(out_dir)
-	# A window behind other windows throttles its frames on macOS: keep it in front and off vsync
+	# A window behind other windows is throttled by macOS (the shots then take minutes): keep it on top and off vsync
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
 	DisplayServer.window_move_to_foreground()
 	seed(5)
 	_run.call_deferred()
@@ -160,4 +161,28 @@ func _run() -> void:
 	scene.ending()
 	await _secs(0.3)
 	await _shot("15-route-screen")
+
+	# sparing, and a recruit joining
+	for attempt in 12:
+		await _fresh("rock")
+		var m: Dictionary = scene.G.foe
+		m.meters.friendliness = 100.0
+		m.meters.anger = 0.0
+		m.meters.fear = 0.0
+		scene.on_key("3")
+		if scene.G.tally.recruited > 0:
+			break
+	await _secs(0.3)
+	await _shot("16-result-spared")
+
+	# dying
+	await _fresh("bandit")
+	scene.G.hp = 2
+	scene.start_dodge(1.0)
+	scene.D.next = 1e12
+	var here: int = Rules.idx(scene.D.soul.c, scene.D.soul.r)
+	var t: float = scene.now()
+	scene.D.hazards.append({"cells": {here: true}, "warn": t, "hit": t + 50.0, "end": t + 2000.0, "kind": "chess", "sounded": false})
+	await _secs(0.5)
+	await _shot("17-dead")
 	quit()
