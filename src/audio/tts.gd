@@ -221,14 +221,14 @@ class Narrator:
 		var g := gen
 		u.onstart = func():
 			if g == gen:
-				_set_duck(true)
+				set_duck(true)
 		# Back up only when nothing else is waiting to be said, so two lines in a row stay ducked
 		var finished := func():
 			if g != gen:
 				return
 			queued = maxi(0, queued - 1)
 			if queued == 0:
-				_set_duck(false)
+				set_duck(false)
 		u.onend = finished
 		u.onerror = finished
 		synth.speak(u)
@@ -241,9 +241,10 @@ class Narrator:
 		if synth != null:
 			synth.cancel()
 		queued = 0
-		_set_duck(false)
+		set_duck(false)
 
-	func _set_duck(is_on: bool) -> void:
+	## Tells the game to duck under speech (or come back); only calls out when the state changes
+	func set_duck(is_on: bool) -> void:
 		if is_on == ducked:
 			return
 		ducked = is_on
