@@ -159,9 +159,20 @@ func _run() -> void:
 	await _letter("a")
 	await _secs(0.3)
 
+	# hovering a command shows what it does on the hint line
+	var camp: Dictionary = main.dock.hits.filter(func(h): return h.get("key") == "c")[0]
+	await _hover(main.dock, camp.rect.get_center())
+	await _secs(0.3)
+	await _shot("02c-hover-hint")
+	await _hover(main.dock, Vector2(-500, -500))
+
 	_game().debug_ask()
 	await _secs(0.45)
 	await _shot("03-modal")
+	await _letter("q")
+	await _secs(0.07)
+	await _shot("03b-modal-nudge")
+	await _secs(0.4)
 	await _letter("n")
 
 	_game().debug_ally("slime", "Glop")
@@ -287,6 +298,11 @@ func _run() -> void:
 	await _until(func(): return _game().G.combat != null and not _game().G.busy, 15.0)
 	await _secs(0.5)
 	await _shot("18-wide-window")
+
+	# a window smaller than the 1180x820 layout: everything scales down together (fonts antialiased)
+	DisplayServer.window_set_size(Vector2i(900, 700))
+	await _secs(0.6)
+	await _shot("19-small-window")
 
 	# leave quietly: the sound stops and the audio thread lets go of its streams before the engine shuts down
 	main.queue_free()
