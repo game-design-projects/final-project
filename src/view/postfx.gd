@@ -88,7 +88,7 @@ class PostFx:
 		_bloom_vp = SubViewport.new()
 		_bloom_vp.name = "PostFxBloom"
 		_bloom_vp.disable_3d = true
-		_bloom_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		_bloom_vp.render_target_update_mode = SubViewport.UPDATE_WHEN_PARENT_VISIBLE # idle while the view is hidden
 		_bloom_vp.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
 		_bloom_rect = ColorRect.new()
 		_bloom_rect.material = _bloom_material

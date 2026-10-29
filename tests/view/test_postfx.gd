@@ -148,7 +148,7 @@ func test_attach_puts_the_material_and_a_bloom_viewport_on_the_rect_and_detach_t
 	var vp := rect.get_child(0) as SubViewport
 	ok(vp != null)
 	eq(vp.size, Vector2i(112, 72))
-	eq(vp.render_target_update_mode, SubViewport.UPDATE_ALWAYS)
+	eq(vp.render_target_update_mode, SubViewport.UPDATE_WHEN_PARENT_VISIBLE)
 	ok(uniform(post, "bloom_tex") != null)
 	post.detach()
 	ok(rect.material == null)
