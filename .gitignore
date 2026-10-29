@@ -10,6 +10,7 @@ __pycache__/
 *.pyc
 # Godot
 .godot/
-/build/
+/build/*
+!/build/.gdignore
 /config/jev_config.json
 *.translation

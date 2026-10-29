@@ -10,7 +10,7 @@ const Render = preload("res://src/view/render.gd")
 const Art = preload("res://src/view/art.gd")
 const Postfx = preload("res://src/view/postfx.gd")
 
-var out_dir := "/private/tmp/claude-501/-private-tmp-temp/9a270d88-2fcd-474a-8038-3c1a423642ac/scratchpad/view/"
+var out_dir := ProjectSettings.globalize_path("res://build/shots/view/") # build/ is gitignored
 var view_vp: SubViewport
 var painter: Painter
 

@@ -10,7 +10,7 @@ const Rules = preload("res://src/genre/genre_rules.gd")
 const Render = preload("res://src/view/render.gd")
 const Flags = preload("res://src/core/flags.gd")
 
-var out_dir := "/private/tmp/claude-501/-private-tmp-temp/9a270d88-2fcd-474a-8038-3c1a423642ac/scratchpad/genre/"
+var out_dir := ProjectSettings.globalize_path("res://build/shots/genre/") # build/ is gitignored
 var scene: Control
 
 
