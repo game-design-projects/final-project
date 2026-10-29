@@ -1,7 +1,7 @@
-# Tests on every push and pull request; on main, a passing build is published to itch.io
-# (https://aalfalasi.itch.io/donjon, channel html5). The publish job alone sees the secrets and never runs for
-# pull requests: BUTLER_API_KEY to push, and OPENROUTER_API_KEY, which the itch build ships in the page so the
-# browser can call Jev on OpenRouter itself (a low-credit key on purpose; see crawler/scripts/build-itch.js).
+# Tests on every push and pull request; on main, a passing build is published to itch.io (channel html5).
+# The publish job alone sees the secrets and never runs for pull requests: BUTLER_API_KEY to push, and
+# OPENROUTER_API_KEY, which the web build ships in the page so the browser can call Jev on OpenRouter itself
+# (a low-credit key on purpose; see tools/build-web.sh).
 name: CI
 on:
   push:
@@ -12,36 +12,38 @@ permissions:
   contents: read
 
 env:
-  # The Cloudflare Worker that holds the Jev key; the static build only knows its address (crawler/README.md)
-  JEV_API: https://UNSET.workers.dev
+  GODOT_VERSION: 4.7.2
   ITCH_TARGET: UNSET/UNSET:html5
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - name: Install Godot and its web export templates
+        uses: ./.github/actions/setup-godot
         with:
-          node-version: '22'
-      # The tests and the itch build use only Node built-ins, so there is nothing to install
-      - run: npm test
-      # Every scripted encounter, against the mock Jev (random answers, no key, no credits), on two seeds
+          version: ${{ env.GODOT_VERSION }}
+      - name: Import the project
+        run: godot --headless --path . --import
+      - name: Unit and game tests (mock Jev)
+        run: godot --headless --path . -s res://tests/run_tests.gd
+      # Every scripted encounter, against mock Jev (random answers, no key, no credits), on two seeds
       - name: Scenarios (mock Jev)
         run: |
           set -euo pipefail
           for seed in 1 2; do
-            node crawler/scripts/scenarios.js --seed=$seed > /dev/null
-            node crawler/scripts/social-scenarios.js --seed=$seed > /dev/null
+            godot --headless --path . -s res://cli/scenarios.gd -- --seed=$seed > /dev/null
+            godot --headless --path . -s res://cli/social_scenarios.gd -- --seed=$seed > /dev/null
           done
-      # A keyless build, to validate the bundle on every push and PR
-      - name: Build the itch bundle
-        run: node crawler/scripts/build-itch.js "$JEV_API"
+      # A keyless build, to validate the web bundle on every push and PR
+      - name: Build the web bundle
+        run: GODOT=godot tools/build-web.sh
       - name: Validate the HTML5 bundle
-        run: node crawler/scripts/check-html5.mjs dist/donjon
+        run: node tools/check-html5.mjs build/web
 
   publish:
     needs: test
@@ -53,22 +55,22 @@ jobs:
       cancel-in-progress: false
     environment:
       name: itch-production
-      url: https://aalfalasi.itch.io/donjon
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - name: Install Godot and its web export templates
+        uses: ./.github/actions/setup-godot
         with:
-          node-version: '22'
-      - name: Build the itch bundle (Jev via OpenRouter, from the browser)
+          version: ${{ env.GODOT_VERSION }}
+      - name: Build the web bundle (Jev via OpenRouter, from the browser)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
           test -n "$OPENROUTER_API_KEY" || { echo '::error::Missing OPENROUTER_API_KEY secret'; exit 1; }
-          node crawler/scripts/build-itch.js --openrouter
-          node crawler/scripts/check-html5.mjs dist/donjon
+          GODOT=godot tools/build-web.sh --openrouter
+          node tools/check-html5.mjs build/web
       - name: Install official butler
         run: |
           set -euo pipefail
@@ -82,5 +84,5 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$BUTLER_API_KEY" || { echo '::error::Missing BUTLER_API_KEY secret'; exit 1; }
-          "$RUNNER_TEMP/butler/butler" push dist/donjon "$ITCH_TARGET" --userversion "$GITHUB_SHA"
+          "$RUNNER_TEMP/butler/butler" push build/web "$ITCH_TARGET" --userversion "$GITHUB_SHA"
           "$RUNNER_TEMP/butler/butler" status "$ITCH_TARGET"
