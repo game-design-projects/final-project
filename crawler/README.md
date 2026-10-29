@@ -10,6 +10,8 @@ npm run crawler:mock         # the same, with Jev mocked: monsters act at random
 npm test                     # unit + API tests (node:test, mock Jev, no credits)
 npm run crawler:scenarios    # scripted encounters, mock Jev by default; add -- --live to call the real API
 npm run crawler:social       # group fights, ally talk and vows, likewise (-- --live for real calls)
+npm run crawler:shots        # smoke test in real Chrome on mock Jev: screenshots of every look, fails on page errors
+npm run crawler:bench        # frame time, canvas calls, allocations and layouts per frame (-- --root=<checkout> to compare)
 ```
 
 The mock (`src/mock-jev.js`) answers every Jev question with a random but well-formed answer of the right type, seeded (`--seed=N`, or `JEV_SEED` for the server) so a run repeats. It exercises the plumbing and the game's rules, not Jev's judgement: use `--live` when you want to see what Jev actually decides.
@@ -64,6 +66,15 @@ To upload by hand instead, upload `dist/donjon-itch.zip` to itch.io as an **HTML
 Hover any of them for the details (exact numbers, ability scores, boons).
 
 **Monsters answer out loud.** With the browser's built-in text to speech (Chrome, Edge, Safari), monsters and allies read their lines aloud, each kind in its own pitch and pace (a deep, slow dragon; a squeaky slime), in an English voice, skipping the *stage directions*. It starts off, and turns on by itself the first time you talk to the game with your voice: someone speaking to the monsters wants to hear them answer. **L** turns it on or off for good. Speech can't be turned up past the browser's full volume, so while a monster talks the music drops to a quarter and the effects to half, then come back as it finishes. It goes quiet while the microphone listens, and drops a backlog rather than falling behind the fight (`public/tts.js`).
+
+**How it looks, sounds and feels.** The view runs through a shader (`public/postfx.js`) that makes the wireframe glow like an old vector monitor: lines bloom, the pixels stay sharp at any window size, faint scanlines follow the game's own rows, and each floor's accent color tints the dark. Game state drives it, along with the music and the shake, through one event bus (`public/juice.js` `FX_EVENTS`): the rules announce hits, kills, falls, steps and fights, and the presentation answers.
+
+- **Danger** (`dangerOf`: how much health the living have left, and whether anyone is rolling death saves) drains the color, closes in a red edge, muffles the music behind a low-pass filter and starts a heartbeat on the music's beat: every other beat while hurt, every beat when someone is about to die. The red edge pulses with each heartbeat, timed from the audio clock.
+- **Hits** shake the screen in proportion to the blow (trauma that drains away, so small hits nudge and big ones rattle). Critical hits and kills freeze the monsters for a few frames and flash the view; getting hurt flashes the edges red. Big moments dip the music for an instant so they punch through.
+- **Moving** eases: a step dollies the old view past you, a turn pans, a wall bump lunges the view at the wall.
+- **Sound**: music and effects share one audio context and mixing desk (`public/mix.js`), ending in a limiter. Repeated effects (hits, misses, coins...) get a random detune and volume each time, and at most a few copies of one sound start at once (`public/sfx.js` `VARY`, `POLY`).
+
+Prefers-reduced-motion turns off the shake, the step and turn transitions and the strobing flashes. `?nofx` in the address turns the shader off (so does a browser without WebGL): the plain canvas shows, and everything else works the same.
 
 **Hold Space to talk.** Instead of typing, hold **Space**, say it, and let go: the words fill the talk box as you speak and are sent when you let go. In a fight it talks to the monsters (like T); exploring, it talks to a monster ally (like E; pick one first if you have several); with a talk box already open and empty (after T, R or E) it just listens. A quick tap of Space is still an ordinary key, and with words already in the box Space types a space. On a phone or with a mouse, press and hold the **HOLD TO SPEAK** button beside the box. It uses the browser's built-in speech recognition (Web Speech API: Chrome, Edge and Safari; Chrome sends the audio to Google's recognizer, Safari to Apple's), in the browser's language, and asks for the microphone the first time. Where it's missing (Firefox) the button hides and holding acts like a tap. The logic is `public/voice.js`.
 

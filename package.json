@@ -10,7 +10,9 @@
     "crawler:itch": "node crawler/scripts/build-itch.js",
     "test": "node --test crawler/test/*.test.js",
     "crawler:mock": "JEV_MOCK=1 node crawler/server.js",
-    "crawler:social": "node crawler/scripts/social-scenarios.js"
+    "crawler:social": "node crawler/scripts/social-scenarios.js",
+    "crawler:shots": "node crawler/scripts/shots.mjs",
+    "crawler:bench": "node crawler/scripts/bench-view.mjs"
   },
   "engines": {
     "node": ">=20"

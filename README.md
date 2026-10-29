@@ -10,6 +10,7 @@ A Wizardry-style wireframe dungeon crawler where every monster decision comes fr
 npm run crawler              # http://localhost:5174
 npm test                     # unit tests (node:test, no API calls)
 npm run crawler:scenarios    # scripted encounters against the live API (spends credits)
+npm run crawler:shots        # smoke test + screenshots in real Chrome (playwright-core), mock Jev
 ```
 
 Play it on itch.io: https://aalfalasi.itch.io/donjon. GitHub Actions (`.github/workflows/ci.yml`) tests every push and pull request, and publishes `main` there automatically. Changes are listed in [CHANGELOG.md](CHANGELOG.md).

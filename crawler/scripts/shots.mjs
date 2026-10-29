@@ -102,8 +102,9 @@ try {
   assert.ok(f.post, "postfx alive");
   assert.ok(f.danger > 0.8 && f.mixerDanger > 0.8, `danger rises: ${JSON.stringify(f)}`);
   assert.ok(f.cutoff < 5000, `the music's low-pass closes: ${f.cutoff} Hz`);
-  const beats = await page.evaluate(() => window.halls.sfx.stats);
-  assert.ok(beats.played > 0, "effects play through the shared context");
+  const audio = await page.evaluate(() => ({ stats: window.halls.sfx.stats, heartbeats: window.halls.sfx.recent.get("heartbeat")?.length ?? 0, state: window.halls.sfx.ctx.state, shared: window.halls.sfx.ctx === window.halls.feel().mixer.ctx }));
+  assert.ok(audio.shared && audio.state === "running", `music and effects share one running context: ${JSON.stringify(audio)}`);
+  assert.ok(audio.stats.played > 0 && audio.heartbeats > 0, `the heartbeat plays in danger: ${JSON.stringify(audio)}`);
   await shot(page, "6-danger");
   await page.close();
 
