@@ -1,0 +1,46 @@
+; Donjon, on Godot 4.7. Engine configuration file.
+
+config_version=5
+
+[application]
+
+config/name="Donjon"
+config/description="A Wizardry-style wireframe dungeon crawler whose monsters are driven by Jev."
+config/version="0.3.0"
+run/main_scene="res://src/ui/main.tscn"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="donjon"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0, 0, 0, 1)
+boot_splash/use_filter=false
+boot_splash/minimum_display_time=0
+
+[audio]
+
+general/text_to_speech=true
+
+[autoload]
+
+Store="*res://src/core/store.gd"
+
+[display]
+
+window/size/viewport_width=1180
+window/size/viewport_height=820
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+theme/default_font_antialiasing=0
+theme/default_font_hinting=0
+theme/default_font_subpixel_positioning=0
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0
+environment/defaults/default_clear_color=Color(0.0666667, 0.0666667, 0.0666667, 1)

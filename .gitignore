@@ -8,3 +8,8 @@ dist/
 .claude/
 __pycache__/
 *.pyc
+# Godot
+.godot/
+/build/
+/config/jev_config.json
+*.translation
