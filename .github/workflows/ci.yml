@@ -1,14 +1,14 @@
-# Every push and pull request: tests, then a build for every platform (web, Windows, macOS, Linux), kept as workflow
-# artifacts. A tag vX.Y.Z (matching config/version in project.godot) builds them all again and publishes a GitHub
-# release with the zips and that version's CHANGELOG section. Nothing publishes to itch.io: the final ships native.
-# Every build reaches Jev through the Jev API Worker (JEV_API, deployed by worker.yml), which holds the key, so no
-# build carries one and this workflow uses no secrets; the release job alone may write (the release itself).
+# Every push to main and every pull request: tests, then a build for every platform (web, Windows, macOS, Linux),
+# kept as workflow artifacts. Tags don't trigger this file: release.yml owns them and calls this one, so a tag runs
+# the tests and builds once and publishes the artifacts that passed. Nothing publishes to itch.io: the final ships
+# native. Every build reaches Jev through the Jev API Worker (JEV_API, deployed by worker.yml), which holds the key,
+# so no build carries one and this workflow uses no secrets and can only read.
 name: CI
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
@@ -74,50 +74,3 @@ jobs:
           path: build/donjon-*-${{ matrix.platform }}.zip
           retention-days: 14
           if-no-files-found: error
-
-  release:
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    concurrency:
-      group: release-${{ github.ref_name }}
-      cancel-in-progress: false
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The tag matches the project's version
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)
-          [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::Tag $GITHUB_REF_NAME doesn't match config/version=\"$version\" in project.godot"; exit 1; }
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-          package-manager-cache: false
-      - name: Install Godot and its export templates
-        uses: ./.github/actions/setup-godot
-        with:
-          version: ${{ env.GODOT_VERSION }}
-      - name: Build every platform (Jev through the Worker)
-        run: |
-          set -euo pipefail
-          GODOT=godot tools/build.sh --proxy "$JEV_API"
-          node tools/check-html5.mjs build/web
-      - name: Release notes from the changelog
-        run: |
-          set -euo pipefail
-          version=${GITHUB_REF_NAME#v}
-          awk -v v="[$version]" '/^## \[/ { p = index($0, v) > 0; next } p' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-          [[ -s "$RUNNER_TEMP/notes.md" ]] || echo "Donjon $GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
-      - name: Publish the GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" build/donjon-*.zip \
-            --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "Donjon $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
