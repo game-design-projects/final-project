@@ -102,7 +102,7 @@ static func die_frame(age: float, tier = null) -> Dictionary:
 static func _ring(n: int, radius := 1.0, start := -90.0) -> Array:
 	var out := []
 	for k in n:
-		var a := deg_to_rad(start + (360.0 / n) * k)
+		var a := (start + (360.0 / n) * k) * PI / 180.0 # in JS's order of operations, so the corners round the same
 		out.append([cos(a) * radius, sin(a) * radius])
 	return out
 
@@ -111,8 +111,23 @@ static func _seg(a: Array, b: Array) -> Array:
 	return [a[0], a[1], b[0], b[1]]
 
 
+## Math.hypot(a[0] - b[0], a[1] - b[1]) with V8's algorithm (scaled, Kahan-summed), in doubles: where two corners are
+## exactly the same distance away, floating-point noise picks the winner, so this keeps JS's pick.
 static func _dist(a: Array, b: Array) -> float:
-	return Vector2(a[0] - b[0], a[1] - b[1]).length()
+	var dx := absf(a[0] - b[0])
+	var dy := absf(a[1] - b[1])
+	var top := maxf(dx, dy)
+	if top == 0.0:
+		return 0.0
+	var sum := 0.0
+	var compensation := 0.0
+	for v in [dx, dy]:
+		var n: float = v / top
+		var summand := n * n - compensation
+		var preliminary := sum + summand
+		compensation = (preliminary - sum) - summand
+		sum = preliminary
+	return sqrt(sum) * top
 
 
 ## {outline: [[x, y]...], inner: [[x1, y1, x2, y2]...]}

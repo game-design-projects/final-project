@@ -5,6 +5,17 @@ const Status = preload("res://src/rules/status.gd")
 const Dnd = preload("res://src/rules/dnd.gd")
 
 
+## Draws inside a real _draw(), so a call that only works outside it fails the test.
+class Probe:
+	extends Node2D
+	var calls := Callable()
+	var drew := false
+
+	func _draw() -> void:
+		calls.call(self)
+		drew = true
+
+
 func _member(hp, max_hp, extra := {}) -> Dictionary:
 	var m := {"hp": hp, "maxHp": max_hp, "dead": false, "down": false}
 	m.merge(extra, true)
@@ -161,3 +172,18 @@ func test_the_party_holds_six_allies_get_whatever_seats_the_adventurers_leave():
 	eq(Status.ally_room([h.call(), h.call(), h.call(), a.call(), a.call()]), {"allies": 2, "max": 3, "full": false})
 	eq(Status.ally_room([h.call(), h.call(), h.call(), a.call(), a.call(), a.call()]), {"allies": 3, "max": 3, "full": true})
 	eq(Status.ally_room([h.call(), h.call(true), h.call(), a.call()]), {"allies": 1, "max": 3, "full": false}, "a fallen adventurer keeps their seat")
+
+
+func test_draw_icon_paints_inside_draw_at_any_scale_and_falls_back_to_a_dot():
+	var p := Probe.new()
+	p.calls = func(item):
+		Status.draw_icon(item, "heart", Vector2(4, 4), "#ff0000")
+		Status.draw_icon(item, "skull", Vector2(20, 4), Color.WHITE, 3)
+		Status.draw_icon(item, "nope", Vector2(50, 4), "#8a8a8a", 2)
+	var tree := Engine.get_main_loop() as SceneTree
+	tree.root.add_child(p)
+	p.queue_redraw()
+	await tree.process_frame
+	await tree.process_frame
+	ok(p.drew)
+	p.queue_free()

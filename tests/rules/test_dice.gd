@@ -129,6 +129,19 @@ func test_every_die_shape_is_a_closed_polygon_inside_the_unit_circle_with_finite
 	eq(Dice.die_shape(12).inner.size(), 10)
 
 
+## Segments as the JS draws them (the d12's spokes and the d20's spokes pick between equally near corners, so this
+## pins the exact choice).
+func test_the_d12_and_d20_inner_lines_match_the_original():
+	var d12 := [[0, 0.5, -0.475528, 0.154508], [-0.475528, 0.154508, -0.293893, -0.404508], [-0.293893, -0.404508, 0.293893, -0.404508], [0.293893, -0.404508, 0.475528, 0.154508], [0.475528, 0.154508, 0, 0.5], [0, -1, 0.293893, -0.404508], [0.951057, -0.309017, 0.475528, 0.154508], [0.587785, 0.809017, 0, 0.5], [-0.587785, 0.809017, 0, 0.5], [-0.951057, -0.309017, -0.293893, -0.404508]]
+	var d20 := [[0, 0.52, -0.450333, -0.26], [-0.450333, -0.26, 0.450333, -0.26], [0.450333, -0.26, 0, 0.52], [0, -1, 0.450333, -0.26], [0, -1, -0.450333, -0.26], [0.866025, -0.5, 0.450333, -0.26], [0.866025, 0.5, 0, 0.52], [0.866025, 0.5, 0.450333, -0.26], [0, 1, 0, 0.52], [-0.866025, 0.5, 0, 0.52], [-0.866025, 0.5, -0.450333, -0.26], [-0.866025, -0.5, -0.450333, -0.26]]
+	for case in [[12, d12], [20, d20]]:
+		var inner: Array = Dice.die_shape(case[0]).inner
+		eq(inner.size(), case[1].size(), "d%d segments" % case[0])
+		for i in inner.size():
+			for j in 4:
+				near(inner[i][j], case[1][i][j], 1e-5, "d%d segment %d" % [case[0], i])
+
+
 func test_pops_are_drawn_and_expire_rolls_at_the_same_target_sit_side_by_side():
 	var pops := Dice.DicePops.new()
 	var a := pops.add({"x": 100, "y": 100, "rolls": [13], "now": 0, "rng": _seeded(1)})
