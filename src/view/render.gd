@@ -422,6 +422,13 @@ static func _paint_corridor(ctx, map: Dictionary, view: Dictionary, t: float) ->
 		_decorate(ctx, P, dec["kind"], t, palette, dec["seed"])
 		ctx.restore()
 	ctx.restore()
+	# The clip above only cuts a line's centerline, so a stroke along the edge of the view sticks out by half its
+	# width: black the 4px border out again, as the pixel clip of a browser canvas would have
+	ctx.fill_style = "#000"
+	ctx.fill_rect(0, 0, W, 4)
+	ctx.fill_rect(0, H - 4, W, 4)
+	ctx.fill_rect(0, 4, 4, H - 8)
+	ctx.fill_rect(W - 4, 4, 4, H - 8)
 	ctx.stroke_style = palette.wall
 	ctx.line_width = 2
 	ctx.stroke_rect(4.5, 4.5, W - 8, H - 8)

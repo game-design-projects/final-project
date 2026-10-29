@@ -16,6 +16,9 @@ const FONT_FILES := {
 }
 const DEFAULT_FONT := "res://assets/fonts/VT323-Regular.ttf"
 
+## Godot's antialiased polylines come out about 12% wider than a browser canvas draws the same line (measured against
+## the JS view); antialiased strokes are drawn this much thinner to match. 0 turns it off.
+static var aa_shrink := 0.12
 static var _colors := {}
 static var _fonts := {}
 static var _font_specs := {}
@@ -485,6 +488,13 @@ func _clipped_polys(pts: PackedVector2Array) -> Array:
 
 
 func _stroke_line(pts: PackedVector2Array, style, w: float) -> void:
+	if style is Gradient2D and (style as Gradient2D).kind == "linear" and line_dash.is_empty():
+		# A linear gradient along a straight segment is the blend of its end colors: color each vertex
+		var colors := PackedColorArray()
+		for p: Vector2 in pts:
+			colors.append(_gradient_color(style, p))
+		item.draw_polyline_colors(pts, colors, maxf(w * (1.0 - aa_shrink), 0.25) if antialiased else w, antialiased)
+		return
 	var col := _color(style)
 	if col.a <= 0.0:
 		return
@@ -501,7 +511,7 @@ func _raw_polyline(pts: PackedVector2Array, col: Color, w: float) -> void:
 		if sc.a > 0.0:
 			sc.a *= 0.35
 			item.draw_polyline(pts, sc, w + shadow_blur * 0.6 * _scale_factor(), true)
-	item.draw_polyline(pts, col, w, antialiased)
+	item.draw_polyline(pts, col, maxf(w * (1.0 - aa_shrink), 0.25) if antialiased else w, antialiased)
 
 
 func _dashed(pts: PackedVector2Array) -> Array:
@@ -555,22 +565,30 @@ func _fill_poly(poly: PackedVector2Array, style) -> void:
 
 
 func _fill_gradient(poly: PackedVector2Array, g: Gradient2D) -> void:
-	if g.kind == "radial":
-		var tex := _radial_texture(g)
-		var r := g.r1
-		item.draw_texture_rect(tex, Rect2(g.p1 - Vector2(r, r), Vector2(r, r) * 2.0), false, Color(1, 1, 1, global_alpha))
-		return
 	if Geometry2D.triangulate_polygon(poly).is_empty():
 		return
-	var axis := g.p1 - g.p0
-	var len2 := axis.length_squared()
+	if g.kind == "radial":
+		# The gradient's texture mapped onto the polygon, so a clip (or a rect bigger than the circle) is respected
+		var r := maxf(g.r1, 0.001)
+		var uvs := PackedVector2Array()
+		for p: Vector2 in poly:
+			uvs.append((p - g.p1) / (2.0 * r) + Vector2(0.5, 0.5))
+		item.draw_colored_polygon(poly, Color(1, 1, 1, global_alpha), uvs, _radial_texture(g))
+		return
 	var colors := PackedColorArray()
 	for p: Vector2 in poly:
-		var t: float = 0.0 if len2 == 0.0 else (p - g.p0).dot(axis) / len2
-		var c := g.at(t)
-		c.a *= global_alpha
-		colors.append(c)
+		colors.append(_gradient_color(g, p))
 	item.draw_polygon(poly, colors)
+
+
+## A linear gradient's color at a device-space point, with the global alpha applied
+func _gradient_color(g: Gradient2D, p: Vector2) -> Color:
+	var axis := g.p1 - g.p0
+	var len2 := axis.length_squared()
+	var t: float = 0.0 if len2 == 0.0 else (p - g.p0).dot(axis) / len2
+	var c := g.at(t)
+	c.a *= global_alpha
+	return c
 
 
 func _radial_texture(g: Gradient2D) -> Texture2D:
