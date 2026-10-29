@@ -165,4 +165,5 @@ func test_nothing_listening_is_an_error_not_a_hang():
 	probe.stop()
 	Jev.configure_jev("k", {"via": "proxy", "api_base": "http://127.0.0.1:%d" % port})
 	var r := await Jev.jev({}, {"q": Q.noul("x")})
-	ok(r.has("error") and r["error"].contains("connection error"), str(r))
+	# macOS reports a refused connection as a connection error, Linux as can't connect
+	ok(r.has("error") and (r["error"].contains("connection error") or r["error"].contains("can't connect")), str(r))
