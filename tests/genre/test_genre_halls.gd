@@ -470,3 +470,89 @@ func test_every_screen_draws_without_errors():
 		scene.G.foe.gone = "slain"
 		scene.explore()
 		await _draw_frame()
+
+
+func _key(keycode: Key, unicode := 0, echo := false) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.keycode = keycode
+	e.unicode = unicode
+	e.pressed = true
+	e.echo = echo
+	return e
+
+
+func test_key_events_become_the_js_key_names_and_drive_the_game():
+	_start()
+	eq(scene._js_key(_key(KEY_UP)), "ArrowUp")
+	eq(scene._js_key(_key(KEY_ENTER)), "Enter")
+	eq(scene._js_key(_key(KEY_KP_ENTER)), "Enter")
+	eq(scene._js_key(_key(KEY_ESCAPE)), "Escape")
+	eq(scene._js_key(_key(KEY_SPACE, 32)), " ")
+	eq(scene._js_key(_key(KEY_W, 119)), "w")
+	eq(scene._js_key(_key(KEY_3, 51)), "3")
+	eq(scene._js_key(_key(KEY_SHIFT)), "")
+	var dir0: int = scene.G.dir
+	scene._input(_key(KEY_RIGHT))
+	eq(scene.G.dir, (dir0 + 1) % 4)
+	scene._input(_key(KEY_D, 100))
+	eq(scene.G.dir, (dir0 + 2) % 4)
+	var cmd := _key(KEY_LEFT)
+	cmd.meta_pressed = true
+	scene._input(cmd) # shortcuts belong to the OS
+	eq(scene.G.dir, (dir0 + 2) % 4)
+	scene.meet("slime")
+	await _pump(800.0)
+	scene._input(_key(KEY_DOWN, 0, true)) # a held key does not repeat on the menus
+	eq(scene.G.sel, 0)
+	scene._input(_key(KEY_DOWN))
+	eq(scene.G.sel, 1)
+	scene._input(_key(KEY_2, 50)) # ACT
+	eq(scene.G.mode, "act")
+
+
+func test_escape_in_the_typed_line_goes_back_to_the_acts_and_enter_says_it():
+	_start("snake")
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("5")
+	eq(scene.G.mode, "talk")
+	scene._on_talk_gui_input(_key(KEY_ESCAPE))
+	eq(scene.G.mode, "act")
+	ok(not scene._talk.visible)
+	scene.on_key("5")
+	scene._talk_in.text = "you have such beautiful scales"
+	scene._talk_in.text_submitted.emit(scene._talk_in.text)
+	ok(scene.G.foe.spoke)
+	ok(scene.last_say.contains("You say \"you have such beautiful scales\"."), scene.last_say)
+
+
+func test_escape_on_the_title_and_the_route_screen_goes_back_when_there_is_a_main_scene():
+	scene = SCENE.instantiate()
+	scene.clock_override = 1000.0
+	_tree().root.add_child(scene)
+	scene.set_process(false)
+	if ResourceLoader.exists(scene.MAIN_SCENE):
+		return # changing scenes would pull the test runner's tree apart: it is checked by hand
+	scene.on_key("Escape")
+	eq(scene.G.mode, "explore", "no main scene: Esc is just a key")
+
+
+func test_with_the_real_sfx_the_fight_makes_its_sounds():
+	Flags.override = "" # sound on
+	_start("rock")
+	ok(scene.sfx is Node, "the effects live under the scene")
+	ok(scene.sfx.running, "audio is up from the first key")
+	scene.sfx.log_plays = true
+	await _pump(800.0)
+	scene.on_key("1")
+	await _pump(400.0)
+	scene.on_key("Enter") # a strike
+	await _pump(1000.0)
+	scene.start_dodge(1.0)
+	await _pump(3000.0) # the stomps tick on the beat
+	var names := []
+	for p in scene.sfx.plays:
+		names.append(p.name)
+	ok(names.has("tick"), str(names))
+	ok(names.has("hit") or names.has("crit") or names.has("miss"), str(names))
+	ok(scene.sfx.stats.played > 0)

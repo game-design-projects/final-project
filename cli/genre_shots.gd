@@ -1,21 +1,27 @@
 ## Screenshots of the Genre Halls scene, to look at: the maze view with a monster down the corridor, the command box,
 ## each faction's dodge box (goo rain, chess, lantern/shadow, rhythm stomps), the mind panel, the strike bar, the
 ## typed line, a route screen. Opens a window briefly (not headless):
-##   godot --path . -s res://cli/genre_shots.gd [-- out=/some/dir]
+##   godot --path . -s res://cli/genre_shots.gd [-- out=/some/dir] [sound]
+## Silent unless `sound` is given.
 extends SceneTree
 
 const J = preload("res://src/core/js.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
 const Render = preload("res://src/view/render.gd")
+const Flags = preload("res://src/core/flags.gd")
 
 var out_dir := "/private/tmp/claude-501/-private-tmp-temp/9a270d88-2fcd-474a-8038-3c1a423642ac/scratchpad/genre/"
 var scene: Control
 
 
 func _initialize() -> void:
+	var sound := false
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("out="):
 			out_dir = a.trim_prefix("out=").path_join("")
+		elif a == "sound":
+			sound = true
+	Flags.override = "" if sound else "nosound"
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	# A window behind other windows throttles its frames on macOS: keep it in front and off vsync
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -148,6 +154,8 @@ func _run() -> void:
 	scene.start_dodge(1.0)
 	await _secs(1.2)
 	await _shot("14-allies-dodge")
+	scene.D = null
+	scene.explore()
 	scene.G.tally = {"spared": 2, "slain": 1, "fled": 1, "recruited": 3, "left": 1}
 	scene.ending()
 	await _secs(0.3)

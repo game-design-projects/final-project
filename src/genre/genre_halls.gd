@@ -21,6 +21,7 @@ const Canvas2D = preload("res://src/view/canvas2d.gd")
 const Render = preload("res://src/view/render.gd")
 const Art = preload("res://src/view/art.gd")
 const Postfx = preload("res://src/view/postfx.gd")
+const SfxModule = preload("res://src/audio/sfx.gd")
 const Species = preload("res://src/rules/species.gd")
 const Emotions = preload("res://src/rules/emotions.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
@@ -120,6 +121,8 @@ func _ready() -> void:
 	_bold = heavy
 	_build_ui()
 	sfx = _make_sfx()
+	if not OS.has_feature("web"):
+		_sfx_init() # browsers keep audio locked until the first key press (on_key calls it again)
 	_attach_postfx()
 	render_party()
 	say(sys("DONJON's dungeon, with Undertale-style encounters: every faction attacks in its own genre. Press any key or tap the view to start."))
@@ -143,7 +146,7 @@ func _process(_delta: float) -> void:
 		_map_canvas.queue_redraw()
 
 
-# ---------------------------------------------------------------- soft dependencies (audio, post effects)
+# ---------------------------------------------------------------- audio and post effects
 
 class NullSfx:
 	extends RefCounted
@@ -159,24 +162,12 @@ class NullSfx:
 		pass
 
 
-static func _soft(path: String):
-	return load(path) if ResourceLoader.exists(path) else null
-
-
+## The effects (src/audio/sfx.gd) live under this node; `nosound` plays silent (tests, tools)
 func _make_sfx():
 	if Flags.test("nosound|nosfx"):
 		return NullSfx.new()
-	var scr = _soft("res://src/audio/sfx.gd")
-	if scr == null:
-		push_warning("genre halls: src/audio/sfx.gd is missing, playing silent")
-		return NullSfx.new()
-	var cls = scr.get_script_constant_map().get("Sfx")
-	if cls == null:
-		push_warning("genre halls: sfx.gd has no Sfx class, playing silent")
-		return NullSfx.new()
-	var s = cls.new(0.5)
-	if s is Node:
-		add_child(s)
+	var s = SfxModule.Sfx.new(0.5)
+	add_child(s)
 	return s
 
 
@@ -1659,6 +1650,12 @@ func _build_ui() -> void:
 	aside.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	aside.size_flags_vertical = Control.SIZE_FILL
 	wrap.add_child(aside)
+	var vbar := aside.get_v_scroll_bar()
+	vbar.custom_minimum_size = Vector2(8, 0)
+	vbar.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
+	vbar.add_theme_stylebox_override("scroll_focus", StyleBoxEmpty.new())
+	for grab in ["grabber", "grabber_highlight", "grabber_pressed"]:
+		vbar.add_theme_stylebox_override(grab, _style(C_FAINT if grab == "grabber" else C_DIM, C_FAINT, 0))
 	var side := VBoxContainer.new()
 	side.add_theme_constant_override("separation", 12)
 	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1770,6 +1767,7 @@ class MenuItem:
 
 	func _init() -> void:
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		mouse_entered.connect(func(): hover = true; queue_redraw())
 		mouse_exited.connect(func(): hover = false; queue_redraw())
 
