@@ -1,0 +1,20 @@
+DONJON: CREDITS
+
+Monster AI: Jev, the System One model by TypeSafe (https://typesafe.ai)
+
+Music (assets/audio/ambient.ogg, battle-*.ogg, fanfare.ogg, victory.ogg)
+- Original music made for this game, on the game's own melody. Rendered offline by
+  tools/music/build-ambient.py, build-battle.py and build-stings.py (the sampler is tools/music/sampler.py)
+  and encoded to Ogg Vorbis by tools/music/to_ogg.sh.
+- Instruments: harpsichord, church organ, string ensemble, choir aahs, music box and tubular bells
+  samples from the MusyngKite soundfont, via gleitz/midi-js-soundfonts. CC BY-SA 3.0:
+  https://creativecommons.org/licenses/by-sa/3.0/
+- Kettle drums and tabor: synthesised in tools/music/sampler.py, no samples.
+
+Sound effects: synthesised when the game starts (src/audio/sfx.gd, src/audio/synth.gd), no samples.
+
+Rules inspired by the Dungeons & Dragons 5th Edition System Reference Document.
+
+Fonts (assets/fonts/):
+- Press Start 2P, copyright 2012 The Press Start 2P Project Authors (SIL Open Font License 1.1): OFL-PressStart2P.txt
+- VT323, copyright 2011 The VT323 Project Authors (SIL Open Font License 1.1): OFL-VT323.txt
