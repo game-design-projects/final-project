@@ -15,15 +15,15 @@ export const TRACKS = {
   // The renders are mastered to -19 dBFS RMS (explore) and -17 dBFS RMS (fights and stings). These
   // volumes put a fight at about -19.5 dB, as loud against the sound effects as the music it replaced,
   // and the exploring music about 2.6 dB under it.
-  explore: { url: "ambient.m4a", loopSeconds: 112.5, volume: 0.7 }, // 40 bars of 3/4 at 64 BPM
+  explore: { url: "ambient.m4a", bpm: 64, loopSeconds: 112.5, volume: 0.7 }, // 40 bars of 3/4 at 64 BPM
   battle: {
     volume: 0.75,
     // 16 bars of 4/4 at each tempo: 3840 / BPM seconds
     variants: [
-      { name: "toccata", url: "battle-toccata.m4a", loopSeconds: 3840 / 132 },
-      { name: "charge", url: "battle-charge.m4a", loopSeconds: 3840 / 126 },
-      { name: "crusade", url: "battle-crusade.m4a", loopSeconds: 3840 / 112 },
-      { name: "gallop", url: "battle-gallop.m4a", loopSeconds: 3840 / 120 },
+      { name: "toccata", url: "battle-toccata.m4a", bpm: 132, loopSeconds: 3840 / 132 },
+      { name: "charge", url: "battle-charge.m4a", bpm: 126, loopSeconds: 3840 / 126 },
+      { name: "crusade", url: "battle-crusade.m4a", bpm: 112, loopSeconds: 3840 / 112 },
+      { name: "gallop", url: "battle-gallop.m4a", bpm: 120, loopSeconds: 3840 / 120 },
     ],
   },
 };
@@ -61,6 +61,26 @@ export class Ambient {
     this.lastBattle = null;
   }
 
+  // Play through a context the effects share (mix.js), into `destination`. Call before start(). The music then
+  // switches off by muting itself, since suspending the context would silence the effects too.
+  attach(ctx, destination) {
+    this.ctx = ctx;
+    this.shared = true;
+    this.master = ctx.createGain(); // speech ducking (duck)
+    this.mute = ctx.createGain(); // the P switch
+    this.mute.gain.setValueAtTime(0, ctx.currentTime);
+    this.master.connect(this.mute);
+    this.mute.connect(destination);
+  }
+
+  setMuted(muted) {
+    const g = this.mute.gain;
+    const now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(muted ? 0 : 1, now + 0.12);
+  }
+
   // Must be called from a user gesture (browsers block audio otherwise).
   async start() {
     if (!this.ctx) {
@@ -71,6 +91,7 @@ export class Ambient {
     // Resume right away, while still inside the click/keypress (Safari refuses after an await)
     const resumed = this.ctx.resume();
     this.on = true;
+    if (this.shared) this.setMuted(false);
     // Load the ambient first so it starts quickly; the rest load behind it
     this.loading ??= this.load("explore").then(() => {
       if (this.mood === "explore") this.exploreIn(FIRST_FADE_IN);
@@ -79,7 +100,7 @@ export class Ambient {
       for (const name of rest) this.load(name).catch((err) => console.warn(`music: ${name}`, err));
     });
     await Promise.all([this.loading, resumed]);
-    if (!this.on) this.ctx.suspend(); // switched off while the track was still downloading
+    if (!this.on) this.silence(); // switched off while the track was still downloading
   }
 
   // name: "explore", "battle:<variant>", or a sting
@@ -144,7 +165,7 @@ export class Ambient {
     }
     console.debug(`music: battle loop ${v.name}`);
     this.fadeOut("battle", fade); // a loop still fading from the last fight, if any
-    this.startLoop("battle", this.buffers[key], v.loopSeconds, this.tracks.battle.volume, fade);
+    this.startLoop("battle", this.buffers[key], v.loopSeconds, this.tracks.battle.volume, fade, v.bpm);
   }
 
   // ---- the explore rhythm: play a stretch, rest a stretch
@@ -184,11 +205,11 @@ export class Ambient {
   // The ambient keeps its place while silent and comes back from there
   play(track, fade) {
     if (!this.buffers[track]) return;
-    const { volume, loopSeconds } = this.tracks[track];
-    this.startLoop(track, this.buffers[track], loopSeconds, volume, fade);
+    const { volume, loopSeconds, bpm } = this.tracks[track];
+    this.startLoop(track, this.buffers[track], loopSeconds, volume, fade, bpm);
   }
 
-  startLoop(track, buffer, loopSeconds, volume, fade) {
+  startLoop(track, buffer, loopSeconds, volume, fade, bpm) {
     const now = this.ctx.currentTime;
     let v = this.voices[track];
     if (!v) {
@@ -202,7 +223,8 @@ export class Ambient {
       src.loopEnd = LOOP_START + loopSeconds;
       src.connect(gain);
       src.start(now, LOOP_START);
-      v = this.voices[track] = { src, gain };
+      // Beat k of the loop sounds at origin + k * 60 / bpm (the loop is whole bars, so the grid survives the wrap)
+      v = this.voices[track] = { src, gain, bpm, origin: now - LOOP_START };
     }
     v.gain.gain.cancelScheduledValues(now);
     v.gain.gain.setValueAtTime(v.gain.gain.value, now);
@@ -233,9 +255,21 @@ export class Ambient {
     g.linearRampToValueAtTime(on ? DUCK.level : 1, now + (on ? DUCK.down : DUCK.up));
   }
 
+  // The beat grid of what is playing, for anything that should land on the music's beat (the heartbeat):
+  // { bpm, origin } with a beat on `origin`, or null when no loop is running.
+  beatClock() {
+    const v = this.voices[this.mood === "battle" ? "battle" : "explore"];
+    return v?.bpm ? { bpm: v.bpm, origin: v.origin } : null;
+  }
+
   stop() {
     this.on = false;
-    this.ctx?.suspend();
+    this.silence();
+  }
+
+  silence() {
+    if (this.shared) this.setMuted(true);
+    else this.ctx?.suspend();
   }
 
   toggle() {

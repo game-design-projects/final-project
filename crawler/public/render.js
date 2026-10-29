@@ -263,31 +263,44 @@ function paintStairs(ctx, W, H, { d, k }, palette) {
   ctx.restore();
 }
 
-// Draws the view from (x,y) facing dir. Returns the floor cells you can see (for the automap).
-// `t` animates torch flames.
-const seenCache = new WeakMap();
-export function drawCorridor(ctx, map, x, y, dir, t = 0) {
+// A decoration, if this wall face (wall cell seen from floor cell) has one
+function decorFor(map, [wx, wy], [cx, cy]) {
+  const r = hash(wx, wy, cx, cy, map.seed ?? 0);
+  return r < 0.32 ? { kind: DECOR[Math.floor(hash(wy, wx, map.seed ?? 0, 7) * DECOR.length)], seed: r } : null;
+}
+
+// The corridor only changes when you move or turn. In between, only torch flames move, and they flicker at
+// FLAME_FPS. So the view is painted into a cached layer once per step (and once per flame frame while a torch is
+// in sight), and every other frame just copies that layer: one drawImage instead of every face, gradient and path.
+export const FLAME_FPS = 24;
+const layers = new WeakMap(); // map -> its layer: { canvas, pos, faces, decor, torches, cells, key }
+const newLayer = (W, H) =>
+  typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(W, H) : typeof document !== "undefined" ? Object.assign(document.createElement("canvas"), { width: W, height: H }) : null;
+
+// The layer's cache key at time t: where you stand, and the flame frame only if a flame is in sight
+export const layerKey = (pos, torches, t) => `${pos}|${torches ? Math.floor((t * FLAME_FPS) / 1000) : "-"}`;
+
+// What you see from (x, y) facing dir, worked out once per position: faces in painting order, their
+// decorations, whether a torch is among them, and the floor cells in view (for the automap).
+export function corridorView(map, x, y, dir) {
+  const faces = corridorFaces(map, x, y, dir);
+  const decor = faces.map((f) => (f.type === "stairs" ? null : decorFor(map, f.wall, f.from)));
+  return { faces, decor, torches: decor.some((d) => d?.kind === "torch"), cells: visibleCells(map, x, y, dir) };
+}
+
+function paintCorridor(ctx, map, view, t) {
   const { width: W, height: H } = ctx.canvas;
   const palette = map.palette ?? PALETTES[0];
   clear(ctx);
-  // A decoration, if this wall face (wall cell seen from floor cell) has one
-  const decorFor = ([wx, wy], [cx, cy]) => {
-    const r = hash(wx, wy, cx, cy, map.seed ?? 0);
-    return r < 0.32 ? { kind: DECOR[Math.floor(hash(wy, wx, map.seed ?? 0, 7) * DECOR.length)], seed: r } : null;
-  };
-
   ctx.save();
   ctx.beginPath();
   ctx.rect(4, 4, W - 8, H - 8);
   ctx.clip();
-  for (const face of corridorFaces(map, x, y, dir)) {
-    if (face.type === "stairs") {
-      paintStairs(ctx, W, H, face, palette);
-      continue;
-    }
+  view.faces.forEach((face, i) => {
+    if (face.type === "stairs") return paintStairs(ctx, W, H, face, palette);
     const P = paintFace(ctx, W, H, face, palette);
-    const dec = decorFor(face.wall, face.from);
-    if (!dec) continue;
+    const dec = view.decor[i];
+    if (!dec) return;
     // Decorations go on with their wall, so nearer walls still cover them, and stay inside it (a torch's glow
     // must not leak around the corner of the wall that hides it)
     ctx.save();
@@ -297,17 +310,33 @@ export function drawCorridor(ctx, map, x, y, dir, t = 0) {
     ctx.lineWidth = face.d >= 2 ? 1 : 1.5;
     decorate(ctx, P, dec.kind, t, palette, dec.seed);
     ctx.restore();
-  }
+  });
   ctx.restore();
-
   ctx.strokeStyle = palette.wall;
   ctx.lineWidth = 2;
   ctx.strokeRect(4.5, 4.5, W - 8, H - 8);
+}
 
-  const key = `${x},${y},${dir}`;
-  let cached = seenCache.get(map);
-  if (cached?.key !== key) seenCache.set(map, (cached = { key, cells: visibleCells(map, x, y, dir) }));
-  return cached.cells;
+// Draws the view from (x,y) facing dir. Returns the floor cells you can see (for the automap).
+// `t` animates torch flames.
+export function drawCorridor(ctx, map, x, y, dir, t = 0) {
+  const { width: W, height: H } = ctx.canvas;
+  let L = layers.get(map);
+  if (!L) layers.set(map, (L = { canvas: newLayer(W, H), pos: null, key: null }));
+  const pos = `${x},${y},${dir},${W}x${H}`;
+  if (L.pos !== pos) Object.assign(L, corridorView(map, x, y, dir), { pos, key: null });
+  const key = layerKey(pos, L.torches, t);
+  const flameT = (Math.floor((t * FLAME_FPS) / 1000) * 1000) / FLAME_FPS;
+  if (!L.canvas) {
+    paintCorridor(ctx, map, L, flameT); // nowhere to cache (no canvas support): paint straight in
+    return L.cells;
+  }
+  if (L.key !== key) {
+    L.key = key;
+    paintCorridor(L.canvas.getContext("2d"), map, L, flameT);
+  }
+  ctx.drawImage(L.canvas, 0, 0);
+  return L.cells;
 }
 
 // The walls you have seen, as edges of seen floor cells: [x, y, side] with side 0..3 = N E S W.

@@ -18,17 +18,44 @@ const FORMANT_GAIN = [1, 0.6, 0.3];
 const VOICE_GAIN = 3; // narrow band-pass filters take most of the buzz out; this puts voices on par with the other effects
 const NOISE_VOICE = 4; // ...and white noise loses even more through them
 
+// Sounds you hear over and over get a little different each time: a random detune up to ± `cents` and a
+// volume up to ± `gain`, so ten sword hits in a row sound like ten hits, not one sample on repeat.
+export const VARY = {
+  hit: { cents: 110, gain: 0.12 },
+  crit: { cents: 50, gain: 0.08 },
+  miss: { cents: 180, gain: 0.15 },
+  hurt: { cents: 90, gain: 0.12 },
+  kill: { cents: 70, gain: 0.08 },
+  bump: { cents: 140, gain: 0.15 },
+  slash: { cents: 100, gain: 0.1 },
+  gold: { cents: 60, gain: 0.1 },
+  tick: { cents: 40, gain: 0.1 },
+  stairs: { cents: 50, gain: 0.08 },
+  heartbeat: { cents: 30, gain: 0.05 },
+};
+// Voice limit: at most this many copies of one sound may start within POLY_WINDOW seconds of each other
+// (QUICK ATTACK can land six hits at once). The rest are dropped, and the ones that play are each a little
+// quieter, so a pile-up sounds bigger without clipping.
+export const POLY = { default: 4, hit: 3, crit: 2, miss: 2, hurt: 2, kill: 2, dice: 1, tick: 1, bump: 1, heartbeat: 1 };
+export const POLY_WINDOW = 0.06;
+
 export class Sfx {
-  constructor(volume = 0.55) {
+  constructor(volume = 0.55, { random = Math.random } = {}) {
     this.volume = volume;
+    this.random = random;
     this.ctx = null;
     this.on = true;
     this.lag = 0; // seconds: sounds played right now wait this long (a die's result lands with the die)
     this.lastShout = new Map();
+    this.rate = 1; // pitch and volume for the sound being built right now (VARY)
+    this.gainMul = 1;
+    this.recent = new Map(); // sound name -> start times, for the voice limit
+    this.stats = { played: 0, dropped: 0 };
   }
 
-  // Call from a key press or click (browsers block audio otherwise). A test can pass its own context.
-  init(ctx) {
+  // Call from a key press or click (browsers block audio otherwise). Pass the shared context and the mixer's
+  // effects bus (mix.js) to share a clock with the music; a test can pass its own context.
+  init(ctx, destination) {
     if (!this.ctx) {
       this.ctx = ctx ?? new AudioContext();
       this.out = this.ctx.createGain();
@@ -36,7 +63,7 @@ export class Sfx {
       const comp = this.ctx.createDynamicsCompressor();
       comp.threshold.value = -14;
       comp.ratio.value = 4;
-      this.out.connect(comp).connect(this.ctx.destination);
+      this.out.connect(comp).connect(destination ?? this.ctx.destination);
       // A short room, so effects sit in the dungeon instead of in your ear
       this.room = this.ctx.createConvolver();
       this.room.buffer = this.impulse(1.1, 3);
@@ -63,11 +90,25 @@ export class Sfx {
   }
 
   play(name, opt = {}) {
-    if (!this.on || !this.ctx || this.ctx.state !== "running") return;
+    if (!this.on || !this.ctx || this.ctx.state !== "running" || !SOUNDS[name]) return;
+    const at = this.ctx.currentTime + 0.01 + (opt.delay ?? this.lag);
+    const near = (this.recent.get(name) ?? []).filter((t) => Math.abs(t - at) < POLY_WINDOW);
+    if (near.length >= (POLY[name] ?? POLY.default)) {
+      this.stats.dropped++;
+      return;
+    }
+    this.recent.set(name, [...near, at]);
+    this.stats.played++;
+    const v = VARY[name];
+    this.rate = v ? 2 ** (((this.random() * 2 - 1) * v.cents) / 1200) : 1;
+    this.gainMul = (v ? 1 + (this.random() * 2 - 1) * v.gain : 1) / Math.sqrt(1 + near.length);
     try {
-      SOUNDS[name]?.(this, this.ctx.currentTime + 0.01 + (opt.delay ?? this.lag), opt);
+      SOUNDS[name](this, at, opt);
     } catch (err) {
       console.warn("sfx", name, err);
+    } finally {
+      this.rate = 1;
+      this.gainMul = 1;
     }
   }
 
@@ -114,6 +155,7 @@ export class Sfx {
   // A pitched tone gliding from f0 to f1, with a fast attack and exponential release.
   tone(at, { type = "sine", f0, f1 = f0, dur = 0.2, vol = 0.3, attack = 0.004, lp, room = 0.4, vibrato }) {
     const c = this.ctx;
+    [f0, f1, vol] = [f0 * this.rate, f1 * this.rate, vol * this.gainMul];
     const o = c.createOscillator();
     o.type = type;
     o.frequency.setValueAtTime(f0, at);
@@ -147,6 +189,7 @@ export class Sfx {
   // Filtered noise: hits, whooshes, fire, crackle.
   noise(at, { dur = 0.15, vol = 0.3, type = "bandpass", f0 = 1000, f1 = f0, q = 1, attack = 0.002, room = 0.4 }) {
     const c = this.ctx;
+    [f0, f1, vol] = [f0 * this.rate, f1 * this.rate, vol * this.gainMul];
     const src = c.createBufferSource();
     src.buffer = this.noiseBuf;
     src.loop = true;
@@ -475,6 +518,14 @@ const SOUNDS = {
   },
   bump(s, t) {
     s.tone(t, { f0: 90, f1: 60, dur: 0.12, vol: 0.4, room: 0.2 });
+  },
+  // Your own pulse when the party is in danger (mix.js schedules it on the music's beat): lub-dub, felt more than heard.
+  // o.level 0..1 scales it with the danger.
+  heartbeat(s, t, o = {}) {
+    const level = Math.max(0, Math.min(1, o.level ?? 1));
+    s.tone(t, { f0: 62, f1: 38, dur: 0.16, vol: 0.5 * level, attack: 0.006, room: 0.05 });
+    s.tone(t + 0.17, { f0: 55, f1: 34, dur: 0.2, vol: 0.34 * level, attack: 0.006, room: 0.05 });
+    s.noise(t, { dur: 0.05, vol: 0.05 * level, type: "lowpass", f0: 220, f1: 80, room: 0 });
   },
   stairs(s, t) {
     for (let i = 0; i < 4; i++) s.tone(t + i * 0.13, { f0: 120 - i * 12, f1: 70 - i * 6, dur: 0.1, vol: 0.3, room: 0.5 });
