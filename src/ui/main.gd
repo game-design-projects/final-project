@@ -132,6 +132,22 @@ func _ready() -> void:
 	print_verbose("ui ready: debug %s, postfx %s%s" % ["on" if debug else "off", "on" if post != null else "off (plain view)", ", reduced motion" if reduced_motion else ""])
 
 
+## Leaving (a new scene, quitting): the sound stops first, so no player is freed mid-stream
+func _exit_tree() -> void:
+	for n in [music, sfx, narrator]:
+		if n != null and is_instance_valid(n):
+			_stop_players(n)
+	if narrator != null and is_instance_valid(narrator):
+		narrator.hush()
+
+
+static func _stop_players(n: Node) -> void:
+	for c in n.get_children():
+		if c is AudioStreamPlayer:
+			(c as AudioStreamPlayer).stop()
+		_stop_players(c)
+
+
 static func _prefers_reduced_motion() -> bool:
 	if OS.has_feature("web") and Engine.has_singleton("JavaScriptBridge"):
 		var r = JavaScriptBridge.eval("!!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)", true)

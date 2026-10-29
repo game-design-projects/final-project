@@ -585,7 +585,7 @@ class JsonSection:
 		rtl = RichTextLabel.new()
 		rtl.bbcode_enabled = true
 		rtl.scroll_active = true
-		rtl.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
+		rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		rtl.selection_enabled = true
 		rtl.focus_mode = Control.FOCUS_NONE
 		rtl.add_theme_font_override("normal_font", Css.vt())

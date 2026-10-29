@@ -54,6 +54,26 @@ static func _font(path: String) -> FontFile:
 	return _fonts[path]
 
 
+## Press Start 2P below its 8px design size loses whole strokes without antialiasing ("Y" turns into "V"):
+## smaller text is drawn with a grayscale-antialiased copy, as the browser draws it
+static func _small_ps() -> FontFile:
+	if not _fonts.has("ps-small"):
+		var f: FontFile = (load(PS_PATH) as FontFile).duplicate()
+		f.hinting = TextServer.HINTING_NONE
+		f.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
+		f.generate_mipmaps = false
+		f.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		_fonts["ps-small"] = f
+	return _fonts["ps-small"]
+
+
+## The font to draw `font` with at `size`
+static func face(font: Font, size: int) -> Font:
+	if size < 8 and font == _fonts.get(PS_PATH):
+		return _small_ps()
+	return font
+
+
 static func _apply_aa(f: FontFile, path: String) -> void:
 	# VT323 reads like the page with soft edges at any size; Press Start 2P stays crisp unless the scale is fractional
 	var aa := _fractional or path == VT_PATH
@@ -67,8 +87,9 @@ static func set_scale(s: float) -> void:
 		return
 	_fractional = frac
 	print_verbose("ui fonts: %s at scale %.3f" % ["antialiased" if frac else "crisp", s])
-	for path in _fonts:
-		_apply_aa(_fonts[path], path)
+	for path in [PS_PATH, VT_PATH]:
+		if _fonts.has(path):
+			_apply_aa(_fonts[path], path)
 
 
 ## A CSS colour string (or Color) as a Color
@@ -121,6 +142,7 @@ static func baseline(font: Font, size: int, top: float, h: float) -> float:
 static func text(ci: CanvasItem, font: Font, size: int, x: float, top: float, s: String, color: Color, h := 0.0) -> float:
 	if s == "":
 		return 0.0
+	font = face(font, size)
 	var lh := h if h > 0.0 else font.get_height(size)
 	var base := Vector2(roundf(x), roundf(baseline(font, size, top, lh)))
 	if s.ends_with(ELLIPSIS) and not font.has_char(0x2026):

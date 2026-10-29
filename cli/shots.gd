@@ -100,6 +100,15 @@ func _game():
 	return main.game
 
 
+## Moves the mouse to `at` in `w`'s coordinates
+func _hover(w: Control, at: Vector2) -> void:
+	var ev := InputEventMouseMotion.new()
+	ev.position = w.get_global_transform() * at
+	ev.global_position = ev.position
+	Input.parse_input_event(ev)
+	await _frames(2)
+
+
 ## Wait until `cond` holds (or `secs` pass)
 func _until(cond: Callable, secs := 10.0) -> bool:
 	var t0 := Time.get_ticks_msec()
@@ -175,7 +184,18 @@ func _run() -> void:
 		await _secs(0.3)
 		await _shot("07-talk")
 		await _press(KEY_ESCAPE)
-	await _shot("08-jev-mind")
+	# the vow ledger: one kept, one just broken (the slash sweeps across it)
+	_game().G.vows = [
+		{"id": "v90", "will": false, "verb": "kill", "target": "slime", "text": "I WON'T KILL SLIMES", "toId": "x", "toName": "Glop", "toSpecies": "slime", "status": "active", "floor": 1},
+		{"id": "v91", "will": true, "verb": "talk", "target": "goblin", "text": "I WILL TALK TO GOBLINS", "toId": "y", "toName": "Slink", "toSpecies": "goblin", "status": "broken", "fresh": true, "justBroken": true, "floor": 1},
+	]
+	_game().render()
+	await _secs(0.9)
+	await _shot("08-jev-mind-vows")
+	await _hover(main.party, Vector2(120, 22))
+	await _secs(0.5)
+	await _shot("08b-tooltip")
+	await _hover(main.party, Vector2(-400, -400))
 
 	main.jev_tab("requests")
 	await _frames(3)
@@ -215,6 +235,16 @@ func _run() -> void:
 	_face_long_corridor()
 	await _secs(1.6)
 	await _shot("12-tip")
+	_game().debug_lesson()
+	await _until(func(): return _game().G.combat != null and not _game().G.busy, 10.0)
+	await _secs(1.8)
+	await _shot("12b-lesson")
+	await _letter("f")
+	await _secs(0.4)
+	await _shot("12c-lesson-nudge")
+	_game().G.combat = null
+	_game().G.mode = "explore"
+	_game().render()
 
 	_game().debug_roll()
 	await _secs(0.8)
