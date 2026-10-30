@@ -15,7 +15,7 @@ func before_each():
 
 
 func after_each():
-	Jev.configure_jev(null)
+	Jev.configure_jev()
 
 
 static func full(v) -> String:
@@ -42,7 +42,7 @@ func test_every_scenario_asks_jev_exactly_what_the_js_asked():
 	for f in names:
 		var golden = JSON.parse_string(FileAccess.get_file_as_string(DIR.path_join(f)))
 		var server := MockJev.Server.new(1)
-		Jev.configure_jev("k", {"transport": server})
+		Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": server})
 		var r: Dictionary = await JevApi.handle(golden["path"], golden["body"])
 		eq(r["status"], 200, "%s: %s" % [f, r["body"]])
 		eq(server.calls.size(), 1, "%s: one Jev call" % f)
@@ -50,7 +50,7 @@ func test_every_scenario_asks_jev_exactly_what_the_js_asked():
 			continue
 		var want: Dictionary = golden["request"]
 		var got: Dictionary = server.calls[0]
-		eq(got["model"], want["model"], f)
+		eq(got["model"], "decider", "%s: the model is the provider's; the fixtures recorded Jev's" % f)
 		var d := first_difference(full(want["state"]), full(got["state"]))
 		ok(d == "", "%s state %s" % [f, d])
 		d = first_difference(full(want["questions"]), full(got["questions"]))

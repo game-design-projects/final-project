@@ -1,13 +1,11 @@
-# The game's API end to end against the mock Jev (no key, no credits): every endpoint answers, debug mode returns each
-# raw Jev call, and the key never shows. Ported from crawler/test/api.test.js, plus the sanitisers and error paths.
+# The game's API end to end against the mock model: every endpoint answers and debug mode returns each raw model call.
+# Ported from crawler/test/api.test.js, plus the sanitisers and error paths.
 extends "res://tests/test_case.gd"
 
 const JevApi = preload("res://src/jev/api.gd")
 const Jev = preload("res://src/jev/jev.gd")
 const MockJev = preload("res://src/jev/mock_jev.gd")
 const Species = preload("res://src/rules/species.gd")
-
-const KEY := "test-key-never-shown"
 
 var fake: MockJev.Server
 
@@ -20,11 +18,11 @@ const PARTY := [
 func before_each():
 	seed(7)
 	fake = MockJev.Server.new(42)
-	Jev.configure_jev(KEY, {"transport": fake})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": fake})
 
 
 func after_each():
-	Jev.configure_jev(null)
+	Jev.configure_jev()
 
 
 static func mon(id: String, species: String, name: String) -> Dictionary:
@@ -67,19 +65,17 @@ func test_debug_mode_returns_every_raw_jev_call_and_never_the_key():
 			ok(c.has("state") and c.has("questions") and c.get("response", {}).has("answers"), "request and response both recorded")
 			eq(c["status"], 200)
 			ok(c["ms"] >= 0)
-			eq(c["model"], "jev-latest")
-		ok(not JSON.stringify(r["body"]).contains(KEY), "the API key must never be in a response")
+			eq(c["model"], "decider")
 
 
-func test_with_an_openrouter_key_jev_is_reached_through_openrouter():
-	Jev.configure_jev("or-test-key", {"via": "openrouter", "transport": fake})
+func test_the_local_model_is_reached_the_same_way():
+	Jev.configure_jev({"via": "local", "transport": fake})
 	var before := fake.calls.size()
 	var r: Dictionary = await JevApi.handle("/api/vow", endpoints()["/api/vow"], {"debug": true})
 	eq(r["status"], 200)
-	eq(fake.calls[-1]["model"], "~typesafe/jev-latest")
-	eq(r["body"]["_debug"]["jev"][0]["via"], "openrouter")
+	eq(fake.calls[-1]["model"], "decider")
+	eq(r["body"]["_debug"]["jev"][0]["via"], "local")
 	ok(fake.calls.size() > before)
-	ok(not JSON.stringify(r["body"]).contains("or-test-key"))
 
 
 func test_the_request_body_is_never_modified():
@@ -154,18 +150,17 @@ func test_gold_and_delivery_arrive_as_clean_numbers():
 
 
 func test_a_jev_failure_is_a_500_server_error_with_the_trace_in_debug_mode():
-	Jev.configure_jev(KEY, {"transport": FailingJev.new(503)})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": FailingJev.new(500)})
 	var r: Dictionary = await JevApi.handle("/api/vow", endpoints()["/api/vow"])
 	eq([r["status"], r["body"]], [500, {"error": "Server error"}])
 	r = await JevApi.handle("/api/vow", endpoints()["/api/vow"], {"debug": true})
 	eq(r["status"], 500)
-	eq(r["body"]["_debug"]["jev"][0]["status"], 503)
+	eq(r["body"]["_debug"]["jev"][0]["status"], 500)
 	ok(r["body"]["_debug"]["jev"][0]["error"].contains("down for lunch"))
-	ok(not JSON.stringify(r["body"]).contains(KEY))
 
 
 func test_a_reply_missing_the_answers_the_rules_need_is_a_500_not_a_crash():
-	Jev.configure_jev(KEY, {"transport": EmptyJev.new()})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": EmptyJev.new()})
 	for path in ["/api/group-turn", "/api/ally-reactions", "/api/ally-talk", "/api/vow", "/api/vow-broken"]:
 		var r: Dictionary = await JevApi.handle(path, endpoints()[path])
 		eq(r["status"], 500, path)

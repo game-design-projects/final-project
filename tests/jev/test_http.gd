@@ -8,8 +8,8 @@ const J = preload("res://src/core/js.gd")
 
 
 func after_each():
-	Jev.configure_jev(null)
-	Jev.timeout_s = 10.0
+	Jev.configure_jev()
+	Jev.timeout_s = 300.0
 	Jev.backoff_ms = 400
 
 
@@ -99,9 +99,7 @@ func ok_body() -> String:
 
 func test_a_real_request_carries_the_headers_and_the_body_in_order_and_parses_the_reply():
 	var server := Server.new([{"status": 200, "body": ok_body()}])
-	# the OpenRouter shape (key, x-title, model) pointed at the local server
-	Jev.configure_jev("wire-key", {"via": "openrouter"})
-	Jev.provider = Jev.provider.merged({"url": "http://127.0.0.1:%d/v1/decisions" % server.port}, true)
+	Jev.configure_jev({"via": "systemone", "api_base": "http://127.0.0.1:%d" % server.port})
 	var questions := {"zeta": Q.noul("last?"), "alpha": Q.choice("first?", {"b": "B", "a": "A"})}
 	var trace := []
 	var r := await Jev.jev({"who": "né – ≥"}, questions, trace)
@@ -111,12 +109,11 @@ func test_a_real_request_carries_the_headers_and_the_body_in_order_and_parses_th
 	eq(trace[0]["status"], 200)
 	eq(server.requests.size(), 1)
 	var req: Dictionary = server.requests[0]
-	eq(req["request_line"], "POST /v1/decisions HTTP/1.1")
-	eq(req["headers"]["authorization"], "Bearer wire-key")
-	eq(req["headers"]["x-title"], "Donjon")
+	eq(req["request_line"], "POST /v1/systemone HTTP/1.1")
+	ok(not req["headers"].has("authorization"), "no key goes out")
 	eq(req["headers"]["content-type"], "application/json")
 	var sent = JSON.parse_string(req["body"])
-	eq(sent["model"], "~typesafe/jev-latest")
+	eq(sent["model"], "decider")
 	eq(sent["state"]["who"], "né – ≥", "UTF-8 survives")
 	eq(sent["questions"].keys(), ["zeta", "alpha"], "question order is kept, not sorted")
 	eq(sent["questions"]["alpha"]["criteria"].keys(), ["b", "a"], "option order is kept, not sorted")
@@ -124,16 +121,16 @@ func test_a_real_request_carries_the_headers_and_the_body_in_order_and_parses_th
 
 func test_an_http_error_status_comes_back_as_an_error():
 	var server := Server.new([{"status": 401, "body": "{\"error\":\"bad key\"}"}])
-	Jev.configure_jev("k", {"via": "proxy", "api_base": "http://127.0.0.1:%d" % server.port})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://127.0.0.1:%d" % server.port})
 	var r := await Jev.jev({}, {"q": Q.noul("x")})
 	server.finish()
-	eq(r["error"], "Jev (Proxy) 401: {\"error\":\"bad key\"}")
+	eq(r["error"], "System One 401: {\"error\":\"bad key\"}")
 
 
 func test_a_429_over_the_wire_is_retried():
 	var server := Server.new([{"status": 429, "body": "slow"}, {"status": 200, "body": ok_body()}])
 	Jev.backoff_ms = 5
-	Jev.configure_jev("k", {"via": "proxy", "api_base": "http://127.0.0.1:%d" % server.port})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://127.0.0.1:%d" % server.port})
 	var trace := []
 	var r := await Jev.jev({}, {"q": Q.noul("x")}, trace)
 	server.finish()
@@ -145,7 +142,7 @@ func test_a_429_over_the_wire_is_retried():
 func test_a_server_that_never_answers_times_out():
 	var server := Server.new([], true)
 	Jev.timeout_s = 0.4
-	Jev.configure_jev("k", {"via": "proxy", "api_base": "http://127.0.0.1:%d" % server.port})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://127.0.0.1:%d" % server.port})
 	var trace := []
 	var t0 := Time.get_ticks_msec()
 	var r := await Jev.jev({}, {"q": Q.noul("x")}, trace)
@@ -163,7 +160,7 @@ func test_nothing_listening_is_an_error_not_a_hang():
 	while probe.listen(port, "127.0.0.1") != OK:
 		port += 1
 	probe.stop()
-	Jev.configure_jev("k", {"via": "proxy", "api_base": "http://127.0.0.1:%d" % port})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://127.0.0.1:%d" % port})
 	var r := await Jev.jev({}, {"q": Q.noul("x")})
 	# macOS reports a refused connection as a connection error, Linux as can't connect
 	ok(r.has("error") and (r["error"].contains("connection error") or r["error"].contains("can't connect")), str(r))

@@ -15,11 +15,11 @@ var fake: FakeJev
 
 func before_each():
 	seed(11)
-	Jev.configure_jev("test-key")
+	Jev.configure_jev()
 
 
 func after_each():
-	Jev.configure_jev(null)
+	Jev.configure_jev()
 
 
 static func emotion(id: String) -> Dictionary:
@@ -81,7 +81,7 @@ class FakeJev:
 
 func stub(overrides: Dictionary) -> void:
 	fake = FakeJev.new(overrides)
-	Jev.configure_jev("test-key", {"transport": fake})
+	Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": fake})
 
 
 static func mon(id: String, species: String, name: String, meters: Dictionary, extra := {}) -> Dictionary:

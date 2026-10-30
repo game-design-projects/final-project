@@ -196,7 +196,7 @@ func after_each():
 		game = null
 	Flags.override = null
 	JevConfig.reset()
-	Jev.configure_jev(null)
+	Jev.configure_jev()
 
 
 ## A game, started unless opts.start == false. opts: flags (the pretend address), store ({key: value}),
