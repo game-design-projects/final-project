@@ -4,7 +4,8 @@ files in assets/voices/<bank>/ with the manifest.json src/audio/tts_engines.gd's
 
 Each monster's voice is cloned from a Creative Commons recording (voices.json "refs", credited in
 assets/CREDITS.txt), then shaped a little (voices.json "shape": semitones and tempo, so a dragon rumbles and a slime
-squeaks), trimmed, loudness-normalised (EBU R128) and encoded to mono Ogg Vorbis.
+squeaks), trimmed, loudness-normalised (EBU R128) and encoded to mono Ogg Vorbis. voices.json "say" gives a bank's
+engine another spelling of a line it can't say as written (CosyVoice3 gives "Hmph." no sound at all).
 
     python3 tools/voices/render.py cosyvoice3 --python ~/tts/cosy/.venv/bin/python --model ~/tts/Fun-CosyVoice3-0.5B-2512 \
         --src ~/tts/CosyVoice
@@ -201,7 +202,8 @@ def main():
             plan.append((species, line, rel, raw))
             if args.force or not os.path.exists(raw):
                 os.makedirs(os.path.dirname(raw), exist_ok=True)
-                todo.append({"text": line["text"], "ref": os.path.join(HERE, ref["wav"]), "ref_text": ref["text"],
+                say = voices.get("say", {}).get(args.bank, {}).get(line["text"], line["text"])
+                todo.append({"text": say, "ref": os.path.join(HERE, ref["wav"]), "ref_text": ref["text"],
                              "out": raw, "species": species})
     log(f"{args.bank}: {len(plan)} lines, {len(todo)} to render")
     t0 = time.time()

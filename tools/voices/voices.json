@@ -92,5 +92,11 @@
    "semitones": 3,
    "tempo": 1.05
   }
+ },
+ "say": {
+  "_": "per bank: a line -> what the engine is given instead (a spelling it can say); the bank still files it under the line",
+  "cosyvoice3": {
+   "Hmph.": "Hmmmph."
+  }
  }
 }
