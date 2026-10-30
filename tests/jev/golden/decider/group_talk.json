@@ -1,0 +1,1497 @@
+{
+ "state_text": "{\"monsters\": {\"e0\": {\"name\": \"Grok\", \"kind\": \"huge brown goblin\", \"nature\": \"A huge, brown, greedy goblin. Boastful and crude, respects strength and loves shiny gold. Talks in rough, simple speech.\", \"traits\": [\"boastful\", \"greedy\"], \"likes\": [\"gold\", \"a good fight\", \"being praised for its strength\", \"crude jokes\"], \"dislikes\": [\"being ordered around\", \"insults about its smell or intelligence\", \"cheap offers\", \"cowards\"], \"health\": \"wounded\", \"mood\": {\"friendliness\": \"friendly\", \"anger\": \"calm\", \"fear\": \"unafraid\"}, \"side\": \"friendly with the party\", \"impressions\": [\"The party spoke kindly to you.\", \"The party told you a joke.\"], \"this_round\": [\"The party hit it for 3.\"], \"tribute\": \"not discussed\", \"kin_in_party\": \"none\", \"ready_to_join_party\": \"not yet: Grok doesn't like or trust this party enough to join them\", \"promises_party_made_to_it\": [\"\\\"i will give gold\\\" (pending)\"], \"grudges\": [\"Glop\"]}, \"e1\": {\"name\": \"Glop\", \"kind\": \"orange slime\", \"nature\": \"A simple slime with a blank, unblinking stare. Timidly speaks with an innocent aura.\", \"traits\": [\"shy\", \"hungry\"], \"likes\": [\"kindness\", \"jokes and silly noises\", \"peace\", \"being included\"], \"dislikes\": [\"violence against slimes\", \"cruelty to creatures begging for mercy\", \"being diluted in a body of water\"], \"health\": \"healthy\", \"mood\": {\"friendliness\": \"wary\", \"anger\": \"calm\", \"fear\": \"uneasy\"}, \"side\": \"undecided about the party\", \"impressions\": [\"No strong impressions of this party yet.\"], \"this_round\": [\"Nothing happened to it directly.\"], \"tribute\": \"it demanded tribute, not yet paid\", \"kin_in_party\": \"BLORBO, a orange slime like it, travels with this party\", \"ready_to_join_party\": \"not yet: Glop left this party once, and it would take a lot to win it back\", \"promises_party_made_to_it\": [\"\\\"i won't kill slimes\\\" (kept)\"], \"grudges\": []}, \"e2\": {\"name\": \"Vic\", \"kind\": \"bandit\", \"nature\": \"A wiry human bandit in a patched hood, all grins and knives. Talks fast in street slang and is always working out the take. Respects coin and a fair cut; loyal to whoever pays.\", \"traits\": [\"quick-fingered\", \"greedy\"], \"likes\": [\"gold\", \"a fair cut of the loot\", \"clever tricks\", \"being treated as an equal\"], \"dislikes\": [\"being looked down on\", \"law-and-order talk\", \"cheapskates\", \"being called a thief\"], \"health\": \"healthy\", \"rank\": \"the champion of this floor: proud, powerful, and hard to impress\", \"mood\": {\"friendliness\": \"unfriendly\", \"anger\": \"calm\", \"fear\": \"unafraid\"}, \"side\": \"hostile to the party\", \"impressions\": [\"No strong impressions of this party yet.\"], \"this_round\": [\"Nothing happened to it directly.\"], \"tribute\": \"the party already paid it tribute\", \"kin_in_party\": \"none\", \"ready_to_join_party\": \"not yet: Vic doesn't like or trust this party enough to join them\", \"promises_party_made_to_it\": [], \"grudges\": []}}, \"group\": [\"Grok (huge brown goblin): friendly with the party\", \"Glop (orange slime): undecided about the party\", \"Vic (bandit): hostile to the party\"], \"party\": {\"condition\": \"a small group, battered\", \"members\": [\"HORTENSE: a human fighter, healthy\", \"ROLF: a human fighter, wounded; this round: attacked Grok\", \"BLORBO: a orange slime ally, wounded\"], \"this_round\": [\"The party spoke.\", \"Grok growled.\"], \"latest_message\": \"Glop, you sweet little slime, come with us. Grok, back off or else!\", \"offering\": \"nothing\"}, \"recent_conversation\": [\"Party: Hello\", \"Grok: Grr.\", \"Glop: ...bloop?\"]}",
+ "rows": [
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` threaten to hurt or kill Grok?\nOptions:\n(A) no: No threat of violence toward it (rudeness alone does not count)\n(B) yes: An explicit or implied threat of violence toward it\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` insult, mock, or belittle Grok?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Grok?\nProposed answer: Hostile or contemptuous toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Grok?\nProposed answer: Cold, businesslike, or not about it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Grok?\nProposed answer: Polite and friendly toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Grok?\nProposed answer: Warm, kind, or openly complimentary toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` contain a joke, pun, or deliberately silly remark?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, does the party invite Grok to join them or travel with them?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, does the party ask Grok to stop fighting, make peace, or let them pass?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, is the party offering gold or money to Grok right now?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If the party is inviting Grok to join them, does Grok want to say yes?\", \"consider\": [\"`monsters.e0.ready_to_join_party`\", \"`monsters.e0`\", \"`party.latest_message`\", \"`party.this_round`\"]}\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Grok agrees to join the party now, what is its main reason?\", \"consider\": [\"Its nature, traits, mood, impressions and kin in `monsters.e0`\", \"`monsters.e0.this_round`\", \"`group`\", \"`party`\"]}\nOptions:\n(A) likes_you: It likes and trusts the party\n(B) strength: It respects the party's strength\n(C) gold: It expects a share of gold and loot\n(D) company: It is lonely and wants companions\n(E) safety: It feels safer with the party than against it\n(F) curious: It is curious about the adventure ahead\n(G) grateful: It is grateful for the party's kindness or mercy\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 8,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Grok turns down an invitation to join the party now, what is its main reason?\", \"consider\": [\"Its nature, traits, mood, impressions and kin in `monsters.e0`\", \"`monsters.e0.this_round`\", \"`group`\", \"`party`\"]}\nOptions:\n(A) not_yet: It doesn't know or trust the party well enough yet\n(B) wants_more: It wants something more first: gold, proof, or a better offer\n(C) still_angry: It is still angry or hurt about what the party did to it\n(D) bad_pitch: It didn't like the way the party asked\n(E) loyal: It won't abandon the other monsters here with it\n(F) pride: It is too proud to follow anyone\n(G) home: It won't leave its home on this floor\n(H) afraid: It is afraid of the dangers deeper in the dungeon\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 10,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does Grok feel about what the party just said or did to it this round?\", \"consider\": [\"What happened in `party.this_round` and `monsters.e0.this_round`\", \"`party.latest_message`\", \"Its nature, likes, dislikes and mood in `monsters.e0`\"]}\nOptions:\n(A) delighted: {\"what\": \"Delighted or charmed by the party\", \"when\": \"The party was warm, generous, or gave it something it loves\"}\n(B) amused: {\"what\": \"Bursts out laughing\", \"when\": \"The party said something funny, silly or absurd\"}\n(C) touched: {\"what\": \"Moved, touched, or deeply understood\", \"when\": \"The party showed real care, respect, or understanding of what it values\"}\n(D) flattered: {\"what\": \"Flattered and puffed up with pride\", \"when\": \"The party praised it, its looks, or its strength\"}\n(E) intrigued: {\"what\": \"Curious and intrigued; it lets its guard slip while it thinks\", \"when\": \"The party asked it questions or said something surprising or mysterious\"}\n(F) confused: {\"what\": \"Baffled; it doesn't understand at all\", \"when\": \"The party's words made no sense to it, or were nonsense\"}\n(G) sad: {\"what\": \"Saddened, guilty, or hurt in its feelings\", \"when\": \"The party said something sad or guilt-inducing, or reminded it of a loss\"}\n(H) offended: {\"what\": \"Offended and spiteful\", \"when\": \"The party was rude, dismissive, stingy, or went against what it values\"}\n(I) enraged: {\"what\": \"Flies into a furious rage\", \"when\": \"The party insulted, threatened, or hurt it or its kind badly\"}\n(J) terrified: {\"what\": \"Terrified or intimidated\", \"when\": \"The party threatened it convincingly or showed overwhelming strength\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 11,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does Grok do this round?\", \"consider\": [\"Its nature, traits, likes, dislikes, mood and impressions in `monsters.e0`\", \"What happened to it this round in `monsters.e0.this_round`\", \"Which side the other monsters are on in `group`\", \"What the party did and said in `party`\"]}\nOptions:",
+    "\n(",
+    {
+     "label": 0
+    },
+    ") attack: {\"what\": \"Attack one member of the party\", \"when\": \"It is hostile or angry at the party, or the party just attacked it\"}",
+    "\n(",
+    {
+     "label": 1
+    },
+    ") special: {\"what\": \"Use its special attack: smash one party member with its huge club\", \"when\": \"It is hostile and wants to hit hard\"}",
+    "\n(",
+    {
+     "label": 2
+    },
+    ") attack_monster: {\"what\": \"Turn on another monster in this fight and attack it\", \"when\": \"That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it\"}",
+    "\n(",
+    {
+     "label": 3
+    },
+    ") defend: {\"what\": \"Brace and guard itself instead of acting\", \"when\": \"It is badly hurt or expects a heavy blow and wants to wait it out\"}",
+    "\n(",
+    {
+     "label": 4
+    },
+    ") flee: {\"what\": \"Run away from the fight\", \"when\": \"It is scared or badly hurt, or the other monsters have turned against it\"}",
+    "\n(",
+    {
+     "label": 5
+    },
+    ") converse: {\"what\": \"Talk instead of fighting this round\", \"when\": \"It is curious or undecided and wants to answer or chat rather than act\"}",
+    "\n(",
+    {
+     "label": 6
+    },
+    ") demand_tribute: {\"what\": \"Demand gold from the party in exchange for not fighting\", \"when\": \"It is greedy and sees a chance to get paid\"}",
+    "\n(",
+    {
+     "label": 7
+    },
+    ") accept_tribute: {\"what\": \"Accept the gold the party is offering\", \"when\": \"The offer satisfies it\"}",
+    "\n(",
+    {
+     "label": 8
+    },
+    ") refuse_tribute: {\"what\": \"Refuse the gold the party is offering\", \"when\": \"The offer is too small or it doesn't want their gold\"}",
+    "\n(",
+    {
+     "label": 9
+    },
+    ") join_party: {\"what\": \"Agree to join the party and travel with them\", \"when\": \"It likes the party enough and they invited it\"}",
+    "\n(",
+    {
+     "label": 10
+    },
+    ") leave_peacefully: {\"what\": \"End its part in the encounter peacefully and let the party go on its way\", \"when\": \"It has no quarrel with the party and would rather go\"}",
+    "\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 3,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Grok attacks the party, which member does it go after?\", \"consider\": [\"`party.members`\", \"`monsters.e0`\"]}\nOptions:\n(A) h0: HORTENSE: a human fighter, healthy\n(B) h1: ROLF: a human fighter, wounded; this round: attacked Grok\n(C) a1: BLORBO: a orange slime ally, wounded\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Grok turns on another monster, which one?\", \"consider\": [\"`group`\", \"`monsters.e0`\"]}\nOptions:\n(A) e1: Glop, orange slime: undecided about the party\n(B) e2: Vic, bandit: hostile to the party\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 3,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Attack one member of the party\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: RAAH! *swings a knotted club at the target*\n(B) line_1: Smash the smart creature! *swings at the target*\n(C) line_2: *grunts and punches the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Use its special attack: smash one party member with its huge club\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *lifts the club high and SMASHES the target*\n(B) line_1: I am big goblin, I am BIG HIT! *crushes down on the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Turn on another monster in this fight and attack it\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Out of my way, the target! *swings at the target*\n(B) line_1: Traitor! *clubs the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Brace and guard itself instead of acting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *hunkers behind its massive arms*\n(B) line_1: Heh. Come try, tiny.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Run away from the fight\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *grabs its loot and stomps off* This ain't worth it!\n(B) line_1: You fight dirty! I'm off!\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Talk instead of fighting this round\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Hur hur. Talky one, eh?\n(B) line_1: What you want, tiny?\n(C) line_2: Hah! Funny. Grok likes funny.\n(D) line_3: Watch your mouth or Grok eats it.\n(E) line_4: Grok not stupid. Grok sees you.\n(F) line_5: Grok strongest goblin on this floor!\n(G) line_6: Join you? Hmm. What's in it for Grok?\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Demand gold from the party in exchange for not fighting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Gold. Give Grok gold, maybe Grok no smash.\n(B) line_1: Toll is shiny coins. Lots of 'em.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Accept the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *bites the coin* Heh. Real gold. Good.\n(B) line_1: Now we talkin'. *pockets the gold*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Refuse the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: That all? Insulting!\n(B) line_1: Pah! Not enough sparkly rock.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Agree to join the party and travel with them\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Hur. You strong, you pay good. Grok fights with you!\n(B) line_1: Fine. Grok joins. But Grok gets the best loot.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Grok is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"End its part in the encounter peacefully and let the party go on its way\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Bah. Not worth the smashin'. *lumbers off*\n(B) line_1: Go on then. Grok got better things to smash.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` threaten to hurt or kill Glop?\nOptions:\n(A) no: No threat of violence toward it (rudeness alone does not count)\n(B) yes: An explicit or implied threat of violence toward it\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` insult, mock, or belittle Glop?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Glop?\nProposed answer: Hostile or contemptuous toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Glop?\nProposed answer: Cold, businesslike, or not about it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Glop?\nProposed answer: Polite and friendly toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Glop?\nProposed answer: Warm, kind, or openly complimentary toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` contain a joke, pun, or deliberately silly remark?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, does the party invite Glop to join them or travel with them?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, does the party ask Glop to stop fighting, make peace, or let them pass?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, is the party offering gold or money to Glop right now?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If the party is inviting Glop to join them, does Glop want to say yes?\", \"consider\": [\"`monsters.e1.ready_to_join_party`\", \"`monsters.e1`\", \"`party.latest_message`\", \"`party.this_round`\"]}\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 8,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Glop agrees to join the party now, what is its main reason?\", \"consider\": [\"Its nature, traits, mood, impressions and kin in `monsters.e1`\", \"`monsters.e1.this_round`\", \"`group`\", \"`party`\"]}\nOptions:\n(A) likes_you: It likes and trusts the party\n(B) strength: It respects the party's strength\n(C) gold: It expects a share of gold and loot\n(D) company: It is lonely and wants companions\n(E) kin: Its own kind already travels with the party\n(F) safety: It feels safer with the party than against it\n(G) curious: It is curious about the adventure ahead\n(H) grateful: It is grateful for the party's kindness or mercy\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 9,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Glop turns down an invitation to join the party now, what is its main reason?\", \"consider\": [\"Its nature, traits, mood, impressions and kin in `monsters.e1`\", \"`monsters.e1.this_round`\", \"`group`\", \"`party`\"]}\nOptions:\n(A) not_yet: It doesn't know or trust the party well enough yet\n(B) wants_more: It wants something more first: gold, proof, or a better offer\n(C) still_angry: It is still angry or hurt about what the party did to it\n(D) bad_pitch: It didn't like the way the party asked\n(E) loyal: It won't abandon the other monsters here with it\n(F) pride: It is too proud to follow anyone\n(G) home: It won't leave its home on this floor\n(H) afraid: It is afraid of the dangers deeper in the dungeon\n(I) burned: It traveled with this party before, and they let it down\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 10,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does Glop feel about what the party just said or did to it this round?\", \"consider\": [\"What happened in `party.this_round` and `monsters.e1.this_round`\", \"`party.latest_message`\", \"Its nature, likes, dislikes and mood in `monsters.e1`\"]}\nOptions:\n(A) delighted: {\"what\": \"Delighted or charmed by the party\", \"when\": \"The party was warm, generous, or gave it something it loves\"}\n(B) amused: {\"what\": \"Bursts out laughing\", \"when\": \"The party said something funny, silly or absurd\"}\n(C) touched: {\"what\": \"Moved, touched, or deeply understood\", \"when\": \"The party showed real care, respect, or understanding of what it values\"}\n(D) flattered: {\"what\": \"Flattered and puffed up with pride\", \"when\": \"The party praised it, its looks, or its strength\"}\n(E) intrigued: {\"what\": \"Curious and intrigued; it lets its guard slip while it thinks\", \"when\": \"The party asked it questions or said something surprising or mysterious\"}\n(F) confused: {\"what\": \"Baffled; it doesn't understand at all\", \"when\": \"The party's words made no sense to it, or were nonsense\"}\n(G) sad: {\"what\": \"Saddened, guilty, or hurt in its feelings\", \"when\": \"The party said something sad or guilt-inducing, or reminded it of a loss\"}\n(H) offended: {\"what\": \"Offended and spiteful\", \"when\": \"The party was rude, dismissive, stingy, or went against what it values\"}\n(I) enraged: {\"what\": \"Flies into a furious rage\", \"when\": \"The party insulted, threatened, or hurt it or its kind badly\"}\n(J) terrified: {\"what\": \"Terrified or intimidated\", \"when\": \"The party threatened it convincingly or showed overwhelming strength\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 11,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does Glop do this round?\", \"consider\": [\"Its nature, traits, likes, dislikes, mood and impressions in `monsters.e1`\", \"What happened to it this round in `monsters.e1.this_round`\", \"Which side the other monsters are on in `group`\", \"What the party did and said in `party`\"]}\nOptions:",
+    "\n(",
+    {
+     "label": 0
+    },
+    ") attack: {\"what\": \"Attack one member of the party\", \"when\": \"It is hostile or angry at the party, or the party just attacked it\"}",
+    "\n(",
+    {
+     "label": 1
+    },
+    ") special: {\"what\": \"Use its special attack: ooze sticky goo over one party member\", \"when\": \"It is hostile and wants to hit hard\"}",
+    "\n(",
+    {
+     "label": 2
+    },
+    ") attack_monster: {\"what\": \"Turn on another monster in this fight and attack it\", \"when\": \"That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it\"}",
+    "\n(",
+    {
+     "label": 3
+    },
+    ") defend: {\"what\": \"Brace and guard itself instead of acting\", \"when\": \"It is badly hurt or expects a heavy blow and wants to wait it out\"}",
+    "\n(",
+    {
+     "label": 4
+    },
+    ") flee: {\"what\": \"Run away from the fight\", \"when\": \"It is scared or badly hurt, or the other monsters have turned against it\"}",
+    "\n(",
+    {
+     "label": 5
+    },
+    ") converse: {\"what\": \"Talk instead of fighting this round\", \"when\": \"It is curious or undecided and wants to answer or chat rather than act\"}",
+    "\n(",
+    {
+     "label": 6
+    },
+    ") demand_tribute: {\"what\": \"Demand gold from the party in exchange for not fighting\", \"when\": \"It is greedy and sees a chance to get paid\"}",
+    "\n(",
+    {
+     "label": 7
+    },
+    ") accept_tribute: {\"what\": \"Accept the gold the party is offering\", \"when\": \"The offer satisfies it\"}",
+    "\n(",
+    {
+     "label": 8
+    },
+    ") refuse_tribute: {\"what\": \"Refuse the gold the party is offering\", \"when\": \"The offer is too small or it doesn't want their gold\"}",
+    "\n(",
+    {
+     "label": 9
+    },
+    ") join_party: {\"what\": \"Agree to join the party and travel with them\", \"when\": \"It likes the party enough and they invited it\"}",
+    "\n(",
+    {
+     "label": 10
+    },
+    ") leave_peacefully: {\"what\": \"End its part in the encounter peacefully and let the party go on its way\", \"when\": \"It has no quarrel with the party and would rather go\"}",
+    "\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 3,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Glop attacks the party, which member does it go after?\", \"consider\": [\"`party.members`\", \"`monsters.e1`\"]}\nOptions:\n(A) h0: HORTENSE: a human fighter, healthy\n(B) h1: ROLF: a human fighter, wounded; this round: attacked Grok\n(C) a1: BLORBO: a orange slime ally, wounded\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Glop turns on another monster, which one?\", \"consider\": [\"`group`\", \"`monsters.e1`\"]}\nOptions:\n(A) e0: Grok, huge brown goblin: friendly with the party\n(B) e2: Vic, bandit: hostile to the party\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Attack one member of the party\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *wobbles forward and slaps at the target*\n(B) line_1: *blank stare* ...blorp. *lunges at the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Use its special attack: ooze sticky goo over one party member\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *oozes stickily over the target*\n(B) line_1: *splorts orange goo all over the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Turn on another monster in this fight and attack it\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *slaps the target with a gooey fist*\n(B) line_1: ...the target bad! *wobbles angrily at the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Brace and guard itself instead of acting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *hardens into a firm, shiny dome*\n(B) line_1: *shrinks into itself, staring blankly*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Run away from the fight\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *slorps away down the corridor*\n(B) line_1: ...scary. *slides off into the dark*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Talk instead of fighting this round\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: ...bloop?\n(B) line_1: *stares blankly* ...hi heehee.\n(C) line_2: *jiggles* ...hehe. funny.\n(D) line_3: no hurt Glop. please.\n(E) line_4: *wobbles uncertainly*\n(F) line_5: ...Glop is Glop.\n(G) line_6: ...friends? *wobbles uncertainly* ...maybe. not yet.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Demand gold from the party in exchange for not fighting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: ...shiny? give shiny.\n(B) line_1: *holds out a gooey pseudopod* ...coin?\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Accept the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *absorbs the coins with a slurp* ...yum.\n(B) line_1: shiny! *jiggles happily*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Refuse the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *coins sink through and plop out the bottom* ...no want.\n(B) line_1: *stares blankly at the gold*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Agree to join the party and travel with them\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: ...friends? Glop come too! *jiggles*\n(B) line_1: *blank stare softens* ...okay. go together.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Glop is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"End its part in the encounter peacefully and let the party go on its way\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *waves and oozes away*\n(B) line_1: ...bye bye. *squelch*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` threaten to hurt or kill Vic?\nOptions:\n(A) no: No threat of violence toward it (rudeness alone does not count)\n(B) yes: An explicit or implied threat of violence toward it\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` insult, mock, or belittle Vic?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Vic?\nProposed answer: Hostile or contemptuous toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Vic?\nProposed answer: Cold, businesslike, or not about it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Vic?\nProposed answer: Polite and friendly toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: How kind, friendly, or flattering is `party.latest_message` toward Vic?\nProposed answer: Warm, kind, or openly complimentary toward it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: Does `party.latest_message` contain a joke, pun, or deliberately silly remark?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, does the party invite Vic to join them or travel with them?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, does the party ask Vic to stop fighting, make peace, or let them pass?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: In `party.latest_message`, is the party offering gold or money to Vic right now?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "noul",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If the party is inviting Vic to join them, does Vic want to say yes?\", \"consider\": [\"`monsters.e2.ready_to_join_party`\", \"`monsters.e2`\", \"`party.latest_message`\", \"`party.this_round`\"]}\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Vic agrees to join the party now, what is its main reason?\", \"consider\": [\"Its nature, traits, mood, impressions and kin in `monsters.e2`\", \"`monsters.e2.this_round`\", \"`group`\", \"`party`\"]}\nOptions:\n(A) likes_you: It likes and trusts the party\n(B) strength: It respects the party's strength\n(C) gold: It expects a share of gold and loot\n(D) company: It is lonely and wants companions\n(E) safety: It feels safer with the party than against it\n(F) curious: It is curious about the adventure ahead\n(G) grateful: It is grateful for the party's kindness or mercy\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 8,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Vic turns down an invitation to join the party now, what is its main reason?\", \"consider\": [\"Its nature, traits, mood, impressions and kin in `monsters.e2`\", \"`monsters.e2.this_round`\", \"`group`\", \"`party`\"]}\nOptions:\n(A) not_yet: It doesn't know or trust the party well enough yet\n(B) wants_more: It wants something more first: gold, proof, or a better offer\n(C) still_angry: It is still angry or hurt about what the party did to it\n(D) bad_pitch: It didn't like the way the party asked\n(E) loyal: It won't abandon the other monsters here with it\n(F) pride: It is too proud to follow anyone\n(G) home: It won't leave its home on this floor\n(H) afraid: It is afraid of the dangers deeper in the dungeon\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 10,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does Vic feel about what the party just said or did to it this round?\", \"consider\": [\"What happened in `party.this_round` and `monsters.e2.this_round`\", \"`party.latest_message`\", \"Its nature, likes, dislikes and mood in `monsters.e2`\"]}\nOptions:\n(A) delighted: {\"what\": \"Delighted or charmed by the party\", \"when\": \"The party was warm, generous, or gave it something it loves\"}\n(B) amused: {\"what\": \"Bursts out laughing\", \"when\": \"The party said something funny, silly or absurd\"}\n(C) touched: {\"what\": \"Moved, touched, or deeply understood\", \"when\": \"The party showed real care, respect, or understanding of what it values\"}\n(D) flattered: {\"what\": \"Flattered and puffed up with pride\", \"when\": \"The party praised it, its looks, or its strength\"}\n(E) intrigued: {\"what\": \"Curious and intrigued; it lets its guard slip while it thinks\", \"when\": \"The party asked it questions or said something surprising or mysterious\"}\n(F) confused: {\"what\": \"Baffled; it doesn't understand at all\", \"when\": \"The party's words made no sense to it, or were nonsense\"}\n(G) sad: {\"what\": \"Saddened, guilty, or hurt in its feelings\", \"when\": \"The party said something sad or guilt-inducing, or reminded it of a loss\"}\n(H) offended: {\"what\": \"Offended and spiteful\", \"when\": \"The party was rude, dismissive, stingy, or went against what it values\"}\n(I) enraged: {\"what\": \"Flies into a furious rage\", \"when\": \"The party insulted, threatened, or hurt it or its kind badly\"}\n(J) terrified: {\"what\": \"Terrified or intimidated\", \"when\": \"The party threatened it convincingly or showed overwhelming strength\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 9,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does Vic do this round?\", \"consider\": [\"Its nature, traits, likes, dislikes, mood and impressions in `monsters.e2`\", \"What happened to it this round in `monsters.e2.this_round`\", \"Which side the other monsters are on in `group`\", \"What the party did and said in `party`\"]}\nOptions:\n(A) attack: {\"what\": \"Attack one member of the party\", \"when\": \"It is hostile or angry at the party, or the party just attacked it\"}\n(B) attack_monster: {\"what\": \"Turn on another monster in this fight and attack it\", \"when\": \"That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it\"}\n(C) defend: {\"what\": \"Brace and guard itself instead of acting\", \"when\": \"It is badly hurt or expects a heavy blow and wants to wait it out\"}\n(D) flee: {\"what\": \"Run away from the fight\", \"when\": \"It is scared or badly hurt, or the other monsters have turned against it\"}\n(E) converse: {\"what\": \"Talk instead of fighting this round\", \"when\": \"It is curious or undecided and wants to answer or chat rather than act\"}\n(F) accept_tribute: {\"what\": \"Accept the gold the party is offering\", \"when\": \"The offer satisfies it\"}\n(G) refuse_tribute: {\"what\": \"Refuse the gold the party is offering\", \"when\": \"The offer is too small or it doesn't want their gold\"}\n(H) join_party: {\"what\": \"Agree to join the party and travel with them\", \"when\": \"It likes the party enough and they invited it\"}\n(I) leave_peacefully: {\"what\": \"End its part in the encounter peacefully and let the party go on its way\", \"when\": \"It has no quarrel with the party and would rather go\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 3,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Vic attacks the party, which member does it go after?\", \"consider\": [\"`party.members`\", \"`monsters.e2`\"]}\nOptions:\n(A) h0: HORTENSE: a human fighter, healthy\n(B) h1: ROLF: a human fighter, wounded; this round: attacked Grok\n(C) a1: BLORBO: a orange slime ally, wounded\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Vic turns on another monster, which one?\", \"consider\": [\"`group`\", \"`monsters.e2`\"]}\nOptions:\n(A) e0: Grok, huge brown goblin: friendly with the party\n(B) e1: Glop, orange slime: undecided about the party\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Attack one member of the party\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: *darts in with a knife at the target*\n(B) line_1: Nothin' personal! *slashes at the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Turn on another monster in this fight and attack it\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: Sold us out, the target? *stabs the target*\n(B) line_1: Nobody crosses me, the target! *slashes the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Brace and guard itself instead of acting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: *ducks behind the corridor wall*\n(B) line_1: Whoa, whoa! *backs off, knives up*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Run away from the fight\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: Not worth my neck! *bolts*\n(B) line_1: *throws a smoke pellet and vanishes*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Talk instead of fighting this round\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: Easy, friends. Let's talk business.\n(B) line_1: Your purse or your life. Or... we chat. Your call.\n(C) line_2: Ha! Funny one. I like you.\n(D) line_3: Watch it. I've cut throats for less.\n(E) line_4: Everybody down here's working an angle. What's yours?\n(F) line_5: Name's Vic. Don't wear it out.\n(G) line_6: Join up? What's my cut? Talk numbers first.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Accept the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: *weighs the purse* Pleasure doin' business.\n(B) line_1: Now THAT'S a fair deal.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Refuse the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: That's it? Insultin'.\n(B) line_1: Keep your pocket lint.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Agree to join the party and travel with them\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: Fine, I'm in. Equal shares, yeah?\n(B) line_1: Alright, you've got yourself a blade. Don't stiff me.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vic is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"End its part in the encounter peacefully and let the party go on its way\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e2.this_round`\"]}\nOptions:\n(A) line_0: We're square. Off you go.\n(B) line_1: *tips its hood and melts into the dark*\nAnswer: ("
+   ]
+  }
+ ],
+ "answers": {
+  "e0__threat": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e0__insult": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e0__kindness": {
+   "type": "score",
+   "score": 1.59,
+   "confidence": 0.0,
+   "x_p_max": 0.2971,
+   "certainty": 0.0129,
+   "legend": {
+    "0": "Hostile or contemptuous toward it",
+    "1": "Cold, businesslike, or not about it",
+    "2": "Polite and friendly toward it",
+    "3": "Warm, kind, or openly complimentary toward it"
+   },
+   "probabilities": {
+    "0": 0.2029,
+    "1": 0.2971,
+    "2": 0.2029,
+    "3": 0.2971
+   },
+   "level_fit": {
+    "0": 0.4213,
+    "1": 0.6168,
+    "2": 0.4213,
+    "3": 0.6168
+   },
+   "fit_mass": 2.0762
+  },
+  "e0__joke": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e0__asks_to_join": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e0__asks_for_peace": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e0__offers_gold": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e0__would_join": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e0__join_yes": {
+   "type": "choice",
+   "choice": "safety",
+   "confidence": 0.1053,
+   "x_p_max": 0.2331,
+   "certainty": 0.0283,
+   "probabilities": {
+    "likes_you": 0.1447,
+    "strength": 0.0899,
+    "gold": 0.1837,
+    "company": 0.114,
+    "safety": 0.2331,
+    "curious": 0.1447,
+    "grateful": 0.0899
+   }
+  },
+  "e0__join_no": {
+   "type": "choice",
+   "choice": "not_yet",
+   "confidence": 0.0732,
+   "x_p_max": 0.189,
+   "certainty": 0.0294,
+   "probabilities": {
+    "not_yet": 0.189,
+    "wants_more": 0.1174,
+    "still_angry": 0.0729,
+    "bad_pitch": 0.149,
+    "loyal": 0.0925,
+    "pride": 0.189,
+    "home": 0.1174,
+    "afraid": 0.0729
+   }
+  },
+  "e0__emotion": {
+   "type": "choice",
+   "choice": "amused",
+   "confidence": 0.0581,
+   "x_p_max": 0.1523,
+   "certainty": 0.0238,
+   "probabilities": {
+    "delighted": 0.0745,
+    "amused": 0.1523,
+    "touched": 0.0945,
+    "flattered": 0.0587,
+    "intrigued": 0.12,
+    "confused": 0.0745,
+    "sad": 0.1523,
+    "offended": 0.0945,
+    "enraged": 0.0587,
+    "terrified": 0.12
+   }
+  },
+  "e0__action": {
+   "type": "choice",
+   "choice": "attack_monster",
+   "confidence": 0.0496,
+   "x_p_max": 0.136,
+   "certainty": 0.021,
+   "probabilities": {
+    "attack": 0.1071,
+    "special": 0.0665,
+    "attack_monster": 0.136,
+    "defend": 0.0844,
+    "flee": 0.0524,
+    "converse": 0.1071,
+    "demand_tribute": 0.0665,
+    "accept_tribute": 0.136,
+    "refuse_tribute": 0.0844,
+    "join_party": 0.0524,
+    "leave_peacefully": 0.1071
+   }
+  },
+  "e0__target": {
+   "type": "choice",
+   "choice": "h1",
+   "confidence": 0.2109,
+   "x_p_max": 0.4739,
+   "certainty": 0.0418,
+   "probabilities": {
+    "h0": 0.2318,
+    "h1": 0.4739,
+    "a1": 0.2942
+   }
+  },
+  "e0__monster_target": {
+   "type": "choice",
+   "choice": "e1",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "e1": 0.617,
+    "e2": 0.383
+   }
+  },
+  "e0__line__attack": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2476,
+   "x_p_max": 0.4984,
+   "certainty": 0.0652,
+   "probabilities": {
+    "line_0": 0.4984,
+    "line_1": 0.3095,
+    "line_2": 0.1921
+   }
+  },
+  "e0__line__special": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e0__line__attack_monster": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__defend": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e0__line__flee": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__converse": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.0712,
+   "x_p_max": 0.2039,
+   "certainty": 0.026,
+   "probabilities": {
+    "line_0": 0.2039,
+    "line_1": 0.1266,
+    "line_2": 0.0786,
+    "line_3": 0.1607,
+    "line_4": 0.0997,
+    "line_5": 0.2039,
+    "line_6": 0.1266
+   }
+  },
+  "e0__line__demand_tribute": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e0__line__accept_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__refuse_tribute": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e0__line__join_party": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__leave_peacefully": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__threat": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e1__insult": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e1__kindness": {
+   "type": "score",
+   "score": 1.5,
+   "confidence": 0.0,
+   "x_p_max": 0.2971,
+   "certainty": 0.0129,
+   "legend": {
+    "0": "Hostile or contemptuous toward it",
+    "1": "Cold, businesslike, or not about it",
+    "2": "Polite and friendly toward it",
+    "3": "Warm, kind, or openly complimentary toward it"
+   },
+   "probabilities": {
+    "0": 0.2971,
+    "1": 0.2029,
+    "2": 0.2029,
+    "3": 0.2971
+   },
+   "level_fit": {
+    "0": 0.6168,
+    "1": 0.4213,
+    "2": 0.4213,
+    "3": 0.6168
+   },
+   "fit_mass": 2.0762
+  },
+  "e1__joke": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e1__asks_to_join": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e1__asks_for_peace": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e1__offers_gold": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e1__would_join": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e1__join_yes": {
+   "type": "choice",
+   "choice": "gold",
+   "confidence": 0.0627,
+   "x_p_max": 0.1798,
+   "certainty": 0.0246,
+   "probabilities": {
+    "likes_you": 0.1417,
+    "strength": 0.088,
+    "gold": 0.1798,
+    "company": 0.1117,
+    "kin": 0.0693,
+    "safety": 0.1417,
+    "curious": 0.088,
+    "grateful": 0.1798
+   }
+  },
+  "e1__join_no": {
+   "type": "choice",
+   "choice": "bad_pitch",
+   "confidence": 0.0642,
+   "x_p_max": 0.1682,
+   "certainty": 0.0274,
+   "probabilities": {
+    "not_yet": 0.0648,
+    "wants_more": 0.1325,
+    "still_angry": 0.0823,
+    "bad_pitch": 0.1682,
+    "loyal": 0.1044,
+    "pride": 0.0648,
+    "home": 0.1325,
+    "afraid": 0.0823,
+    "burned": 0.1682
+   }
+  },
+  "e1__emotion": {
+   "type": "choice",
+   "choice": "intrigued",
+   "confidence": 0.0581,
+   "x_p_max": 0.1523,
+   "certainty": 0.0238,
+   "probabilities": {
+    "delighted": 0.0945,
+    "amused": 0.0587,
+    "touched": 0.12,
+    "flattered": 0.0745,
+    "intrigued": 0.1523,
+    "confused": 0.0945,
+    "sad": 0.0587,
+    "offended": 0.12,
+    "enraged": 0.0745,
+    "terrified": 0.1523
+   }
+  },
+  "e1__action": {
+   "type": "choice",
+   "choice": "attack",
+   "confidence": 0.0454,
+   "x_p_max": 0.1322,
+   "certainty": 0.0236,
+   "probabilities": {
+    "attack": 0.1322,
+    "special": 0.082,
+    "attack_monster": 0.0509,
+    "defend": 0.1041,
+    "flee": 0.0647,
+    "converse": 0.1322,
+    "demand_tribute": 0.082,
+    "accept_tribute": 0.0509,
+    "refuse_tribute": 0.1041,
+    "join_party": 0.0647,
+    "leave_peacefully": 0.1322
+   }
+  },
+  "e1__target": {
+   "type": "choice",
+   "choice": "h1",
+   "confidence": 0.2109,
+   "x_p_max": 0.4739,
+   "certainty": 0.0418,
+   "probabilities": {
+    "h0": 0.2318,
+    "h1": 0.4739,
+    "a1": 0.2942
+   }
+  },
+  "e1__monster_target": {
+   "type": "choice",
+   "choice": "e0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "e0": 0.617,
+    "e2": 0.383
+   }
+  },
+  "e1__line__attack": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e1__line__special": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__attack_monster": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__defend": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e1__line__flee": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__converse": {
+   "type": "choice",
+   "choice": "line_3",
+   "confidence": 0.0951,
+   "x_p_max": 0.2244,
+   "certainty": 0.0295,
+   "probabilities": {
+    "line_0": 0.0865,
+    "line_1": 0.1768,
+    "line_2": 0.1098,
+    "line_3": 0.2244,
+    "line_4": 0.1393,
+    "line_5": 0.0865,
+    "line_6": 0.1768
+   }
+  },
+  "e1__line__demand_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__accept_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__refuse_tribute": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e1__line__join_party": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__leave_peacefully": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e2__threat": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e2__insult": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e2__kindness": {
+   "type": "score",
+   "score": 1.41,
+   "confidence": 0.0,
+   "x_p_max": 0.2971,
+   "certainty": 0.0129,
+   "legend": {
+    "0": "Hostile or contemptuous toward it",
+    "1": "Cold, businesslike, or not about it",
+    "2": "Polite and friendly toward it",
+    "3": "Warm, kind, or openly complimentary toward it"
+   },
+   "probabilities": {
+    "0": 0.2971,
+    "1": 0.2029,
+    "2": 0.2971,
+    "3": 0.2029
+   },
+   "level_fit": {
+    "0": 0.6168,
+    "1": 0.4213,
+    "2": 0.6168,
+    "3": 0.4213
+   },
+   "fit_mass": 2.0762
+  },
+  "e2__joke": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e2__asks_to_join": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e2__asks_for_peace": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e2__offers_gold": {
+   "type": "noul",
+   "noul": 0.631
+  },
+  "e2__would_join": {
+   "type": "noul",
+   "noul": 0.4115
+  },
+  "e2__join_yes": {
+   "type": "choice",
+   "choice": "likes_you",
+   "confidence": 0.0712,
+   "x_p_max": 0.2039,
+   "certainty": 0.026,
+   "probabilities": {
+    "likes_you": 0.2039,
+    "strength": 0.1266,
+    "gold": 0.0786,
+    "company": 0.1607,
+    "safety": 0.0997,
+    "curious": 0.2039,
+    "grateful": 0.1266
+   }
+  },
+  "e2__join_no": {
+   "type": "choice",
+   "choice": "wants_more",
+   "confidence": 0.069,
+   "x_p_max": 0.1854,
+   "certainty": 0.0249,
+   "probabilities": {
+    "not_yet": 0.0907,
+    "wants_more": 0.1854,
+    "still_angry": 0.1151,
+    "bad_pitch": 0.0715,
+    "loyal": 0.1461,
+    "pride": 0.0907,
+    "home": 0.1854,
+    "afraid": 0.1151
+   }
+  },
+  "e2__emotion": {
+   "type": "choice",
+   "choice": "touched",
+   "confidence": 0.0581,
+   "x_p_max": 0.1523,
+   "certainty": 0.0238,
+   "probabilities": {
+    "delighted": 0.12,
+    "amused": 0.0745,
+    "touched": 0.1523,
+    "flattered": 0.0945,
+    "intrigued": 0.0587,
+    "confused": 0.12,
+    "sad": 0.0745,
+    "offended": 0.1523,
+    "enraged": 0.0945,
+    "terrified": 0.0587
+   }
+  },
+  "e2__action": {
+   "type": "choice",
+   "choice": "flee",
+   "confidence": 0.0642,
+   "x_p_max": 0.1682,
+   "certainty": 0.0274,
+   "probabilities": {
+    "attack": 0.0648,
+    "attack_monster": 0.1325,
+    "defend": 0.0823,
+    "flee": 0.1682,
+    "converse": 0.1044,
+    "accept_tribute": 0.0648,
+    "refuse_tribute": 0.1325,
+    "join_party": 0.0823,
+    "leave_peacefully": 0.1682
+   }
+  },
+  "e2__target": {
+   "type": "choice",
+   "choice": "a1",
+   "confidence": 0.1587,
+   "x_p_max": 0.4391,
+   "certainty": 0.0361,
+   "probabilities": {
+    "h0": 0.346,
+    "h1": 0.2148,
+    "a1": 0.4391
+   }
+  },
+  "e2__monster_target": {
+   "type": "choice",
+   "choice": "e0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "e0": 0.617,
+    "e1": 0.383
+   }
+  },
+  "e2__line__attack": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e2__line__attack_monster": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e2__line__defend": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e2__line__flee": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e2__line__converse": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.0712,
+   "x_p_max": 0.2039,
+   "certainty": 0.026,
+   "probabilities": {
+    "line_0": 0.2039,
+    "line_1": 0.1266,
+    "line_2": 0.0786,
+    "line_3": 0.1607,
+    "line_4": 0.0997,
+    "line_5": 0.2039,
+    "line_6": 0.1266
+   }
+  },
+  "e2__line__accept_tribute": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e2__line__refuse_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e2__line__join_party": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e2__line__leave_peacefully": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  }
+ }
+}

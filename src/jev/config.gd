@@ -1,37 +1,44 @@
-## Decides how the game reaches Jev, once. In order:
+## Decides how the game reaches its System One model, once. In order:
 ##   1. mock: flag `mock` (command line / address) or env JEV_MOCK=1; the seed is flag `seed=N` or env JEV_SEED
-##   2. res://config/jev_config.json  {"provider": "openrouter"|"typesafe"|"proxy", "key": "...", "apiBase": "...", "debug": true}
-##      (what an exported build ships; a key with a small credit limit, or the proxy's apiBase)
-##   3. the project's .env (only when run from source, never in an exported build): OPENROUTER_API_KEY, preferred, or
-##      TYPESAFE_API_KEY, like the JS server
+##   2. res://config/jev_config.json (git-ignored), plus "debug": true for debug mode:
+##        {"provider": "local", "server": "<llama-server>", "model": "<decider .gguf>", "gpu": true, "port": 41715}
+##                                      the game starts that llama-server and talks to it
+##        {"provider": "local", "apiBase": "http://127.0.0.1:41715"}   a llama-server you started yourself
+##        {"provider": "systemone", "apiBase": "http://host:8000"}      any server that answers POST /v1/systemone
+##   3. user://local-model/install.json, which cli/setup_local.gd writes: the game starts that llama-server
 ##   4. nothing found: mock, with a warning the game shows in its log
-## API keys are read from those files only, never from OS environment variables.
-## Every source can be injected (`sources`), so tests never touch the real .env. Load it with
-## `const JevConfig = preload("res://src/jev/config.gd")`.
+## The flag `cpu` keeps a llama-server the game starts off the GPU. Every source can be injected (`sources`), so tests
+## never read the real files or start a process. Load it with `const JevConfig = preload("res://src/jev/config.gd")`.
 extends RefCounted
 
 const J = preload("res://src/core/js.gd")
 const Flags = preload("res://src/core/flags.gd")
 const Jev = preload("res://src/jev/jev.gd")
+const LocalServer = preload("res://src/jev/local_server.gd")
+const LocalSetup = preload("res://src/jev/local_setup.gd")
 
 const JSON_PATH := "res://config/jev_config.json"
-const NO_KEY := "No Jev key found (config/jev_config.json or .env): Jev is mocked, so monsters act at random, not sensibly."
+const NO_MODEL := "No local model installed (cli/setup_local.gd, or the setup-local flag): monsters act at random, not sensibly."
+## How long the first request waits for a llama-server the game started (loading 2.7 GB from a slow disk takes a while)
+const LAUNCH_WAIT_S := 180.0
 
 static var _current: Dictionary = {}
 
 
-## Works out the provider without configuring anything. `sources` (all optional, for tests and tools):
+## Works out the way in without configuring anything. `sources` (all optional, for tests and tools):
 ##   flags_text   the string the flags are searched in (default: the real flags)
 ##   env          {JEV_MOCK, JEV_SEED} (default: the real environment; no other variable is ever read)
 ##   json_text    the text of jev_config.json (default: the file at json_path)
 ##   json_path    where that file is (default: res://config/jev_config.json)
-##   dotenv_text  the text of the .env file (default: the file at dotenv_path)
-##   dotenv_path  where it is (default: the project's .env)
-##   exported     true to ignore .env as an exported build does (default: not OS.has_feature("editor"))
-##   latency      ms of fake latency for mock answers (default 150, like the JS server)
-## Returns { provider: "mock"|"openrouter"|"typesafe"|"proxy", key, api_base, debug, seed, latency, warning, source }.
+##   install      the setup's install.json contents (default: LocalSetup.installed(), {} when there is none)
+##   latency      ms of fake latency for mock answers (default 150)
+## Returns { provider: "mock"|"local"|"systemone", api_base, server, model, gpu, port, debug, seed, latency, warning,
+## source }. server/model are set when the game is to start llama-server itself.
 static func resolve(sources := {}) -> Dictionary:
-	var out := {"provider": "mock", "key": "", "api_base": "", "debug": false, "seed": 0, "latency": sources.get("latency", 150), "warning": "", "source": ""}
+	var out := {
+		"provider": "mock", "api_base": "", "server": "", "model": "", "gpu": true, "port": LocalServer.DEFAULT_PORT,
+		"debug": false, "seed": 0, "latency": sources.get("latency", 150), "warning": "", "source": "",
+	}
 	var flags: String = sources["flags_text"] if sources.has("flags_text") else Flags.text()
 	var env: Dictionary = sources["env"] if sources.has("env") else {"JEV_MOCK": OS.get_environment("JEV_MOCK"), "JEV_SEED": OS.get_environment("JEV_SEED")}
 
@@ -43,51 +50,63 @@ static func resolve(sources := {}) -> Dictionary:
 		out["source"] = "flag or JEV_MOCK"
 		return out
 
-	var found := _from_json(sources, out)
-	if not found and not _exported(sources):
-		found = _from_dotenv(sources, out)
-	if not found:
-		out["warning"] = NO_KEY
-		out["source"] = "none"
+	if not _from_json(sources, out):
+		var inst: Dictionary = sources["install"] if sources.has("install") else LocalSetup.installed()
+		if not inst.is_empty():
+			out.merge({"provider": "local", "server": str(inst.get("server", "")), "model": str(inst.get("model", "")), "gpu": inst.get("gpu", true) != false, "source": "install.json"}, true)
+		else:
+			out["warning"] = NO_MODEL
+			out["source"] = "none"
+	if out["provider"] == "local":
+		if RegEx.create_from_string("(?i)(^|[^a-z])cpu($|[^a-z])").search(flags) != null:
+			out["gpu"] = false
+		if out["api_base"] == "":
+			out["api_base"] = "http://127.0.0.1:%d" % out["port"]
 	return out
 
 
-## resolve() + point jev.gd at the result. Decides once: later calls return the same answer unless `force`.
-## The returned Dictionary has no key (it is safe to log); `warning` is non-empty when Jev fell back to the mock
-## for lack of a key, and the game shows it in its log.
+## resolve() + point jev.gd at the result, starting llama-server when the game is to run it (`sources.launch`, a
+## Callable like LocalServer.start, replaces that in tests). Decides once: later calls return the same answer unless
+## `force`. `warning` is non-empty when the game fell back to the mock, and the game shows it in its log.
 static func setup(sources := {}, force := false) -> Dictionary:
 	if not _current.is_empty() and not force:
 		return _current
 	var cfg := resolve(sources)
+	if cfg["provider"] == "local" and cfg["server"] != "":
+		var launch: Callable = sources.get("launch", Callable(LocalServer, "start"))
+		var started: Dictionary = launch.call(cfg["server"], cfg["model"], cfg["port"], cfg["gpu"])
+		if started.has("error"):
+			cfg["warning"] = "The local model could not start (%s): monsters act at random, not sensibly." % started["error"]
+			cfg["provider"] = "mock"
 	match cfg["provider"]:
 		"mock":
-			Jev.configure_jev(null, {"via": "mock", "seed": cfg["seed"], "latency": cfg["latency"]})
-		"proxy":
-			Jev.configure_jev(null, {"via": "proxy", "api_base": cfg["api_base"]})
-		_:
-			Jev.configure_jev(cfg["key"], {"via": cfg["provider"]})
+			Jev.configure_jev({"via": "mock", "seed": cfg["seed"], "latency": cfg["latency"]})
+		"local":
+			Jev.configure_jev({"via": "local", "api_base": cfg["api_base"], "wait_s": LAUNCH_WAIT_S if cfg["server"] != "" else 3.0})
+		"systemone":
+			Jev.configure_jev({"via": "systemone", "api_base": cfg["api_base"]})
 	if cfg["warning"] != "":
 		push_warning(cfg["warning"])
 	print_verbose("jev config: %s (%s)" % [cfg["provider"], cfg["source"]])
-	cfg["has_key"] = cfg["key"] != ""
-	cfg.erase("key")
 	_current = cfg
 	return cfg
 
 
-## For the scenario scripts (cli/): mock Jev with this seed and no fake latency, or with `live` the real API from the
-## .env / jev_config.json (every call is billed; raw replies are saved to user://jev-raw before they are parsed).
-## Returns { ok, banner }; ok is false when `live` was asked for and no key was found.
+## For the scenario scripts (cli/): mock with this seed and no fake latency, or with `live` the real model (the local one
+## the setup installed, or what jev_config.json names; raw text replies are saved to user://jev-raw).
+## Returns { ok, banner }; ok is false when `live` was asked for and no model was found.
 static func setup_tool(live: bool, seed: int, sources := {}) -> Dictionary:
 	if not live:
-		Jev.configure_jev(null, {"via": "mock", "seed": seed})
-		return {"ok": true, "banner": "MOCK Jev (seed %d): random answers, no credits. Add --live for real calls." % seed}
-	var cfg := resolve(sources.merged({"flags_text": "", "env": {}}, true))
+		Jev.configure_jev({"via": "mock", "seed": seed})
+		return {"ok": true, "banner": "MOCK model (seed %d): random answers. Add --live for the real model." % seed}
+	var quiet := sources.merged({"flags_text": "", "env": {}}, true)
+	if resolve(quiet)["provider"] == "mock":
+		return {"ok": false, "banner": "--live needs a model: run cli/setup_local.gd, or name one in config/jev_config.json."}
+	var cfg := setup(quiet, true)
 	if cfg["provider"] == "mock":
-		return {"ok": false, "banner": "--live needs a key in .env (OPENROUTER_API_KEY or TYPESAFE_API_KEY) or config/jev_config.json."}
-	cfg = setup(sources.merged({"flags_text": "", "env": {}}, true), true)
+		return {"ok": false, "banner": "--live: %s" % cfg["warning"]}
 	Jev.raw_dir = "user://jev-raw"
-	return {"ok": true, "banner": "LIVE Jev (%s): every call is billed." % cfg["provider"]}
+	return {"ok": true, "banner": "LIVE model (%s at %s)." % [cfg["provider"], cfg["api_base"]]}
 
 
 ## The config setup() settled on (empty before it ran)
@@ -98,10 +117,6 @@ static func current() -> Dictionary:
 ## Forget the decision (tests)
 static func reset() -> void:
 	_current = {}
-
-
-static func _exported(sources: Dictionary) -> bool:
-	return sources["exported"] if sources.has("exported") else not OS.has_feature("editor")
 
 
 static func _read(text_key: String, path_key: String, default_path: String, sources: Dictionary) -> String:
@@ -122,63 +137,23 @@ static func _from_json(sources: Dictionary, out: Dictionary) -> bool:
 	if not cfg is Dictionary:
 		push_warning("jev config: %s is not a JSON object, ignoring it" % JSON_PATH)
 		return false
-	var key := str(cfg.get("key", "")).strip_edges()
+	var provider := str(cfg.get("provider", "local"))
 	var api_base := str(cfg.get("apiBase", "")).strip_edges().rstrip("/")
-	var provider := str(cfg.get("provider", ""))
-	if provider == "":
-		provider = "proxy" if api_base != "" and key == "" else ("openrouter" if key.begins_with("sk-or-") else "typesafe")
-	if provider == "proxy":
+	var server := str(cfg.get("server", "")).strip_edges()
+	var model := str(cfg.get("model", "")).strip_edges()
+	if provider == "systemone":
 		if api_base == "":
-			push_warning("jev config: provider proxy needs an apiBase, ignoring %s" % JSON_PATH)
+			push_warning("jev config: provider systemone needs an apiBase, ignoring %s" % JSON_PATH)
 			return false
-	elif provider != "openrouter" and provider != "typesafe":
-		push_warning("jev config: unknown provider \"%s\", ignoring %s" % [provider, JSON_PATH])
+	elif provider == "local":
+		if (server == "") != (model == ""):
+			push_warning("jev config: provider local needs both server and model (or neither, with apiBase), ignoring %s" % JSON_PATH)
+			return false
+	else:
+		push_warning("jev config: unknown provider \"%s\" (local or systemone), ignoring %s" % [provider, JSON_PATH])
 		return false
-	elif key == "":
-		return false
-	out["provider"] = provider
-	out["key"] = key
-	out["api_base"] = api_base
-	out["debug"] = cfg.get("debug") == true
-	out["source"] = "jev_config.json"
+	out.merge({
+		"provider": provider, "api_base": api_base, "server": server, "model": model, "gpu": cfg.get("gpu", true) != false,
+		"port": int(cfg.get("port", LocalServer.DEFAULT_PORT)), "debug": cfg.get("debug") == true, "source": "jev_config.json",
+	}, true)
 	return true
-
-
-static func _from_dotenv(sources: Dictionary, out: Dictionary) -> bool:
-	var text := _read("dotenv_text", "dotenv_path", ProjectSettings.globalize_path("res://").path_join(".env"), sources)
-	if text == "":
-		return false
-	var vars := parse_dotenv(text)
-	var provider := ""
-	var key := ""
-	for candidate in [["openrouter", "OPENROUTER_API_KEY"], ["typesafe", "TYPESAFE_API_KEY"]]:
-		var v: String = vars.get(candidate[1], "")
-		if v != "":
-			provider = candidate[0]
-			key = v
-			break
-	if key == "":
-		return false
-	out["provider"] = provider
-	out["key"] = key
-	out["source"] = ".env"
-	return true
-
-
-## KEY=value lines of a .env file (comments, blank lines, `export ` and quotes handled)
-static func parse_dotenv(text: String) -> Dictionary:
-	var vars := {}
-	for raw in text.split("\n"):
-		var line := raw.strip_edges()
-		if line == "" or line.begins_with("#"):
-			continue
-		if line.begins_with("export "):
-			line = line.trim_prefix("export ").strip_edges()
-		var eq := line.find("=")
-		if eq < 1:
-			continue
-		var value := line.substr(eq + 1).strip_edges()
-		if value.length() >= 2 and (value[0] == "\"" or value[0] == "'") and value[value.length() - 1] == value[0]:
-			value = value.substr(1, value.length() - 2)
-		vars[line.left(eq).strip_edges()] = value
-	return vars

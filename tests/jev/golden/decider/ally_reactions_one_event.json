@@ -1,0 +1,113 @@
+{
+ "state_text": "{\"events\": [\"The party gave a slime 10 gold.\"], \"allies\": {\"a1\": {\"name\": \"Vic\", \"kind\": \"bandit\", \"personality\": [\"A wiry human bandit in a patched hood, all grins and knives. Talks fast in street slang and is always working out the take. Respects coin and a fair cut; loyal to whoever pays.\", \"sly\", \"greedy\"], \"values\": \"Wants a party that pays well and shares the loot fairly. Pleased by profit and clever tricks. Upset by gold given away to monsters, by heroics that risk its neck, and by being treated as lesser.\", \"loyalty\": \"uneasy\"}}}",
+ "rows": [
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `allies.a1.name` feel about what the party did in `events`?\", \"judge_by\": [\"`allies.a1.values`\", \"`allies.a1.personality`\"]}\nProposed answer: Strongly disapproves\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `allies.a1.name` feel about what the party did in `events`?\", \"judge_by\": [\"`allies.a1.values`\", \"`allies.a1.personality`\"]}\nProposed answer: Disapproves\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `allies.a1.name` feel about what the party did in `events`?\", \"judge_by\": [\"`allies.a1.values`\", \"`allies.a1.personality`\"]}\nProposed answer: Doesn't care\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `allies.a1.name` feel about what the party did in `events`?\", \"judge_by\": [\"`allies.a1.values`\", \"`allies.a1.personality`\"]}\nProposed answer: Approves\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `allies.a1.name` feel about what the party did in `events`?\", \"judge_by\": [\"`allies.a1.values`\", \"`allies.a1.personality`\"]}\nProposed answer: Strongly approves\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does `allies.a1.name` say or do in reaction to `events`?\", \"judge_by\": [\"`allies.a1.values`\", \"`allies.a1.personality`\"]}\nOptions:\n(A) line_0: Ha! Nice work!\n(B) line_1: Now that's profit.\n(C) line_2: *picks its teeth with a knife*\n(D) line_3: Eh.\n(E) line_4: You gave that away? Are you mad?\n(F) line_5: Too risky, that.\n(G) line_6: Don't look down your nose at me.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 3,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"After `events`, what does `allies.a1.name` do?\", \"consider\": [\"`allies.a1.values`\", \"`allies.a1.loyalty`\", \"`allies.a1.personality`\"]}\nOptions:\n(A) stay: Stays with the party, perhaps grumbling\n(B) leave_party: Leaves the party and goes its own way\n(C) turn_on_party: Turns on the party and attacks them\nAnswer: ("
+   ]
+  }
+ ],
+ "answers": {
+  "approval__a1": {
+   "type": "score",
+   "score": 1.92,
+   "confidence": 0.0,
+   "x_p_max": 0.2469,
+   "certainty": 0.0112,
+   "legend": {
+    "0": "Strongly disapproves",
+    "1": "Disapproves",
+    "2": "Doesn't care",
+    "3": "Approves",
+    "4": "Strongly approves"
+   },
+   "probabilities": {
+    "0": 0.2469,
+    "1": 0.1687,
+    "2": 0.1687,
+    "3": 0.2469,
+    "4": 0.1687
+   },
+   "level_fit": {
+    "0": 0.6168,
+    "1": 0.4213,
+    "2": 0.4213,
+    "3": 0.6168,
+    "4": 0.4213
+   },
+   "fit_mass": 2.4976
+  },
+  "line__a1": {
+   "type": "choice",
+   "choice": "line_3",
+   "confidence": 0.0951,
+   "x_p_max": 0.2244,
+   "certainty": 0.0295,
+   "probabilities": {
+    "line_0": 0.0865,
+    "line_1": 0.1768,
+    "line_2": 0.1098,
+    "line_3": 0.2244,
+    "line_4": 0.1393,
+    "line_5": 0.0865,
+    "line_6": 0.1768
+   }
+  },
+  "decision__a1": {
+   "type": "choice",
+   "choice": "turn_on_party",
+   "confidence": 0.1587,
+   "x_p_max": 0.4391,
+   "certainty": 0.0361,
+   "probabilities": {
+    "stay": 0.346,
+    "leave_party": 0.2148,
+    "turn_on_party": 0.4391
+   }
+  }
+ }
+}
