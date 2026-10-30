@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
+
 ## [0.3.0] - 2026-10-29
 
 Donjon moves from the browser to Godot. The web version's last changes, made just before the port, are listed with it (game feel, mixing, Genre Halls); file names in those entries are the web version's.
