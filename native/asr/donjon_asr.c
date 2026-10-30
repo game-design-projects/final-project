@@ -3,7 +3,8 @@
 // The game (src/audio/asr.gd) starts it once, waits for "ready", and talks to it over stdin/stdout:
 //
 //   in:  frames of 1 tag byte, a uint32 little-endian payload length, then the payload
-//        'S' start an utterance; payload: int32 LE sample rate of the audio that follows (sherpa-onnx resamples)
+//        'S' start an utterance (with 0.3 s of silence before it); payload: int32 LE sample rate of the audio that
+//            follows (sherpa-onnx resamples)
 //        'A' audio; payload: float32 LE mono samples in -1..1
 //        'F' finish: decode what is left (after half a second of silence) and report the final text
 //        'X' abort: drop the utterance without a result
@@ -56,6 +57,7 @@ typedef pthread_cond_t Cond;
 
 #define MAX_PAYLOAD (16u * 1024u * 1024u)
 #define TAIL_S 0.5f  // silence fed after the last audio of an utterance (see 'F')
+#define LEAD_S 0.3f  // and before the first (see 'S')
 
 // Automatic gain: laptop microphones often come in far below full scale. Quiet speech is raised towards
 // AGC_TARGET (peak) by at most AGC_MAX_GAIN; loud speech is never turned down.
@@ -296,6 +298,13 @@ int main(int argc, char **argv) {
         if (a.stream == NULL) fail("could not create a stream");
         a.last = (char *)calloc(1, 1);  // report text only once there are words
         a.unreported = 0;
+        // Nor does it catch a first word that starts with the stream: the player is often already talking when
+        // listening begins ("Know your place" -> "Your place"), so give it a moment of quiet to start from
+        float *lead = (float *)calloc((size_t)(a.rate * LEAD_S), sizeof(float));
+        if (lead != NULL) {
+          SherpaOnnxOnlineStreamAcceptWaveform(a.stream, a.rate, lead, (int32_t)(a.rate * LEAD_S));
+          free(lead);
+        }
         a.env = AGC_TARGET / 2.0f;
         a.gain = 1.0f;
         break;

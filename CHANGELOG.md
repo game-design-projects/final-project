@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 - Letting go of Space right after your last word no longer cuts it off ("Insolent morsel" came back "Insol"): the speech helper listens half a second past the end before it finishes. `native/asr/smoke.py` checks it, and paces its spoken test by the clock.
+- Talking before listening has started no longer loses your first word ("Know your place" came back "Your place"): the helper starts each utterance with 0.3 s of quiet. `smoke.py` checks it on `native/asr/testdata/know_your_place.wav`.
 
 ### Changed
 - **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
