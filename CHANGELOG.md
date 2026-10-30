@@ -18,7 +18,7 @@ The dungeon is 3D now, drawn to look 2D ("3渲2": cel-shaded, like an anime's 3D
 
 ### Added
 - `cli/stage_shots.gd`: screenshots of the 3D view through the shader at 2× (the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight, a shiny, a champion, a hurt one, groups, boxed in by walls, danger, the cover).
-- 28 tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces and corner ink, the stairwell, torches, mesh winding, every model's size and colors and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torchlight, the title hall.
+- 27 tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces and corner ink, the stairwell, torches, mesh winding, every model's size and colors and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torchlight, the title hall.
 
 ## [0.3.0] - 2026-10-29
 
