@@ -140,6 +140,11 @@ for an engine that can (llama-cpp-python):
 | 2B | RTX | CPU (i7-14700K) | 1.5 s | 5.6 s | 1.2 s |
 | 4B | RTX | CPU (i7-14700K) | 4.1 s | 13.8 s | 3.3 s |
 
+The gap between the machines is raw prefill compute, not a setup problem. `llama-bench -p 512 -n 0` (flash attention
+and a 2048 ubatch change it by under 4%): 4B 776 tok/s on the M4 Pro's 20-core GPU vs 8,312 on the RTX (10.7×), 2B
+1,956 vs 18,892 (9.7×). These rounds generate no tokens, only read the prompt, so memory bandwidth (where Apple
+Silicon is closer) does not help.
+
 Reading the 23 `enemy_turn` slots through llama-server instead, one request each (what `probe_sf.py` does), takes
 ~1.1 s for the 4B and ~0.42 s for the 2B on CUDA: the one-pass numbers need an engine that returns every slot's
 logits from one call.
