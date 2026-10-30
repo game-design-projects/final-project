@@ -1,7 +1,8 @@
 # Replacing Jev with an open-source System One model: research and evidence
 
 Status: **for group discussion, nothing decided yet.** This page collects what was surveyed, what was built on
-`feat/opensource-jev`, and every measurement taken, so the group can pick a route. Measured on 2026-10-29.
+`feat/opensource-jev`, and every measurement taken, so the group can pick a route. Measured on 2026-10-29 on an
+Apple M4 Pro laptop and on a Linux desktop with an NVIDIA RTX 4070 Ti SUPER.
 
 ## The question
 
@@ -65,10 +66,17 @@ check will fail because `jev.gd` changed), a cross-platform CI job, README / ARC
 
 ## Evidence
 
-Machine: Apple M4 Pro (10 performance + 4 efficiency cores, integrated GPU), macOS. llama.cpp b11429 (Homebrew
-llama.cpp 0.6.0), decider-ai 1.10.0, llama-cpp-python 0.3.36 (Metal), torch 2.15.0. "Metal" = GPU, "CPU" =
-`llama-server -dev none -ngl 0`. Models: `decider-4b-v3-Q4_K_M.gguf`, `decider-2b-v12-Q4_K_M.gguf` (pinned revisions in
-`src/jev/decider.gd`). Scripts in `tools/system-one/`.
+Two machines:
+
+- **M4 Pro**: Apple M4 Pro (10 performance + 4 efficiency cores, integrated GPU), macOS. llama.cpp b11429 (Homebrew
+  llama.cpp 0.6.0), decider-ai 1.10.0, llama-cpp-python 0.3.36 (Metal), torch 2.15.0.
+- **RTX**: NVIDIA GeForce RTX 4070 Ti SUPER (16 GB, driver 595.99.02, CUDA 13.2), Intel Core i7-14700K (20 cores,
+  28 threads), Ubuntu 24.04. llama.cpp built from source with CUDA for sm_89 (commit `2092353`, 2026-09-07),
+  decider-ai 1.10.0, torch 2.15.0+cu132.
+
+"Metal" / "CUDA" = GPU (`-ngl 999`), "CPU" = `llama-server -dev none -ngl 0`. Models: `decider-4b-v3-Q4_K_M.gguf`,
+`decider-2b-v12-Q4_K_M.gguf` (pinned revisions in `src/jev/decider.gd`, the same files on both machines, sha256
+checked). Scripts in `tools/system-one/`.
 
 ### 1. The readout is exact
 
@@ -84,21 +92,35 @@ All 213 rows of the 11 fixtures (including the 11-option rows, which put each la
 exactly Decider's ids, and a mixed `[token ids…, "text"]` prompt gives the same probabilities as an all-ids one (max
 difference 0.0). The same file gives probabilities up to 0.085 apart on CPU vs Metal (llama.cpp numerics).
 
+On CUDA the batch split moves uncertain rows too: one row read fresh (no cache), with the cache, or after the state was
+primed differs by up to 0.15 in `enemy_turn` and 0.21–0.36 in `group_talk` (mean 0.02; `vow` 0.02), at temperature 1.
+The rows that move are close calls (0.59 / 0.41 → 0.81 / 0.19) or a 0.97 that drops to 0.85; at the calibrated
+temperatures that is a shift of 0.07–0.11, and on each of the rows that moved most the answer stays on the same side
+(`prime_check.py`).
+
 ### 2. Latency with one row per question (what `local.gd` does)
 
-| Model | Backend | How | enemy_turn | group_talk | Prompt tokens run (enemy) |
-| --- | --- | --- | ---: | ---: | ---: |
-| 4B | Metal | rows, one after another | 7.2 s | 23.5 s | 4,455 |
-| 4B | Metal | 4 parallel slots | 15.9 s | 51.9 s | 10,867 |
-| 2B | Metal | rows | 5.4 s | 12.6 s | 8,854 |
-| 2B | CPU | rows | 35.9 s | – | 8,854 |
-| 4B | CPU | rows | 95.4 s | – | 8,854 |
-| 2B | CPU | **state primed first**, then rows | **13.8 s** | – | 3,013 |
+| Model | Machine | Backend | How | enemy_turn | group_talk | Prompt tokens run (enemy) |
+| --- | --- | --- | --- | ---: | ---: | ---: |
+| 4B | M4 Pro | Metal | rows, one after another | 7.2 s | 23.5 s | 4,455 |
+| 4B | M4 Pro | Metal | 4 parallel slots | 15.9 s | 51.9 s | 10,867 |
+| 2B | M4 Pro | Metal | rows | 5.4 s | 12.6 s | 8,854 |
+| 2B | M4 Pro | CPU | rows | 35.9 s | – | 8,854 |
+| 4B | M4 Pro | CPU | rows | 95.4 s | – | 8,854 |
+| 2B | M4 Pro | CPU | **state primed first**, then rows | **13.8 s** | – | 3,013 |
+| 4B | RTX | CUDA | rows | 2.02 s | 5.85 s | 8,854 |
+| 4B | RTX | CUDA | state primed, rows | **1.67 s** | **4.77 s** | 3,013 |
+| 2B | RTX | CUDA | rows | 0.94 s | 2.58 s | 8,854 |
+| 2B | RTX | CUDA | state primed, rows | **0.78 s** | **2.08 s** | 3,013 |
+| 2B | RTX | CPU (i7-14700K) | state primed, rows | 10.6 s | – | 3,013 |
+| 4B | RTX | CPU (i7-14700K) | state primed, rows | 26.2 s | – | 3,013 |
 
 The model's layers are partly recurrent, so llama.cpp can only resume from a checkpoint; sending the state alone
 first puts one at its end, and every row then runs only its question (3,013 = exactly the question tokens). Parallel
-slots are slower: each keeps its own cache. Throughput: 4B ~630 tok/s on Metal, ~95 on CPU; 2B ~1,640 on Metal,
-~220–250 on CPU. Estimated with priming: 4B Metal ~5 s, 2B Metal ~2 s, 4B CPU ~35 s per `enemy_turn`.
+slots are slower: each keeps its own cache. Throughput: 4B ~630 tok/s on Metal, ~3,500–4,400 on CUDA, ~95–115 on
+CPU; 2B ~1,640 on Metal, ~8,000–9,400 on CUDA, ~220–285 on CPU. Estimated with priming on the M4 Pro: 4B Metal ~5 s,
+2B Metal ~2 s, 4B CPU ~35 s per `enemy_turn`. On CUDA the rows are short (~115 tokens each), so per-request overhead
+dominates: 26 primed rows take 1.67 s, ~64 ms each, at only ~2,100 tok/s.
 
 ### 3. Latency with every question cached and one forward pass (schema-first)
 
@@ -107,19 +129,42 @@ state, then one `Answer k: (` slot per question, all read in one pass. llama-ser
 pass, so this is the server's time for the state plus slots after the question prefix was cached, i.e. the best case
 for an engine that can (llama-cpp-python):
 
-| Model | Backend | enemy_turn (516 tok) | group_talk (1,485 tok) | ally_reactions_three (432 tok) |
-| --- | --- | ---: | ---: | ---: |
-| 2B | Metal | **297 ms** | 963 ms | **255 ms** |
-| 2B | CPU | 2.9 s | 14.4 s | 2.1 s |
-| 4B | Metal | 752 ms | 2.5 s | 633 ms |
-| 4B | CPU | 7.6 s | 41.7 s | 5.0 s |
+| Model | Machine | Backend | enemy_turn (516 tok) | group_talk (1,485 tok) | ally_reactions_three (432 tok) |
+| --- | --- | --- | ---: | ---: | ---: |
+| 2B | M4 Pro | Metal | **297 ms** | 963 ms | **255 ms** |
+| 2B | M4 Pro | CPU | 2.9 s | 14.4 s | 2.1 s |
+| 4B | M4 Pro | Metal | 752 ms | 2.5 s | 633 ms |
+| 4B | M4 Pro | CPU | 7.6 s | 41.7 s | 5.0 s |
+| 2B | RTX | CUDA | **42 ms** | **96 ms** | **34 ms** |
+| 4B | RTX | CUDA | **93 ms** | **215 ms** | **83 ms** |
+| 2B | RTX | CPU (i7-14700K) | 1.5 s | 5.6 s | 1.2 s |
+| 4B | RTX | CPU (i7-14700K) | 4.1 s | 13.8 s | 3.3 s |
+
+Reading the 23 `enemy_turn` slots through llama-server instead, one request each (what `probe_sf.py` does), takes
+~1.1 s for the 4B and ~0.42 s for the 2B on CUDA: the one-pass numbers need an engine that returns every slot's
+logits from one call.
 
 ### 4. Decider's official torch server
 
-`decider.serve` (decider-ai 1.10.0) on MPS with the 2B, shared prefix on (`DECIDER_SHARED_MIN_TOKENS=64`), eager
-(CUDA graphs are CUDA only): **vow 1.13–1.21 s, enemy_turn 7.3–7.7 s**, the same with the optional MLX kernel
-installed. On NVIDIA GPUs the same server uses CUDA graphs; its author reports a few ms per short request there. Not
-measured here (no NVIDIA GPU on this machine).
+`decider.serve` (decider-ai 1.10.0): one row per question, the state shared across the rows
+(`DECIDER_SHARED_MIN_TOKENS=64`), bf16 weights, median of 7 runs. On MPS it runs eager; on CUDA it captures CUDA graphs
+at start-up.
+
+| Model | Machine | vow (2 q) | ally_talk (2 q) | ally_reactions_three (11 q) | enemy_turn (23 q) | group_recruit (20 q) | group_talk (73 q) | Start-up |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2B | M4 Pro (MPS) | 1.13–1.21 s | – | – | 7.3–7.7 s | – | – | – |
+| 2B | RTX (CUDA) | **128 ms** | **68 ms** | **235 ms** | 722 ms | 617 ms | 2.58 s | 47 s |
+| 4B | RTX (CUDA) | **331 ms** | **156 ms** | 585 ms | 1.70 s | 1.45 s | out of memory | 58 s |
+
+- The MPS numbers are the same with the optional MLX kernel installed.
+- On CUDA it is about as fast as llama-server's primed rows (`enemy_turn`: 2B 0.78 s, 4B 1.67 s). It batches the rows,
+  but its weights are bf16 where the GGUF is 4-bit.
+- 16 GB of VRAM is tight. With the default graph budget the 2B captured 89 graphs in 214 s and ran out of memory on
+  `group_talk`; `DECIDER_GRAPH_TOKEN_BUDGET=8192` fits it at the same speed. The 4B (8 GB of weights) runs out on
+  `group_talk` even with `DECIDER_MAX_BATCH=8 DECIDER_GRAPH_TOKEN_BUDGET=4096`.
+- Its noul answers come out as 0 or 1. The shipped `decider_config.json` sets the noul temperature to 0.05, tuned for
+  JevBench's 0.2–0.8 band rule. The calibrated temperature that `src/jev/decider.gd` uses (4B 2.795, 2B 3.185) would
+  need an edited config, because `DECIDER_TEMPERATURE` sets one temperature for every answer type.
 
 ### 5. Quality: does it read the player's words?
 
@@ -148,6 +193,9 @@ Schema-first, one pass (section 3):
 | Want to come adventure with us? … | .05 | .30 | .16 | .86 | .12 | 2.03 | .20 | .52 | .47 | .87 | .75 | 1.84 |
 | Please, let's not fight. Let us pass in peace. | .09 | .51 | .13 | .19 | .83 | 1.19 | .80 | .59 | .25 | .71 | .90 | 1.93 |
 
+On the RTX (CUDA) both probes read the same as on Metal: one row per question within 0.05 of the numbers above
+(kindness within 0.19 on its 0–3 scale), schema-first within 0.04. The judgement is the model's, not the machine's.
+
 Reading: the **4B one-row-per-question** reads every message right. The 2B is mushy (an open invitation to join
 scores .24; the game needs ≥ .6). Schema-first keeps the 4B mostly right but noisier (a joke reads as .66 insult, a
 plea for peace as .51 insult), and breaks the 2B (a plea for peace reads as a .80 threat). Decider's config says the
@@ -155,20 +203,33 @@ released models were not trained on schema-first (`"schema_first_trained": false
 
 ## What this means for "under 400 ms"
 
+- **On an RTX 4070 Ti SUPER, the 4B schema-first round fits easily: 93 ms for `enemy_turn`, 215 ms for `group_talk`.**
+  Its judgement is good but noisier than one row per question (section 5). It needs an engine that reads every slot
+  in one pass (llama-cpp-python, or a small program on llama.cpp's C API). Through llama-server, one request per slot,
+  the same round takes ~1.1 s.
+- **The best reader (4B, one row per question) takes 1.7 s on that GPU**, both with llama-server (primed) and with
+  Decider's CUDA-graph server. The rows are short, so per-request overhead takes the time. An engine that ran a
+  request's rows as one batch from the shared state would process ~3,000 question tokens: ~0.45–0.55 s at the 4B's
+  measured 5,500–6,900 tok/s. That is an estimate, not a measurement, and it sits at the edge of 400 ms rather than
+  under it.
 - **No configuration measured on the M4 Pro's GPU reaches 400 ms with judgement we would ship.** The only one under
-  400 ms (2B, schema-first) misreads players. The best reader (4B, one row per question) takes ~5 s.
-- **Without a GPU, 400 ms is out of reach** for any model of this quality: the CPU runs the 2B at ~220 tok/s, and even
-  the cached best case is 2.1–2.9 s per round. Only ~150–300M encoder models could, and they read feelings poorly.
-- **Discrete NVIDIA GPUs are the unknown**: llama.cpp CUDA and Decider's CUDA-graph server are both far faster than
-  Metal here; someone with an NVIDIA card should run `tools/system-one/`.
+  400 ms (2B, schema-first) misreads players. The best reader takes ~5 s. Batching would not help there: Metal runs
+  the 4B at ~600–700 tok/s even in one pass, so it is compute-bound, not overhead-bound.
+- **Without a GPU, 400 ms is out of reach** for any model of this quality. A desktop i7-14700K is 1.3–3 times as fast
+  as the M4 Pro's CPU, and its cached best case is still 1.2–1.5 s (2B) and 3.3–4.1 s (4B) per round. Only
+  ~150–300M encoder models could, and they read feelings poorly.
 
 ## Routes to discuss
 
-| Route | Decision latency on the M4 Pro | Judgement | Work |
-| --- | --- | --- | --- |
-| **A.** 4B, schema-first, one pass (a llama-cpp-python sidecar), request sent the moment the player commits so it overlaps the party's animations, and visible / audible feedback within 400 ms of every key | ~750 ms (NVIDIA likely ~200 ms) | good, noisier than B | medium: Python sidecar per platform |
-| **B.** keep what is built: 4B, one row per question on llama-server, plus the same overlap and instant feedback | ~5 s | best | small |
-| **C.** A, plus shorter questions and only the state's changing parts after the cached prefix (target < 250 tokens per round) | maybe < 400 ms | to be re-measured | large: rewrites the questions and the golden fixtures |
+Latencies are per `enemy_turn` (`group_talk` in brackets). "est." marks a value worked out from measured
+throughput, not measured itself.
+
+| Route | M4 Pro (Metal) | RTX 4070 Ti SUPER (CUDA) | Judgement | Work |
+| --- | ---: | ---: | --- | --- |
+| **A.** 4B, schema-first, one pass (a llama-cpp-python sidecar), request sent the moment the player commits so it overlaps the party's animations, and visible / audible feedback within 400 ms of every key | ~750 ms (2.5 s) | **~95 ms (215 ms)** | good, noisier than B | medium: Python sidecar per platform |
+| **B.** keep what is built: 4B, one row per question on llama-server, plus the same overlap and instant feedback | ~5 s | 1.7 s (4.8 s) | best | small |
+| **C.** A, plus shorter questions and only the state's changing parts after the cached prefix (target < 250 tokens per round) | maybe < 400 ms | well under | to be re-measured | large: rewrites the questions and the golden fixtures |
+| **D.** B's rows, but all of a request's rows in one batch from the shared state (a small engine on llama.cpp's C API or llama-cpp-python) | ~4.5 s est. | ~0.5 s est. | best (same rows as B) | medium: the same sidecar as A, different readout |
 
 Questions for the group:
 
@@ -176,7 +237,8 @@ Questions for the group:
    the Doherty threshold)? Route B already meets the second if we add the feedback.
 2. What hardware do our players have: NVIDIA, Apple Silicon, or CPU only?
 3. When latency and judgement conflict, which wins?
-4. Can someone with an NVIDIA GPU run the benchmarks below?
+4. Only an NVIDIA GPU gets a decision under 400 ms (route A). Is it enough that decisions are fast there and take
+   seconds, behind instant feedback, everywhere else?
 
 ## Reproducing
 
@@ -185,8 +247,11 @@ M=~/decider-models   # outside the repo, so Godot doesn't scan gigabytes
 hf download Mapika/decider-4b-GGUF decider-4b-v3-Q4_K_M.gguf tokenizer.json decider_config.json --local-dir $M/decider-4b
 hf download Mapika/decider-2b-GGUF decider-2b-v12-Q4_K_M.gguf tokenizer.json decider_config.json --local-dir $M/decider-2b
 uv venv $M/ref && uv pip install -p $M/ref/bin/python "decider-ai[gguf,serve]==1.10.0"   # Decider's own code, the reference
+#   ([serve] alone covers everything but compare.py, and skips building llama-cpp-python on Linux / Windows)
 # plus a llama-server (llama.cpp b11429 or later) on PATH
 
+tools/system-one/run_all.sh $M $M/ref/bin/python        # sections 1 (priming), 2, 3 and 5 in one go, GPU then CPU
+# or one at a time:
 tools/system-one/run_bench.sh $M/decider-4b/decider-4b-v3-Q4_K_M.gguf 4b-gpu enemy_turn group_talk            # section 2
 PRIME=1 tools/system-one/run_bench.sh $M/decider-2b/decider-2b-v12-Q4_K_M.gguf 2b-cpu enemy_turn -- -dev none -ngl 0
 DECIDER_PY=$M/ref/bin/python tools/system-one/run_sf.sh $M/decider-2b/decider-2b-v12-Q4_K_M.gguf 2b-gpu       # section 3
@@ -195,6 +260,7 @@ python3 tools/system-one/probe.py http://127.0.0.1:41715                        
 $M/ref/bin/python tools/system-one/probe_sf.py http://127.0.0.1:41715 $M/decider-4b 2.795 3.152                # section 5, schema-first
 $M/ref/bin/python tools/system-one/compare.py $M/decider-4b/decider-4b-v3-Q4_K_M.gguf http://127.0.0.1:41715 tests/jev/golden/enemy_turn.json   # section 1
 # Decider's torch server (section 4); needs the full model folder: hf download Mapika/decider-2b --local-dir $M/hf-decider-2b
+# on a 16 GB NVIDIA card add DECIDER_GRAPH_TOKEN_BUDGET=8192, or group_talk runs out of memory
 DECIDER_MODEL=$M/hf-decider-2b DECIDER_SHARED_MIN_TOKENS=64 $M/ref/bin/uvicorn decider.serve:app --port 41716 &
 python3 tools/system-one/bench_s1.py http://127.0.0.1:41716
 ```
