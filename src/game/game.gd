@@ -745,7 +745,12 @@ func on_voice_error(err) -> void:
 	if G == null:
 		return
 	var blocked: bool = err == "not-allowed" or err == "service-not-allowed"
-	say("THE MICROPHONE IS BLOCKED. TYPE INSTEAD, OR ALLOW IT IN THE BROWSER." if blocked else "COULDN'T HEAR YOU (%s). TYPE INSTEAD." % UP(err), "warn")
+	if err == "audio-capture" and not OS.has_feature("web"):
+		say("NO SOUND FROM THE MICROPHONE. CHECK IT'S CONNECTED AND THAT DONJON MAY USE IT (SYSTEM SETTINGS), OR TYPE.", "warn")
+	elif err == "asr-failed":
+		pass # the recognizer has already said what broke
+	else:
+		say("THE MICROPHONE IS BLOCKED. TYPE INSTEAD, OR ALLOW IT IN THE BROWSER." if blocked else "COULDN'T HEAR YOU (%s). TYPE INSTEAD." % UP(err), "warn")
 	render()
 
 
@@ -3068,7 +3073,12 @@ func key(k: String) -> void:
 		render()
 		return
 	if k == "l" and narrator.supported:
-		say("VOICES %s." % ("ON: MONSTERS READ THEIR LINES ALOUD" if narrator.toggle() else "OFF"), "dim")
+		if not narrator.toggle():
+			say("VOICES OFF.", "dim")
+		elif narrator.order.size() > 1:
+			say("VOICES: %s. L FOR THE NEXT VOICE." % narrator.label, "dim")
+		else:
+			say("VOICES ON: MONSTERS READ THEIR LINES ALOUD.", "dim")
 		render()
 		return
 	if G.combat != null:

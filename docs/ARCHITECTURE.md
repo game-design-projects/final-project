@@ -13,13 +13,14 @@ Donjon was a browser game (`crawler/` in git history, last at `12d2be7`) and was
 | `src/game/` | `game.gd`, the run: state `G`, exploring, combat, talking, vows, boons, every Jev request. `floors.gd`: floor rules and the maze generator |
 | `src/jev/` | Everything that asks Jev: `config.gd`, `jev.gd`, `api.gd`, `enemy.gd`, `allies.gd`, `bonds.gd`, `q.gd`, `util.gd`, `mock_jev.gd` |
 | `src/view/` | The 448×288 picture: `canvas2d.gd`, `render.gd` (corridor, automap, title), `art.gd` (monsters), `postfx.gd` + two `.gdshader` files |
-| `src/audio/` | `synth.gd` (offline DSP), `sfx.gd`, `shout.gd` (line to monster voice), `mix.gd` (buses), `ambient.gd` (music), `tts.gd`, `voice.gd` |
+| `src/audio/` | `synth.gd` (offline DSP), `sfx.gd`, `shout.gd` (line to monster voice), `mix.gd` (buses), `ambient.gd` (music), `tts.gd` + `tts_engines.gd` + `tts_config.gd` (monsters reading aloud), `voice.gd` + `asr.gd` (hold to talk) |
 | `src/ui/` | `main.tscn` + `main.gd` (the screen) and its panels, models and helpers |
 | `src/genre/` | Genre Halls: `genre_rules.gd` (rules, no UI) and `genre_halls.gd` + `.tscn` (its own scene) |
-| `assets/` | `audio/*.ogg` (the music), `fonts/` (Press Start 2P, VT323), `CREDITS.txt` |
+| `assets/` | `audio/*.ogg` (the music), `voices/<bank>/` (monster lines rendered ahead, with a `manifest.json`), `fonts/` (Press Start 2P, VT323), `CREDITS.txt` |
 | `tests/` | Mirrors `src/`, plus `run_tests.gd` and `test_case.gd` |
 | `cli/` | Scenario runners and screenshot/sound dump scripts (see the README) |
 | `tools/` | `build.sh`, `check-html5.mjs`, `music/` (offline music renders), `godot-mcp/` (the Godot MCP server `.mcp.json` and `.codex/config.toml` start). Godot ignores it (`.gdignore`) |
+| `native/` | `asr/`: the speech-recognition helper's C source, `build.sh`, `smoke.py` and the licences it ships with (Godot ignores it). `dist/<platform>/`: what `build.sh` builds, not committed; each desktop export carries its own |
 | `proxy/` | The Cloudflare Worker that holds the Jev key and forwards the game's requests (JavaScript, its own `package.json` and tests; `.gdignore`) |
 | `.github/` | CI: `workflows/ci.yml` (tests, builds, releases), `workflows/worker.yml` (the Worker), `actions/setup-godot` |
 | `web/shell.html` | The web export's page |
@@ -66,12 +67,13 @@ Below it: `enemy.gd` (a round for 1 to 3 monsters), `allies.gd` (the after-fight
 
 ## Audio
 
-Nothing is a sound file except the music.
+Nothing is a sound file except the music and any monster lines rendered ahead (`assets/voices/`).
 
 - **Effects.** `sfx.gd` holds recipes (`snd_hit`, `snd_levelup`...) made of tones, filtered noise and a formant voice, built on `synth.gd` (oscillators, WebAudio-compatible biquad filters, envelopes, rendered offline into sample buffers). A recipe is rendered once into an `AudioStreamWAV` and cached, a few milliseconds per frame in the background (`PREWARM`), and each play picks the cached stream and sets pitch and volume (`VARY`, `POLY`). `shout.gd` classifies a monster's line (a roar, a squelch, a hiss...) into a plan the voice recipes play.
 - **Buses.** `Mix.Mixer` builds the audio buses at runtime: music (`MusicIn` then `Music`, with the danger low-pass and impact dips), effects (`SFX`) with a reverb send (`SFXRoom`), all into `Master` with a limiter. `Mix.BeatScheduler` lands the heartbeat on the music's beat. The mixer is made on the first key press (browsers keep audio locked until then), and `sfx.init(mixer)` and `music.attach(mixer)` plug the players in.
 - **Music.** `Ambient.Ambient` plays seamless `.ogg` loops from `assets/audio/` (one for exploring, four for fights) and two stings, switching by mood. They are rendered offline by the scripts in `tools/music/`; the loop lengths in `TRACKS` must match the files (a test checks).
-- **Speech.** `tts.gd` speaks through `DisplayServer.tts_*` (the system's engine, or the browser's on the web) and ducks the music and effects while a monster talks. `voice.gd` listens through the browser's Web Speech API via `JavaScriptBridge`, so it exists only in the web build; elsewhere `supported` is false and the ui hides the mic.
+- **Monsters speaking.** `tts.gd`'s `Narrator` decides when a line is said (off until the player talks or presses L, a backlog dropped, the music and effects ducked) and hands an `Utterance` (words, species, callbacks) to an engine. Engines share one interface: `get_voices()`, `speak(u)`, `cancel()` and, when they may not have a line, `can_say(u)`. `tts_engines.gd` has them: `Bank` (lines rendered ahead into `assets/voices/<id>/`, looked up by species and `Tts.line_key`), `Feiyu` and `Qwen` (HTTP services, through an injectable `fetch`; a failure takes one out of the chain for 30 s), `Chain` (the first engine that can say it does) and `Player` (plays banked and synthesised lines in the order they were asked for). `DisplayServerSynth` in `tts.gd` is the system's engine. `tts_config.gd` works out which engines exist (banks on disk, services in `config/tts_config.json` or `.env`, the system's) and their order; L steps through them.
+- **Hold to talk.** `voice.gd`'s `Listener` runs one listening session against anything shaped like the browser's `SpeechRecognition` (`start()`, `stop()`, `abort()`, `onresult`, `onerror`, `onend`). The web build gives it the Web Speech API through `JavaScriptBridge`. The desktop builds give it `asr.gd`'s `NativeRecognition`: `Runtime` (one, under the root) captures the microphone (`AudioStreamMicrophone` into a muted `Mic` bus with an `AudioEffectCapture`), runs `native/asr`'s helper as a child process (`OS.execute_with_pipe`, non-blocking) and streams the audio to it as frames on stdin; the helper answers with JSON lines. It also downloads the speech model when the player asks (`prepare()`), checks it, and copies the helper out of the `.pck` in an exported build. Without either, `supported` is false and the ui hides the mic.
 
 ## Core helpers
 
@@ -94,7 +96,7 @@ godot --headless --path . -s res://tests/run_tests.gd -- --only=<substring of th
 - **Layout.** `tests/` mirrors `src/`. Files without a `test_` prefix are helpers: `tests/game/helpers.gd` wires a `Game` to stub ui, sfx and music objects that record their calls, real tips and achievements, an in-memory store and seeded mock Jev, with `sleep_scale = 0` so a fight plays in frames; `tests/ui/sample_g.gd` builds a hand-made `G`. `tests/ui/test_main.gd` instantiates the real `main.tscn` (`Flags.override = "mock"`, `Main.store_override`).
 - **Seams.** Tests set `Flags.override`, pass `Store.Memory`, call `seed(n)`, give `JevConfig.resolve` injected sources (it never reads the real `.env` in a test), or replace Jev's transport; `game.api_handler` replaces `JevApi.handle`.
 - **Golden fixtures.** `tests/jev/golden/*.json` hold requests and exactly what the JavaScript game sent to Jev for each (`{model, state, questions}`), and `results.json` holds what its rules made of scripted Jev answers, all recorded from the browser version before it was deleted. `test_golden.gd` replays each request through `JevApi.handle` into a `MockJev.Server`, which records what it was sent, and compares `state` and `questions` as JSON text, including the order of questions and options; `test_golden_results.gd` replays the decisions. Changing Jev's wording is a deliberate edit to a fixture in the same commit.
-- **Real paths.** `test_http.gd` runs the real `HTTPRequest` against a throwaway server on 127.0.0.1. `test_playback.gd` plays through the real audio server (the dummy driver) and measures levels at the end of `Master`. The Worker has its own: `node --test proxy/worker.test.js`.
+- **Real paths.** `test_http.gd` runs the real `HTTPRequest` against a throwaway server on 127.0.0.1. `test_playback.gd` plays through the real audio server (the dummy driver) and measures levels at the end of `Master`. `test_asr.gd` runs the real speech helper on a recording through `asr.gd` when `native/asr/build.sh` has built it and the model (CI does; elsewhere that test says it skipped). The helper's own test is `native/asr/smoke.py`. The Worker has its own: `node --test proxy/worker.test.js`.
 
 ## GDScript traps that still matter
 

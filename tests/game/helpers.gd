@@ -130,6 +130,8 @@ class StubNarrator:
 	extends RefCounted
 	var supported := false
 	var on := false
+	var order := ["default"]  # the voices L steps through
+	var label := "DEFAULT"
 	var said := []
 
 	func say(line: String, _species = null) -> void:

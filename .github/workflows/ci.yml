@@ -1,8 +1,12 @@
-# Every push to main and every pull request: tests, then a build for every platform (web, Windows, macOS, Linux),
-# kept as workflow artifacts. Tags don't trigger this file: release.yml owns them and calls this one, so a tag runs
-# the tests and builds once and publishes the artifacts that passed. Nothing publishes to itch.io: the final ships
-# native. Every build reaches Jev through the Jev API Worker (JEV_API, deployed by worker.yml), which holds the key,
-# so no build carries one and this workflow uses no secrets and can only read.
+# Every push to main and every pull request: the speech helper for each desktop system, tests, then a build for every
+# platform (web, Windows, macOS, Linux), kept as workflow artifacts. Tags don't trigger this file: release.yml owns them
+# and calls this one, so a tag runs the tests and builds once and publishes the artifacts that passed. Nothing
+# publishes to itch.io: the final ships native. Every build reaches Jev through the Jev API Worker (JEV_API, deployed
+# by worker.yml), which holds the key, so no build carries one and this workflow uses no secrets and can only read.
+#
+# The speech helper (native/asr/: hold-to-talk on the desktop builds) is built for Linux and Windows on Linux (Windows
+# cross-compiled with mingw-w64) and for macOS on macOS, then run on a recording on each of the three systems against
+# the speech model (the same pinned download the game makes, cached). Each desktop build carries its own helper.
 name: CI
 on:
   push:
@@ -16,9 +20,101 @@ permissions:
 env:
   GODOT_VERSION: 4.7.2
   JEV_API: https://donjon-api.lishuyustevenli.workers.dev
+  ASR_MODEL_KEY: asr-model-nemotron-speech-streaming-en-0.6b-160ms-int8-2026-04-25
 
 jobs:
+  asr-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install mingw-w64
+        run: sudo apt-get update -q && sudo apt-get install -y -q gcc-mingw-w64-x86-64
+      - name: Build the Linux and Windows helpers
+        run: |
+          native/asr/build.sh linux
+          native/asr/build.sh windows
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: asr-linux
+          path: native/dist/linux
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: asr-windows
+          path: native/dist/windows
+          retention-days: 14
+          if-no-files-found: error
+
+  asr-macos:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the macOS helper (universal)
+        run: native/asr/build.sh macos
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: asr-macos
+          path: native/dist/macos
+          retention-days: 14
+          if-no-files-found: error
+      - name: Cache the speech model
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/asr-model
+          key: ${{ env.ASR_MODEL_KEY }}
+      - name: Fetch the speech model
+        run: native/asr/build.sh model
+      - name: The helper hears a recording
+        run: python3 native/asr/smoke.py native/dist/macos/donjon-asr build/asr-model
+
+  asr-smoke:
+    needs: asr-build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            os: ubuntu-latest
+          - platform: windows
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: asr-${{ matrix.platform }}
+          path: native/dist/${{ matrix.platform }}
+      - name: Cache the speech model
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/asr-model
+          key: ${{ env.ASR_MODEL_KEY }}
+      - name: Fetch the speech model
+        run: native/asr/build.sh model
+      - name: The helper hears a recording
+        run: |
+          set -euo pipefail
+          exe=native/dist/${{ matrix.platform }}/donjon-asr
+          [[ ${{ matrix.platform }} == windows ]] && exe=$exe.exe
+          chmod +x "$exe" # artifacts don't keep the executable bit
+          py=$(command -v python || command -v python3) # python3 can be the Store stub on Windows
+          "$py" native/asr/smoke.py "$exe" build/asr-model
+
   test:
+    needs: asr-build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,6 +125,20 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           version: ${{ env.GODOT_VERSION }}
+      # The helper and the model, so tests/audio/test_asr.gd hears a real recording through the game's own code
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: asr-linux
+          path: native/dist/linux
+      - name: Cache the speech model
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/asr-model
+          key: ${{ env.ASR_MODEL_KEY }}
+      - name: Fetch the speech model
+        run: |
+          chmod +x native/dist/linux/donjon-asr
+          native/asr/build.sh model
       - name: Import the project
         run: godot --headless --path . --import
       - name: Unit and game tests (mock Jev)
@@ -43,7 +153,7 @@ jobs:
           done
 
   build:
-    needs: test
+    needs: [test, asr-smoke, asr-macos]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -62,6 +172,12 @@ jobs:
         uses: ./.github/actions/setup-godot
         with:
           version: ${{ env.GODOT_VERSION }}
+      # Each desktop build carries its own system's speech helper (export_presets.cfg include_filter)
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: matrix.platform != 'web'
+        with:
+          name: asr-${{ matrix.platform }}
+          path: native/dist/${{ matrix.platform }}
       - name: Build (Jev through the Worker)
         run: GODOT=godot tools/build.sh --proxy "$JEV_API" ${{ matrix.platform }}
       - name: Validate the HTML5 bundle
