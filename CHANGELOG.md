@@ -4,8 +4,20 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+Work in progress on `feat/opensource-jev`: replacing Jev with an open-source System One model that runs on the player's computer. The route is still being decided; [docs/system-one-research.md](docs/system-one-research.md) has the survey, the measurements and the open questions.
+
 ### Added
 - Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
+- Decider (Mapika, Apache-2.0) as the monsters' model, read through a stock llama.cpp `llama-server`: `src/jev/decider.gd` (Decider's readout ported from decider-ai 1.10.0, checked byte for byte against its own output in `tests/jev/golden/decider/`, written by `tools/decider_golden.py`), `src/jev/local.gd` (the transport: the state first, then one `/completion` per question), `src/jev/local_server.gd` (starts and stops the server) and `src/jev/local_setup.gd` (downloads a pinned llama.cpp build and model for this OS and backend, sha256-checked).
+- A `systemone` way in: any server that answers `POST /v1/systemone`, such as Decider's own.
+- `tools/system-one/`: the scripts behind the research page (readout parity, latency on GPU and CPU, a perception probe), with `run_all.sh` to run every llama-server measurement in one go and `prime_check.py` to see how far priming moves each answer.
+- NVIDIA measurements in the research page (RTX 4070 Ti SUPER, CUDA, and its i7-14700K CPU): the 4B's schema-first round takes 93 ms for `enemy_turn` and 215 ms for `group_talk`, and one row per question takes 1.7 s on llama-server and on Decider's own CUDA-graph server.
+
+### Changed
+- `Jev.configure_jev(opts)` takes no key; the ways in are `local`, `systemone` and `mock`. `config.gd` reads `config/jev_config.json`, then the setup's `user://local-model/install.json`, and falls back to the mock with a warning (*NO LOCAL MODEL INSTALLED*).
+
+### Removed
+- The game's TypeSafe, OpenRouter and Worker providers, and API keys in `.env` (the Worker in `proxy/` is still in the repo for now).
 
 ## [0.3.0] - 2026-10-29
 

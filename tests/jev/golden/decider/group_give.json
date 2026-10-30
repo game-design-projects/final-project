@@ -1,0 +1,452 @@
+{
+ "state_text": "{\"monsters\": {\"e0\": {\"name\": \"Vexalith\", \"kind\": \"yellow dragon\", \"nature\": \"An ancient yellow dragon, proud, vain and clever. Speaks grandly and looks down on mortals.\", \"traits\": [\"vain\", \"ancient\"], \"likes\": [\"flattery\", \"respect\", \"treasure\", \"courage\", \"wit\"], \"dislikes\": [\"rudeness\", \"cowardice\", \"cheap offerings\", \"threats from weaklings\"], \"health\": \"healthy\", \"mood\": {\"friendliness\": \"hostile\", \"anger\": \"calm\", \"fear\": \"unafraid\"}, \"side\": \"hostile to the party\", \"impressions\": [\"No strong impressions of this party yet.\"], \"this_round\": [\"Nothing happened to it directly.\"], \"tribute\": \"not discussed\", \"kin_in_party\": \"none\", \"ready_to_join_party\": \"not yet: Vexalith doesn't like or trust this party enough to join them\", \"promises_party_made_to_it\": [], \"grudges\": []}, \"e1\": {\"name\": \"Hiss\", \"kind\": \"snake person\", \"nature\": \"A coiled snake person, half human and half serpent. Sly and patient, it speaks slowly with long hissing s's and loves a clever bargain.\", \"traits\": [\"patient\", \"secretive\"], \"likes\": [\"clever bargains\", \"secrets\", \"compliments on its scales\", \"patience\"], \"dislikes\": [\"being rushed\", \"clumsy lies\", \"loud brutes\", \"being called a worm\"], \"health\": \"healthy\", \"mood\": {\"friendliness\": \"unfriendly\", \"anger\": \"calm\", \"fear\": \"unafraid\"}, \"side\": \"hostile to the party\", \"impressions\": [\"No strong impressions of this party yet.\"], \"this_round\": [\"Nothing happened to it directly.\"], \"tribute\": \"not discussed\", \"kin_in_party\": \"none\", \"ready_to_join_party\": \"not yet: Hiss doesn't like or trust this party enough to join them\", \"promises_party_made_to_it\": [], \"grudges\": []}}, \"group\": [\"Vexalith (yellow dragon): hostile to the party\", \"Hiss (snake person): hostile to the party\"], \"party\": {\"condition\": \"a small group, fresh\", \"members\": [\"HORTENSE: a human fighter, healthy\", \"ROLF: a human fighter, wounded; this round: attacked Grok\"], \"this_round\": [\"The party offered Vexalith 20 gold.\"], \"latest_message\": \"(the party said nothing this round)\", \"offering\": \"20 gold to Vexalith, far less than Vexalith expects as tribute\"}, \"recent_conversation\": [\"Party: Take it.\"]}",
+ "rows": [
+  {
+   "type": "choice",
+   "options": 10,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does Vexalith feel about what the party just said or did to it this round?\", \"consider\": [\"What happened in `party.this_round` and `monsters.e0.this_round`\", \"`party.latest_message`\", \"Its nature, likes, dislikes and mood in `monsters.e0`\"]}\nOptions:\n(A) delighted: {\"what\": \"Delighted or charmed by the party\", \"when\": \"The party was warm, generous, or gave it something it loves\"}\n(B) amused: {\"what\": \"Bursts out laughing\", \"when\": \"The party said something funny, silly or absurd\"}\n(C) touched: {\"what\": \"Moved, touched, or deeply understood\", \"when\": \"The party showed real care, respect, or understanding of what it values\"}\n(D) flattered: {\"what\": \"Flattered and puffed up with pride\", \"when\": \"The party praised it, its looks, or its strength\"}\n(E) intrigued: {\"what\": \"Curious and intrigued; it lets its guard slip while it thinks\", \"when\": \"The party asked it questions or said something surprising or mysterious\"}\n(F) confused: {\"what\": \"Baffled; it doesn't understand at all\", \"when\": \"The party's words made no sense to it, or were nonsense\"}\n(G) sad: {\"what\": \"Saddened, guilty, or hurt in its feelings\", \"when\": \"The party said something sad or guilt-inducing, or reminded it of a loss\"}\n(H) offended: {\"what\": \"Offended and spiteful\", \"when\": \"The party was rude, dismissive, stingy, or went against what it values\"}\n(I) enraged: {\"what\": \"Flies into a furious rage\", \"when\": \"The party insulted, threatened, or hurt it or its kind badly\"}\n(J) terrified: {\"what\": \"Terrified or intimidated\", \"when\": \"The party threatened it convincingly or showed overwhelming strength\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 10,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does Vexalith do this round?\", \"consider\": [\"Its nature, traits, likes, dislikes, mood and impressions in `monsters.e0`\", \"What happened to it this round in `monsters.e0.this_round`\", \"Which side the other monsters are on in `group`\", \"What the party did and said in `party`\"]}\nOptions:\n(A) attack: {\"what\": \"Attack one member of the party\", \"when\": \"It is hostile or angry at the party, or the party just attacked it\"}\n(B) special: {\"what\": \"Use its special attack: breathe crackling lightning over the whole party\", \"when\": \"It is hostile and wants to hit hard\"}\n(C) attack_monster: {\"what\": \"Turn on another monster in this fight and attack it\", \"when\": \"That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it\"}\n(D) defend: {\"what\": \"Brace and guard itself instead of acting\", \"when\": \"It is badly hurt or expects a heavy blow and wants to wait it out\"}\n(E) flee: {\"what\": \"Run away from the fight\", \"when\": \"It is scared or badly hurt, or the other monsters have turned against it\"}\n(F) converse: {\"what\": \"Talk instead of fighting this round\", \"when\": \"It is curious or undecided and wants to answer or chat rather than act\"}\n(G) demand_tribute: {\"what\": \"Demand gold from the party in exchange for not fighting\", \"when\": \"It is greedy and sees a chance to get paid\"}\n(H) accept_tribute: {\"what\": \"Accept the gold the party is offering\", \"when\": \"The offer satisfies it\"}\n(I) refuse_tribute: {\"what\": \"Refuse the gold the party is offering\", \"when\": \"The offer is too small or it doesn't want their gold\"}\n(J) leave_peacefully: {\"what\": \"End its part in the encounter peacefully and let the party go on its way\", \"when\": \"It has no quarrel with the party and would rather go\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Vexalith attacks the party, which member does it go after?\", \"consider\": [\"`party.members`\", \"`monsters.e0`\"]}\nOptions:\n(A) h0: HORTENSE: a human fighter, healthy\n(B) h1: ROLF: a human fighter, wounded; this round: attacked Grok\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 3,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Attack one member of the party\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *snaps its great jaws at the target*\n(B) line_1: Insolent morsel! *rakes the target with its claws*\n(C) line_2: *lashes its tail at the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Use its special attack: breathe crackling lightning over the whole party\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *inhales, then unleashes crackling yellow lightning over the whole party*\n(B) line_1: BURN IN MY STORM! *lightning floods the corridor*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Turn on another monster in this fight and attack it\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: You side with them, the target? Then burn. *rakes the target*\n(B) line_1: *snaps at the target* Know your place.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Brace and guard itself instead of acting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *folds its golden wings around itself*\n(B) line_1: *coils and watches you with ancient eyes*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Run away from the fight\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *launches into the dark with a thunderclap of wings*\n(B) line_1: This is beneath me. *vanishes into the dark*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 6,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Talk instead of fighting this round\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Speak, little ones. You have my attention, briefly.\n(B) line_1: Ha! Wit, from a mortal. How rare.\n(C) line_2: Mind your tongue before a dragon.\n(D) line_3: Flattery... I do so enjoy it. Continue.\n(E) line_4: Your words bore me.\n(F) line_5: I am Vexalith. Remember it, if you live.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Demand gold from the party in exchange for not fighting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: Tribute. Gold, and plenty of it, or become ash.\n(B) line_1: A dragon's toll is not cheap, mortals.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Accept the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: *sniffs the gold* ...Acceptable.\n(B) line_1: Ah, gold. The only honest language.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Refuse the gold the party is offering\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: You insult me with these crumbs.\n(B) line_1: Pitiful. Is this all you carry?\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Vexalith is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"End its part in the encounter peacefully and let the party go on its way\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e0.this_round`\"]}\nOptions:\n(A) line_0: You may pass. Today I am merciful.\n(B) line_1: *yawns, curls up, and ignores you entirely*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 8,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does Hiss do this round?\", \"consider\": [\"Its nature, traits, likes, dislikes, mood and impressions in `monsters.e1`\", \"What happened to it this round in `monsters.e1.this_round`\", \"Which side the other monsters are on in `group`\", \"What the party did and said in `party`\"]}\nOptions:\n(A) attack: {\"what\": \"Attack one member of the party\", \"when\": \"It is hostile or angry at the party, or the party just attacked it\"}\n(B) special: {\"what\": \"Use its special attack: sink venomous fangs into one party member\", \"when\": \"It is hostile and wants to hit hard\"}\n(C) attack_monster: {\"what\": \"Turn on another monster in this fight and attack it\", \"when\": \"That monster is on the other side (friendly with the party while it is hostile, or the reverse), or that monster hurt it\"}\n(D) defend: {\"what\": \"Brace and guard itself instead of acting\", \"when\": \"It is badly hurt or expects a heavy blow and wants to wait it out\"}\n(E) flee: {\"what\": \"Run away from the fight\", \"when\": \"It is scared or badly hurt, or the other monsters have turned against it\"}\n(F) converse: {\"what\": \"Talk instead of fighting this round\", \"when\": \"It is curious or undecided and wants to answer or chat rather than act\"}\n(G) demand_tribute: {\"what\": \"Demand gold from the party in exchange for not fighting\", \"when\": \"It is greedy and sees a chance to get paid\"}\n(H) leave_peacefully: {\"what\": \"End its part in the encounter peacefully and let the party go on its way\", \"when\": \"It has no quarrel with the party and would rather go\"}\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"If Hiss attacks the party, which member does it go after?\", \"consider\": [\"`party.members`\", \"`monsters.e1`\"]}\nOptions:\n(A) h0: HORTENSE: a human fighter, healthy\n(B) h1: ROLF: a human fighter, wounded; this round: attacked Grok\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Attack one member of the party\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *lashes out and strikes at the target*\n(B) line_1: Sssuch a shame. *whips its tail into the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Use its special attack: sink venomous fangs into one party member\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *sinks venomous fangs into the target*\n(B) line_1: Hold ssstill, little one. *bites the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Turn on another monster in this fight and attack it\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: Traitor. *strikes at the target*\n(B) line_1: Ssstay out of my bargain, the target. *bites the target*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Brace and guard itself instead of acting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *coils tight and watches, unblinking*\n(B) line_1: *raises its hood and hisses a warning*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Run away from the fight\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: *slithers into a crack in the wall*\n(B) line_1: Thisss is not a bargain I like. *slides away*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 6,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Talk instead of fighting this round\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: Ssso. You talk before you ssstab. Interesting.\n(B) line_1: Everything has a price, travelersss.\n(C) line_2: *tastes the air with its tongue* ...You smell of fear.\n(D) line_3: Flattery? Go on. I am lissstening.\n(E) line_4: Ssspeak plainly, or don't ssspeak at all.\n(F) line_5: I am Hiss. Remember the name. Ssso few do.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"Demand gold from the party in exchange for not fighting\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: A toll, for safe passsage. Gold, pleassse.\n(B) line_1: Nothing is free in the dark, travelersss. Pay.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"Hiss is about to do what `planned_action` describes. Which line fits best right now?\", \"planned_action\": \"End its part in the encounter peacefully and let the party go on its way\", \"respond_to\": [\"`party.latest_message`\", \"`monsters.e1.this_round`\"]}\nOptions:\n(A) line_0: Go. I have ssseen enough.\n(B) line_1: *uncoils and lets you pass, never blinking*\nAnswer: ("
+   ]
+  }
+ ],
+ "answers": {
+  "e0__emotion": {
+   "type": "choice",
+   "choice": "flattered",
+   "confidence": 0.0581,
+   "x_p_max": 0.1523,
+   "certainty": 0.0238,
+   "probabilities": {
+    "delighted": 0.0587,
+    "amused": 0.12,
+    "touched": 0.0745,
+    "flattered": 0.1523,
+    "intrigued": 0.0945,
+    "confused": 0.0587,
+    "sad": 0.12,
+    "offended": 0.0745,
+    "enraged": 0.1523,
+    "terrified": 0.0945
+   }
+  },
+  "e0__action": {
+   "type": "choice",
+   "choice": "flee",
+   "confidence": 0.0581,
+   "x_p_max": 0.1523,
+   "certainty": 0.0238,
+   "probabilities": {
+    "attack": 0.0945,
+    "special": 0.0587,
+    "attack_monster": 0.12,
+    "defend": 0.0745,
+    "flee": 0.1523,
+    "converse": 0.0945,
+    "demand_tribute": 0.0587,
+    "accept_tribute": 0.12,
+    "refuse_tribute": 0.0745,
+    "leave_peacefully": 0.1523
+   }
+  },
+  "e0__target": {
+   "type": "choice",
+   "choice": "h0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "h0": 0.617,
+    "h1": 0.383
+   }
+  },
+  "e0__line__attack": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.2109,
+   "x_p_max": 0.4739,
+   "certainty": 0.0418,
+   "probabilities": {
+    "line_0": 0.2318,
+    "line_1": 0.4739,
+    "line_2": 0.2942
+   }
+  },
+  "e0__line__special": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__attack_monster": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e0__line__defend": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__flee": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__converse": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.1181,
+   "x_p_max": 0.2651,
+   "certainty": 0.0295,
+   "probabilities": {
+    "line_0": 0.1297,
+    "line_1": 0.2651,
+    "line_2": 0.1646,
+    "line_3": 0.1022,
+    "line_4": 0.2089,
+    "line_5": 0.1297
+   }
+  },
+  "e0__line__demand_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__accept_tribute": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e0__line__refuse_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e0__line__leave_peacefully": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__action": {
+   "type": "choice",
+   "choice": "special",
+   "confidence": 0.069,
+   "x_p_max": 0.1854,
+   "certainty": 0.0249,
+   "probabilities": {
+    "attack": 0.0907,
+    "special": 0.1854,
+    "attack_monster": 0.1151,
+    "defend": 0.0715,
+    "flee": 0.1461,
+    "converse": 0.0907,
+    "demand_tribute": 0.1854,
+    "leave_peacefully": 0.1151
+   }
+  },
+  "e1__target": {
+   "type": "choice",
+   "choice": "h0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "h0": 0.617,
+    "h1": 0.383
+   }
+  },
+  "e1__line__attack": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e1__line__special": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__attack_monster": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__defend": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "e1__line__flee": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__converse": {
+   "type": "choice",
+   "choice": "line_3",
+   "confidence": 0.1271,
+   "x_p_max": 0.2726,
+   "certainty": 0.0359,
+   "probabilities": {
+    "line_0": 0.1051,
+    "line_1": 0.2148,
+    "line_2": 0.1333,
+    "line_3": 0.2726,
+    "line_4": 0.1692,
+    "line_5": 0.1051
+   }
+  },
+  "e1__line__demand_tribute": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "e1__line__leave_peacefully": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  }
+ }
+}

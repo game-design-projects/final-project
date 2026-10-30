@@ -1,0 +1,99 @@
+{
+ "state_text": "{\"monster\": {\"name\": \"Glop\", \"kind\": \"orange slime\", \"personality\": [\"A simple slime with a blank, unblinking stare. Timidly speaks with an innocent aura.\", \"shy\", \"hungry\"], \"likes\": [\"kindness\", \"jokes and silly noises\", \"peace\", \"being included\"], \"dislikes\": [\"violence against slimes\", \"cruelty to creatures begging for mercy\", \"being diluted in a body of water\"], \"values\": \"Wants a kind, gentle party. Upset by needless killing, especially of slimes or of creatures that begged for mercy. Happy when the party makes friends instead of fighting.\", \"loyalty_now\": \"uneasy\"}, \"broken_promise\": \"The party swore to Glop: \\\"i won't kill slimes\\\"\", \"how_it_was_broken\": \"The party killed a slime.\"}",
+ "rows": [
+  {
+   "type": "choice",
+   "options": 4,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` respond to the party breaking `broken_promise`?\", \"consider\": [\"`how_it_was_broken`\", \"`monster.values`\", \"`monster.loyalty_now`\", \"`monster.personality`\"]}\nOptions:\n(A) forgive: Forgive the party, grudgingly, and stay\n(B) leave_party: Leave the party for good\n(C) attack_party: Turn on the party and attack them\n(D) steal_gold: Steal the party's gold and run off with it\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"`monster.name` is about to forgive the party, grudgingly, and stay. What does it say?\", \"about\": \"`how_it_was_broken`\"}\nOptions:\n(A) line_0: ...you said. you promised. *blank stare* ...okay. one more chance.\n(B) line_1: *trembles, but stays*\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"`monster.name` is about to leave the party for good. What does it say?\", \"about\": \"`how_it_was_broken`\"}\nOptions:\n(A) line_0: ...promise was lie. Glop go now. *oozes away*\n(B) line_1: *the blank stare dims* ...no more friends.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"`monster.name` is about to turn on the party and attack them. What does it say?\", \"about\": \"`how_it_was_broken`\"}\nOptions:\n(A) line_0: LIAR! *lunges at the party*\n(B) line_1: *the blank stare turns cold* ...you lied.\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"`monster.name` is about to steal the party's gold and run off with it. What does it say?\", \"about\": \"`how_it_was_broken`\"}\nOptions:\n(A) line_0: *quietly absorbs the coin pouch and slides off*\n(B) line_1: ...Glop take shiny. you take promise. fair.\nAnswer: ("
+   ]
+  }
+ ],
+ "answers": {
+  "response": {
+   "type": "choice",
+   "choice": "steal_gold",
+   "confidence": 0.1674,
+   "x_p_max": 0.3756,
+   "certainty": 0.0484,
+   "probabilities": {
+    "forgive": 0.1448,
+    "leave_party": 0.2959,
+    "attack_party": 0.1837,
+    "steal_gold": 0.3756
+   }
+  },
+  "line__forgive": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "line__leave_party": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  },
+  "line__attack_party": {
+   "type": "choice",
+   "choice": "line_1",
+   "confidence": 0.343,
+   "x_p_max": 0.6715,
+   "certainty": 0.0866,
+   "probabilities": {
+    "line_0": 0.3285,
+    "line_1": 0.6715
+   }
+  },
+  "line__steal_gold": {
+   "type": "choice",
+   "choice": "line_0",
+   "confidence": 0.2339,
+   "x_p_max": 0.617,
+   "certainty": 0.0398,
+   "probabilities": {
+    "line_0": 0.617,
+    "line_1": 0.383
+   }
+  }
+ }
+}
