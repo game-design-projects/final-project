@@ -584,7 +584,8 @@ func sys_toggles() -> Array:
 		out.append(sw.call("j", "eye", "JEV MIND PANEL", jev_open, "WHAT JEV DECIDED, AND EVERY API REQUEST"))
 	out.append(ach_cap())
 	if narrator.supported:
-		out.append(sw.call("l", "bubble", "VOICES", narrator.on, "MONSTERS READ THEIR LINES ALOUD. ON BY ITSELF ONCE YOU SPEAK (HOLD SPACE)"))
+		var which: String = (" IN " + narrator.label) if narrator.order.size() > 1 else ""
+		out.append(sw.call("l", "bubble", "VOICES", narrator.on, "MONSTERS READ THEIR LINES ALOUD%s. ON BY ITSELF ONCE YOU SPEAK (HOLD SPACE)" % which))
 	out.append(sw.call("o", "speaker", "SOUND", sfx.on, "HITS, SPELLS, DICE AND MONSTER VOICES"))
 	out.append(sw.call("p", "note", "MUSIC", music.on, "THE DUNGEON AND BATTLE MUSIC"))
 	return out

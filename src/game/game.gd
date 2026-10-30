@@ -3073,7 +3073,12 @@ func key(k: String) -> void:
 		render()
 		return
 	if k == "l" and narrator.supported:
-		say("VOICES %s." % ("ON: MONSTERS READ THEIR LINES ALOUD" if narrator.toggle() else "OFF"), "dim")
+		if not narrator.toggle():
+			say("VOICES OFF.", "dim")
+		elif narrator.order.size() > 1:
+			say("VOICES: %s. L FOR THE NEXT VOICE." % narrator.label, "dim")
+		else:
+			say("VOICES ON: MONSTERS READ THEIR LINES ALOUD.", "dim")
 		render()
 		return
 	if G.combat != null:
