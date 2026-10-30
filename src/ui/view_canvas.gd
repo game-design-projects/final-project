@@ -1,7 +1,8 @@
-## The dungeon view's picture: game.js's drawing functions for the 448x288 canvas (drawView, drawExplore,
-## drawMonsterTag, drawBossAhead, drawFloaters, drawIcon, drawRoll, beginTransition), painted with Canvas2D into
-## the SubViewport main shows through the PostFx shader. Before the game starts it draws the title card.
-## It repaints every frame (main asks), so monsters wobble, torches flicker and dice tumble.
+## The dungeon view's picture, drawn as 3D in a 2D style: the floor, the monsters and the champion are a cel-shaded
+## 3D set (Stage3D, in the same SubViewport), and this node paints game.js's 2D layer over it at the view's own
+## 448x288 (drawMonsterTag, drawFloaters, drawIcon, drawRoll, the dice): names and health bars, floating numbers, the
+## Roll of Fate, a shiny's glints. Before the game starts the set is the title corridor and this draws the title card.
+## main calls `frame(now)` every frame: the set follows the game (where you stand, who you fight), then this repaints.
 extends Node2D
 
 const J = preload("res://src/core/js.gd")
@@ -10,18 +11,78 @@ const Render = preload("res://src/view/render.gd")
 const Art = preload("res://src/view/art.gd")
 const Status = preload("res://src/rules/status.gd")
 const Dice = preload("res://src/rules/dice.gd")
-const Juice = preload("res://src/rules/juice.gd")
+const Stage3D = preload("res://src/view/stage3d.gd")
 
 const W := 448.0
 const H := 288.0
+## How long a hit shows on a monster (game.hurt_until is when it ends)
+const HURT_MS := 300.0
 
 ## main.gd: the game, the shake, the hit-stop, the sound effects
 var ui
-## The frame on screen before a step or turn, drawn over (or beside) the new view while the move eases
-var prev_frame: Texture2D = null
-var transition = null # {kind, dir, t0}
+## The 3D set this draws over (main puts both in the view's SubViewport)
+var stage: Stage3D
 ## How many floor cells the automap had last frame (the map redraws when the view reveals more)
 var _seen_count := -1
+var _seen_pos := ""
+## The shiny monsters on stage this frame, for their glints: [{x, y, s}]
+var _glints := []
+
+
+## The set follows the game at time t (J.now_ms()), then the 2D layer repaints
+func frame(t: float) -> void:
+	_glints = []
+	var game = ui.game if ui != null else null
+	if stage != null:
+		if game == null or game.G == null:
+			stage.title(t)
+		else:
+			_stage_game(game, t)
+	queue_redraw()
+
+
+func _stage_game(game, t: float) -> void:
+	var G: Dictionary = game.G
+	stage.use_map(G.map)
+	stage.place(G.x, G.y, G.dir, t, game.present().size() if G.combat != null else 0)
+	var off: Array = ui.shake.offset(t)
+	stage.set_shake(off[0], off[1])
+	stage.light(t)
+	if G.combat != null:
+		stage.set_fight_visible(true)
+		var here: Array = game.present()
+		var slots: Array = Art.SLOTS[mini(3, maxi(1, here.size()))]
+		var at: float = ui.hitstop.clock(t) # big blows freeze the monsters for a few frames
+		var list := []
+		for i in here.size():
+			var e: Dictionary = here[i]
+			var until: float = game.hurt_until.get(e.id, 0.0)
+			var look := {"shiny": J.truthy(e.get("shiny"))}
+			if J.truthy(e.get("boss")):
+				look.color = Art.BOSS_COLOR
+			var hurt := clampf((until - t) / HURT_MS, 0.0, 1.0) if t < until and t >= until - HURT_MS else 0.0
+			list.append({"id": e.id, "species": e.species, "look": look, "slot": slots[i], "hurt": hurt})
+			if look.shiny:
+				var place := stage.fight_place(slots[i])
+				var c := stage.project(place.pos + Vector3(0, 0.75 * place.scale, 0))
+				_glints.append({"x": c.x, "y": c.y, "s": Stage3D.slot_scale(slots[i].s)})
+		stage.show_fight(list, at)
+	else:
+		stage.set_fight_visible(false)
+		stage.show_champion(G.map.get("boss"), t)
+		_mark_seen(G)
+
+
+## The floor cells in view join the automap (once per spot); the map redraws when that adds any
+func _mark_seen(G: Dictionary) -> void:
+	var pos := "%d,%d,%d" % [G.x, G.y, G.dir]
+	if pos != _seen_pos:
+		_seen_pos = pos
+		for c in Render.visible_cells(G.map, G.x, G.y, G.dir):
+			G.seen[c[1] * G.map.n + c[0]] = true
+	if G.seen.size() != _seen_count:
+		_seen_count = G.seen.size()
+		ui.map_changed()
 
 
 func _draw() -> void:
@@ -29,17 +90,9 @@ func _draw() -> void:
 	var ctx = Canvas2D.new(self, Vector2(W, H))
 	var game = ui.game if ui != null else null
 	if game == null or game.G == null:
-		Render.draw_title(ctx, now)
+		Render.draw_title(ctx, now, "PRESS ANY KEY", stage == null)
 		return
 	draw_view(ctx, now)
-
-
-## beginTransition: keep the frame on screen, to ease from it to the new view
-func begin_transition(kind: String, dir: int, frame: Texture2D) -> void:
-	if frame == null:
-		return
-	prev_frame = frame
-	transition = {"kind": kind, "dir": dir, "t0": J.now_ms()}
 
 
 func draw_view(ctx, t: float) -> void:
@@ -51,68 +104,39 @@ func draw_view(ctx, t: float) -> void:
 		ctx.save()
 		ctx.translate(off[0], off[1])
 	if G.combat != null:
-		Render.clear(ctx)
 		var here: Array = game.present()
 		var slots: Array = Art.SLOTS[mini(3, maxi(1, here.size()))]
-		var at: float = ui.hitstop.clock(t) # big blows freeze the monsters for a few frames
 		for i in here.size():
-			var e: Dictionary = here[i]
-			var slot: Dictionary = slots[i]
-			var until: float = game.hurt_until.get(e.id, 0.0)
-			var look := {"shiny": J.truthy(e.get("shiny"))}
-			if J.truthy(e.get("boss")):
-				look.color = Art.BOSS_COLOR
-			Art.draw_monster(ctx, e.species, at, 1.0 if t < until and t >= until - 300.0 else 0.0, slot, Art.ART.pixel, look)
-			draw_monster_tag(ctx, e, slot, i, here.size())
-	else:
-		var seen := draw_explore(ctx, t)
-		draw_boss_ahead(ctx, t)
-		if G.roll != null:
-			draw_roll(ctx, t)
-		for c in seen:
-			G.seen[c[1] * G.map.n + c[0]] = true
-		if G.seen.size() != _seen_count:
-			_seen_count = G.seen.size()
-			ui.map_changed()
+			draw_monster_tag(ctx, here[i], slots[i], i, here.size())
+		for g in _glints:
+			draw_glints(ctx, g.x, g.y, g.s, t)
+	elif G.roll != null:
+		draw_roll(ctx, t)
 	game.dice.draw(ctx, t, {"ink": G.map.palette.wall, "hot": G.map.palette.accent})
 	draw_floaters(ctx, t)
 	if shaking:
 		ctx.restore()
 
 
-## The corridor, eased from the last view while a step or turn plays out
-func draw_explore(ctx, t: float) -> Array:
-	var G: Dictionary = ui.game.G
-	var tr = Juice.transition_at(transition, t)
-	if tr == null:
-		transition = null
-	if tr == null or prev_frame == null:
-		return Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
-	var seen: Array
+## A shiny monster twinkles: four-point glints around it (art.gd's, drawn over the 3D model)
+func draw_glints(ctx, cx: float, cy: float, s: float, t: float) -> void:
 	ctx.save()
-	if tr.kind == "turn":
-		# A pan: the new view slides in from the side you turned to, the old one slides out the other way
-		Render.clear(ctx)
-		ctx.save()
-		ctx.translate(J.round_js((tr.shift + transition.dir) * W), 0)
-		seen = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
-		ctx.restore()
-		ctx.draw_image(prev_frame, J.round_js(tr.shift * W), 0)
-	elif tr.kind == "step":
-		# A dolly: the old view grows past you (or shrinks away, stepping back) and fades into the new one
-		seen = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
-		ctx.global_alpha = tr.alpha
-		ctx.translate(W / 2.0, H / 2.0)
-		ctx.scale(tr.scale, tr.scale)
-		ctx.draw_image(prev_frame, -W / 2.0, -H / 2.0)
-	else:
-		# A bump: the view lunges at the wall and springs back
-		ctx.translate(W / 2.0, H / 2.0)
-		ctx.scale(tr.scale, tr.scale)
-		ctx.translate(-W / 2.0, -H / 2.0)
-		seen = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
+	ctx.stroke_style = Art.SHINY_COLOR
+	ctx.line_width = 1.5
+	for i in Art.GLINTS.size():
+		var on := sin(t / 260.0 + i * 1.7)
+		if on < 0.35:
+			continue
+		var r := (4.0 + on * 6.0) * maxf(s, 0.6)
+		var x: float = cx + Art.GLINTS[i][0] * s
+		var y: float = cy + Art.GLINTS[i][1] * s
+		ctx.begin_path()
+		ctx.move_to(x - r, y)
+		ctx.line_to(x + r, y)
+		ctx.move_to(x, y - r)
+		ctx.line_to(x, y + r)
+		ctx.stroke()
 	ctx.restore()
-	return seen
 
 
 ## Name, health bar and conditions above each monster in a fight
@@ -157,25 +181,6 @@ func draw_monster_tag(ctx, e: Dictionary, slot: Dictionary, i: int, count: int) 
 				ctx.fill_text(tags[j].word, x + 10, 35)
 			x += widths[j] + 6.0
 	ctx.restore()
-
-
-## The floor's champion, seen standing down the corridor before you reach it
-func draw_boss_ahead(ctx, t: float) -> void:
-	var G: Dictionary = ui.game.G
-	var b = G.map.get("boss")
-	if b == null or J.truthy(b.get("defeated")):
-		return
-	var f: Array = Render.DIRS[G.dir]
-	for dd in range(1, Render.VIEW + 1):
-		var cx: int = G.x + f[0] * dd
-		var cy: int = G.y + f[1] * dd
-		if cy < 0 or cy >= G.map.grid.size() or cx < 0 or cx >= G.map.grid[cy].size() or G.map.grid[cy][cx] != 1:
-			return
-		if cx == b.x and cy == b.y:
-			# Standing in the middle of its cell, feet on the floor there
-			var s := Render.scale_at(dd + 0.5)
-			Art.draw_monster(ctx, b.species, t, 0.0, {"cx": 224, "s": s * 0.92, "by": 144 + 140 * s}, Art.ART.pixel, {"color": Art.BOSS_COLOR})
-			return
 
 
 ## Numbers and words that float up from monsters and party members: damage, misses, feelings

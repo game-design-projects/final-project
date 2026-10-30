@@ -519,16 +519,19 @@ static func draw_map(ctx, map: Dictionary, seen, visited, x: int, y: int, dir: i
 	ctx.fill()
 
 
-static func draw_title(ctx, t: float, prompt := "PRESS ANY KEY") -> void:
+## The title card. `backdrop` false leaves out the black and the receding frames: the box goes over whatever the
+## view already shows (the 3D title corridor).
+static func draw_title(ctx, t: float, prompt := "PRESS ANY KEY", backdrop := true) -> void:
 	var W: float = ctx.size.x
 	var H: float = ctx.size.y
-	clear(ctx)
 	ctx.stroke_style = INK
 	ctx.line_width = 2
-	# A receding corridor behind the title
-	for d in 5:
-		var f := _frame(W, H, d)
-		ctx.stroke_rect(f.l + 0.5, f.t + 0.5, f.r - f.l, f.b - f.t)
+	if backdrop:
+		clear(ctx)
+		# A receding corridor behind the title
+		for d in 5:
+			var f := _frame(W, H, d)
+			ctx.stroke_rect(f.l + 0.5, f.t + 0.5, f.r - f.l, f.b - f.t)
 	ctx.fill_style = "#000"
 	ctx.fill_rect(W * 0.12, H * 0.3, W * 0.76, H * 0.42)
 	ctx.stroke_rect(W * 0.12 + 0.5, H * 0.3 + 0.5, W * 0.76, H * 0.42)

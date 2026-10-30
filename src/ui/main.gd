@@ -28,6 +28,7 @@ const Game = preload("res://src/game/game.gd")
 
 const TopBar = preload("res://src/ui/top_bar.gd")
 const ViewCanvas = preload("res://src/ui/view_canvas.gd")
+const Stage3D = preload("res://src/view/stage3d.gd")
 const MapBox = preload("res://src/ui/map_box.gd")
 const PartyPanel = preload("res://src/ui/party_panel.gd")
 const LogPanel = preload("res://src/ui/log_panel.gd")
@@ -68,6 +69,7 @@ var debug := false
 var L := {}
 var bar: TopBar
 var vp: SubViewport
+var stage: Stage3D
 var view: ViewCanvas
 var view_box: ViewBox
 var picture: TextureRect
@@ -157,15 +159,22 @@ static func _prefers_reduced_motion() -> bool:
 
 
 func _build_screen() -> void:
+	# The view: the 3D set (Stage3D) with the 2D layer (ViewCanvas) painted over it, in one SubViewport that is a
+	# whole multiple of 448x288 (relayout picks it for the window), so the 2D layer keeps its own pixels
 	vp = SubViewport.new()
 	vp.name = "View"
 	vp.size = Vector2i(448, 288)
-	vp.disable_3d = true
+	vp.own_world_3d = true
+	vp.msaa_3d = Viewport.MSAA_4X
 	vp.transparent_bg = false
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
+	stage = Stage3D.new()
+	stage.reduced_motion = reduced_motion
+	vp.add_child(stage)
 	view = ViewCanvas.new()
 	view.ui = self
+	view.stage = stage
 	vp.add_child(view)
 
 	bar = _widget(TopBar.new(), "TopBar")
@@ -178,7 +187,7 @@ func _build_screen() -> void:
 	picture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view_box.add_child(picture)
-	post = Postfx.PostFx.create({"reducedMotion": reduced_motion})
+	post = Postfx.PostFx.create({"reducedMotion": reduced_motion, "look": "cel"})
 	if post != null:
 		post.attach(picture)
 	toasts = _widget(Toasts.new(), "Toasts", view_box)
@@ -299,19 +308,8 @@ func _subscribe(fx) -> void:
 	fx.on("combat:start", func(p):
 		if post != null:
 			post.flash(Art.BOSS_COLOR if J.truthy(p.get("boss")) else (_accent_css() if _accent_css() != null else "#ffffff"), 0.28))
-	fx.on("view:step", func(p): begin_transition("step", int(p.dir)))
-	fx.on("view:turn", func(p): begin_transition("turn", int(p.dir)))
-	fx.on("view:bump", func(_p): begin_transition("bump", 1))
-
-
-## Moving and turning ease from the old view to the new one: the frame on screen is kept before the move
-func begin_transition(kind: String, dir: int) -> void:
-	if reduced_motion or DisplayServer.get_name() == "headless":
-		return
-	var img := vp.get_texture().get_image()
-	if img == null or img.is_empty():
-		return
-	view.begin_transition(kind, dir, ImageTexture.create_from_image(img))
+	# A step or a turn needs nothing here: the 3D camera glides to wherever the party now stands (Stage3D.place)
+	fx.on("view:bump", func(_p): stage.bump(J.now_ms()))
 
 
 # ---------------------------------------------------------------- audio
@@ -363,7 +361,7 @@ func _process(_delta: float) -> void:
 	if game == null:
 		return # on the way to the Genre Halls
 	var now := J.now_ms()
-	view.queue_redraw()
+	view.frame(now)
 	var G = game.G if game != null else null
 	if G != null:
 		var target: float = 0.5 if G.mode == "over" else Juice.danger_of(G.party)
@@ -399,6 +397,18 @@ func _process(_delta: float) -> void:
 
 # ---------------------------------------------------------------- layout
 
+## The view renders at the largest whole multiple of 448x288 that still shows at full size or larger on screen
+## (`px`: the picture's width in physical pixels), up to 3x: the 3D set gets the pixels, the 2D layer is scaled
+## up whole so its pixels stay square.
+func _size_view(px: float) -> void:
+	var k := clampi(floori(px / ViewCanvas.W), 1, 3)
+	var want := Vector2i(int(ViewCanvas.W) * k, int(ViewCanvas.H) * k)
+	if vp.size != want:
+		vp.size = want
+		view.scale = Vector2(k, k)
+		print_verbose("view: %dx%d (%dx)" % [want.x, want.y, k])
+
+
 func relayout() -> void:
 	hide_tooltip()
 	Css.set_scale(get_viewport().get_final_transform().get_scale().x)
@@ -409,6 +419,7 @@ func relayout() -> void:
 	view_box.size = L.view.size
 	picture.position = Vector2(Layout.VIEW_BORDER, Layout.VIEW_BORDER)
 	picture.size = L.picture.size
+	_size_view(L.picture.size.x * get_viewport().get_final_transform().get_scale().x)
 	for o in [toasts, modal, tip_box]:
 		o.position = Vector2.ZERO
 		o.size = L.view.size

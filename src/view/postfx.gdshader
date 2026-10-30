@@ -1,5 +1,6 @@
 // The view's last pass (crawler/public/postfx.js, composite stage): put on the TextureRect that shows the
-// 448x288 view. Lines glow like phosphor on an old vector monitor (bloom from postfx_bloom.gdshader's texture),
+// 448x288 view. The bloom's strength and the scanlines are set per look by postfx.gd (LOOKS: the wireframe's
+// "vector", or "cel" for the cel-shaded 3D view, which has no scanlines and glows only where things are lit up). Lines glow like phosphor on an old vector monitor (bloom from postfx_bloom.gdshader's texture),
 // the pixels stay sharp instead of blurring when scaled up, rows show faint scanlines, the edges fall off into the
 // dark, and the floor's accent color tints the shadows. Game state drives it through a few uniforms (see postfx.gd):
 // a red pulse at the edges while the party is in danger (on the heartbeat), a red flash and a split of color when
@@ -20,6 +21,8 @@ uniform float pulse = 0.0;                    // 0..1, a heartbeat that decays
 uniform float hurt_level = 0.0;               // 0..1, decays
 uniform vec4 flash = vec4(0.0);               // rgb, strength
 uniform float split = 0.35;                   // chromatic split, in source pixels
+uniform float bloom_gain = 1.3;               // how strongly the glow adds (PostFx sets it per look)
+uniform float scanlines = 0.07;               // how dark the gaps between the game's rows are (0: none)
 
 // Sharp bilinear: nearest-neighbour pixels with only their edges blended, so a 448-wide canvas scaled to any
 // size keeps crisp pixels without shimmering
@@ -58,7 +61,7 @@ void fragment() {
 	bloom += texture(bloom_tex, uv - dir * 1.3846153846).rgb * 0.3162162162;
 	bloom += texture(bloom_tex, uv + dir * 3.2307692308).rgb * 0.0702702703;
 	bloom += texture(bloom_tex, uv - dir * 3.2307692308).rgb * 0.0702702703;
-	col += bloom * mix(vec3(1.0), accent, 0.25) * 1.3;
+	col += bloom * mix(vec3(1.0), accent, 0.25) * bloom_gain;
 
 	// Shadows lifted toward the accent: the dark is this floor's dark, not flat black
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
@@ -72,7 +75,7 @@ void fragment() {
 
 	// Scanlines on the game's own rows, and a soft vignette
 	float row = -cos((uv.y * src_size.y) * 6.2831853); // dark between rows, bright through their middle
-	col *= 0.93 + 0.07 * row;
+	col *= 1.0 - scanlines + scanlines * row;
 	col *= mix(1.0, 0.68, smoothstep(0.4, 0.9, length(from_center * vec2(1.1, 1.25))));
 
 	col += flash.rgb * flash.a;
