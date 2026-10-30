@@ -19,7 +19,7 @@ Donjon was a browser game (`crawler/` in git history, last at `12d2be7`) and was
 | `assets/` | `audio/*.ogg` (the music), `voices/<bank>/` (monster lines rendered ahead, with a `manifest.json`), `fonts/` (Press Start 2P, VT323), `CREDITS.txt` |
 | `tests/` | Mirrors `src/`, plus `run_tests.gd` and `test_case.gd` |
 | `cli/` | Scenario runners and screenshot/sound dump scripts (see the README) |
-| `tools/` | `build.sh`, `check-html5.mjs`, `music/` (offline music renders), `voices/` (voice bank renders and their Creative Commons reference recordings), `godot-mcp/` (the Godot MCP server `.mcp.json` and `.codex/config.toml` start). Godot ignores it (`.gdignore`) |
+| `tools/` | `build.sh`, `check-html5.mjs`, `music/` (offline music renders), `godot-mcp/` (the Godot MCP server `.mcp.json` and `.codex/config.toml` start). Godot ignores it (`.gdignore`) |
 | `native/` | `asr/`: the speech-recognition helper's C source, `build.sh`, `smoke.py` and the licences it ships with (Godot ignores it). `dist/<platform>/`: what `build.sh` builds, not committed; each desktop export carries its own |
 | `proxy/` | The Cloudflare Worker that holds the Jev key and forwards the game's requests (JavaScript, its own `package.json` and tests; `.gdignore`) |
 | `.github/` | CI: `workflows/ci.yml` (tests, builds, releases), `workflows/worker.yml` (the Worker), `actions/setup-godot` |
@@ -67,7 +67,7 @@ Below it: `enemy.gd` (a round for 1 to 3 monsters), `allies.gd` (the after-fight
 
 ## Audio
 
-Nothing is a sound file except the music and the monster lines rendered ahead (`assets/voices/`).
+Nothing is a sound file except the music and any monster lines rendered ahead (`assets/voices/`).
 
 - **Effects.** `sfx.gd` holds recipes (`snd_hit`, `snd_levelup`...) made of tones, filtered noise and a formant voice, built on `synth.gd` (oscillators, WebAudio-compatible biquad filters, envelopes, rendered offline into sample buffers). A recipe is rendered once into an `AudioStreamWAV` and cached, a few milliseconds per frame in the background (`PREWARM`), and each play picks the cached stream and sets pitch and volume (`VARY`, `POLY`). `shout.gd` classifies a monster's line (a roar, a squelch, a hiss...) into a plan the voice recipes play.
 - **Buses.** `Mix.Mixer` builds the audio buses at runtime: music (`MusicIn` then `Music`, with the danger low-pass and impact dips), effects (`SFX`) with a reverb send (`SFXRoom`), all into `Master` with a limiter. `Mix.BeatScheduler` lands the heartbeat on the music's beat. The mixer is made on the first key press (browsers keep audio locked until then), and `sfx.init(mixer)` and `music.attach(mixer)` plug the players in.

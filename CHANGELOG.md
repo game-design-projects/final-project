@@ -5,7 +5,16 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- **Hold Space to talk in the desktop builds**, on your own computer with nothing sent anywhere: NVIDIA's Nemotron Speech Streaming model (English, 160 ms chunks, int8) in a small helper program on sherpa-onnx 1.13.8 (`native/asr/donjon_asr.c`), which the game runs and streams the microphone to (`src/audio/asr.gd`). The model is a one-time 662 MB download (pinned, SHA-256 checked) that the first hold of Space offers and the next starts. Each desktop build carries its own helper (Windows x86_64, macOS universal, Linux x86_64). The web build keeps the browser's recognizer.
+- **Pluggable monster voices** (`src/audio/tts_engines.gd`, `tts_config.gd`): rendered voice banks in `assets/voices/` (CosyVoice3, the Feiyu stack's engine, and Qwen3-TTS; the banks themselves follow), a Feiyu voice service or a Qwen3-TTS service on your network synthesising lines as they're said (`config/tts_config.json` or `.env`), and the system's voice as before. The Feiyu service is only used with a voice of our own named, never its default Feiyu voice library. Flag `tts=<voice>` starts with one.
+- `cli/voice_lines.gd`: every line a monster can say aloud (322, `{name}` filled in), for rendering a bank.
+- `native/asr/build.sh` builds the helper (Linux, Windows cross-compiled with mingw-w64, macOS) and fetches the model; `native/asr/smoke.py` runs it on recordings. CI builds the three helpers and runs each on its own system, and the tests run the real recognizer through the game's code.
+- Tests: `tests/audio/test_asr.gd` (13) and `tests/audio/test_tts_engines.gd` (13).
 - Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
+
+### Changed
+- **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
+- The macOS build asks for the microphone (it has the usage description and audio-input entitlement). Godot's microphone input is on in every build but the web one.
 
 ## [0.3.0] - 2026-10-29
 
