@@ -1,0 +1,102 @@
+{
+ "refs": {
+  "dragon": {
+   "wav": "refs/dragon_7729.wav",
+   "text": "They were not only well armed and supplied, but wrought up to the highest pitch of partisan excitement.",
+   "speaker": "LibriTTS-R 7729 (Tim Bower)",
+   "gender": "M",
+   "utterance": "7729_102255_000010_000014",
+   "source": "https://www.openslr.org/resources/141/test_clean.tar.gz : LibriTTS_R/test-clean/7729/102255/7729_102255_000010_000014.wav",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "LibriTTS-R by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han, A. Bapna (Google), CC BY 4.0; derived from LibriTTS / LibriSpeech, from LibriVox recordings. Speaker 7729 (LibriVox reader 'Tim Bower'). Trimmed, mono, 24 kHz PCM16."
+  },
+  "rock": {
+   "wav": "refs/golem_1188.wav",
+   "text": "But in this vignette, copied from Turner, you have the two principles brought out perfectly.",
+   "speaker": "LibriTTS-R 1188 (Duncan Murrell)",
+   "gender": "M",
+   "utterance": "1188_133604_000024_000000",
+   "source": "https://www.openslr.org/resources/141/test_clean.tar.gz : LibriTTS_R/test-clean/1188/133604/1188_133604_000024_000000.wav",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "LibriTTS-R by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han, A. Bapna (Google), CC BY 4.0; derived from LibriTTS / LibriSpeech, from LibriVox recordings. Speaker 1188 (LibriVox reader 'Duncan Murrell'). Trimmed, mono, 24 kHz PCM16."
+  },
+  "goblin": {
+   "wav": "refs/goblin_260.wav",
+   "text": "I was possessed with an apprehension lest the electric light should grow dim, or fail altogether.",
+   "speaker": "LibriTTS-R 260 (Brad Bush)",
+   "gender": "M",
+   "utterance": "260_123286_000021_000005",
+   "source": "https://www.openslr.org/resources/141/test_clean.tar.gz : LibriTTS_R/test-clean/260/123286/260_123286_000021_000005.wav",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "LibriTTS-R by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han, A. Bapna (Google), CC BY 4.0; derived from LibriTTS / LibriSpeech, from LibriVox recordings. Speaker 260 (LibriVox reader 'Brad Bush'). Trimmed, mono, 24 kHz PCM16."
+  },
+  "bandit": {
+   "wav": "refs/bandit_4077.wav",
+   "text": "An appeal was made to the executive of the state, but little encouragement was returned.",
+   "speaker": "LibriTTS-R 4077 (Nathan Markham)",
+   "gender": "M",
+   "utterance": "4077_13751_000015_000001",
+   "source": "https://www.openslr.org/resources/141/test_clean.tar.gz : LibriTTS_R/test-clean/4077/13751/4077_13751_000015_000001.wav",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "LibriTTS-R by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han, A. Bapna (Google), CC BY 4.0; derived from LibriTTS / LibriSpeech, from LibriVox recordings. Speaker 4077 (LibriVox reader 'Nathan Markham'). Trimmed, mono, 24 kHz PCM16."
+  },
+  "snake": {
+   "wav": "refs/snake_8463.wav",
+   "text": "Even so, I had just returned from an arduous journey, exhausted and badly needing a rest.",
+   "speaker": "LibriTTS-R 8463 (Michele Fry)",
+   "gender": "F",
+   "utterance": "8463_294828_000014_000000",
+   "source": "https://www.openslr.org/resources/141/test_clean.tar.gz : LibriTTS_R/test-clean/8463/294828/8463_294828_000014_000000.wav",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "LibriTTS-R by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han, A. Bapna (Google), CC BY 4.0; derived from LibriTTS / LibriSpeech, from LibriVox recordings. Speaker 8463 (LibriVox reader 'Michele Fry'). Trimmed, mono, 24 kHz PCM16."
+  },
+  "slime": {
+   "wav": "refs/slime_5683.wav",
+   "text": "But don't these very wise things sometimes turn out very foolishly?",
+   "speaker": "LibriTTS-R 5683 (Rachael Lapidis)",
+   "gender": "F",
+   "utterance": "5683_32866_000012_000001",
+   "source": "https://www.openslr.org/resources/141/test_clean.tar.gz : LibriTTS_R/test-clean/5683/32866/5683_32866_000012_000001.wav",
+   "license": "CC BY 4.0",
+   "license_url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "LibriTTS-R by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han, A. Bapna (Google), CC BY 4.0; derived from LibriTTS / LibriSpeech, from LibriVox recordings. Speaker 5683 (LibriVox reader 'Rachael Lapidis'). Trimmed, mono, 24 kHz PCM16."
+  }
+ },
+ "shape": {
+  "dragon": {
+   "semitones": -2,
+   "tempo": 0.95
+  },
+  "rock": {
+   "semitones": -3,
+   "tempo": 0.9
+  },
+  "goblin": {
+   "semitones": -1,
+   "tempo": 1.0
+  },
+  "bandit": {
+   "semitones": 0,
+   "tempo": 1.0
+  },
+  "snake": {
+   "semitones": 0,
+   "tempo": 0.95
+  },
+  "slime": {
+   "semitones": 3,
+   "tempo": 1.05
+  }
+ },
+ "say": {
+  "_": "per bank: a line -> what the engine is given instead (a spelling it can say); the bank still files it under the line",
+  "cosyvoice3": {
+   "Hmph.": "Hmmmph."
+  }
+ }
+}

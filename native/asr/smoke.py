@@ -6,7 +6,9 @@ microphone would deliver them) and checks the words that come back.
 
 With no WAVs it uses the model's own test_wavs/0.wav and 8k.wav (an 8 kHz file: sherpa-onnx resamples) and their
 transcripts. The first file is sent at the pace of speech and must show words before it ends; the others are sent at
-once (the helper catches up, then reports). Each expected-words string must appear, in order, in the final text (case and punctuation ignored).
+once (the helper catches up, then reports). Then the first again, cut right after its last word (a player letting go
+of the key at once): that word must still come back; and a line that starts with its first word (a player already talking when
+listening starts, testdata/know_your_place.wav): that one must come back as well. Each expected-words string must appear, in order, in the final text (case and punctuation ignored).
 Exits 1 on any failure. Standard library only, so it runs on every CI runner.
 """
 import json
@@ -85,9 +87,9 @@ def main():
         for i in range(0, len(mono), step):
             chunk = mono[i:i + step]
             p.stdin.write(frame(b"A", struct.pack("<%df" % len(chunk), *chunk)))
-            if live:
+            if live:  # by the clock, as a microphone would: a sleep can run long on a busy runner
                 p.stdin.flush()
-                time.sleep(FRAME_S)
+                time.sleep(max(0.0, t1 + (i + step) / rate - time.time()))
         p.stdin.write(frame(b"F"))
         p.stdin.flush()
         partials = 0
@@ -111,6 +113,36 @@ def main():
               f"{len(mono) / rate:.1f} s of audio {'spoken' if live else 'sent at once'}, final after "
               f"{time.time() - t1:.1f} s")
         print(f"   heard: {ev['text']}")
+
+    # let go right after the last word: the recording cut 40 ms after it still ends with that word
+    path, expected = cases[0]
+    rate, mono = read_wav(path)
+    end = max(i for i, v in enumerate(mono) if abs(v) > 0.02) + int(0.04 * rate)
+    p.stdin.write(frame(b"S", struct.pack("<i", rate)))
+    p.stdin.write(frame(b"A", struct.pack("<%df" % end, *mono[:end])) + frame(b"F"))
+    p.stdin.flush()
+    while True:
+        ev = json.loads(p.stdout.readline())
+        if ev["event"] == "final":
+            break
+    last = words(expected)[-1]
+    ok = bool(words(ev["text"])) and words(ev["text"])[-1] == last
+    failed += not ok
+    print(f"{'ok' if ok else 'FAIL'} cut right after the last word ({last!r}): heard {ev['text']!r}")
+
+    # already talking when listening starts: a line whose first word begins with the stream still has that word
+    # (testdata/know_your_place.wav: the dragon's line from the CosyVoice3 bank, at 48 kHz like the game's microphone)
+    rate, mono = read_wav(os.path.join(os.path.dirname(os.path.abspath(__file__)), "testdata", "know_your_place.wav"))
+    p.stdin.write(frame(b"S", struct.pack("<i", rate)))
+    p.stdin.write(frame(b"A", struct.pack("<%df" % len(mono), *mono)) + frame(b"F"))
+    p.stdin.flush()
+    while True:
+        ev = json.loads(p.stdout.readline())
+        if ev["event"] == "final":
+            break
+    ok = words(ev["text"])[:1] == ["know"]
+    failed += not ok
+    print(f"{'ok' if ok else 'FAIL'} starts right on the first word ('know'): heard {ev['text']!r}")
 
     # an aborted utterance gives no result, and the next one still works
     p.stdin.write(frame(b"S", struct.pack("<i", 16000)) + frame(b"A", struct.pack("<4f", 0, 0, 0, 0)) + frame(b"X"))

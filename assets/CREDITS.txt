@@ -13,6 +13,23 @@ Music (assets/audio/ambient.ogg, battle-*.ogg, fanfare.ogg, victory.ogg)
 
 Sound effects: synthesised when the game starts (src/audio/sfx.gd, src/audio/synth.gd), no samples.
 
+Monster voices (assets/voices/): every line rendered ahead by an open text-to-speech model, each monster's voice
+cloned from a reference recording in LibriTTS-R. The reference clips are in tools/voices/refs/ (trimmed, mono,
+24 kHz); the rendered lines are new recordings in a voice like the reference speaker's, then pitch- and
+tempo-shaped per monster and loudness-normalised (tools/voices/render.py, tools/voices/voices.json).
+- assets/voices/cosyvoice3/: CosyVoice3 (FunAudioLLM/Fun-CosyVoice3-0.5B-2512, https://github.com/FunAudioLLM/CosyVoice),
+  Apache License 2.0. The engine of the Feiyu voice stack; the Feiyu voice library itself is not used.
+- assets/voices/qwen3/: Qwen3-TTS (Qwen/Qwen3-TTS-12Hz-0.6B-Base, https://github.com/QwenLM/Qwen3-TTS), Apache License 2.0.
+- Reference voices: LibriTTS-R (https://www.openslr.org/141/) by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe,
+  N. Morioka, M. Bacchiani, Y. Zhang, W. Han and A. Bapna, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/);
+  derived from LibriTTS and LibriSpeech, from LibriVox recordings. Readers (LibriVox) and the clips used:
+  - the dragon: speaker 7729 (Tim Bower), utterance 7729_102255_000010_000014
+  - the rock golem: speaker 1188 (Duncan Murrell), utterance 1188_133604_000024_000000
+  - the goblin: speaker 260 (Brad Bush), utterance 260_123286_000021_000005
+  - the bandit: speaker 4077 (Nathan Markham), utterance 4077_13751_000015_000001
+  - the snake: speaker 8463 (Michele Fry), utterance 8463_294828_000014_000000
+  - the slime: speaker 5683 (Rachael Lapidis), utterance 5683_32866_000012_000001
+
 Hold to talk (desktop builds): the speech is recognised on your own machine, nothing is sent anywhere.
 - sherpa-onnx by k2-fsa (https://github.com/k2-fsa/sherpa-onnx), Apache License 2.0. Its licence ships beside the
   helper program as LICENSE-sherpa-onnx.txt.

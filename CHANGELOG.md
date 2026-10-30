@@ -10,7 +10,13 @@ All notable changes to this project are documented here. The format follows [Kee
 - `cli/voice_lines.gd`: every line a monster can say aloud (322, `{name}` filled in), for rendering a bank.
 - `native/asr/build.sh` builds the helper (Linux, Windows cross-compiled with mingw-w64, macOS) and fetches the model; `native/asr/smoke.py` runs it on recordings. CI builds the three helpers and runs each on its own system, and the tests run the real recognizer through the game's code.
 - Tests: `tests/audio/test_asr.gd` (13) and `tests/audio/test_tts_engines.gd` (13).
+- **Two voice banks**: all 322 lines, rendered ahead in each monster's own voice, cloned from Creative Commons recordings (LibriTTS-R, CC BY 4.0): `assets/voices/cosyvoice3/` (CosyVoice3, the Feiyu stack's engine) and `assets/voices/qwen3/` (Qwen3-TTS), the same reference voice per monster in both. **L** steps between them.
+- `tools/voices/`: `render.py` (a bank from the line list, on CPU or through a Feiyu / Qwen3-TTS service, with retakes for clipped or runaway takes, shaping, loudness and Ogg), `check.py` (plays a bank into the game's own speech recognizer and reports what it heard), the engine scripts and the reference clips. `tests/audio/test_voice_banks.gd`: every bank has every line, and every file is a sound of a sensible length.
 - Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
+
+### Fixed
+- Letting go of Space right after your last word no longer cuts it off ("Insolent morsel" came back "Insol"): the speech helper listens half a second past the end before it finishes. `native/asr/smoke.py` checks it, and paces its spoken test by the clock.
+- Talking before listening has started no longer loses your first word ("Know your place" came back "Your place"): the helper starts each utterance with 0.3 s of quiet. `smoke.py` checks it on `native/asr/testdata/know_your_place.wav`.
 
 ### Changed
 - **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
