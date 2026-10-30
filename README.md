@@ -2,7 +2,7 @@
 
 ![Donjon cover: an orange slime waiting down a torch-lit wireframe corridor](docs/donjon-cover.png)
 
-A Wizardry-style wireframe dungeon crawler with roguelike runs. You can talk to the monsters, SMT-style. Every enemy decision comes from **Jev**, TypeSafe's System One model: what your words meant, whether it fights, flees, haggles or joins you, who it attacks, and what it says. Monsters you befriend join the party. They judge what you do and may walk out, or turn on you, mid-run.
+A Wizardry-style wireframe dungeon crawler with roguelike runs, rendered in 3D and drawn as the 2D line art it always was ("3渲2"). You can talk to the monsters, SMT-style. Every enemy decision comes from **Jev**, TypeSafe's System One model: what your words meant, whether it fights, flees, haggles or joins you, who it attacks, and what it says. Monsters you befriend join the party. They judge what you do and may walk out, or turn on you, mid-run.
 
 Donjon is a Godot 4.7 project (GDScript). It runs in the browser, on Windows, on macOS and on Linux. How the code is laid out is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
@@ -15,7 +15,7 @@ Donjon is a Godot 4.7 project (GDScript). It runs in the browser, on Windows, on
 - **Promises that count.** Swear a vow to an ally (*I WON'T KILL SLIMES*) and the game checks it against everything you do. Break it and the ally forgives you, leaves, attacks you or steals your gold.
 - **Real dice.** Combat follows D&D 5e, simplified. Every roll shows in the log in words, and d20s tumble across the view. Spell slots, death saves, advantage, critical hits, levels.
 - **A run worth restarting.** Floors are new mazes every time. Every flight of stairs earns a Roll of Fate (a random boon that stacks), every fifth floor has a red champion, and death is permanent.
-- **It looks and sounds like a place.** Wireframe corridors in true perspective run through a shader that makes the lines glow like an old vector monitor. The screen drains of color, closes in red and starts a heartbeat when the party is dying. The music is original baroque dungeon music; every sound effect is synthesized.
+- **It looks and sounds like a place.** Wireframe corridors and line-art monsters glow like an old vector monitor. They are a real 3D set now, drawn as lines: the camera glides down a corridor and swings round a corner, the monsters are models that stand in the corridor in front of you, and the floor's champion waits in its hall where you can see it from down the corridor. The screen drains of color, closes in red and starts a heartbeat when the party is dying. The music is original baroque dungeon music; every sound effect is synthesized.
 - **Genre Halls.** A side mode that pitches Undertale-style battles on the same dungeon: each faction attacks in its own genre (goo rain, chess, shadow, rhythm).
 
 ## Run it
@@ -58,11 +58,11 @@ Hover any of them for the details (exact numbers, ability scores, boons).
 
 **Monsters answer out loud.** With the system's text to speech, monsters and allies read their lines aloud, each kind in its own pitch and pace (a deep, slow dragon; a squeaky slime), in an English voice, skipping the *stage directions*. It starts off. **L** turns it on or off for good, and the keycap only shows when the system has a speech engine. In the web build it also turns on by itself the first time you talk to the game with your voice: someone speaking to the monsters wants to hear them answer. Speech can't be turned up past full volume, so while a monster talks the music drops to a quarter and the effects to half, then come back as it finishes. It goes quiet while the microphone listens, and drops a backlog rather than falling behind the fight (`src/audio/tts.gd`).
 
-**How it looks, sounds and feels.** The view runs through a shader (`src/view/postfx.gd`, `postfx.gdshader`) that makes the wireframe glow like an old vector monitor: lines bloom, the pixels stay sharp at any window size, faint scanlines follow the game's own rows, and each floor's accent color tints the dark. Game state drives it, along with the music and the shake, through one event bus (`src/rules/juice.gd` `FX_EVENTS`): the rules announce hits, kills, falls, steps and fights, and the presentation answers.
+**How it looks, sounds and feels.** The view is a 3D set drawn as the 2D wireframe was (`src/view/stage3d.gd`): the floor is built from the map (`dungeon3d.gd`) and the monsters from simple shapes (`monsters3d.gd`), and their shaders fill every surface black and draw only lines, in the floor's wall color and each monster's own, dimming with distance as the old drawing did (`line.gdshaderinc`; `stone.gdshader` outlines every wall face, `ink.gdshader` every model's parts, `flame.gdshader` the torch flames). Names, health bars, dice and floating numbers are drawn in 2D over it. [docs/shots/](docs/shots/) has the 3D view next to the old 2D one, every monster, and a walk down a corridor into a fight (`walk.gif`). It runs through a shader (`src/view/postfx.gd`, `postfx.gdshader`) that makes the lines glow like an old vector monitor: lines bloom, the pixels stay sharp at any window size, faint scanlines follow the game's own rows, and each floor's accent color tints the dark. Game state drives it, along with the music and the shake, through one event bus (`src/rules/juice.gd` `FX_EVENTS`): the rules announce hits, kills, falls, steps and fights, and the presentation answers.
 
 - **Danger** (`danger_of`: how much health the living have left, and whether anyone is rolling death saves) drains the color, closes in a red edge, muffles the music behind a low-pass filter and starts a heartbeat on the music's beat: every other beat while hurt, every beat when someone is about to die. The red edge pulses with each heartbeat, timed from the audio clock.
 - **Hits** shake the screen in proportion to the blow (trauma that drains away, so small hits nudge and big ones rattle). Critical hits and kills freeze the monsters for a few frames and flash the view; getting hurt flashes the edges red. Big moments dip the music for an instant so they punch through.
-- **Moving** eases: a step dollies the old view past you, a turn pans, a wall bump lunges the view at the wall.
+- **Moving** eases: the camera glides a step, swings round on a turn, and lunges at a wall you walk into. When a fight starts it backs off and looks down a little, and the monsters stand in the corridor in front of you, two or three in a V.
 - **Sound**: music and effects share one mixing desk (`src/audio/mix.gd`: Godot audio buses, ending in a limiter). Repeated effects (hits, misses, coins...) get a random detune and volume each time, and at most a few copies of one sound start at once (`src/audio/sfx.gd` `VARY`, `POLY`).
 
 The `nofx` flag turns the shader off: the plain view shows, and everything else works the same. When the browser reports prefers-reduced-motion (web build only; see [Platform differences](#platform-differences)) the game turns off the shake, the step and turn transitions, the pulsing glows and the blinking, and tones the flashes down.
@@ -191,7 +191,7 @@ It needs the `godot` binary on `PATH` (or `GODOT=/path/to/godot`) with the 4.7.2
 
 ```bash
 godot --headless --path . --import                                  # once, and after adding files
-godot --headless --path . -s res://tests/run_tests.gd               # everything: about 480 tests, half a minute
+godot --headless --path . -s res://tests/run_tests.gd               # everything: about 500 tests, under a minute
 godot --headless --path . -s res://tests/run_tests.gd -- --only=dnd # only files whose path contains "dnd"
 ```
 
@@ -204,11 +204,12 @@ Scripts for looking at the game, in `cli/`:
 | `scenarios.gd` | `godot --headless --path . -s res://cli/scenarios.gd -- [filter] [--live] [--seed=N]` | scripted encounters, one monster at a time, then how its allies judge the fight |
 | `social_scenarios.gd` | `godot --headless --path . -s res://cli/social_scenarios.gd -- [filter] [--live] [--seed=N]` | group fights, ally talk and vows |
 | `shots.gd` | `godot --path . -s res://cli/shots.gd -- out=<dir>` | opens a window, plays the real screen on mock Jev, saves a screenshot of every state (title, exploring, a question, a fight, CHOOSE MOVES, the talk box, the Jev panel, the achievements list, the Roll of Fate, danger, game over, a tip, `nofx`, a small window) and fails on any script error |
-| `view_shots.gd` | `godot --path . -s res://cli/view_shots.gd -- --out=<dir>` | the view modules alone: the title, corridors on three palettes, the automap, every monster (plus a shiny, a champion and a group of three), and the shader at two danger levels |
+| `stage_shots.gd` | `godot --path . -s res://cli/stage_shots.gd -- --out=<dir> [--only=<name>]` | the 3D view alone through the shader, at 2x: the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight (plus a shiny, a champion, a hurt one, groups of two and three, boxed in by walls), danger |
+| `view_shots.gd` | `godot --path . -s res://cli/view_shots.gd -- --out=<dir>` | the 2D view modules alone (the automap, and the wireframe Genre Halls draws): the title, corridors on three palettes, the automap, every monster (plus a shiny, a champion and a group of three), and the shader at two danger levels |
 | `genre_shots.gd` | `godot --path . -s res://cli/genre_shots.gd -- out=<dir> [sound]` | Genre Halls: each faction's box, the mind panel, the strike bar, a route screen |
 | `sfx_dump.gd` | `godot --headless --path . -s res://cli/sfx_dump.gd -- --out=<dir>` | renders every sound effect to WAV with a table of length, peak and RMS, to listen to or measure |
 
-The scenario scripts use mock Jev by default (random answers, no credits, repeatable with `--seed`): that checks the plumbing and the game's rules, not Jev's judgement. `--live` calls the real API with the key from `.env` or `config/jev_config.json`: every call is billed, and each raw reply is saved under `user://jev-raw` before it is parsed. The three screenshot scripts open a window briefly (they are not headless); pass `out=` (or `--out=`), because their default folder is a scratch path.
+The scenario scripts use mock Jev by default (random answers, no credits, repeatable with `--seed`): that checks the plumbing and the game's rules, not Jev's judgement. `--live` calls the real API with the key from `.env` or `config/jev_config.json`: every call is billed, and each raw reply is saved under `user://jev-raw` before it is parsed. The four screenshot scripts open a window briefly (they are not headless); pass `out=` (or `--out=`), because their default folder is a scratch path.
 
 ### Godot MCP for AI agents
 
@@ -325,7 +326,7 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 ## Genre Halls: Undertale-style battles
 
-Genre Halls is a pitch for the next version of the fights, built on the same renderer, monster art, species, feelings and synth. Open it with **G** on the title card, with the `genre-halls` flag, or as its own scene (`godot --path . res://src/genre/genre_halls.tscn`). It needs no key; Esc on its title or route screen goes back to the game.
+Genre Halls is a pitch for the next version of the fights, built on the same species, feelings and synth, and on the 2D wireframe renderer and line-art monsters the main game drew before it went 3D (same look, flat drawing). Open it with **G** on the title card, with the `genre-halls` flag, or as its own scene (`godot --path . res://src/genre/genre_halls.tscn`). It needs no key; Esc on its title or route screen goes back to the game.
 
 - **One floor, five fights.** A 13×13 maze holds one slime, bandit, snake person and rock entity, plus a red dragon champion in the 5×5 hall at the center. Monsters are drawn down the corridor when you can see them, and show on the automap.
 - **One box, one rule: lit squares hurt.** When a monster attacks, you dodge on a 7×7 grid with the arrow keys (or WASD). Every faction attacks in its own genre. Slimes rain goo, and the shadow of each drop shows where it will land. Bandits play chess: a rook lights its row and column, a bishop its diagonals, a knight its L-jumps. Snake people swing a lantern around the box, and you hide in a pillar's shadow. Rock entities stomp on the beat, with each pattern shown two beats ahead. The champion changes genre every turn.

@@ -28,6 +28,7 @@ const Game = preload("res://src/game/game.gd")
 
 const TopBar = preload("res://src/ui/top_bar.gd")
 const ViewCanvas = preload("res://src/ui/view_canvas.gd")
+const Stage3D = preload("res://src/view/stage3d.gd")
 const MapBox = preload("res://src/ui/map_box.gd")
 const PartyPanel = preload("res://src/ui/party_panel.gd")
 const LogPanel = preload("res://src/ui/log_panel.gd")
@@ -68,6 +69,7 @@ var debug := false
 var L := {}
 var bar: TopBar
 var vp: SubViewport
+var stage: Stage3D
 var view: ViewCanvas
 var view_box: ViewBox
 var picture: TextureRect
@@ -157,15 +159,22 @@ static func _prefers_reduced_motion() -> bool:
 
 
 func _build_screen() -> void:
+	# The view: the 3D set (Stage3D) drawn as line art, with the 2D layer (ViewCanvas) painted over it, in one
+	# 448x288 SubViewport that the shader scales up with sharp pixels
 	vp = SubViewport.new()
 	vp.name = "View"
 	vp.size = Vector2i(448, 288)
-	vp.disable_3d = true
+	vp.own_world_3d = true
+	vp.msaa_3d = Viewport.MSAA_4X
 	vp.transparent_bg = false
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(vp)
+	stage = Stage3D.new()
+	stage.reduced_motion = reduced_motion
+	vp.add_child(stage)
 	view = ViewCanvas.new()
 	view.ui = self
+	view.stage = stage
 	vp.add_child(view)
 
 	bar = _widget(TopBar.new(), "TopBar")
@@ -299,19 +308,8 @@ func _subscribe(fx) -> void:
 	fx.on("combat:start", func(p):
 		if post != null:
 			post.flash(Art.BOSS_COLOR if J.truthy(p.get("boss")) else (_accent_css() if _accent_css() != null else "#ffffff"), 0.28))
-	fx.on("view:step", func(p): begin_transition("step", int(p.dir)))
-	fx.on("view:turn", func(p): begin_transition("turn", int(p.dir)))
-	fx.on("view:bump", func(_p): begin_transition("bump", 1))
-
-
-## Moving and turning ease from the old view to the new one: the frame on screen is kept before the move
-func begin_transition(kind: String, dir: int) -> void:
-	if reduced_motion or DisplayServer.get_name() == "headless":
-		return
-	var img := vp.get_texture().get_image()
-	if img == null or img.is_empty():
-		return
-	view.begin_transition(kind, dir, ImageTexture.create_from_image(img))
+	# A step or a turn needs nothing here: the 3D camera glides to wherever the party now stands (Stage3D.place)
+	fx.on("view:bump", func(_p): stage.bump(J.now_ms()))
 
 
 # ---------------------------------------------------------------- audio
@@ -363,7 +361,7 @@ func _process(_delta: float) -> void:
 	if game == null:
 		return # on the way to the Genre Halls
 	var now := J.now_ms()
-	view.queue_redraw()
+	view.frame(now)
 	var G = game.G if game != null else null
 	if G != null:
 		var target: float = 0.5 if G.mode == "over" else Juice.danger_of(G.party)

@@ -4,7 +4,18 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
+
+### Changed
+- **The view is a 3D set drawn as the wireframe.** Walls, floor and ceiling are built from each floor's map (`src/view/dungeon3d.gd`), and the six monsters are models made of simple shapes (`src/view/monsters3d.gd`). Shaders fill every surface black and draw only lines, the way the 2D view did: every wall face outlined in the floor's wall color, each monster in its own color (red champions, gold shinies), the dots and slits filled in, lines dimming with distance exactly as before, torches glowing on the walls with flickering accent flames, the same decorations on the same walls, the stairs as a pit with accent steps. The vector-monitor shader is unchanged, so it glows the same.
+- **Moving is a camera move**: a step glides, a turn swings round, walking into a wall lunges at it (same timings as before). When a fight starts the camera backs off and looks down a little, and the monsters stand in the corridor in front of you, two or three in a V; their names, health bars, dice and floating numbers stay 2D, drawn over them.
+- **The floor's red champion stands in its hall**, turned toward you, so you can see it from anywhere down a corridor, not only straight ahead.
+- The title card is over a torch-lit 3D hall.
+- Genre Halls keeps its 2D drawing (the same look).
+
 ### Added
+- `cli/stage_shots.gd`: screenshots of the 3D view through the shader at 2× (the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight, a shiny, a champion, a hurt one, groups, boxed in by walls, danger).
+- Tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces, the stairwell, decorations in the wall color, torches, mesh winding, every model's size, single color and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torches' glow, line widths, the title hall.
 - Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
 
 ## [0.3.0] - 2026-10-29
