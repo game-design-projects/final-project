@@ -15,6 +15,26 @@ exact transcript and attribution, and how each voice is shaped after rendering (
 library is not used: its authorisation covers that project's own voice training only. Credits:
 `assets/CREDITS.txt`.
 
+## Samples
+
+The same line from each bank, and the recording the voice was cloned from (on GitHub, a click opens the file):
+
+| Monster | Reference voice (LibriTTS-R) | Line | | | |
+| --- | --- | --- | --- | --- | --- |
+| dragon | 7729 Tim Bower, −2 st | *Speak, little ones. You have my attention, briefly.* | [CosyVoice3](../../assets/voices/cosyvoice3/dragon/0ac6a445ee27.ogg) | [Qwen3-TTS](../../assets/voices/qwen3/dragon/0ac6a445ee27.ogg) | [reference](refs/dragon_7729.wav) |
+| rock golem | 1188 Duncan Murrell, −3 st, slower | *too soon. stone does not move quickly.* | [CosyVoice3](../../assets/voices/cosyvoice3/rock/a57c46af8d50.ogg) | [Qwen3-TTS](../../assets/voices/qwen3/rock/a57c46af8d50.ogg) | [reference](refs/golem_1188.wav) |
+| goblin | 260 Brad Bush, −1 st | *Gold. Give Tringus gold, maybe Tringus no smash.* | [CosyVoice3](../../assets/voices/cosyvoice3/goblin/c1c34f9b1b74.ogg) | [Qwen3-TTS](../../assets/voices/qwen3/goblin/c1c34f9b1b74.ogg) | [reference](refs/goblin_260.wav) |
+| bandit | 4077 Nathan Markham | *Your purse or your life. Or, we chat. Your call.* | [CosyVoice3](../../assets/voices/cosyvoice3/bandit/9e14e15d8515.ogg) | [Qwen3-TTS](../../assets/voices/qwen3/bandit/9e14e15d8515.ogg) | [reference](refs/bandit_4077.wav) |
+| snake | 8463 Michele Fry (breathy), slower | *You broke our deal. Now I break you.* | [CosyVoice3](../../assets/voices/cosyvoice3/snake/faa360ecf482.ogg) | [Qwen3-TTS](../../assets/voices/qwen3/snake/faa360ecf482.ogg) | [reference](refs/snake_8463.wav) |
+| slime | 5683 Rachael Lapidis, +3 st, faster | *promise was lie. Squish go now.* | [CosyVoice3](../../assets/voices/cosyvoice3/slime/349128e37aba.ogg) | [Qwen3-TTS](../../assets/voices/qwen3/slime/349128e37aba.ogg) | [reference](refs/slime_5683.wav) |
+
+What the game's speech recognizer heard back from every line (`check.py`):
+
+| Bank | Words heard back | Lines word for word | dragon | rock | bandit | goblin | slime | snake |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `cosyvoice3` | 88% | 167 / 322 | 98% | 91% | 89% | 82% | 80% | 78% |
+| `qwen3` | 89% | 171 / 322 | 96% | 93% | 88% | 83% | 85% | 78% |
+
 ## Rendering
 
 ```bash
