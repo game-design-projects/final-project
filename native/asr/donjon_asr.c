@@ -5,7 +5,7 @@
 //   in:  frames of 1 tag byte, a uint32 little-endian payload length, then the payload
 //        'S' start an utterance; payload: int32 LE sample rate of the audio that follows (sherpa-onnx resamples)
 //        'A' audio; payload: float32 LE mono samples in -1..1
-//        'F' finish: decode what is left and report the final text
+//        'F' finish: decode what is left (after half a second of silence) and report the final text
 //        'X' abort: drop the utterance without a result
 //   out: one JSON object per line
 //        {"event":"ready"}                    the model is loaded
@@ -55,6 +55,7 @@ typedef pthread_cond_t Cond;
 #include "sherpa-onnx/c-api/c-api.h"
 
 #define MAX_PAYLOAD (16u * 1024u * 1024u)
+#define TAIL_S 0.5f  // silence fed after the last audio of an utterance (see 'F')
 
 // Automatic gain: laptop microphones often come in far below full scale. Quiet speech is raised towards
 // AGC_TARGET (peak) by at most AGC_MAX_GAIN; loud speech is never turned down.
@@ -317,6 +318,13 @@ int main(int argc, char **argv) {
         if (a.stream == NULL) {
           emit("final", "text", "");
           break;
+        }
+        // The streaming model only commits a word once it has heard a little past it: people let go of the key
+        // right after their last word, and without this it came back cut ("Insolent morsel" -> "Insol")
+        float *tail = (float *)calloc((size_t)(a.rate * TAIL_S), sizeof(float));
+        if (tail != NULL) {
+          SherpaOnnxOnlineStreamAcceptWaveform(a.stream, a.rate, tail, (int32_t)(a.rate * TAIL_S));
+          free(tail);
         }
         SherpaOnnxOnlineStreamInputFinished(a.stream);
         decode(&a);
