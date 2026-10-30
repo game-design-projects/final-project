@@ -16,6 +16,7 @@ The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
 ### Added
 - `cli/stage_shots.gd`: screenshots of the 3D view through the shader at 2× (the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight, a shiny, a champion, a hurt one, groups, boxed in by walls, danger).
 - Tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces, the stairwell, decorations in the wall color, torches, mesh winding, every model's size, single color and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torches' glow, line widths, the title hall.
+- Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
 
 ## [0.3.0] - 2026-10-29
 

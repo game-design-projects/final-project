@@ -1,0 +1,8 @@
+# Codex reads this for trusted projects only. Same server as .mcp.json (Claude Code): see the README, "Godot MCP for AI agents".
+# The command finds the repo root itself, so it works whichever folder Codex starts in.
+
+[mcp_servers.godot]
+command = "bash"
+args = ["-c", "exec bash \"$(git rev-parse --show-toplevel)/tools/godot-mcp/run.sh\""]
+env_vars = ["GODOT_PATH"]
+startup_timeout_sec = 120  # the first start runs npm ci

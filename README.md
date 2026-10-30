@@ -211,6 +211,16 @@ Scripts for looking at the game, in `cli/`:
 
 The scenario scripts use mock Jev by default (random answers, no credits, repeatable with `--seed`): that checks the plumbing and the game's rules, not Jev's judgement. `--live` calls the real API with the key from `.env` or `config/jev_config.json`: every call is billed, and each raw reply is saved under `user://jev-raw` before it is parsed. The four screenshot scripts open a window briefly (they are not headless); pass `out=` (or `--out=`), because their default folder is a scratch path.
 
+### Godot MCP for AI agents
+
+[Godot MCP](https://github.com/Coding-Solo/godot-mcp) is registered as the `godot` server for Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`), so an agent can open the editor, run the game and read its output and errors, create scenes and add nodes, and refresh UIDs. It lives in `tools/godot-mcp/`, pinned in that folder's `package.json` and lockfile; `tools/godot-mcp/run.sh` runs `npm ci` there on the first start (and whenever the lockfile changes), then starts the server. It needs Node 18+ and the `godot` binary on `PATH` (or `GODOT_PATH=/path/to/godot` in the environment). To install it ahead of time:
+
+```bash
+npm ci --prefix tools/godot-mcp
+```
+
+Claude Code asks once whether to trust the project's MCP servers; approve `godot`. Codex loads `.codex/config.toml` only once the project is trusted (it asks on the first start here); `codex mcp list` shows the server, and it forwards `GODOT_PATH` when that is set. The server's own dependencies carry known `npm audit` advisories (an old pinned MCP SDK); it only talks to the agent over stdio, and nothing of it ships in a build.
+
 ## The rules
 
 ### D&D-style combat
