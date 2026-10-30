@@ -39,7 +39,7 @@ Prebuilt web, Windows, macOS and Linux builds come out of CI: every push has the
 | Exploring | ↑/W forward · ↓/S back · ←/A and →/D turn · **C** camp (long rest; may be ambushed) · **E** talk to an ally · **V** make a vow to an ally · **B** boons · **M** map |
 | Combat | **F** quick attack: everyone does their usual move at once (weapons; the wizard's free Fire Bolt; no spell slots) · **C** choose moves: pick each adventurer's action one by one (attack, Second Wind or Action Surge, or any spell they have slots for) · **T** talk (everyone hears) · **R** recruit the target · **G** give gold · **V** vow to the target · **E** escape · **1–3** pick target |
 | Menus | ↑/↓ (or W/S) move the highlight, ←/→ jump columns, **Enter** picks it · **1–9** and **0** pick directly · **Esc** goes back |
-| Anywhere | hold **Space** to talk (web build) · **K** achievements · **H** tips off / back on from the start · **P** music on/off · **O** sound effects on/off · **L** voices (monsters read aloud) on/off · (**J** Jev mind panel, debug runs only) |
+| Anywhere | hold **Space** to talk · **K** achievements · **H** tips off / back on from the start · **P** music on/off · **O** sound effects on/off · **L** voices (monsters read aloud): the next voice, then off · (**J** Jev mind panel, debug runs only) |
 
 Keys pressed with Cmd, Ctrl or Alt are left to the system. On the title card, any key starts the game and **G** opens [Genre Halls](#genre-halls-undertale-style-battles). Every key on the screen is also a button: click it.
 
@@ -56,7 +56,13 @@ Keys pressed with Cmd, Ctrl or Alt are left to the system. On the title card, an
 
 Hover any of them for the details (exact numbers, ability scores, boons).
 
-**Monsters answer out loud.** With the system's text to speech, monsters and allies read their lines aloud, each kind in its own pitch and pace (a deep, slow dragon; a squeaky slime), in an English voice, skipping the *stage directions*. It starts off. **L** turns it on or off for good, and the keycap only shows when the system has a speech engine. In the web build it also turns on by itself the first time you talk to the game with your voice: someone speaking to the monsters wants to hear them answer. Speech can't be turned up past full volume, so while a monster talks the music drops to a quarter and the effects to half, then come back as it finishes. It goes quiet while the microphone listens, and drops a backlog rather than falling behind the fight (`src/audio/tts.gd`).
+**Monsters answer out loud.** Monsters and allies read their lines aloud, each kind in its own voice (a deep, slow dragon; a squeaky slime), skipping the *stage directions*. It starts off, and turns on by itself the first time you talk to the game with your voice: someone speaking to the monsters wants to hear them answer. **L** steps through the voices this build has, then off, and the game keeps your choice:
+
+- **Rendered ahead** (`assets/voices/`): every line in the game spoken by an open text-to-speech model, each monster's voice cloned from a Creative Commons recording. Two banks, one per model, to compare: **CosyVoice3** (the engine of the Feiyu stack) and **Qwen3-TTS**. They play instantly and sound the same on every machine. A line that names someone (*"You side with them, ROLF?"*) isn't in them and goes to the next voice.
+- **A live service** on your network, when one is set up: a Feiyu voice service or a Qwen3-TTS service synthesises each line as it's said. Any line, a second or more to start (they need a good GPU). See [Voices](#voices).
+- **Your system's voice**: the macOS, Windows or Linux speech engine, or the browser's on the web; each monster gets its own pitch and pace.
+
+The keycap only shows when there is at least one. Speech can't be turned up past full volume, so while a monster talks the music drops to a quarter and the effects to half, then come back as it finishes. It goes quiet while the microphone listens, and drops a backlog rather than falling behind the fight (`src/audio/tts.gd`, `tts_engines.gd`).
 
 **How it looks, sounds and feels.** The view runs through a shader (`src/view/postfx.gd`, `postfx.gdshader`) that makes the wireframe glow like an old vector monitor: lines bloom, the pixels stay sharp at any window size, faint scanlines follow the game's own rows, and each floor's accent color tints the dark. Game state drives it, along with the music and the shake, through one event bus (`src/rules/juice.gd` `FX_EVENTS`): the rules announce hits, kills, falls, steps and fights, and the presentation answers.
 
@@ -67,7 +73,12 @@ Hover any of them for the details (exact numbers, ability scores, boons).
 
 The `nofx` flag turns the shader off: the plain view shows, and everything else works the same. When the browser reports prefers-reduced-motion (web build only; see [Platform differences](#platform-differences)) the game turns off the shake, the step and turn transitions, the pulsing glows and the blinking, and tones the flashes down.
 
-**Hold Space to talk** (web build). Instead of typing, hold **Space**, say it, and let go: the words fill the talk box as you speak and are sent when you let go. In a fight it talks to the monsters (like T); exploring, it talks to a monster ally (like E; pick one first if you have several); with a talk box already open and empty (after T, R or E) it just listens. A quick tap of Space is still an ordinary key, and with words already in the box Space types a space. With a mouse or a finger, press and hold the **HOLD TO SPEAK** button beside the box. It uses the browser's built-in speech recognition (Web Speech API: Chrome, Edge and Safari; Chrome sends the audio to Google's recognizer, Safari to Apple's), in the browser's language, and asks for the microphone the first time. Where it's missing (Firefox, and every desktop build) the button hides and Space is an ordinary key: type instead. The logic is `src/audio/voice.gd`.
+**Hold Space to talk.** Instead of typing, hold **Space**, say it, and let go: the words fill the talk box as you speak and are sent when you let go. In a fight it talks to the monsters (like T); exploring, it talks to a monster ally (like E; pick one first if you have several); with a talk box already open and empty (after T, R or E) it just listens. A quick tap of Space is still an ordinary key, and with words already in the box Space types a space. With a mouse or a finger, press and hold the **HOLD TO SPEAK** button beside the box.
+
+- **Desktop builds** hear you on your own computer, with nothing sent anywhere: NVIDIA's Nemotron Speech Streaming model (English) running in a small helper program the game carries (sherpa-onnx). The model is a one-time **662 MB download**: the first time you hold Space the game offers it, and holding Space again starts it (keep typing meanwhile; the log says when it's done). It loads in a few seconds the first time you speak in a session, and uses about 1 GB of memory while the game runs. macOS asks for the microphone once.
+- **The web build** uses the browser's speech recognition (Web Speech API: Chrome, Edge and Safari; Chrome sends the audio to Google's recognizer, Safari to Apple's), in the browser's language, and asks for the microphone the first time. In Firefox the button hides and Space is an ordinary key: type instead.
+
+The logic is `src/audio/voice.gd`, and `src/audio/asr.gd` for the desktop recognizer.
 
 **Achievements.** Thirty of them, for what makes this game itself rather than for grinding: words that leave a monster DELIGHTED or IN STITCHES, a fight won without a single attack, your first ally, a shiny, three monster allies at once, a vow carried down the stairs (or broken and forgiven), a natural 20 while talking, a death save that pulls someone back up, floors 5 and 10, a red champion slain or talked down, a legendary boon. Five are secret and read **???** until you stumble on them. When you earn one, a gold note slides down over the top of the view with a short jingle (the **O** toggle mutes it) and the log says so; it never takes a key or a click away from you. **K** (or the trophy keycap in the top bar, which also shows your count) lists them all over the view: earned ones lit in their group's color with the date, locked ones dimmed with what to do, and progress bars for the two that count up across runs (EMPATH, every feeling; MENAGERIE, every kind of monster). While the list is open it glows, **K** or **Esc** closes it, the arrows scroll it, and any other key shakes it. Achievements are kept across runs, deaths and restarts in the game's saved data (`donjon.achievements`, see [Platform differences](#platform-differences)). The list and its rules live in `src/rules/achievements.gd`; the game calls it from one-line hooks.
 
@@ -141,12 +152,13 @@ godot --path . res://src/genre/genre_halls.tscn -- meet=rock   # Genre Halls, st
 | `nodebug` | debug mode off for this run, even in a build that ships with it on |
 | `floorN` | a **test run**: start on floor N (clamped to 2 to 30) with a party that got there, every member at level N, one Roll of Fate boon per floor cleared, some gold, fully rested |
 | `nofx` | no shader: the plain view |
+| `tts=<voice>` | start with that voice: `cosyvoice3`, `qwen3`, `feiyu`, `qwen` or `system` (see [Voices](#voices)) |
 | `genre-halls` | open [Genre Halls](#genre-halls-undertale-style-battles) instead of the game |
 | `meet=<species>` | in Genre Halls, jump into that faction's fight: `slime`, `bandit`, `snake`, `rock` or `dragon` |
 | `nosound` or `nosfx` | Genre Halls without sound |
 | `pad` | Genre Halls with its on-screen arrow pad (always on a touch screen) |
 
-`godot --path . --verbose` prints the game's debug logging (flag choice, Jev provider, API timing, audio start, boon draws).
+`godot --path . --verbose` prints the game's debug logging (flag choice, Jev provider, API timing, audio start, boon draws, the voices found and each line spoken, the speech helper's own log).
 
 Floors are new mazes every time you descend. Death is permanent, and your deepest floor is remembered.
 
@@ -154,9 +166,9 @@ Floors are new mazes every time you descend. Death is permanent, and your deepes
 
 The same project runs everywhere; these parts depend on where.
 
-- **Text to speech** is the system's (`DisplayServer.tts_*`): the macOS, Windows and Linux speech engines, or the browser's `speechSynthesis` on the web. The voices differ from machine to machine; the game picks an English one, preferring local voices, and gives each monster its own pitch and pace. No speech engine, no **L** keycap.
-- **Hold-Space speech recognition** works only in the web build, in a browser that has the Web Speech API (Chrome, Edge, Safari). Everywhere else `src/audio/voice.gd` reports it unsupported, the HOLD TO SPEAK button stays hidden and Space is an ordinary key. Voices therefore turn on by themselves only on the web; on a desktop build press **L**.
-- **Saved data** (achievements, tips seen and off, the voices choice, the Jev panel's state, your deepest floor) is one JSON file, `user://store.json` (`src/core/store.gd`): `~/Library/Application Support/donjon/` on macOS, `%APPDATA%\donjon\` on Windows, `~/.local/share/donjon/` on Linux, and the browser's IndexedDB for the site on the web. Delete the file to start fresh. Setting `donjon.debug` to `"1"` in it turns debug mode on for every run.
+- **Voices.** The rendered banks play the same everywhere, the web included. The system's voice is `DisplayServer.tts_*`: the macOS, Windows and Linux speech engines, or the browser's `speechSynthesis` on the web, which differ from machine to machine (the game picks an English one, preferring local voices). A live service is reached over your network from any build that has it configured.
+- **Hold-Space speech recognition** runs on your machine in the Windows (x86_64), macOS (universal) and Linux (x86_64) builds, with the downloaded model; in the web build it's the browser's (Chrome, Edge, Safari). Elsewhere (Firefox, another processor, a build made without the helper) the HOLD TO SPEAK button stays hidden and Space is an ordinary key.
+- **Saved data** (achievements, tips seen and off, the voices choice, the Jev panel's state, your deepest floor) is one JSON file, `user://store.json` (`src/core/store.gd`): `~/Library/Application Support/donjon/` on macOS, `%APPDATA%\donjon\` on Windows, `~/.local/share/donjon/` on Linux, and the browser's IndexedDB for the site on the web. Delete the file to start fresh. Setting `donjon.debug` to `"1"` in it turns debug mode on for every run. The speech model and helper live beside it in `asr/`; delete that folder to get the 662 MB back.
 - **Reduced motion**: the web build asks the browser (`prefers-reduced-motion`); desktop builds don't query the system and always run with motion on.
 - **Flags** come from the address on the web and from the command line elsewhere (start an exported desktop build from a terminal with `-- mock` and the like).
 - **The Jev panel and `window.halls`.** The Jev mind panel and its REQUESTS tab work everywhere in debug mode. The `halls` console hooks (`halls.meet("goblin", "slime")`, `halls.hostile("slime")`, `halls.ally("slime", "Glop")`, `halls.lesson()`, `halls.boss()`, `halls.floor(5)`, `halls.xp(n)`, `halls.roll()`, `halls.shiny()`, `halls.descend()`, `halls.state()`) exist only in the web build, in a debug run.
@@ -174,14 +186,15 @@ tools/build.sh --proxy https://donjon-api.<you>.workers.dev   # Jev via a Worker
 OPENROUTER_API_KEY=sk-or-... tools/build.sh --openrouter      # Jev via OpenRouter, the key inside the build (public!)
 ```
 
-It needs the `godot` binary on `PATH` (or `GODOT=/path/to/godot`) with the 4.7.2 export templates installed (Editor → Manage Export Templates). `--openrouter` and `--proxy` write `config/jev_config.json` for the export only and delete it afterwards; both set `debug: true`, so those builds start in debug mode with the Jev panel beside the game (a window or an embed of about 1180 × 820 fits both; the `nodebug` flag plays without it). The exports are the presets in `export_presets.cfg`: **Web** (single-threaded, so no special server headers), **Windows** (x86_64, one `.exe`), **macOS** (universal `.app`, zipped by Godot) and **Linux** (x86_64). Tests, `cli/` and `docs/` stay out of the exports (so do `proxy/` and `tools/`, which Godot ignores through `.gdignore`); the config file and `assets/CREDITS.txt` go in.
+It needs the `godot` binary on `PATH` (or `GODOT=/path/to/godot`) with the 4.7.2 export templates installed (Editor → Manage Export Templates). Each desktop build also carries its system's speech helper from `native/dist/<platform>/`, which `native/asr/build.sh <platform>` builds (`linux` and `windows` on Linux, `windows` cross-compiled with mingw-w64; `macos` on a Mac); `build.sh` warns when one is missing, and that build simply has no hold-to-talk. `--openrouter` and `--proxy` write `config/jev_config.json` for the export only and delete it afterwards; both set `debug: true`, so those builds start in debug mode with the Jev panel beside the game (a window or an embed of about 1180 × 820 fits both; the `nodebug` flag plays without it). The exports are the presets in `export_presets.cfg`: **Web** (single-threaded, so no special server headers), **Windows** (x86_64, one `.exe`), **macOS** (universal `.app`, zipped by Godot) and **Linux** (x86_64). Tests, `cli/` and `docs/` stay out of the exports (so do `proxy/` and `tools/`, which Godot ignores through `.gdignore`); the config file and `assets/CREDITS.txt` go in.
 
 **The web build** uses its own page, `web/shell.html`: no engine logo and no loading screen, just a black page with a 2px line that fills while the files download (the project's boot splash is off too). If the browser can't run the game, or the page is opened as a file, it prints a plain message saying why. `node tools/check-html5.mjs build/web` (Node) checks the folder against itch.io's HTML5 limits (file count and sizes, `index.html` at the top, no symlinks) before a push.
 
 **CI** (`.github/workflows/ci.yml`; Godot 4.7.2 is installed by `.github/actions/setup-godot`, Node 22 for the HTML5 check, and every action is pinned to a commit). It uses no secrets and can only read: the builds reach Jev through the Worker.
 
-- Every push to `main` and every pull request runs the **tests**: the whole suite, then every scripted encounter in `cli/scenarios.gd` and `cli/social_scenarios.gd` on mock Jev with two seeds.
-- Then a **build** for web, Windows, macOS and Linux (`tools/build.sh --proxy "$JEV_API"`), each kept as a workflow artifact for 14 days (`donjon-<platform>`, a zip, because an artifact folder loses the executable bits). The web one is validated with `check-html5.mjs`.
+- First the **speech helper**: built for Linux and Windows on Linux and for macOS on a Mac, then run on a recording on each of the three systems (`native/asr/smoke.py`) against the speech model, which is the game's own pinned download, cached.
+- Every push to `main` and every pull request runs the **tests**: the whole suite (with the Linux helper and the model, so the real recognizer is tested through the game's code), then every scripted encounter in `cli/scenarios.gd` and `cli/social_scenarios.gd` on mock Jev with two seeds.
+- Then a **build** for web, Windows, macOS and Linux (`tools/build.sh --proxy "$JEV_API"`), each desktop one with its own helper, each kept as a workflow artifact for 14 days (`donjon-<platform>`, a zip, because an artifact folder loses the executable bits). The web one is validated with `check-html5.mjs`.
 
 **Release** (`.github/workflows/release.yml`) is its own workflow, and a tag `vX.Y.Z` is its only trigger: `ci.yml` does not run on tags itself, so a tag tests and builds once. It fails at once unless the tag equals `config/version` in `project.godot` and `CHANGELOG.md` has a `## [X.Y.Z]` section. Then it calls `ci.yml` (the tests and the four builds) and, only if they pass, its last job (the only one with write access) publishes a GitHub release with those exact zips and that version's section of `CHANGELOG.md` as the notes. To release: bump `config/version`, add a `## [X.Y.Z] - date` section to `CHANGELOG.md`, tag `vX.Y.Z`, push the tag.
 
@@ -191,11 +204,11 @@ It needs the `godot` binary on `PATH` (or `GODOT=/path/to/godot`) with the 4.7.2
 
 ```bash
 godot --headless --path . --import                                  # once, and after adding files
-godot --headless --path . -s res://tests/run_tests.gd               # everything: about 480 tests, half a minute
+godot --headless --path . -s res://tests/run_tests.gd               # everything: about 500 tests, under a minute
 godot --headless --path . -s res://tests/run_tests.gd -- --only=dnd # only files whose path contains "dnd"
 ```
 
-The runner finds every `tests/**/test_*.gd`, runs each `test_*` method, and exits non-zero on a failure. A script error inside a test (a bad index, a null access) fails that test too. Tests run on mock Jev and need no key or network; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#testing) says how they are built. The Worker has its own: `node --test proxy/worker.test.js` (Node, nothing to install, the upstream is stubbed).
+The runner finds every `tests/**/test_*.gd`, runs each `test_*` method, and exits non-zero on a failure. A script error inside a test (a bad index, a null access) fails that test too. Tests run on mock Jev and need no key or network; one, in `tests/audio/test_asr.gd`, runs the real speech recognizer on a recording when `native/asr/build.sh linux` (or your system) and `native/asr/build.sh model` have been run, and says it skipped otherwise; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#testing) says how they are built. The Worker has its own: `node --test proxy/worker.test.js` (Node, nothing to install, the upstream is stubbed).
 
 Scripts for looking at the game, in `cli/`:
 
@@ -207,6 +220,7 @@ Scripts for looking at the game, in `cli/`:
 | `view_shots.gd` | `godot --path . -s res://cli/view_shots.gd -- --out=<dir>` | the view modules alone: the title, corridors on three palettes, the automap, every monster (plus a shiny, a champion and a group of three), and the shader at two danger levels |
 | `genre_shots.gd` | `godot --path . -s res://cli/genre_shots.gd -- out=<dir> [sound]` | Genre Halls: each faction's box, the mind panel, the strike bar, a route screen |
 | `sfx_dump.gd` | `godot --headless --path . -s res://cli/sfx_dump.gd -- --out=<dir>` | renders every sound effect to WAV with a table of length, peak and RMS, to listen to or measure |
+| `voice_lines.gd` | `godot --headless --path . -s res://cli/voice_lines.gd -- --out=build/voice-lines.json` | every line a monster can say aloud, for rendering a voice bank (see [Voices](#voices)) |
 
 The scenario scripts use mock Jev by default (random answers, no credits, repeatable with `--seed`): that checks the plumbing and the game's rules, not Jev's judgement. `--live` calls the real API with the key from `.env` or `config/jev_config.json`: every call is billed, and each raw reply is saved under `user://jev-raw` before it is parsed. The three screenshot scripts open a window briefly (they are not headless); pass `out=` (or `--out=`), because their default folder is a scratch path.
 
