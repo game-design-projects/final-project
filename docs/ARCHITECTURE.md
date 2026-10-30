@@ -19,7 +19,7 @@ Donjon was a browser game (`crawler/` in git history, last at `12d2be7`) and was
 | `assets/` | `audio/*.ogg` (the music), `fonts/` (Press Start 2P, VT323), `CREDITS.txt` |
 | `tests/` | Mirrors `src/`, plus `run_tests.gd` and `test_case.gd` |
 | `cli/` | Scenario runners and screenshot/sound dump scripts (see the README) |
-| `tools/` | `build.sh`, `check-html5.mjs`, `music/` (offline music renders). Godot ignores it (`.gdignore`) |
+| `tools/` | `build.sh`, `check-html5.mjs`, `music/` (offline music renders), `godot-mcp/` (the Godot MCP server `.mcp.json` starts). Godot ignores it (`.gdignore`) |
 | `proxy/` | The Cloudflare Worker that holds the Jev key and forwards the game's requests (JavaScript, its own `package.json` and tests; `.gdignore`) |
 | `.github/` | CI: `workflows/ci.yml` (tests, builds, releases), `workflows/worker.yml` (the Worker), `actions/setup-godot` |
 | `web/shell.html` | The web export's page |
