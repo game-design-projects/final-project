@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts the Godot MCP server (github.com/Coding-Solo/godot-mcp) for .mcp.json, installing it first when needed:
+# Starts the Godot MCP server (github.com/Coding-Solo/godot-mcp) for .mcp.json and .codex/config.toml, installing it first when needed:
 # npm ci runs on the first start and again whenever package-lock.json changes. stdout is the MCP channel,
 # so everything else goes to stderr. Godot is found on PATH (or the usual install spots); GODOT_PATH overrides.
 set -euo pipefail

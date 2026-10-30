@@ -1,7 +1,7 @@
 {
   "name": "donjon-godot-mcp",
   "private": true,
-  "description": "Godot MCP server (github.com/Coding-Solo/godot-mcp) for AI agents working on Donjon; .mcp.json starts it through run.sh",
+  "description": "Godot MCP server (github.com/Coding-Solo/godot-mcp) for AI agents working on Donjon; .mcp.json (Claude Code) and .codex/config.toml (Codex) start it through run.sh",
   "license": "UNLICENSED",
   "dependencies": {
     "@coding-solo/godot-mcp": "0.1.1"
