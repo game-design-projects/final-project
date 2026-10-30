@@ -76,9 +76,10 @@ case "$platform" in
     for f in tokens.txt decoder.int8.onnx joiner.int8.onnx encoder.int8.onnx test_wavs/0.wav test_wavs/8k.wav test_wavs/trans.txt; do
       [[ -s $dir/$f ]] || { echo "   downloading $f" >&2; curl -fsSL --retry 3 "$MODEL_URL/$f" -o "$dir/$f"; }
     done
+    printf '%s\n' "$MODEL_SUMS" > "$dir/SHA256SUMS" # a file: BSD sha256sum (macOS) won't read the list from stdin
     sum=sha256sum
     command -v sha256sum >/dev/null || sum="shasum -a 256"
-    (cd "$dir" && $sum -c) <<< "$MODEL_SUMS" || { echo "model files don't match their checksums" >&2; exit 1; }
+    (cd "$dir" && $sum -c SHA256SUMS) || { echo "model files don't match their checksums" >&2; exit 1; }
     echo "model: $dir ($(du -sh "$dir" | cut -f1))"
     exit 0
     ;;
