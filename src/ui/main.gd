@@ -159,8 +159,8 @@ static func _prefers_reduced_motion() -> bool:
 
 
 func _build_screen() -> void:
-	# The view: the 3D set (Stage3D) with the 2D layer (ViewCanvas) painted over it, in one SubViewport that is a
-	# whole multiple of 448x288 (relayout picks it for the window), so the 2D layer keeps its own pixels
+	# The view: the 3D set (Stage3D) drawn as line art, with the 2D layer (ViewCanvas) painted over it, in one
+	# 448x288 SubViewport that the shader scales up with sharp pixels
 	vp = SubViewport.new()
 	vp.name = "View"
 	vp.size = Vector2i(448, 288)
@@ -187,7 +187,7 @@ func _build_screen() -> void:
 	picture.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view_box.add_child(picture)
-	post = Postfx.PostFx.create({"reducedMotion": reduced_motion, "look": "cel"})
+	post = Postfx.PostFx.create({"reducedMotion": reduced_motion})
 	if post != null:
 		post.attach(picture)
 	toasts = _widget(Toasts.new(), "Toasts", view_box)
@@ -397,18 +397,6 @@ func _process(_delta: float) -> void:
 
 # ---------------------------------------------------------------- layout
 
-## The view renders at the largest whole multiple of 448x288 that still shows at full size or larger on screen
-## (`px`: the picture's width in physical pixels), up to 3x: the 3D set gets the pixels, the 2D layer is scaled
-## up whole so its pixels stay square.
-func _size_view(px: float) -> void:
-	var k := clampi(floori(px / ViewCanvas.W), 1, 3)
-	var want := Vector2i(int(ViewCanvas.W) * k, int(ViewCanvas.H) * k)
-	if vp.size != want:
-		vp.size = want
-		view.scale = Vector2(k, k)
-		print_verbose("view: %dx%d (%dx)" % [want.x, want.y, k])
-
-
 func relayout() -> void:
 	hide_tooltip()
 	Css.set_scale(get_viewport().get_final_transform().get_scale().x)
@@ -419,7 +407,6 @@ func relayout() -> void:
 	view_box.size = L.view.size
 	picture.position = Vector2(Layout.VIEW_BORDER, Layout.VIEW_BORDER)
 	picture.size = L.picture.size
-	_size_view(L.picture.size.x * get_viewport().get_final_transform().get_scale().x)
 	for o in [toasts, modal, tip_box]:
 		o.position = Vector2.ZERO
 		o.size = L.view.size

@@ -1,14 +1,14 @@
-// Torch flames (Dungeon3D): flat, two-tone flames drawn on quads that always face you, the way an animated
-// film paints fire over a 3D set. Every vertex of a quad sits at the flame's foot; UV (-1..1 across, 0..1 up) says
-// which corner it is, and UV2.x gives each flame its own flicker. Lit by nothing: they are the light (the bloom
-// makes them glow). `accent` is the floor's accent color.
+// Torch flames (Dungeon3D), drawn as the wireframe drew them: an outline of a flame in the floor's accent color, with
+// a smaller tongue inside, on a quad that always faces you. Every vertex of a quad sits at the flame's foot; UV (-1..1
+// across, 0..1 up) says which corner it is, and UV2.x gives each flame its own flicker. The glow round it is the
+// walls' (line.gdshaderinc torch_glow); the bloom does the rest.
 shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_opaque, world_vertex_coords;
 
-uniform vec3 accent : source_color = vec3(1.0, 0.7, 0.28);
-uniform vec3 core : source_color = vec3(1.0, 0.96, 0.82);
+uniform vec3 accent = vec3(1.0, 0.7, 0.28); // sRGB (line.gdshaderinc)
 uniform vec2 flame_size = vec2(0.13, 0.36);
-uniform float fps = 12.0;                          // flames move in steps, like drawn frames
+uniform float fps = 24.0;                        // render.gd FLAME_FPS
+uniform float line_px = 1.5;
 
 varying float seed;
 
@@ -18,19 +18,30 @@ void vertex() {
 	VERTEX += right * UV.x * flame_size.x + vec3(0.0, 1.0, 0.0) * UV.y * flame_size.y;
 }
 
+// How far inside a teardrop of `height` a point (x across, y up from its foot) is, in screen pixels (negative: out)
+float inside_px(float x, float y, float height, float wide) {
+	float v = y / height;
+	float w = sqrt(max(0.0, v)) * (1.0 - v) * 1.9 * wide;
+	float dx = (w - abs(x)) / max(fwidth(x), 1e-5);
+	float dy = min(y, height - y) / max(fwidth(y), 1e-5);
+	return min(dx, dy);
+}
+
+// 1 on the band `line_px` wide just inside an edge
+float band(float v) {
+	return smoothstep(-0.5, 0.5, v) * (1.0 - smoothstep(line_px - 0.5, line_px + 0.5, v));
+}
+
 void fragment() {
 	float t = floor(TIME * fps) / fps + seed * 37.0;
-	vec2 p = vec2(UV.x, UV.y); // x -1..1, y 0 (foot) .. 1 (tip)
-	// A teardrop: wide at the foot, licking up to a point that sways
-	float sway = sin(t * 9.0 + seed * 11.0) * 0.18 + sin(t * 23.0) * 0.07;
-	float x = p.x - sway * p.y * p.y;
-	float height = 0.82 + 0.18 * sin(t * 13.0 + seed * 5.0);
-	float y = p.y / height;
-	float width = sqrt(max(0.0, y)) * (1.0 - y) * 1.9;
-	float outer = step(abs(x), width) * step(y, 1.0);
-	float inner = step(abs(x), width * 0.5) * step(y, 0.62);
-	if (outer < 0.5) {
+	// The flame licks up to a point that sways (render.gd's flicker, by the same two sines)
+	float f = sin(t * 11.1 + seed * 40.0) * 0.12 + sin(t * 27.0 + seed * 17.0) * 0.08;
+	float x = UV.x - f * UV.y * UV.y * 2.0;
+	float outer = inside_px(x, UV.y, 0.86 + f * 0.3, 1.0);
+	float inner = inside_px(x, UV.y, 0.5, 0.4);
+	float line = max(band(outer), band(inner));
+	if (line < 0.05) {
 		discard;
 	}
-	ALBEDO = mix(accent * 1.5, core * 1.6, inner);
+	ALBEDO = accent * line;
 }

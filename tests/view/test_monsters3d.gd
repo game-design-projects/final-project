@@ -62,24 +62,33 @@ func test_every_species_builds_standing_on_the_floor_inside_the_corridor():
 func test_the_body_takes_the_species_color_unless_the_look_says_otherwise():
 	for sp in Monsters3D.SPECIES:
 		var plain := _model(sp)
-		ok(_has_color(plain, MeshKit.lin(Species.SPECIES[sp].color)), "%s in its own color" % sp)
+		ok(_has_color(plain, MeshKit.color(Species.SPECIES[sp].color)), "%s in its own color" % sp)
 		plain.free()
 		var champ := _model(sp, {"color": Art.BOSS_COLOR})
-		ok(_has_color(champ, MeshKit.lin(Art.BOSS_COLOR)), "%s champion in red" % sp)
-		ok(not _has_color(champ, MeshKit.lin(Species.SPECIES[sp].color)), "%s champion has none of its usual color" % sp)
+		ok(_has_color(champ, MeshKit.color(Art.BOSS_COLOR)), "%s champion in red" % sp)
+		ok(not _has_color(champ, MeshKit.color(Species.SPECIES[sp].color)), "%s champion has none of its usual color" % sp)
 		champ.free()
 		var shiny := _model(sp, {"shiny": true})
-		ok(_has_color(shiny, MeshKit.lin(Art.SHINY_COLOR)), "%s shiny in gold" % sp)
+		ok(_has_color(shiny, MeshKit.color(Art.SHINY_COLOR)), "%s shiny in gold" % sp)
 		shiny.free()
 
 
-func test_glowing_parts_are_the_eyes_of_fire():
-	var rock := _model("rock")
-	ok(_colors(rock).any(func(c): return c.a == 0.0), "the rock's crack of an eye glows")
-	rock.free()
-	var slime := _model("slime")
-	ok(not _colors(slime).any(func(c): return c.a == 0.0), "a slime has nothing that glows")
-	slime.free()
+func test_each_is_drawn_in_one_color_like_its_line_drawing():
+	for sp in Monsters3D.SPECIES:
+		var model := _model(sp)
+		var want := MeshKit.color(Species.SPECIES[sp].color)
+		var how := {}
+		for c in _colors(model):
+			if absf(c.r - want.r) > 0.01 or absf(c.g - want.g) > 0.01 or absf(c.b - want.b) > 0.01:
+				fail("%s has a part in %s" % [sp, c])
+				break
+			how["solid" if c.a < 0.25 else ("bare" if c.a < 0.75 else "line")] = true
+		ok(how.has("line"), "%s is outlined" % sp)
+		ok(how.has("solid"), "%s has its dots and slits drawn solid (pupils, a mouth, a crack of an eye)" % sp)
+		model.free()
+	var dragon := _model("dragon")
+	ok(_colors(dragon).any(func(c): return c.a > 0.25 and c.a < 0.75), "the dragon's wing membranes: black, no outline")
+	dragon.free()
 
 
 func test_each_species_moves_like_its_drawing():
@@ -108,7 +117,7 @@ func test_each_species_moves_like_its_drawing():
 	goblin.free()
 
 
-func test_a_hit_shakes_the_model_sideways_and_flashes_it():
+func test_a_hit_shakes_the_model_sideways_and_lights_it_up():
 	var m := ShaderMaterial.new()
 	var model := Monsters3D.build("bandit", {}, m)
 	Monsters3D.pose(model, 10.0 * PI, 0.0)
@@ -116,5 +125,5 @@ func test_a_hit_shakes_the_model_sideways_and_flashes_it():
 	eq(m.get_shader_parameter("flash"), 0.0)
 	Monsters3D.pose(model, 10.0 * PI, 1.0) # sin(t / 20) = 1
 	ok(model.get_node("Rig").position.x > 0.05, "shaken")
-	near(m.get_shader_parameter("flash"), 0.75, 1e-6, "flashed")
+	near(m.get_shader_parameter("flash"), 0.5, 1e-6, "lit up in its own color")
 	model.free()

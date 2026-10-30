@@ -61,19 +61,36 @@ func test_the_face_frame_runs_along_the_wall_up_and_out_of_it():
 	near(f.origin.z, CELL + 0.1, 1e-6, "0.1 out of the wall, which is at z = CELL")
 
 
-func test_corners_are_inked_full_and_a_wall_running_on_only_faintly():
+func test_every_wall_face_is_its_own_quad_from_corner_to_corner_so_the_shader_outlines_each_one():
+	# The wireframe outlined every face, a wall running on included: each face spans UV 0..1 on its own
 	var map := map_of(["#####", "#...#", "#####"])
-	var grid: Array = map.grid
-	# the north wall of the middle cell runs on both ways
-	eq(Dungeon3D.edge_ink(grid, 2, 1, 0, -1), Dungeon3D.SEAM_INK)
-	eq(Dungeon3D.edge_ink(grid, 2, 1, 0, 1), Dungeon3D.SEAM_INK)
-	# at the west end it turns a corner (concave: the end wall), on the east it runs on
-	eq(Dungeon3D.edge_ink(grid, 1, 1, 0, -1), 1.0)
-	eq(Dungeon3D.edge_ink(grid, 1, 1, 0, 1), Dungeon3D.SEAM_INK)
-	# an opening beside you: the wall stops at a convex corner
-	var t := map_of(["#####", "#...#", "##.##", "#####"])
-	eq(Dungeon3D.edge_ink(t.grid, 1, 1, 2, -1), 1.0, "the south wall of the west cell ends at the opening")
-	eq(Dungeon3D.edge_ink(t.grid, 1, 1, 2, 1), 1.0, "and meets the end wall on its other side")
+	var b := Dungeon3D.build(map)
+	var uv: PackedVector2Array = b.walls.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+	eq(uv.size(), b.faces * 4)
+	for i in range(0, uv.size(), 4):
+		eq([uv[i], uv[i + 1], uv[i + 2], uv[i + 3]], [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)])
+
+
+func test_decorations_are_drawn_in_the_wall_color_and_the_stair_steps_in_the_accent():
+	var palette: Dictionary = Render.PALETTES[3]
+	var map := map_of(["#########", "#.......#", "#.#.#.#.#", "#.......#", "#########"], {"seed": 31, "palette": palette, "stairs": {"x": 1, "y": 3}})
+	var b := Dungeon3D.build(map)
+	var wall := MeshKit.color(palette.wall)
+	var accent := MeshKit.color(palette.accent)
+	var kinds := {"line": 0, "solid": 0, "black": 0, "steps": 0}
+	for c in b.props.surface_get_arrays(0)[Mesh.ARRAY_COLOR]:
+		if c.r < 0.01 and c.g < 0.01 and c.b < 0.01:
+			kinds.black += 1 # the inside of a window, a niche, the hole
+		elif absf(c.r - wall.r) < 0.01 and absf(c.g - wall.g) < 0.01 and absf(c.b - wall.b) < 0.01:
+			kinds["solid" if c.a < 0.25 else "line"] += 1
+		elif absf(c.r / maxf(c.g, 1e-3) - accent.r / maxf(accent.g, 1e-3)) < 0.05:
+			kinds.steps += 1
+		else:
+			fail("a prop in another color: %s" % c)
+			break
+	ok(kinds.line > 0, "outlined in the wall color")
+	ok(kinds.steps > 0, "steps in the accent")
+	ok(kinds.solid > 0, "the stairs' rim drawn solid")
 
 
 func test_build_makes_one_mesh_each_and_counts_its_faces():
@@ -87,7 +104,7 @@ func test_build_makes_one_mesh_each_and_counts_its_faces():
 	eq(b.floor.surface_get_array_index_len(0), cells * 6)
 	eq(b.ceiling.surface_get_array_index_len(0), cells * 6)
 	var arr: Array = b.walls.surface_get_arrays(0)
-	ok(arr[Mesh.ARRAY_COLOR] != null and arr[Mesh.ARRAY_TEX_UV2] != null, "colors and UV2 for the stone shader")
+	ok(arr[Mesh.ARRAY_TEX_UV] != null, "UV for the stone shader")
 
 
 func test_the_floor_faces_up_and_the_ceiling_down():
@@ -163,10 +180,11 @@ func test_the_builder_winds_quads_clockwise_from_the_front_and_mirrored_parts_st
 		eq(inward, 0, "triangles facing in, %s" % ("mirrored" if xf.basis.determinant() < 0.0 else "as made"))
 
 
-func test_colors_go_in_linear_and_glow_is_a_zero_alpha():
-	var c := MeshKit.lin("#ff8a1f")
-	ok(c.is_equal_approx(Color.html("#ff8a1f").srgb_to_linear()))
-	eq(c.a, 1.0)
-	eq(MeshKit.lin("#ffffff", true).a, 0.0)
+func test_colors_stay_the_hex_they_were_and_the_alpha_says_outlined_solid_or_bare():
+	var c := MeshKit.color("#ff8a1f")
+	ok(c.is_equal_approx(Color.html("#ff8a1f")), "sRGB: the renderer shows it as it is")
+	eq(c.a, 1.0, "outlined")
+	eq(MeshKit.color("#ffffff", true).a, 0.0, "solid")
+	eq(MeshKit.bare(c).a, 0.5, "black, no outline")
 	ok(MeshKit.shade(Color(1, 0.5, 0.2, 0.0), 0.5).is_equal_approx(Color(0.5, 0.25, 0.1, 0.0)))
 	eq(MeshKit.Builder.new().commit(), null, "nothing added, no mesh")

@@ -9,13 +9,12 @@ shader_type canvas_item;
 
 uniform vec2 src_size = vec2(448.0, 288.0);
 uniform sampler2D src_tex : hint_default_black, filter_linear, repeat_disable; // the view; PostFx sets it
-uniform vec2 knee = vec2(0.12, 0.7); // what glows: from faint (x) to full (y) brightness; PostFx sets it per look
 
 // The half-size image at the center of one of its pixels (`center` in source pixels, an odd whole number each way)
 vec3 bright_px(sampler2D tex, vec2 center) {
 	vec3 c = texture(tex, center / src_size).rgb;
 	float l = max(c.r, max(c.g, c.b));
-	float k = smoothstep(knee.x, knee.y, l); // keep what is bright, as a soft knee
+	float k = smoothstep(0.12, 0.7, l); // keep what is bright, as a soft knee: faint lines glow a little, bright ones a lot
 	return c * k;
 }
 

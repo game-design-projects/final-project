@@ -157,14 +157,3 @@ func test_attach_puts_the_material_and_a_bloom_viewport_on_the_rect_and_detach_t
 	eq(post.alive, false)
 	post.render(0.0) # dead: does nothing
 	rect.free()
-
-
-func test_the_vector_look_glows_every_line_and_the_cel_look_only_what_is_lit_up():
-	var vector := Postfx.PostFx.new()
-	eq(vector._bloom_material.get_shader_parameter("knee"), Vector2(0.12, 0.7), "the wireframe's look by default")
-	near(uniform(vector, "scanlines"), 0.07)
-	var cel := Postfx.PostFx.new({"look": "cel"})
-	eq(cel._bloom_material.get_shader_parameter("knee"), Postfx.LOOKS.cel.knee)
-	ok(Postfx.LOOKS.cel.knee.x > 0.8, "only near full brightness glows: lit surfaces stop at 0.86")
-	near(uniform(cel, "scanlines"), 0.0, 1e-9, "no scanlines over the painted picture")
-	ok(uniform(cel, "bloom_gain") < uniform(vector, "bloom_gain"))

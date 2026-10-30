@@ -1,8 +1,9 @@
-## Renders the cel-shaded 3D view (Stage3D) to PNGs through the post-processing shader, at the 2x size a large
-## window gets: the title corridor, corridors on four palettes, the stairs, the champion seen down a corridor, every
-## monster in a fight (plus a shiny, a champion, a hurt one, groups of two and three, and boxed in by walls), danger,
-## and the README's cover. Needs a real window (it opens one briefly and quits):
-##   $G --path . -s res://cli/stage_shots.gd [-- --out=/some/dir] [--only=<substring>]
+## Renders the 3D view (Stage3D) to PNGs through the post-processing shader, shown at 2x: the title corridor,
+## corridors on four palettes, the stairs, the champion seen down a corridor, every monster in a fight (plus a shiny,
+## a champion, a hurt one, groups of two and three, and boxed in by walls), and danger. Needs a real window (it opens one briefly and quits):
+##   $G --path . -s res://cli/stage_shots.gd [-- --out=/some/dir] [--only=<substring>] [--walk]
+## `--walk` also saves the frames of a short walk (three steps, a turn, a step, a goblin) to <out>/walk/, for a GIF:
+##   convert -delay 4 -loop 0 <out>/walk/*.png -layers Optimize walk.gif
 extends SceneTree
 
 const J = preload("res://src/core/js.gd")
@@ -12,12 +13,12 @@ const Postfx = preload("res://src/view/postfx.gd")
 const Floors = preload("res://src/game/floors.gd")
 const Stage3D = preload("res://src/view/stage3d.gd")
 const Dungeon3D = preload("res://src/view/dungeon3d.gd")
-const Monsters3D = preload("res://src/view/monsters3d.gd")
 
-const K := 2 # the view at 2x: 896x576
+const K := 2 # shown at 2x: 896x576, as a window about twice the base size shows it
 
 var out_dir := ProjectSettings.globalize_path("res://build/shots/stage/") # build/ is gitignored
 var only := ""
+var walk := false
 var vp: SubViewport
 var stage: Stage3D
 var rect: TextureRect
@@ -34,12 +35,14 @@ func _run() -> void:
 			out_dir = a.trim_prefix("--out=").path_join("")
 		elif a.begins_with("--only="):
 			only = a.trim_prefix("--only=")
+		elif a == "--walk":
+			walk = true
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
 	root.size = Vector2i(1000, 640)
 	RenderingServer.set_default_clear_color(Color(0.07, 0.07, 0.07))
 	vp = SubViewport.new()
-	vp.size = Vector2i(448 * K, 288 * K)
+	vp.size = Vector2i(448, 288)
 	vp.own_world_3d = true
 	vp.msaa_3d = Viewport.MSAA_4X
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -50,11 +53,11 @@ func _run() -> void:
 	rect = TextureRect.new()
 	rect.texture = vp.get_texture()
 	rect.position = Vector2(20, 20)
-	rect.size = Vector2(vp.size)
+	rect.size = Vector2(vp.size) * K
 	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	rect.stretch_mode = TextureRect.STRETCH_SCALE
 	root.add_child(rect)
-	post = Postfx.PostFx.create({"look": "cel"})
+	post = Postfx.PostFx.create()
 	if post != null:
 		post.attach(rect)
 
@@ -104,20 +107,57 @@ func _run() -> void:
 	if not boxed.is_empty():
 		await shot("fight_boxed_goblin", func(t): fight(map, boxed, [["goblin", {}]], t))
 		await shot("fight_boxed_group3", func(t): fight(map, boxed, [["slime", {}], ["dragon", {}], ["rock", {}]], t))
-	# The README's cover: an orange slime waiting down the torch-lit title hall (cropped to docs/donjon-cover.png's
-	# 630x500 by hand: `convert cover.png -gravity center -crop 724x576+0+0 -resize 630x500 docs/donjon-cover.png`)
-	if post != null:
-		post.set_danger(0.0)
-		post.pulse_level = 0.0
-	var slime := Monsters3D.build("slime", {}, stage.monster_material())
-	await shot("cover", func(t):
-		stage.title(t)
-		stage.add_child(slime)
-		slime.position = Dungeon3D.cell_center(4, 7) + Vector3(0, 0, -0.7)
-		Monsters3D.pose(slime, t), 1200.0)
-	slime.queue_free()
+	if walk:
+		if post != null:
+			post.set_danger(0.0)
+			post.pulse_level = 0.0
+		map["palette"] = Render.PALETTES[1]
+		stage.set_palette(map["palette"])
+		await walk_frames(map, spot)
 	print("shots written to ", out_dir)
 	quit()
+
+
+## Three steps down the corridor, a turn toward an opening (or right), a step, then a goblin: one frame every 40 ms
+## of game time, the camera easing as it does in the game
+func walk_frames(map: Dictionary, start: Array) -> void:
+	var dir_out := out_dir.path_join("walk")
+	DirAccess.make_dir_recursive_absolute(dir_out)
+	stage.reduced_motion = false
+	var grid: Array = map["grid"]
+	var at := start.duplicate()
+	var plan := ["step", "step", "step", "turn", "step", "fight"]
+	var t := 0.0
+	var frame := 0
+	var fighting := false
+	for i in plan.size() + 1:
+		if i > 0:
+			var act: String = plan[i - 1]
+			var f: Array = Render.DIRS[at[2]]
+			if act == "step" and Render._is_open(grid, at[0] + f[0], at[1] + f[1]):
+				at = [at[0] + f[0], at[1] + f[1], at[2]]
+			elif act == "turn":
+				var left: Array = Render.DIRS[(at[2] + 3) % 4]
+				at = [at[0], at[1], (at[2] + 3) % 4 if Render._is_open(grid, at[0] + left[0], at[1] + left[1]) else (at[2] + 1) % 4]
+			elif act == "fight":
+				fighting = true
+		var until := t + (1600.0 if fighting else 480.0)
+		while t < until:
+			if fighting:
+				fight(map, at, [["goblin", {}]], t)
+			else:
+				explore(map, at, t)
+			if post != null:
+				post.set_accent(map["palette"].accent)
+			await RenderingServer.frame_post_draw
+			if post != null:
+				post.render(t)
+			await RenderingServer.frame_post_draw
+			var img := root.get_texture().get_image().get_region(Rect2i(Vector2i(rect.position), Vector2i(rect.size)))
+			img.save_png(dir_out.path_join("%03d.png" % frame))
+			frame += 1
+			t += 40.0
+	print("walk: %d frames in %s" % [frame, dir_out])
 
 
 func explore(map: Dictionary, at: Array, t: float) -> void:

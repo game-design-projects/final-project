@@ -4,21 +4,18 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-The dungeon is 3D now, drawn to look 2D ("3渲2": cel-shaded, like an anime's 3D sets).
+The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
 
 ### Changed
-- **The view is a cel-shaded 3D set** instead of a wireframe: real walls, floor and ceiling built from each floor's map (`src/view/dungeon3d.gd`), the same wall decorations in the same places (torches, chains, banners, cracks, barred windows, skull niches), the stairs as a stepped pit glowing in the floor's accent, and each floor's colors on the stone. Everything is shaded by hand-written shaders that light it in hard bands, as a 2D painter would: the party's lantern hangs up and to the left of the camera and fades down the corridor, torches throw pools of warm light, shadows lean violet, and every model has an inked outline (`toon.gdshaderinc`, `toon`, `stone`, `ink`, `flame.gdshader`). They light themselves rather than use engine lights, so the Compatibility renderer (and the web build) draws each thing once.
-- **The six monsters are 3D models** (`src/view/monsters3d.gd`), made of simple shapes in flat colors with inked outlines: the slime wobbles and shines, the goblin sways its club, the dragon flaps, the snake sways and flicks its tongue, the rock breathes through its glowing crack, the bandit shifts its weight. Champions are red and shinies gold, as before; a hit flashes a monster white and shakes it.
-- **Moving is a camera move**: a step glides, a turn swings round, walking into a wall lunges at it (same timings as before). When a fight starts the camera backs off and looks down a little, and the monsters stand in the corridor in front of you, two or three in a V; their names, health bars, dice and floating numbers stay 2D, drawn over them at the view's own pixels.
-- **The floor's red champion stands in its cell**, turned toward you, so you can see it from anywhere down a corridor, not only straight ahead.
+- **The view is a 3D set drawn as the wireframe.** Walls, floor and ceiling are built from each floor's map (`src/view/dungeon3d.gd`), and the six monsters are models made of simple shapes (`src/view/monsters3d.gd`). Shaders fill every surface black and draw only lines, the way the 2D view did: every wall face outlined in the floor's wall color, each monster in its own color (red champions, gold shinies), the dots and slits filled in, lines dimming with distance exactly as before, torches glowing on the walls with flickering accent flames, the same decorations on the same walls, the stairs as a pit with accent steps. The vector-monitor shader is unchanged, so it glows the same.
+- **Moving is a camera move**: a step glides, a turn swings round, walking into a wall lunges at it (same timings as before). When a fight starts the camera backs off and looks down a little, and the monsters stand in the corridor in front of you, two or three in a V; their names, health bars, dice and floating numbers stay 2D, drawn over them.
+- **The floor's red champion stands in its hall**, turned toward you, so you can see it from anywhere down a corridor, not only straight ahead.
 - The title card is over a torch-lit 3D hall.
-- The view renders at the largest whole multiple of 448 × 288 (up to 3×) the window shows at full size, so a big window gets a sharper 3D picture while the 2D layer keeps square pixels.
-- The last shader has two looks (`src/view/postfx.gd` `LOOKS`): the game's "cel" look, where only flames, glowing eyes and the dice bloom and there are no scanlines, and the wireframe's "vector" look, which Genre Halls keeps.
-- The README's cover shows the new look.
+- Genre Halls keeps its 2D drawing (the same look).
 
 ### Added
-- `cli/stage_shots.gd`: screenshots of the 3D view through the shader at 2× (the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight, a shiny, a champion, a hurt one, groups, boxed in by walls, danger, the cover).
-- 27 tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces and corner ink, the stairwell, torches, mesh winding, every model's size and colors and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torchlight, the title hall.
+- `cli/stage_shots.gd`: screenshots of the 3D view through the shader at 2× (the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight, a shiny, a champion, a hurt one, groups, boxed in by walls, danger).
+- Tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces, the stairwell, decorations in the wall color, torches, mesh winding, every model's size, single color and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torches' glow, line widths, the title hall.
 
 ## [0.3.0] - 2026-10-29
 

@@ -1,8 +1,9 @@
-## The view's 3D set (the cel-shaded, "3D drawn as 2D" look): the floor built by Dungeon3D, a camera where the
-## party stands, the monsters of a fight standing in the corridor in front of you (Monsters3D), the floor's
-## champion waiting in its cell, and the light every material shares (the lantern at the camera and the nearest
-## torches, toon.gdshaderinc). view_canvas.gd owns one and calls it every frame before it paints the 2D layer
-## (names, health bars, dice, floating numbers) on top.
+## The view's 3D set, drawn as the 2D wireframe was ("3D drawn as 2D"): the floor built by Dungeon3D, a camera where
+## the party stands, the monsters of a fight standing in the corridor in front of you (Monsters3D), the floor's
+## champion waiting in its cell. Every surface is black and only lines show, in the floor's wall color and each
+## monster's own (line.gdshaderinc, stone, fill, ink, flame.gdshader), dimming with distance; the nearest torches
+## glow on the walls. view_canvas.gd owns one and calls it every frame before it paints the 2D layer (names, health
+## bars, dice, floating numbers) on top, and the view's shader makes the lines glow like an old vector monitor.
 ##
 ## Moving eases: when the party's cell or facing changes, the camera glides (a step) or swings (a turn) to the new
 ## spot over Juice.TRANSITION_MS; `bump()` lunges it at the wall and back. A new floor, reduced motion, or the first
@@ -20,7 +21,7 @@ const Monsters3D = preload("res://src/view/monsters3d.gd")
 const MeshKit = preload("res://src/view/mesh_kit.gd")
 
 const STONE_SHADER = preload("res://src/view/stone.gdshader")
-const TOON_SHADER = preload("res://src/view/toon.gdshader")
+const FILL_SHADER = preload("res://src/view/fill.gdshader")
 const INK_SHADER = preload("res://src/view/ink.gdshader")
 const FLAME_SHADER = preload("res://src/view/flame.gdshader")
 
@@ -48,6 +49,9 @@ const FEET_MARGIN := 3.0
 ## How far from the middle of the corridor a monster to the side may stand
 const FIGHT_SIDE_ROOM := 0.8
 const MAX_TORCHES := 10
+## Line widths, in the view's pixels: art.gd's monsters, render.gd's decorations
+const MONSTER_LINE := 2.5
+const PROP_LINE := 1.5
 ## Torches flicker in steps, like the flames drawn on them
 const FLICKER_FPS := 12.0
 
@@ -59,8 +63,8 @@ var _set_root: Node3D
 var _fight_root: Node3D
 var _boss_root: Node3D
 var _mats := {}
-var _lit: Array[ShaderMaterial] = [] # every material that reads the shared light
-var _shared := {} # the shared light's parameters as last set, for materials made later
+var _lit: Array[ShaderMaterial] = [] # every material that reads the shared uniforms (the torches)
+var _shared := {} # those uniforms as last set, for materials made later
 var _map = null
 var _built: Dictionary = {}
 var _palette := {}
@@ -104,9 +108,10 @@ func _init() -> void:
 	_mats.walls = _material(STONE_SHADER, {"kind": 0})
 	_mats.floor = _material(STONE_SHADER, {"kind": 1})
 	_mats.ceiling = _material(STONE_SHADER, {"kind": 2})
-	_mats.ink = _material(INK_SHADER)
-	_mats.props = _material(TOON_SHADER)
-	_mats.props.next_pass = _mats.ink
+	_mats.ink_props = _material(INK_SHADER, {"ink_px": PROP_LINE})
+	_mats.ink_monsters = _material(INK_SHADER, {"ink_px": MONSTER_LINE})
+	_mats.props = _material(FILL_SHADER)
+	_mats.props.next_pass = _mats.ink_props
 	_mats.flames = ShaderMaterial.new()
 	_mats.flames.shader = FLAME_SHADER
 
@@ -122,17 +127,17 @@ func _material(shader: Shader, params := {}) -> ShaderMaterial:
 	return m
 
 
-# A parameter of the shared light, on every material that reads it (and on the ones made from now on)
+# A shared uniform, on every material that reads it (and on the ones made from now on)
 func _share(key: String, value) -> void:
 	_shared[key] = value
 	for m in _lit:
 		m.set_shader_parameter(key, value)
 
 
-## A cel material for one monster (its own, so a hit can flash it alone), inked by the shared outline
+## A material for one monster (its own, so a hit can flash it alone), outlined by the shared line pass
 func monster_material() -> ShaderMaterial:
-	var m := _material(TOON_SHADER)
-	m.next_pass = _mats.ink
+	var m := _material(FILL_SHADER)
+	m.next_pass = _mats.ink_monsters
 	return m
 
 
@@ -163,23 +168,14 @@ func use_map(map: Dictionary) -> bool:
 	return true
 
 
-## The floor's colors on every material: stone from its wall color, light and flames from its accent
+## The floor's colors: the walls' lines in its wall color, the flames and the torches' glow in its accent (the
+## decorations carry the wall color in their vertices, Dungeon3D)
 func set_palette(palette: Dictionary) -> void:
 	_palette = palette
-	var wall := Color.html(palette.wall)
 	var accent := Color.html(palette.accent)
-	var stone := wall.darkened(0.42)
-	_mats.walls.set_shader_parameter("stone_color", stone)
-	_mats.walls.set_shader_parameter("joint_color", stone.darkened(0.45))
-	_mats.floor.set_shader_parameter("stone_color", wall.darkened(0.62))
-	_mats.floor.set_shader_parameter("joint_color", wall.darkened(0.8))
-	_mats.ceiling.set_shader_parameter("stone_color", wall.darkened(0.78))
-	_mats.ceiling.set_shader_parameter("joint_color", wall.darkened(0.9))
-	for k in ["walls", "floor", "ceiling"]:
-		_mats[k].set_shader_parameter("ink_color", wall.darkened(0.93))
+	_mats.walls.set_shader_parameter("line_color", Color.html(palette.wall))
 	_mats.flames.set_shader_parameter("accent", accent)
 	_share("torch_color", accent)
-	_share("lantern_color", Color(1.0, 0.94, 0.84).lerp(wall, 0.15))
 
 
 ## The camera pose for standing in (x, y) facing dir, `back` behind the middle of the cell
@@ -282,7 +278,7 @@ func set_shake(px: float, py: float) -> void:
 	_shake = Vector2(-px * k, py * k)
 
 
-## The torches nearest the camera light the set this frame; each flickers on its own
+## The torches nearest the camera glow on the walls this frame; each flickers on its own
 func light(t: float) -> void:
 	var cam := camera.global_transform.origin if camera.is_inside_tree() else camera.transform.origin
 	var near := []
@@ -300,11 +296,7 @@ func light(t: float) -> void:
 			arr.append(Vector4(tor.pos.x, tor.pos.y, tor.pos.z, f))
 		else:
 			arr.append(Vector4.ZERO)
-	# The lantern hangs up and to the left of the camera, so faces are shaded, not lit flat from the front
-	var b := camera.transform.basis
-	var hang := b.x * -0.9 + Vector3.UP * 0.6
 	_share("torches", arr)
-	_share("lantern_offset", hang)
 
 
 ## Where a world point lands in the 448x288 view (behind the camera: off the view)

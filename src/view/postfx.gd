@@ -5,11 +5,8 @@
 ## while the party is in danger (on the heartbeat), a red flash and a split of color when someone is hurt, a flash
 ## for a critical hit or a kill.
 ##
-## That is the "vector" look, for the wireframe (Genre Halls). The game's cel-shaded 3D view uses the "cel" look
-## (LOOKS): only flames and other glowing things bloom, and no scanlines.
-##
-## Setup (the ui): the view is a SubViewport (448x288, or a whole multiple) shown by a TextureRect scaled up. Call
-##     var post = Postfx.PostFx.create({"reducedMotion": reduced, "look": "cel"})   # null with the `nofx` flag
+## Setup (the ui): the view is a SubViewport (448x288) shown by a TextureRect scaled up. Call
+##     var post = Postfx.PostFx.create({"reducedMotion": reduced})   # null with the `nofx` flag: show the plain rect
 ##     if post: post.attach(view_rect)
 ## `attach` puts the material on the rect, switches the rect to linear filtering (the shader reads the texture with
 ## it) and adds the small SubViewport that holds the bloom. Then, every frame: `post.set_danger(d)`,
@@ -28,15 +25,6 @@ const BLOOM_SHADER = preload("res://src/view/postfx_bloom.gdshader")
 
 ## How fast the effects fade, per second
 const FX_DECAY = {"hurt": 3.2, "flash": 6.0, "pulse": 3.5, "split": 5.0}
-
-## Two looks. "vector" is the wireframe's old vector monitor (Genre Halls): every line glows, scanlines run along
-## the rows. "cel" is for the cel-shaded 3D view (the game): lit surfaces stop short of full brightness
-## (toon.gdshaderinc EXPOSURE), so only what is near it glows (flames, eyes of fire, the dice), and there are no
-## scanlines over the painted picture. `knee`: the bloom's soft knee; `gain`: how strongly the glow adds.
-const LOOKS = {
-	"vector": {"knee": Vector2(0.12, 0.7), "gain": 1.3, "scanlines": 0.07},
-	"cel": {"knee": Vector2(0.84, 1.0), "gain": 0.9, "scanlines": 0.0},
-}
 
 
 class PostFx:
@@ -64,17 +52,13 @@ class PostFx:
 	var _out_size := Vector2.ZERO
 
 
-	## `opts`: {"reducedMotion": bool, "look": "vector" (default) or "cel" (LOOKS)}
+	## `opts`: {"reducedMotion": bool}
 	func _init(opts := {}) -> void:
 		reduced_motion = J.truthy(opts.get("reducedMotion", false))
 		material = ShaderMaterial.new()
 		material.shader = POSTFX_SHADER
 		_bloom_material = ShaderMaterial.new()
 		_bloom_material.shader = BLOOM_SHADER
-		var look: Dictionary = LOOKS.get(opts.get("look", "vector"), LOOKS.vector)
-		_bloom_material.set_shader_parameter("knee", look.knee)
-		material.set_shader_parameter("bloom_gain", look.gain)
-		material.set_shader_parameter("scanlines", look.scanlines)
 		_push_sizes()
 
 

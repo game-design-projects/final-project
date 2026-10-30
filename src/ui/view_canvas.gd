@@ -1,6 +1,6 @@
-## The dungeon view's picture, drawn as 3D in a 2D style: the floor, the monsters and the champion are a cel-shaded
-## 3D set (Stage3D, in the same SubViewport), and this node paints game.js's 2D layer over it at the view's own
-## 448x288 (drawMonsterTag, drawFloaters, drawIcon, drawRoll, the dice): names and health bars, floating numbers, the
+## The dungeon view's picture: the floor, the monsters and the champion are a 3D set drawn as the wireframe (Stage3D,
+## in the same SubViewport), and this node paints game.js's 2D layer over it at the view's own 448x288
+## (drawMonsterTag, drawFloaters, drawIcon, drawRoll, the dice): names and health bars, floating numbers, the
 ## Roll of Fate, a shiny's glints. Before the game starts the set is the title corridor and this draws the title card.
 ## main calls `frame(now)` every frame: the set follows the game (where you stand, who you fight), then this repaints.
 extends Node2D

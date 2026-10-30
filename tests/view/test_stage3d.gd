@@ -192,7 +192,7 @@ func test_the_champion_waits_in_its_cell_facing_you_until_it_is_overcome():
 	ok(stage._boss == null, "gone once overcome")
 
 
-func test_the_nearest_torches_light_the_set():
+func test_the_nearest_torches_glow_on_the_walls():
 	var rows := ["#########", "#.......#", "#.#.#.#.#", "#.......#", "#.#.#.#.#", "#.......#", "#########"]
 	var map := map_of(rows, {"seed": 5})
 	stage.use_map(map)
@@ -206,9 +206,12 @@ func test_the_nearest_torches_light_the_set():
 			lit += 1
 			ok(v.w > 0.7 and v.w <= 1.0, "a flicker, not out (%s)" % v.w)
 	eq(lit, mini(Stage3D.MAX_TORCHES, stage.torches().filter(func(t): return t.pos.distance_to(stage.camera.transform.origin) < 10.0).size()))
-	ok(stage._shared.has("lantern_offset"), "the lantern hangs off the camera")
+	ok(stage._shared.has("torch_color"), "the torches glow in the floor's accent")
 	var late := stage.monster_material()
-	eq(late.get_shader_parameter("torches"), arr, "a material made later gets the light too")
+	eq(late.get_shader_parameter("torches"), arr, "a material made later gets them too")
+	eq(late.next_pass.get_shader_parameter("ink_px"), Stage3D.MONSTER_LINE, "monsters outlined as art.gd stroked them")
+	eq(stage._mats.props.next_pass.get_shader_parameter("ink_px"), Stage3D.PROP_LINE, "decorations thinner, as render.gd drew them")
+	eq(stage._mats.walls.get_shader_parameter("line_color"), Color.html(map.palette.wall), "walls in the floor's wall color")
 
 
 func test_the_title_is_a_lit_corridor_and_the_map_builds_once():

@@ -1,19 +1,27 @@
 ## Builds the view's 3D meshes by hand: a `Builder` collects triangles (positions, normals, vertex colors, UV, UV2)
 ## and turns them into one ArrayMesh, so a whole monster or the whole maze is one mesh with one material. Shapes come
-## from Godot's primitive meshes (sphere, box, cylinder, torus...) moved by a Transform3D and painted one color;
-## quads and triangles are added directly. Colors go in linear (`lin`), the way the shaders read them.
+## from Godot's primitive meshes (sphere, box, cylinder, torus...) moved by a Transform3D and given one color;
+## quads and triangles are added directly. Colors go in as `color` makes them.
 ##
 ## Winding: Godot draws faces whose corners run clockwise as you look at them, so `quad(a, b, c, d)` takes the
 ## corners clockwise seen from the front (top left, top right, bottom right, bottom left).
 extends RefCounted
 
 
-## "#rrggbb" (or a Color) in linear space, with `glow` making the vertex alpha 0 (toon.gdshader: lit by nothing)
-static func lin(c, glow := false) -> Color:
-	var col: Color = c if c is Color else Color.html(str(c))
-	var out := col.srgb_to_linear()
-	out.a = 0.0 if glow else 1.0
+## "#rrggbb" (or a Color) as a vertex color. It stays sRGB: the Compatibility renderer shows what a shader writes
+## as it is, so a line comes out the hex it was given, as in the 2D view. The alpha says how the part is drawn
+## (fill.gdshader, ink.gdshader): `solid` (alpha 0) filled in the color, as the line drawings filled a dot or a slit;
+## otherwise black with an outline in the color (alpha 1).
+static func color(c, solid := false) -> Color:
+	var out: Color = c if c is Color else Color.html(str(c))
+	out.a = 0.0 if solid else 1.0
 	return out
+
+
+## A vertex color for a part drawn black with no outline (alpha 0.5): a two-sided membrane, whose outline pass would
+## show it whole
+static func bare(c: Color) -> Color:
+	return Color(c.r, c.g, c.b, 0.5)
 
 
 ## A color scaled toward black (k < 1) in linear space, keeping its alpha
