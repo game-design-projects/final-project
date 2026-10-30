@@ -2,6 +2,7 @@
 extends "res://tests/test_case.gd"
 
 const Voice = preload("res://src/audio/voice.gd")
+const Asr = preload("res://src/audio/asr.gd")
 
 
 ## A stand-in for SpeechRecognition: the test feeds it results and ends it
@@ -52,11 +53,11 @@ func test_finds_the_recognizer_prefixed_or_not_and_copes_without_one():
 	eq(Voice.recognizer({"SpeechRecognition": FakeRecognition}), FakeRecognition)
 	eq(Voice.recognizer({"webkitSpeechRecognition": FakeRecognition}), FakeRecognition)
 	eq(Voice.recognizer({}), null)
-	# not a web build: no recognizer, so the game keeps the text box
+	# a desktop build hears you with its own helper (asr.gd) when it carries one; without, the game keeps the text box
 	if not OS.has_feature("web"):
-		eq(Voice.recognizer(), null)
+		eq(Voice.recognizer(), Asr.NativeRecognition if Asr.Runtime.available() else null)
 		var l = Voice.Listener.new()
-		eq(l.supported, false)
+		eq(l.supported, Asr.Runtime.available())
 		l.free()
 
 

@@ -223,8 +223,17 @@ func _make_game() -> void:
 		music.duck(on)
 		sfx.duck(on)})
 	narrator.name = "Narrator"
-	voice = Voice.Listener.new({"onText": _heard_so_far, "onError": func(err): game.on_voice_error(err)})
+	voice = Voice.Listener.new({
+		"onText": _heard_so_far,
+		"onError": func(err): game.on_voice_error(err),
+		"onStatus": func(text: String):
+			if game.G != null:
+				game.say(text, "dim")
+				game.render(),
+	})
 	voice.name = "Voice"
+	if store.get_item("donjon.usedVoice") == "1":
+		voice.warm.call_deferred() # the desktop recognizer takes seconds to load: start now for someone who talks
 	for n in [music, sfx, narrator, voice]:
 		add_child(n)
 	tips = Tutorial.create_tutorial({
@@ -883,6 +892,12 @@ func listen(how: String) -> void:
 	var G = game.G
 	var inp = G.input if G != null else null
 	if inp == null or J.truthy(inp.get("numeric")) or J.truthy(inp.get("listening")) or not voice.supported:
+		return
+	var not_yet: String = voice.prepare()
+	if not_yet != "":
+		game.say(not_yet, "dim")
+		focus_input()
+		game.render()
 		return
 	inp.listening = how
 	set_input_text("")

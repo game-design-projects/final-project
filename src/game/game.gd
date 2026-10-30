@@ -745,7 +745,12 @@ func on_voice_error(err) -> void:
 	if G == null:
 		return
 	var blocked: bool = err == "not-allowed" or err == "service-not-allowed"
-	say("THE MICROPHONE IS BLOCKED. TYPE INSTEAD, OR ALLOW IT IN THE BROWSER." if blocked else "COULDN'T HEAR YOU (%s). TYPE INSTEAD." % UP(err), "warn")
+	if err == "audio-capture" and not OS.has_feature("web"):
+		say("NO SOUND FROM THE MICROPHONE. CHECK IT'S CONNECTED AND THAT DONJON MAY USE IT (SYSTEM SETTINGS), OR TYPE.", "warn")
+	elif err == "asr-failed":
+		pass # the recognizer has already said what broke
+	else:
+		say("THE MICROPHONE IS BLOCKED. TYPE INSTEAD, OR ALLOW IT IN THE BROWSER." if blocked else "COULDN'T HEAR YOU (%s). TYPE INSTEAD." % UP(err), "warn")
 	render()
 
 
