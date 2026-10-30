@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 Work in progress on `feat/opensource-jev`: replacing Jev with an open-source System One model that runs on the player's computer. The route is still being decided; [docs/system-one-research.md](docs/system-one-research.md) has the survey, the measurements and the open questions.
 
 ### Added
+- Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
 - Decider (Mapika, Apache-2.0) as the monsters' model, read through a stock llama.cpp `llama-server`: `src/jev/decider.gd` (Decider's readout ported from decider-ai 1.10.0, checked byte for byte against its own output in `tests/jev/golden/decider/`, written by `tools/decider_golden.py`), `src/jev/local.gd` (the transport: the state first, then one `/completion` per question), `src/jev/local_server.gd` (starts and stops the server) and `src/jev/local_setup.gd` (downloads a pinned llama.cpp build and model for this OS and backend, sha256-checked).
 - A `systemone` way in: any server that answers `POST /v1/systemone`, such as Decider's own.
 - `tools/system-one/`: the scripts behind the research page (readout parity, latency on GPU and CPU, a perception probe).
