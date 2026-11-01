@@ -14,6 +14,7 @@ Work in progress on `feat/opensource-jev`: replacing Jev with an open-source Sys
 - NVIDIA measurements in the research page (RTX 4070 Ti SUPER, CUDA, and its i7-14700K CPU): the 4B's schema-first round takes 93 ms for `enemy_turn` and 215 ms for `group_talk`, and one row per question takes 1.7 s on llama-server and on Decider's own CUDA-graph server.
 
 ### Changed
+- The game opens in Genre Halls (`run/main_scene` is `genre_halls.tscn`, so `godot --path .`, the exported builds and the web page start there). The original Donjon is Esc on the Genre Halls title card, or the new `main` flag (`godot --path . -- main mock floor5`); the title card now says so.
 - `Jev.configure_jev(opts)` takes no key; the ways in are `local`, `systemone` and `mock`. `config.gd` reads `config/jev_config.json`, then the setup's `user://local-model/install.json`, and falls back to the mock with a warning (*NO LOCAL MODEL INSTALLED*).
 
 ### Removed

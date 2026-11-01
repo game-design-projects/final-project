@@ -4,10 +4,10 @@
 ## probabilities); here a local stand-in answers them. The rules live in genre_rules.gd; this file draws and plays.
 ## Port of crawler/public/genre-halls.js + genre-halls.html.
 ##
-## Launch:  godot --path . res://src/genre/genre_halls.tscn [-- meet=slime]
+## Launch:  godot --path . [-- meet=slime]   (this is the project's startup scene)
 ## `meet=<species>` (slime, bandit, snake, rock, dragon) jumps straight into that faction's fight, like the
 ## console hook genreHalls.meet("rock"). Keys: arrows / WASD, Enter / Space / Z, Esc / X, 1-9 on the menus.
-## Esc on the title or the route screen goes back to the main game (res://src/ui/main.tscn) when it exists.
+## Esc on the title or the route screen goes to the main game (res://src/ui/main.tscn) when it exists.
 ##
 ## The screen is the HTML page's layout: the 448x288 view (Canvas2D, drawn in a SubViewport and shown scaled up) with
 ## a command box under it, and the automap, party and Jev mind panels beside it. The game logic is clock-driven:
@@ -27,6 +27,7 @@ const Emotions = preload("res://src/rules/emotions.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
 
 const MAIN_SCENE := "res://src/ui/main.tscn"
+const TITLE_HINT := "ESC: THE ORIGINAL DONJON" ## on the title card: how to reach the main game
 const W := Rules.W
 const H := Rules.H
 const COLS := Rules.COLS
@@ -109,7 +110,18 @@ func now() -> float:
 	return clock_override if clock_override >= 0.0 else J.now_ms()
 
 
+## True when the run flags ask for the main game (`-- main`, `?main`): the Genre Halls is the startup scene, so this
+## is how `-- main mock floor5` reaches the game with its own flags. Matches the whole word, not `--only=ui/main`.
+static func wants_main() -> bool:
+	return Flags.test("(^|[\\s?#&-])main($|[\\s&])")
+
+
 func _ready() -> void:
+	if wants_main() and ResourceLoader.exists(MAIN_SCENE):
+		print("genre halls: main game (flag)")
+		get_tree().change_scene_to_file.call_deferred(MAIN_SCENE)
+		return
+	print("genre halls: startup scene" if get_tree().current_scene == self else "genre halls: entered from the main game")
 	_pix = Canvas2D.pixel_font("press start 2p")
 	var term := FontVariation.new()
 	term.base_font = Canvas2D.pixel_font("vt323")
@@ -134,8 +146,8 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if clock_override >= 0.0:
-		return
+	if clock_override >= 0.0 or _view_canvas == null:
+		return # a fake clock in tests, or on the way to the main game
 	var t := now()
 	tick(t)
 	if postfx != null:
@@ -1120,7 +1132,9 @@ func draw_frame(ctx, t: float) -> void:
 		ctx.fill_style = C_YOU
 		ctx.font = '8px "Press Start 2P", monospace'
 		ctx.text_align = "center"
-		ctx.fill_text("GENRE HALLS · PITCH DEMO", W / 2.0, H * 0.55)
+		ctx.fill_text("GENRE HALLS", W / 2.0, H * 0.55)
+		ctx.fill_style = C_DIM
+		ctx.fill_text(TITLE_HINT, W / 2.0, H * 0.82)
 		ctx.text_align = "left"
 	elif G.mode == "explore" or G.mode == "end":
 		var seen: Array = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
@@ -1376,7 +1390,7 @@ func back_to_main() -> bool:
 
 
 func _input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed:
+	if _view_canvas == null or not event is InputEventKey or not event.pressed:
 		return
 	if event.meta_pressed or event.ctrl_pressed or event.alt_pressed:
 		return

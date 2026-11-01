@@ -81,7 +81,7 @@ Nothing is a sound file except the music.
 
 ## Genre Halls
 
-A separate scene (`genre_halls.tscn`, one `Control` with `genre_halls.gd`) that reuses `Render`, `Art`, `Species`, `Emotions`, `Sfx` and `PostFx` but not `game.gd`. `genre_rules.gd` has the factions, the floor, the monster's local "mind", word reading and the box geometry, with no UI. `genre_halls.gd` draws and runs the fight on a clock: `tick(t)` advances it to time `t` (`_process` feeds it the real clock; tests set `clock_override` and call `on_key(key)`).
+The project's startup scene (`run/main_scene` in `project.godot`; Esc on its title or route screen, or the `main` flag, changes to `src/ui/main.tscn`, and the main game's `G` key or `genre-halls` flag comes back). One `Control` with `genre_halls.gd` that reuses `Render`, `Art`, `Species`, `Emotions`, `Sfx` and `PostFx` but not `game.gd`. `genre_rules.gd` has the factions, the floor, the monster's local "mind", word reading and the box geometry, with no UI. `genre_halls.gd` draws and runs the fight on a clock: `tick(t)` advances it to time `t` (`_process` feeds it the real clock; tests set `clock_override` and call `on_key(key)`).
 
 ## Testing
 
