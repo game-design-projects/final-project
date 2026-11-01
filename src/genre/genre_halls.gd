@@ -9,8 +9,10 @@
 ## console hook genreHalls.meet("rock"). Keys: arrows / WASD, Enter / Space / Z, Esc / X, 1-9 on the menus.
 ## Esc on the title or the route screen goes to the main game (res://src/ui/main.tscn) when it exists.
 ##
-## The screen is the HTML page's layout: the 448x288 view (Canvas2D, drawn in a SubViewport and shown scaled up) with
-## a command box under it, and the automap, party and Jev mind panels beside it. The game logic is clock-driven:
+## The screen is one framed CRT that fills the window: a thin top line (where, route), the 448x288 view (Canvas2D, drawn
+## in a SubViewport and scaled up to the free space) with the automap and the allies as small overlays, and a text box
+## under it (HP bar, log, commands). Explanations live in tooltips: hover a command for what it does, an ally for its
+## charm, the foe for what Jev reads in it. The game logic is clock-driven:
 ## `tick(t)` advances it to time `t` (ms), `_process` feeds it the real clock, tests feed it a fake one
 ## (`clock_override`) and call `on_key(key)` with the JS key names ("ArrowUp", "Enter", "Escape", "1", ...).
 extends Control
@@ -46,6 +48,14 @@ const C_FAINT := "#2e2e33"
 const C_WARN := "#ff5a4a"
 const C_YOU := "#8fd3ff"
 const C_MERCY := "#ffd27a"
+
+const SPARE_TIP := "Spare a monster and it may ask to join. Allies ride along as passive charms, and they leave if you cross their values."
+const SPARE_TIP_READY := "It looks ready to stop. " + SPARE_TIP
+const SPARE_TIP_NOT_READY := "It isn't ready yet. " + SPARE_TIP
+
+const SAY_H := 66 ## the log: 3 lines of 20px
+const SLOT_H := 74 ## the commands (two rows of 34) or the talk box
+const KEYS_H := 26 ## the key hints: 2 lines
 
 const KEYMAP := {"w": "ArrowUp", "s": "ArrowDown", "a": "ArrowLeft", "d": "ArrowRight", " ": "Enter", "z": "Enter", "x": "Escape"}
 
@@ -88,18 +98,26 @@ var postfx = null
 var _view_vp: SubViewport
 var _view_canvas: DrawArea
 var _view_rect: TextureRect
+var _map_panel: PanelContainer
 var _map_canvas: DrawArea
 var _where: RichTextLabel
 var _route: RichTextLabel
 var _hp: RichTextLabel
+var _hp_bar: HpBar
 var _say: RichTextLabel
 var _keys: RichTextLabel
 var _menu_grid: GridContainer
 var _talk: HBoxContainer
 var _talk_in: LineEdit
-var _party_box: VBoxContainer
-var _mind_who: Label
-var _mind_box: VBoxContainer
+var _chips: HBoxContainer ## the allies, one chip each, over the view's bottom-left
+var _tip: PanelContainer ## the one tooltip: a command's help, an ally's charm, or the foe's mind
+var _tip_body: VBoxContainer
+var _tip_key := "" ## what the tooltip shows now ("" = hidden), so it is only rebuilt when that changes
+var _tip_anchor := Rect2() ## where it sits: above this (a command), or by the mouse
+var _tip_at_mouse := false
+var _hover_item := -1 ## the command under the mouse
+var _hover_foe := false ## the mouse is over the foe in the view
+var _kbd_nav := false ## the last input was a key: the highlighted command shows its tooltip too
 var _pad: GridContainer
 var _pix: Font
 var _term: Font
@@ -137,7 +155,7 @@ func _ready() -> void:
 		_sfx_init() # browsers keep audio locked until the first key press (on_key calls it again)
 	_attach_postfx()
 	render_party()
-	say(sys("DONJON's dungeon, with Undertale-style encounters: every faction attacks in its own genre. Press any key or tap the view to start."))
+	say(sys("Press any key to start."))
 	set_menu([], kbd("ANY KEY") + " START")
 	hud()
 	var species := Flags.capture("meet=(\\w+)")
@@ -246,7 +264,7 @@ func new_run() -> void:
 	G.allies = []
 	render_party()
 	G.foe = null
-	explore(sys("B1F. Four kinds of monster hold this floor, and each one fights by its own rules. Lit squares hurt. You can fight them, talk them down, or spare them, and a spared monster may join you."))
+	explore(sys("B1F. Find the stairs."))
 
 
 ## The console hook: jump straight into that faction's fight
@@ -266,29 +284,43 @@ func render_mind_append(m, rows: Array) -> void:
 	render_mind(m, prev + rows)
 
 
+## The mind is kept as data; the tooltip over the foe draws it (`_fill_mind_tip`) when the mouse is there
 func render_mind(m, answers: Array) -> void:
 	last_mind = {"m": m, "answers": answers}
-	_mind_who.text = "%s · %s" % [m.name, str(Species.SPECIES[m.species].label).to_upper()] if m != null else "NOBODY YET"
+	if _tip_key == "foe":
+		_show_tip("foe", Rect2(), true, true) # open now: redraw with the new answers
+
+
+## The foe's tooltip: who it is, how it feels, and the last two questions Jev answered about it
+func _fill_mind_tip(box: VBoxContainer) -> void:
+	var m = last_mind.m
 	if m == null:
 		return
-	_clear(_mind_box)
+	var head := HBoxContainer.new()
+	var nm := _label(m.name, _pix, 9, C_INK)
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(nm)
+	head.add_child(_label(str(Species.SPECIES[m.species].label).to_upper(), _pix, 9, C_DIM))
+	box.add_child(head)
 	if not m.traits.is_empty():
 		var note := _rich(_term, 16, C_DIM)
 		note.text = "Seems %s." % esc(" and ".join(m.traits))
-		_mind_box.add_child(note)
-	var meters := GridContainer.new()
-	meters.columns = 3
-	meters.add_theme_constant_override("h_separation", 6)
+		box.add_child(note)
+	var meters := HBoxContainer.new()
+	meters.add_theme_constant_override("separation", 16)
 	for pair in [["FRIENDLY", m.meters.friendliness], ["ANGER", m.meters.anger], ["FEAR", m.meters.fear]]:
 		var cell := VBoxContainer.new()
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cell.add_theme_constant_override("separation", 0)
 		cell.add_child(_label(pair[0], _term, 16, C_DIM))
 		cell.add_child(_label(str(J.round_js(pair[1])), _term, 20, C_INK))
 		meters.add_child(cell)
-	_mind_box.add_child(meters)
-	for q in answers:
-		_mind_box.add_child(_question(q))
+	box.add_child(meters)
+	var shown: Array = last_mind.answers.slice(-2)
+	for q in shown:
+		box.add_child(_question(q))
+	var offline := _rich(_term, 15, C_FAINT)
+	offline.text = "Offline stand-in for Jev."
+	box.add_child(offline)
 
 
 func _question(q: Dictionary) -> Control:
@@ -314,7 +346,7 @@ func _question(q: Dictionary) -> Control:
 			rows.append([k, a.probabilities[k], i])
 			i += 1
 		rows.sort_custom(func(x, y): return x[1] > y[1] or (x[1] == y[1] and x[2] < y[2]))
-		for r in rows.slice(0, 5):
+		for r in rows.slice(0, 3):
 			var name: String = Emotions.EMOTIONS[r[0]].label if Emotions.EMOTIONS.has(r[0]) else str(r[0]).to_upper()
 			bars.add_child(_bar_row(name, r[1], r[0] == a.choice))
 	elif a.type == "noul":
@@ -359,22 +391,28 @@ func line(m: Dictionary, kind: String) -> String:
 func set_menu(items: Array, keys := "") -> void:
 	G.menu = items
 	G.sel = clampi(G.sel, 0, maxi(0, items.size() - 1))
+	_hover_item = -1
+	_kbd_nav = false ## a new menu shows no help until you hover it or move onto a command
 	_clear(_menu_grid)
+	_menu_grid.columns = clampi(items.size(), 1, 4)
 	for i in items.size():
 		var it := MenuItem.new()
 		it.index = i
 		it.label = items[i].label
 		it.sub = items[i].get("sub", "")
+		it.gold = items[i].get("gold", false)
 		it.on = i == G.sel
 		it.pix = _pix
-		it.term = _term
 		it.picked.connect(_on_menu_picked)
+		it.hovered.connect(_on_menu_hover)
 		_menu_grid.add_child(it)
 	_keys.text = keys
+	_refresh_tip()
 
 
 func _on_menu_picked(i: int) -> void:
 	_sfx_init()
+	_hover_item = -1
 	G.sel = i
 	if i < G.menu.size():
 		G.menu[i].run.call()
@@ -389,6 +427,8 @@ func move_sel(d: int) -> void:
 		it.on = i == G.sel
 		it.queue_redraw()
 	_sfx_play("tick")
+	_kbd_nav = true
+	_refresh_tip()
 
 
 func foe_genre() -> String:
@@ -399,10 +439,12 @@ func hud() -> void:
 	if postfx != null:
 		postfx.set_danger(clampf((0.5 - float(G.hp) / G.maxHp) * 2.0, 0.0, 1.0))
 	_hp.text = "HP [color=%s]%d/%d[/color]" % [C_YOU, maxi(0, G.hp), G.maxHp]
+	_hp_bar.set_hp(G.hp, G.maxHp)
 	var spared: int = G.tally.spared
 	var slain: int = G.tally.slain
 	_route.text = "ROUTE [color=%s]%s[/color]" % [C_INK, "UNWRITTEN" if spared + slain == 0 else "%d SPARED · %d SLAIN" % [spared, slain]]
 	_where.text = "B1F [color=%s]%s[/color]" % [C_INK, "%s ENCOUNTER" % Rules.GENRES[foe_genre()].name if G.foe != null else "THE GENRE HALLS"]
+	_map_panel.visible = G.mode == "explore" or G.mode == "end" # it steps aside in a fight
 
 
 # ---------------------------------------------------------------- exploring
@@ -414,7 +456,7 @@ func explore(msg := "") -> void:
 		postfx.set_accent(G.map.palette.accent)
 	if msg != "":
 		say(msg)
-	set_menu([], kbd("↑") + kbd("↓") + " WALK  " + kbd("←") + kbd("→") + " TURN  · FIND THE STAIRS. MONSTERS SHOW ON THE MAP WHEN SEEN")
+	set_menu([], kbd("↑") + kbd("↓") + " WALK  " + kbd("←") + kbd("→") + " TURN")
 	hud()
 
 
@@ -449,18 +491,18 @@ func step(forward: int) -> void:
 		ending()
 
 
-## The monster standing straight ahead, if nothing blocks the view: { m, d } or null
-func monster_ahead():
-	var dir: Array = Render.DIRS[G.dir]
-	for d in range(1, Render.VIEW):
-		var cx: int = G.x + dir[0] * d
-		var cy: int = G.y + dir[1] * d
-		if not _open(cx, cy):
-			return null
-		var m = monster_at(cx, cy)
-		if m != null:
-			return {"m": m, "d": d}
-	return null
+## The monsters you can see, far to near: [{ m, d, k }] (d cells ahead, k to the right). That includes the ones
+## diagonal to you, down a side opening, not only the one straight ahead.
+func monsters_in_view() -> Array:
+	var out := []
+	for m in G.map.monsters:
+		if J.truthy(m.gone):
+			continue
+		var slot = Render.slot_of(G.map, G.x, G.y, G.dir, m.x, m.y)
+		if slot != null:
+			out.append({"m": m, "d": slot.d, "k": slot.k})
+	out.sort_custom(func(a, b): return a.d > b.d)
+	return out
 
 
 # ---------------------------------------------------------------- encounters
@@ -494,7 +536,7 @@ func main_menu(msg := "") -> void:
 		[
 			{"label": "FIGHT", "sub": "Time the strike", "run": func(): fight_bar()},
 			{"label": "ACT", "sub": "Say or do something", "run": func(): act_menu()},
-			{"label": "SPARE", "sub": "It looks ready to stop" if mercy >= 0.5 else "It isn't ready yet", "run": func(): spare()},
+			{"label": "SPARE", "sub": SPARE_TIP_READY if mercy >= 0.5 else SPARE_TIP_NOT_READY, "gold": mercy >= 0.5, "run": func(): spare()},
 			{"label": "FLEE", "sub": "Champions block the way" if m.boss else "Back away", "run": func(): flee()},
 		],
 		kbd("↑") + kbd("↓") + " CHOOSE " + kbd("ENTER") + " PICK " + kbd("1") + "-" + kbd("4"),
@@ -674,54 +716,64 @@ func judge(event) -> void:
 	render_party()
 
 
+## The allies are chips over the view's bottom-left (a colored dot, the charm's name; red when about to leave). The charm's
+## text, the mood and what the ally cares about are in the tooltip. No allies, no chips.
 func render_party() -> void:
-	_clear(_party_box)
-	if G.allies.is_empty():
-		var empty := _rich(_term, 18, C_DIM)
-		empty.text = "Spare a monster and it may ask to join. Allies ride along as passive charms, and they leave if you cross their values."
-		_party_box.add_child(empty)
-		return
+	_clear(_chips)
 	for i in G.allies.size():
 		var a: Dictionary = G.allies[i]
 		var c: Dictionary = Rules.CHARMS[a.species]
-		var mood := "DEVOTED" if a.loyalty >= 70 else ("CONTENT" if a.loyalty >= 45 else ("UNEASY" if a.loyalty >= 30 else "MAY LEAVE"))
-		var card := VBoxContainer.new()
-		card.add_theme_constant_override("separation", 4)
-		if i > 0:
-			var rule := ColorRect.new()
-			rule.color = Color(C_FAINT)
-			rule.custom_minimum_size = Vector2(0, 1)
-			_party_box.add_child(rule)
-			var gap := Control.new()
-			gap.custom_minimum_size = Vector2(0, 4)
-			_party_box.add_child(gap)
-		var head := HBoxContainer.new()
-		var dot := ColorRect.new()
-		dot.color = Color(Species.SPECIES[a.species].color)
-		dot.custom_minimum_size = Vector2(8, 8)
-		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		head.add_child(dot)
-		var pad := Control.new()
-		pad.custom_minimum_size = Vector2(8, 0)
-		head.add_child(pad)
-		var nm := _label(a.name, _term, 18, C_INK)
-		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		head.add_child(nm)
-		head.add_child(_label(mood, _term, 16, C_WARN if a.loyalty < 30 else C_DIM))
-		card.add_child(head)
-		var row := BarRow.new()
-		row.label = c.name
-		row.p = a.loyalty / 100.0
-		row.pick = false
-		row.ink_label = true
-		row.pct = str(J.round_js(a.loyalty))
-		row.font = _term
-		card.add_child(row)
-		var note := _rich(_term, 16, C_DIM)
-		var cares: String = str(Species.SPECIES[a.species].values).split(".")[0].to_lower()
-		note.text = "%s. Cares about: %s." % [esc(c.text), esc(cares)]
-		card.add_child(note)
-		_party_box.add_child(card)
+		var chip := AllyChip.new()
+		chip.dot = Color(Species.SPECIES[a.species].color)
+		chip.label = c.name
+		chip.warn = a.loyalty < 30
+		chip.font = _pix
+		chip.hovered.connect(_on_chip_hover.bind(i))
+		_chips.add_child(chip)
+	if _tip_key.begins_with("ally"):
+		_hide_tip()
+
+
+func _ally_mood(a: Dictionary) -> String:
+	return "DEVOTED" if a.loyalty >= 70 else ("CONTENT" if a.loyalty >= 45 else ("UNEASY" if a.loyalty >= 30 else "MAY LEAVE"))
+
+
+func _fill_map_tip(box: VBoxContainer) -> void:
+	box.add_child(_label("MONSTERS SHOW WHEN SEEN", _pix, 8, C_DIM))
+	for e in [["#ff8a1f", "SLIME", "goo rain"], ["#e0524e", "BANDIT", "chess"], ["#6bd36b", "SNAKE", "shadow"], ["#a7a39b", "ROCK", "rhythm"], ["#ff2a2a", "DRAGON", "all four"]]:
+		var li := HBoxContainer.new()
+		li.add_theme_constant_override("separation", 8)
+		var sw := ColorRect.new()
+		sw.color = Color(e[0])
+		sw.custom_minimum_size = Vector2(8, 8)
+		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		li.add_child(sw)
+		li.add_child(_label(e[1], _term, 18, C_INK))
+		li.add_child(_label(e[2], _term, 18, C_DIM))
+		box.add_child(li)
+
+
+func _fill_ally_tip(box: VBoxContainer, i: int) -> void:
+	if i >= G.allies.size():
+		return
+	var a: Dictionary = G.allies[i]
+	var c: Dictionary = Rules.CHARMS[a.species]
+	var head := HBoxContainer.new()
+	var nm := _label(a.name, _term, 20, C_INK)
+	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(nm)
+	head.add_child(_label(_ally_mood(a), _term, 16, C_WARN if a.loyalty < 30 else C_DIM))
+	box.add_child(head)
+	var row := BarRow.new()
+	row.label = c.name
+	row.p = a.loyalty / 100.0
+	row.pct = str(J.round_js(a.loyalty))
+	row.font = _term
+	box.add_child(row)
+	var note := _rich(_term, 16, C_DIM)
+	var cares: String = str(Species.SPECIES[a.species].values).split(".")[0].to_lower()
+	note.text = "%s. Cares about: %s." % [esc(c.text), esc(cares)]
+	box.add_child(note)
 
 
 # FIGHT: a timing bar. Press OK near the middle.
@@ -1140,7 +1192,7 @@ func draw_frame(ctx, t: float) -> void:
 		var seen: Array = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
 		for c in seen:
 			G.seen[c[1] * G.map.n + c[0]] = true
-		draw_monster_ahead(ctx, t)
+		draw_monsters_in_view(ctx, t)
 	elif G.foe != null:
 		Render.clear(ctx)
 		if G.mode == "dodge" and D != null:
@@ -1168,20 +1220,17 @@ func draw_frame(ctx, t: float) -> void:
 	ctx.restore()
 
 
-func draw_monster_ahead(ctx, t: float) -> void:
-	var a = monster_ahead()
-	if a == null:
-		return
-	var m: Dictionary = a.m
-	var z: float = a.d + 0.5
-	var s := Render.scale_at(z)
-	var by: float = H / 2.0 + ((H - 8) / 2.0) * s
-	Art.draw_monster(ctx, m.species, t, 0.0, {"cx": W / 2.0, "s": s * 0.9, "by": by}, 1, {"color": BOSS_COLOR} if m.boss else {})
-	ctx.fill_style = BOSS_COLOR if m.boss else Species.SPECIES[m.species].color
-	ctx.font = '8px "Press Start 2P", monospace'
-	ctx.text_align = "center"
-	ctx.fill_text("CHAMPION" if m.boss else Rules.GENRES[m.genre].name, W / 2.0, by - 150 * s - 6)
-	ctx.text_align = "left"
+func draw_monsters_in_view(ctx, t: float) -> void:
+	for v in monsters_in_view():
+		var m: Dictionary = v.m
+		var s := Render.scale_at(v.d + 0.5)
+		var foot := Render.project(W, H, v.k, v.d + 0.5, 0.5)
+		Art.draw_monster(ctx, m.species, t, 0.0, {"cx": foot.x, "s": s * 0.9, "by": foot.y}, 1, {"color": BOSS_COLOR} if m.boss else {})
+		ctx.fill_style = BOSS_COLOR if m.boss else Species.SPECIES[m.species].color
+		ctx.font = '8px "Press Start 2P", monospace'
+		ctx.text_align = "center"
+		ctx.fill_text("CHAMPION" if m.boss else Rules.GENRES[m.genre].name, foot.x, foot.y - 150 * s - 6)
+		ctx.text_align = "left"
 
 
 func draw_foe(ctx, t: float, small: bool) -> void:
@@ -1333,6 +1382,9 @@ func draw_bar(ctx, t: float) -> void:
 ## `raw` is the JS key name: "ArrowUp", "Enter", "Escape", " ", or the typed character.
 func on_key(raw: String) -> void:
 	_sfx_init()
+	if _tip != null and _tip_key == "foe":
+		_hover_foe = false
+		_hide_tip()
 	var key: String = KEYMAP.get(raw, KEYMAP.get(raw.to_lower(), raw))
 	var t := now()
 	if G.mode == "title":
@@ -1432,10 +1484,112 @@ func _on_talk_gui_input(event: InputEvent) -> void:
 
 
 func _on_view_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseMotion:
+		_on_view_motion(event)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		on_key("Enter")
 	elif event is InputEventScreenTouch and event.pressed:
 		on_key("Enter")
+
+
+# ---------------------------------------------------------------- tooltips
+
+func _on_menu_hover(i: int, on: bool) -> void:
+	if on:
+		_hover_item = i
+		_kbd_nav = false
+	elif _hover_item == i:
+		_hover_item = -1
+	_refresh_tip()
+
+
+func _on_chip_hover(on: bool, i: int) -> void:
+	if on:
+		_show_tip("ally%d" % i, Rect2(), true)
+	elif _tip_key == "ally%d" % i:
+		_hide_tip()
+
+
+## Decide which tooltip shows: the hovered ally or foe (they set their own), else the command under the mouse, or the
+## highlighted one when the keys were used last. Commands without help show nothing.
+func _refresh_tip() -> void:
+	if _tip == null or _tip_key.begins_with("ally") or _tip_key == "foe" or _tip_key == "map":
+		return
+	var i: int = _hover_item if _hover_item >= 0 else (G.sel if _kbd_nav else -1)
+	if i < 0 or i >= G.menu.size() or str(G.menu[i].get("sub", "")) == "" or G.mode == "dodge":
+		_hide_tip()
+		return
+	var it: Control = _menu_grid.get_child(i) if i < _menu_grid.get_child_count() else null
+	_show_tip("menu%d" % i, it.get_global_rect() if it != null else Rect2(), false)
+
+
+## Show the tooltip for `key` (menu<i>, ally<i>, map or foe): above `anchor` (a command), or by the mouse. The content
+## is only rebuilt when the key changes (or `force`); a mouse that just moves only moves the tooltip.
+func _show_tip(key: String, anchor: Rect2, at_mouse: bool, force := false) -> void:
+	if _tip == null:
+		return
+	if key != _tip_key or force or not _tip.visible:
+		_clear(_tip_body)
+		if key == "foe":
+			_fill_mind_tip(_tip_body)
+		elif key.begins_with("ally"):
+			_fill_ally_tip(_tip_body, int(key.substr(4)))
+		elif key == "map":
+			_fill_map_tip(_tip_body)
+		else:
+			var text := _rich(_term, 18, C_INK)
+			text.text = esc(G.menu[int(key.substr(4))].get("sub", ""))
+			_tip_body.add_child(text)
+		_tip_key = key
+		_tip.visible = true
+		_tip.modulate.a = 0.0 # wrapped text only knows its height after a layout pass: show it once it has one
+		_refit_tip.call_deferred(key)
+	_tip_anchor = anchor
+	_tip_at_mouse = at_mouse
+	_place_tip()
+
+
+func _refit_tip(key: String) -> void:
+	await get_tree().process_frame
+	if _tip_key != key or _tip == null:
+		return
+	_tip.reset_size()
+	_place_tip()
+	_tip.modulate.a = 1.0
+
+
+func _place_tip() -> void:
+	var win := get_viewport_rect().size
+	var mouse := get_global_mouse_position()
+	var pos := mouse + Vector2(18, 18) if _tip_at_mouse else Vector2(_tip_anchor.position.x, _tip_anchor.position.y - _tip.size.y - 6)
+	pos.x = clampf(pos.x, 6.0, maxf(6.0, win.x - _tip.size.x - 6.0))
+	if pos.y + _tip.size.y > win.y - 6.0:
+		pos.y = maxf(6.0, (mouse.y if _tip_at_mouse else _tip_anchor.position.y) - _tip.size.y - 12.0)
+	_tip.position = pos
+
+
+func _hide_tip() -> void:
+	_tip_key = ""
+	if _tip != null:
+		_tip.visible = false
+
+
+## Where the foe stands in the view (view coordinates), for hovering it
+const FOE_RECT := Rect2(110, 20, 228, 258)
+
+
+## The mouse over the view: the foe's tooltip while a fight waits on you, and moves with the mouse
+func _on_view_motion(event: InputEventMouseMotion) -> void:
+	_kbd_nav = false
+	var p: Vector2 = event.position / _view_rect.size * Vector2(W, H)
+	var over: bool = G.foe != null and G.mode in ["menu", "act", "result", "intro"] and FOE_RECT.has_point(p)
+	if over:
+		_hover_foe = true
+		_show_tip("foe", Rect2(), true) # opens, then follows the mouse
+	elif _hover_foe:
+		_hover_foe = false
+		_hide_tip()
+		_refresh_tip()
 
 
 # ---------------------------------------------------------------- building the page
@@ -1492,27 +1646,11 @@ func _stretch() -> Control:
 	return c
 
 
-func _section(title: String, small: String) -> Array:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style(C_BG, C_FAINT, 2, 12, 10))
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	panel.add_child(box)
-	var head := HBoxContainer.new()
-	var h := _label(title, _pix, 9, C_INK)
-	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(h)
-	var sm := _label(small, _pix, 9, C_DIM)
-	head.add_child(sm)
-	box.add_child(head)
-	return [panel, box, sm]
-
-
 func _build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var bg := ColorRect.new()
-	bg.color = Color(C_FRAME)
+	bg.color = Color(C_BG)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
@@ -1530,71 +1668,117 @@ func _build_ui() -> void:
 	_view_canvas.size = Vector2(W, H)
 	_view_vp.add_child(_view_canvas)
 
+	# ---- the CRT: one frame that fills the window (bar, view, text box)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 16)
+		margin.add_theme_constant_override("margin_" + side, 8)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(margin)
-	var wrap := HBoxContainer.new()
-	wrap.alignment = BoxContainer.ALIGNMENT_CENTER
-	wrap.add_theme_constant_override("separation", 16)
-	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	margin.add_child(wrap)
-
-	# ---- the CRT: bar, view, dock
 	var crt := PanelContainer.new()
-	crt.custom_minimum_size = Vector2(640, 0)
-	crt.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	crt.add_theme_stylebox_override("panel", _style(C_BG, C_INK, 2, 12, 10))
-	wrap.add_child(crt)
+	crt.add_theme_stylebox_override("panel", _style(C_BG, C_INK, 2, 14, 10))
+	margin.add_child(crt)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 10)
+	col.add_theme_constant_override("separation", 8)
 	crt.add_child(col)
 
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
 	_where = _rich(_pix, 9, C_DIM)
 	_route = _rich(_pix, 9, C_DIM)
-	_hp = _rich(_pix, 9, C_DIM)
-	_route.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	for r in [_where, _route, _hp]:
+	_route.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	for r in [_where, _route]:
 		r.autowrap_mode = TextServer.AUTOWRAP_OFF
-		r.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(_where)
-	top.add_child(_stretch())
 	top.add_child(_route)
-	top.add_child(_stretch())
-	top.add_child(_hp)
 	col.add_child(top)
 	var rule := ColorRect.new()
 	rule.color = Color(C_INK)
 	rule.custom_minimum_size = Vector2(0, 2)
 	col.add_child(rule)
 
+	# The stage takes whatever height the text box leaves; the view scales to fit it (kept 448:288)
+	var stage := Control.new()
+	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stage.custom_minimum_size = Vector2(320, 206)
+	stage.clip_contents = true
+	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(stage)
 	_view_rect = TextureRect.new()
 	_view_rect.texture = _view_vp.get_texture()
 	_view_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_view_rect.stretch_mode = TextureRect.STRETCH_SCALE
 	_view_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_view_rect.custom_minimum_size = Vector2(612, 612.0 * H / W)
 	_view_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 	_view_rect.gui_input.connect(_on_view_gui_input)
-	col.add_child(_view_rect)
+	_view_rect.mouse_exited.connect(func(): _hover_foe = false; if _tip_key == "foe": _hide_tip())
+	var fit := AspectRatioContainer.new() ## the view keeps its 448:288 and takes the biggest size that fits the stage
+	fit.ratio = float(W) / H
+	fit.stretch_mode = AspectRatioContainer.STRETCH_FIT
+	fit.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(fit)
+	fit.add_child(_view_rect)
 
+	# automap: a small overlay in the view's top-right corner (it steps aside in a fight)
+	_map_panel = PanelContainer.new()
+	_map_panel.add_theme_stylebox_override("panel", _style(C_BG, C_FAINT, 1, 4, 4))
+	_map_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 10)
+	_map_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_map_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_map_panel.mouse_entered.connect(func(): _show_tip("map", Rect2(), true))
+	_map_panel.mouse_exited.connect(func(): if _tip_key == "map": _hide_tip())
+	_view_rect.add_child(_map_panel)
+	_map_canvas = DrawArea.new()
+	_map_canvas.painter = _paint_map
+	_map_canvas.custom_minimum_size = Vector2(105, 105)
+	_map_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_panel.add_child(_map_canvas)
+
+	# allies: chips in the bottom-left corner
+	_chips = HBoxContainer.new()
+	_chips.add_theme_constant_override("separation", 6)
+	_chips.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 10)
+	_chips.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_view_rect.add_child(_chips)
+
+	# ---- the text box: HP bar, log, commands
 	var dock := VBoxContainer.new()
-	dock.add_theme_constant_override("separation", 8)
-	dock.custom_minimum_size = Vector2(0, 150)
+	dock.add_theme_constant_override("separation", 6)
 	col.add_child(dock)
+	var hp_row := HBoxContainer.new()
+	hp_row.add_theme_constant_override("separation", 12)
+	_hp = _rich(_pix, 9, C_DIM)
+	_hp.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_hp.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_hp.custom_minimum_size = Vector2(150, 0)
+	hp_row.add_child(_hp)
+	_hp_bar = HpBar.new()
+	_hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hp_row.add_child(_hp_bar)
+	dock.add_child(hp_row)
+	# Every part of the text box has a fixed height whatever it holds, so the view above never changes size between
+	# exploring, a menu, the talk box and the dodge: a log of 3 lines, one slot for the talk box or two rows of commands,
+	# and 2 lines of key hints.
 	_say = _rich(_term, 20, C_INK)
-	_say.custom_minimum_size = Vector2(0, 66)
+	_say.fit_content = false
+	_say.clip_contents = true
+	_say.custom_minimum_size = Vector2(0, SAY_H)
 	dock.add_child(_say)
+	var slot := VBoxContainer.new()
+	slot.add_theme_constant_override("separation", 6)
+	slot.custom_minimum_size = Vector2(0, SLOT_H)
+	slot.clip_contents = true
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dock.add_child(slot)
 
 	_talk = HBoxContainer.new()
 	_talk.add_theme_constant_override("separation", 8)
 	_talk.visible = false
-	dock.add_child(_talk)
+	slot.add_child(_talk)
 	var talk_label := _label("SAY", _pix, 9, C_MERCY)
 	talk_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_talk.add_child(talk_label)
@@ -1627,12 +1811,15 @@ func _build_ui() -> void:
 	_talk.add_child(send)
 
 	_menu_grid = GridContainer.new()
-	_menu_grid.columns = 2
+	_menu_grid.columns = 4
 	_menu_grid.add_theme_constant_override("h_separation", 6)
 	_menu_grid.add_theme_constant_override("v_separation", 6)
-	dock.add_child(_menu_grid)
+	slot.add_child(_menu_grid)
 	_keys = _rich(_pix, 8, C_DIM)
+	_keys.fit_content = false
+	_keys.clip_contents = true
 	_keys.add_theme_constant_override("line_separation", 6)
+	_keys.custom_minimum_size = Vector2(0, KEYS_H)
 	dock.add_child(_keys)
 
 	# touch controls (the page shows these on coarse pointers)
@@ -1658,71 +1845,18 @@ func _build_ui() -> void:
 		b.button_down.connect(on_key.bind(spec[1]))
 		_pad.add_child(b)
 
-	# ---- the side panels: automap, party, mind
-	var aside := ScrollContainer.new()
-	aside.custom_minimum_size = Vector2(330, 0)
-	aside.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	aside.size_flags_vertical = Control.SIZE_FILL
-	wrap.add_child(aside)
-	var vbar := aside.get_v_scroll_bar()
-	vbar.custom_minimum_size = Vector2(8, 0)
-	vbar.add_theme_stylebox_override("scroll", StyleBoxEmpty.new())
-	vbar.add_theme_stylebox_override("scroll_focus", StyleBoxEmpty.new())
-	for grab in ["grabber", "grabber_highlight", "grabber_pressed"]:
-		vbar.add_theme_stylebox_override(grab, _style(C_FAINT if grab == "grabber" else C_DIM, C_FAINT, 0))
-	var side := VBoxContainer.new()
-	side.add_theme_constant_override("separation", 12)
-	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	aside.add_child(side)
-
-	var automap := _section("AUTOMAP", "B1F")
-	side.add_child(automap[0])
-	var mapbox := HBoxContainer.new()
-	mapbox.add_theme_constant_override("separation", 12)
-	automap[1].add_child(mapbox)
-	var frame := PanelContainer.new()
-	frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	frame.add_theme_stylebox_override("panel", _style(C_BG, C_FAINT, 1))
-	mapbox.add_child(frame)
-	_map_canvas = DrawArea.new()
-	_map_canvas.painter = _paint_map
-	_map_canvas.custom_minimum_size = Vector2(105, 105)
-	frame.add_child(_map_canvas)
-	var legend := VBoxContainer.new()
-	legend.add_theme_constant_override("separation", 3)
-	legend.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mapbox.add_child(legend)
-	for e in [["#ff8a1f", "SLIME", "goo rain"], ["#e0524e", "BANDIT", "chess"], ["#6bd36b", "SNAKE", "shadow"], ["#a7a39b", "ROCK", "rhythm"], ["#ff2a2a", "DRAGON", "all four"]]:
-		var li := HBoxContainer.new()
-		li.add_theme_constant_override("separation", 8)
-		var sw := ColorRect.new()
-		sw.color = Color(e[0])
-		sw.custom_minimum_size = Vector2(8, 8)
-		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		li.add_child(sw)
-		li.add_child(_label(e[1], _term, 18, C_INK))
-		li.add_child(_label(e[2], _term, 18, C_DIM))
-		legend.add_child(li)
-
-	var party := _section("PARTY", "CHARMS")
-	side.add_child(party[0])
-	_party_box = VBoxContainer.new()
-	_party_box.add_theme_constant_override("separation", 4)
-	party[1].add_child(_party_box)
-
-	var mind := _section("JEV MIND", "NOBODY YET")
-	side.add_child(mind[0])
-	_mind_who = mind[2]
-	_mind_box = VBoxContainer.new()
-	_mind_box.add_theme_constant_override("separation", 8)
-	mind[1].add_child(_mind_box)
-	var empty := _rich(_term, 18, C_DIM)
-	empty.text = "Meet a monster. Every choice it makes shows up here as a typed decision with its odds."
-	_mind_box.add_child(empty)
-	var note := _rich(_term, 16, C_DIM)
-	note.text = "Offline stand-in with the same question shapes (choice, score, yes/no): typed words are read by keyword cues here. In [url=main][color=%s]the main game[/color][/url] these questions go to Jev." % C_YOU
-	note.meta_clicked.connect(func(_m): back_to_main())
-	mind[1].add_child(note)
+	# the tooltip: above everything, never takes the mouse
+	_tip = PanelContainer.new()
+	_tip.top_level = true
+	_tip.visible = false
+	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip.add_theme_stylebox_override("panel", _style(C_BG, C_INK, 2, 12, 10))
+	_tip_body = VBoxContainer.new()
+	_tip_body.custom_minimum_size = Vector2(290, 0)
+	_tip_body.add_theme_constant_override("separation", 6)
+	_tip_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip.add_child(_tip_body)
+	add_child(_tip)
 
 
 # ---------------------------------------------------------------- widgets
@@ -1780,26 +1914,75 @@ class BarRow:
 		draw_string(font, Vector2(size.x - 40.0, base), pct, HORIZONTAL_ALIGNMENT_RIGHT, 40, 16, Color("#8a8a8a"))
 
 
-## A command button: [> ] number label, and a dim line under it
+## The text box's bar: HP as a segmented-free bar, light blue, red once it is under 40%
+class HpBar:
+	extends Control
+	var hp := 0
+	var max_hp := 1
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(0, 16)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func set_hp(h: int, m: int) -> void:
+		hp = h
+		max_hp = maxi(1, m)
+		queue_redraw()
+
+	func _draw() -> void:
+		var f := clampf(float(hp) / max_hp, 0.0, 1.0)
+		var y := floorf(size.y / 2.0 - 6.0)
+		draw_rect(Rect2(0, y, size.x, 12), Color("#2e2e33"))
+		draw_rect(Rect2(0, y, size.x * f, 12), Color("#ff5a4a") if f < 0.4 else Color("#8fd3ff"))
+		draw_rect(Rect2(0.5, y + 0.5, size.x - 1.0, 11.0), Color("#8a8a8a"), false, 1.0)
+
+
+## An ally over the view: a colored dot and the charm's name; hover it for the charm's text
+class AllyChip:
+	extends Control
+	signal hovered(on: bool)
+	var dot := Color.WHITE
+	var label := ""
+	var warn := false
+	var font: Font
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_entered.connect(func(): hovered.emit(true))
+		mouse_exited.connect(func(): hovered.emit(false))
+
+	func _ready() -> void:
+		custom_minimum_size = Vector2(font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x + 34.0, 24)
+
+	func _draw() -> void:
+		var edge := Color("#ff5a4a") if warn else Color("#2e2e33")
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.8))
+		draw_rect(Rect2(1, 1, size.x - 2, size.y - 2), edge, false, 1.0)
+		draw_rect(Rect2(8, size.y / 2.0 - 4.0, 8, 8), dot)
+		draw_string(font, Vector2(24, size.y / 2.0 + 4.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("#ff5a4a") if warn else Color("#e8e8e8"))
+
+
+## A command button: [> ] number label. Its help (`sub`) is the tooltip; `gold` lights the label (SPARE, when it would work)
 class MenuItem:
 	extends Control
 	signal picked(i: int)
+	signal hovered(i: int, on: bool)
 	var index := 0
 	var label := ""
 	var sub := ""
 	var on := false
+	var gold := false
 	var hover := false
 	var pix: Font
-	var term: Font
 
 	func _init() -> void:
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		mouse_entered.connect(func(): hover = true; queue_redraw())
-		mouse_exited.connect(func(): hover = false; queue_redraw())
+		mouse_entered.connect(func(): hover = true; hovered.emit(index, true); queue_redraw())
+		mouse_exited.connect(func(): hover = false; hovered.emit(index, false); queue_redraw())
 
 	func _ready() -> void:
-		custom_minimum_size = Vector2(0, 56 if sub != "" else 34)
+		custom_minimum_size = Vector2(0, 34)
 
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -1814,14 +1997,11 @@ class MenuItem:
 		var border := Color("#e8e8e8") if (on or hover) else Color("#2e2e33")
 		draw_rect(Rect2(1, 1, size.x - 2, size.y - 2), border, false, 2.0)
 		var asc := pix.get_ascent(10)
-		var base := 10.0 + (14.0 - (asc + pix.get_descent(10))) / 2.0 + asc
+		var base := (size.y - (asc + pix.get_descent(10))) / 2.0 + asc
 		var x := 12.0
 		if on:
 			draw_string(pix, Vector2(x, base), "▶", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#8fd3ff"))
 			x += 20.0
 		draw_string(pix, Vector2(x, base), str(index + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#8a8a8a"))
 		x += 10.0 + 8.0
-		draw_string(pix, Vector2(x, base), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#e8e8e8"))
-		if sub != "":
-			var sa := term.get_ascent(16)
-			draw_string(term, Vector2(12.0, 10.0 + 14.0 + 4.0 + sa), sub, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, 16, Color("#8a8a8a"))
+		draw_string(pix, Vector2(x, base), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#ffd27a") if gold else Color("#e8e8e8"))

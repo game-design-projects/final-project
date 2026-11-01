@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-01
+
 Work in progress on `feat/opensource-jev`: replacing Jev with an open-source System One model that runs on the player's computer. The route is still being decided; [docs/system-one-research.md](docs/system-one-research.md) has the survey, the measurements and the open questions.
 
 ### Added
@@ -14,8 +16,14 @@ Work in progress on `feat/opensource-jev`: replacing Jev with an open-source Sys
 - NVIDIA measurements in the research page (RTX 4070 Ti SUPER, CUDA, and its i7-14700K CPU): the 4B's schema-first round takes 93 ms for `enemy_turn` and 215 ms for `group_talk`, and one row per question takes 1.7 s on llama-server and on Decider's own CUDA-graph server.
 
 ### Changed
+- Genre Halls fills the window as one framed screen with far less text (Pear's playtest): the view scales to the free space, the sidebar (automap legend, party, Jev mind) is gone, and the text box under the view holds an HP bar, a three-line log and the commands, at a fixed height so the view never resizes.
+- Help moved into tooltips: a command's help on hover (SPARE turns gold when it would work, and its tooltip explains allies and charms), an ally chip's charm and loyalty, the monster's mind (what it seems like, feelings, last two answers) when you hover it in a fight, and the automap's monster colors. The highlighted command shows its tooltip when you use the keys.
+- The automap loses its title and legend and sits in the view's corner while exploring; it steps aside in a fight. Opening and exploring messages are shorter.
 - The game opens in Genre Halls (`run/main_scene` is `genre_halls.tscn`, so `godot --path .`, the exported builds and the web page start there). The original Donjon is Esc on the Genre Halls title card, or the new `main` flag (`godot --path . -- main mock floor5`); the title card now says so.
 - `Jev.configure_jev(opts)` takes no key; the ways in are `local`, `systemone` and `mock`. `config.gd` reads `config/jev_config.json`, then the setup's `user://local-model/install.json`, and falls back to the mock with a warning (*NO LOCAL MODEL INSTALLED*).
+
+### Fixed
+- Monsters diagonal to you, down a side opening, are drawn in the corridor view (only the one straight ahead was).
 
 ### Removed
 - The game's TypeSafe, OpenRouter and Worker providers, and API keys in `.env` (the Worker in `proxy/` is still in the repo for now).

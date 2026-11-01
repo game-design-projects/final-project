@@ -1,5 +1,5 @@
 ## Screenshots of the Genre Halls scene, to look at: the maze view with a monster down the corridor, the command box,
-## each faction's dodge box (goo rain, chess, lantern/shadow, rhythm stomps), the mind panel, the strike bar, the
+## each faction's dodge box (goo rain, chess, lantern/shadow, rhythm stomps), the foe's mind tooltip, the strike bar, the
 ## typed line, a route screen. Opens a window briefly (not headless):
 ##   godot --path . -s res://cli/genre_shots.gd [-- out=/some/dir] [sound]
 ## Silent unless `sound` is given.
@@ -99,7 +99,7 @@ func _run() -> void:
 	await _secs(0.4)
 	await _shot("02-maze-monster")
 
-	# the command box, then ACT, then an act's answers in the mind panel
+	# the command box, then ACT, then an act's answers in the foe's tooltip (hover the foe)
 	await _fresh("slime")
 	await _shot("03-command-box")
 	scene.on_key("2")
@@ -107,7 +107,11 @@ func _run() -> void:
 	await _shot("04-act-menu")
 	scene.on_key("3") # OFFER COMFORT
 	await _secs(0.3)
-	await _shot("05-mind-panel")
+	scene._show_tip("foe", Rect2(), true)
+	scene._tip.position = Vector2(560, 150)
+	await _frames(3)
+	await _shot("05-mind-tooltip")
+	scene._hide_tip()
 
 	# the strike bar
 	await _fresh("bandit")
