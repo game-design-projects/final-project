@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+Work in progress on `feat/opensource-jev`: replacing Jev with an open-source System One model that runs on the player's computer. The route is still being decided; [docs/system-one-research.md](docs/system-one-research.md) has the survey, the measurements and the open questions.
+
 ### Added
 - **Hold Space to talk in the desktop builds**, on your own computer with nothing sent anywhere: NVIDIA's Nemotron Speech Streaming model (English, 160 ms chunks, int8) in a small helper program on sherpa-onnx 1.13.8 (`native/asr/donjon_asr.c`), which the game runs and streams the microphone to (`src/audio/asr.gd`). The model is a one-time 662 MB download (pinned, SHA-256 checked) that the first hold of Space offers and the next starts. Each desktop build carries its own helper (Windows x86_64, macOS universal, Linux x86_64). The web build keeps the browser's recognizer.
 - **Pluggable monster voices** (`src/audio/tts_engines.gd`, `tts_config.gd`): rendered voice banks in `assets/voices/` (CosyVoice3, the Feiyu stack's engine, and Qwen3-TTS; the banks themselves follow), a Feiyu voice service or a Qwen3-TTS service on your network synthesising lines as they're said (`config/tts_config.json` or `.env`), and the system's voice as before. The Feiyu service is only used with a voice of our own named, never its default Feiyu voice library. Flag `tts=<voice>` starts with one.
@@ -13,6 +15,16 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Two voice banks**: all 322 lines, rendered ahead in each monster's own voice, cloned from Creative Commons recordings (LibriTTS-R, CC BY 4.0): `assets/voices/cosyvoice3/` (CosyVoice3, the Feiyu stack's engine) and `assets/voices/qwen3/` (Qwen3-TTS), the same reference voice per monster in both. **L** steps between them.
 - `tools/voices/`: `render.py` (a bank from the line list, on CPU or through a Feiyu / Qwen3-TTS service, with retakes for clipped or runaway takes, shaping, loudness and Ogg), `check.py` (plays a bank into the game's own speech recognizer and reports what it heard), the engine scripts and the reference clips. `tests/audio/test_voice_banks.gd`: every bank has every line, and every file is a sound of a sensible length.
 - Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
+- Decider (Mapika, Apache-2.0) as the monsters' model, read through a stock llama.cpp `llama-server`: `src/jev/decider.gd` (Decider's readout ported from decider-ai 1.10.0, checked byte for byte against its own output in `tests/jev/golden/decider/`, written by `tools/decider_golden.py`), `src/jev/local.gd` (the transport: the state first, then one `/completion` per question), `src/jev/local_server.gd` (starts and stops the server) and `src/jev/local_setup.gd` (downloads a pinned llama.cpp build and model for this OS and backend, sha256-checked).
+- A `systemone` way in: any server that answers `POST /v1/systemone`, such as Decider's own.
+- `tools/system-one/`: the scripts behind the research page (readout parity, latency on GPU and CPU, a perception probe), with `run_all.sh` to run every llama-server measurement in one go and `prime_check.py` to see how far priming moves each answer.
+- NVIDIA measurements in the research page (RTX 4070 Ti SUPER, CUDA, and its i7-14700K CPU): the 4B's schema-first round takes 93 ms for `enemy_turn` and 215 ms for `group_talk`, and one row per question takes 1.7 s on llama-server and on Decider's own CUDA-graph server.
+
+### Changed
+- `Jev.configure_jev(opts)` takes no key; the ways in are `local`, `systemone` and `mock`. `config.gd` reads `config/jev_config.json`, then the setup's `user://local-model/install.json`, and falls back to the mock with a warning (*NO LOCAL MODEL INSTALLED*).
+
+### Removed
+- The game's TypeSafe, OpenRouter and Worker providers, and API keys in `.env` (the Worker in `proxy/` is still in the repo for now).
 
 ### Fixed
 - Letting go of Space right after your last word no longer cuts it off ("Insolent morsel" came back "Insol"): the speech helper listens half a second past the end before it finishes. `native/asr/smoke.py` checks it, and paces its spoken test by the clock.

@@ -1,12 +1,13 @@
-## A stand-in for TypeSafe's Jev endpoint, for tests, the scenario scripts and `mock` runs (no API key, no credits).
+## A stand-in for a System One model, for tests, the scenario scripts and `mock` runs (no model, nothing to install).
 ## It answers every question with a well-formed answer of the right type, from a seeded random source, so a run is
 ## repeatable: noul -> { noul }, choice -> { choice, probabilities }, score -> { score, probabilities }.
-## The answers are random, not sensible: this exercises the game's plumbing and rules, not Jev's judgement.
+## The answers are random, not sensible: this exercises the game's plumbing and rules, not the model's judgement.
 ## Load it with `const MockJev = preload("res://src/jev/mock_jev.gd")`.
 extends RefCounted
 
-const JEV_URL := "https://api.typesafe.ai/v1/systemone"
-const JEV_URLS := [JEV_URL, "https://openrouter.ai/api/alpha/decisions"]
+const JEV_URL := "mock://jev/v1/systemone"
+## The mock answers any System One endpoint (the path every provider posts to), so a test can point any provider at it
+const PATH := "/v1/systemone"
 
 const _MASK := 0xFFFFFFFF
 
@@ -101,9 +102,9 @@ static func mock_system_one(body: Dictionary, rand: Callable) -> Dictionary:
 	return {"model": "jev-mock", "answers": answers, "usage": {"input_tokens": input_tokens}}
 
 
-## What mockFetch was: a transport (see jev.gd) that answers the Jev endpoints itself, from a seeded source.
+## What mockFetch was: a transport (see jev.gd) that answers System One requests itself, from a seeded source.
 ##   var server := MockJev.Server.new(7)            # seed 7, no latency
-##   Jev.configure_jev("key", {"transport": server})
+##   Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": server})
 ## `calls` has every request body it received, so a test can see what was asked (model, state, questions).
 class Server:
 	extends RefCounted
@@ -122,7 +123,7 @@ class Server:
 
 	## fetch(url, headers, body) -> {"status": 200, "json": {...}}, or {"error": ...} like a rejected fetch
 	func fetch(url: String, _headers: Dictionary, body: Dictionary) -> Dictionary:
-		if not JEV_URLS.has(url):
+		if not url.ends_with(PATH):
 			return {"error": "mock Jev: no mock for %s" % url}
 		calls.append(body.duplicate(true))
 		if latency > 0.0:

@@ -11,7 +11,7 @@ const CONFIDENCE := [0.1, 0.2, 0.3, 0.9]
 
 
 func after_each():
-	Jev.configure_jev(null)
+	Jev.configure_jev()
 
 
 ## The same scripted Jev the recording used: answers depend only on the question's name and a seed.
@@ -111,7 +111,7 @@ func test_every_generated_request_gets_the_same_reply_as_the_js():
 	var decisions := {}
 	for i in cases.size():
 		var c: Dictionary = cases[i]
-		Jev.configure_jev("k", {"transport": Scripted.new(int(c["seed"]))})
+		Jev.configure_jev({"via": "systemone", "api_base": "http://s1.test", "transport": Scripted.new(int(c["seed"]))})
 		var r: Dictionary = await JevApi.handle(c["path"], c["body"])
 		eq(r["status"], int(c["status"]), "case %d %s" % [i, c["path"]])
 		var want = clean(c["expected"], "", {})

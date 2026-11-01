@@ -1,0 +1,95 @@
+{
+ "state_text": "{\"ally\": {\"name\": \"Grok\", \"kind\": \"huge brown goblin\", \"personality\": [\"A huge, brown, greedy goblin. Boastful and crude, respects strength and loves shiny gold. Talks in rough, simple speech.\", \"greedy\", \"boastful\"], \"likes\": [\"gold\", \"a good fight\", \"being praised for its strength\", \"crude jokes\"], \"dislikes\": [\"being ordered around\", \"insults about its smell or intelligence\", \"cheap offers\", \"cowards\"], \"values\": \"Loves fights and loot. Upset when the party gives gold away, spares enemies for no gain, runs from fights, or orders it around. Pleased by victories and treasure.\", \"loyalty\": \"content\"}, \"promises_party_made_to_it\": [\"\\\"i will give gold to goblins\\\" (kept)\"], \"party_says\": \"Grok, you're the strongest fighter we've got.\"}",
+ "rows": [
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How do the words in `party_says` land with `ally.name`?\", \"judge_by\": [\"`ally.values`\", \"`ally.personality`\", \"`ally.likes`\", \"`ally.dislikes`\"]}\nProposed answer: Hurt or offend it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How do the words in `party_says` land with `ally.name`?\", \"judge_by\": [\"`ally.values`\", \"`ally.personality`\", \"`ally.likes`\", \"`ally.dislikes`\"]}\nProposed answer: Leave it cold\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How do the words in `party_says` land with `ally.name`?\", \"judge_by\": [\"`ally.values`\", \"`ally.personality`\", \"`ally.likes`\", \"`ally.dislikes`\"]}\nProposed answer: Fine, nothing special\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How do the words in `party_says` land with `ally.name`?\", \"judge_by\": [\"`ally.values`\", \"`ally.personality`\", \"`ally.likes`\", \"`ally.dislikes`\"]}\nProposed answer: Please it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How do the words in `party_says` land with `ally.name`?\", \"judge_by\": [\"`ally.values`\", \"`ally.personality`\", \"`ally.likes`\", \"`ally.dislikes`\"]}\nProposed answer: Move it deeply\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 8,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"What does `ally.name` say or do in reply to `party_says`?\", \"judge_by\": \"`ally.personality`\"}\nOptions:\n(A) line_0: HAH! That's how it's done!\n(B) line_1: Heh heh. Good smashin'.\n(C) line_2: More gold for us!\n(D) line_3: *scratches its huge belly*\n(E) line_4: Hmph.\n(F) line_5: Oi! That's OUR gold you're wastin'!\n(G) line_6: Pah. Soft. You lot are soft.\n(H) line_7: Nobody bosses Grok.\nAnswer: ("
+   ]
+  }
+ ],
+ "answers": {
+  "resonance": {
+   "type": "score",
+   "score": 1.92,
+   "confidence": 0.0,
+   "x_p_max": 0.2469,
+   "certainty": 0.0112,
+   "legend": {
+    "0": "Hurt or offend it",
+    "1": "Leave it cold",
+    "2": "Fine, nothing special",
+    "3": "Please it",
+    "4": "Move it deeply"
+   },
+   "probabilities": {
+    "0": 0.2469,
+    "1": 0.1687,
+    "2": 0.1687,
+    "3": 0.2469,
+    "4": 0.1687
+   },
+   "level_fit": {
+    "0": 0.6168,
+    "1": 0.4213,
+    "2": 0.4213,
+    "3": 0.6168,
+    "4": 0.4213
+   },
+   "fit_mass": 2.4976
+  },
+  "line": {
+   "type": "choice",
+   "choice": "line_3",
+   "confidence": 0.0882,
+   "x_p_max": 0.2022,
+   "certainty": 0.0265,
+   "probabilities": {
+    "line_0": 0.0779,
+    "line_1": 0.1593,
+    "line_2": 0.0989,
+    "line_3": 0.2022,
+    "line_4": 0.1255,
+    "line_5": 0.0779,
+    "line_6": 0.1593,
+    "line_7": 0.0989
+   }
+  }
+ }
+}

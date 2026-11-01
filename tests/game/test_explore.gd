@@ -41,10 +41,10 @@ func test_tips_off_says_how_to_move():
 	eq(game.tips.current(), null)
 
 
-func test_jev_warning_shows_without_a_key():
-	make_game({"jev": {"flags_text": "", "env": {}, "json_text": "", "dotenv_text": "", "exported": true, "latency": 0}})
-	saw("^NO JEV KEY FOUND .*JEV IS MOCKED", "the run starts by saying Jev is mocked")
-	var line = game.G.log.filter(func(l): return l.text.begins_with("NO JEV KEY"))[0]
+func test_a_warning_shows_without_a_local_model():
+	make_game({"jev": {"flags_text": "", "env": {}, "json_text": "", "install": {}, "latency": 0}})
+	saw("^NO LOCAL MODEL INSTALLED .*MONSTERS ACT AT RANDOM", "the run starts by saying the monsters are mocked")
+	var line = game.G.log.filter(func(l): return l.text.begins_with("NO LOCAL MODEL"))[0]
 	eq(line.cls, "warn")
 
 

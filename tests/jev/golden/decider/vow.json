@@ -1,0 +1,94 @@
+{
+ "state_text": "{\"monster\": {\"name\": \"Vex\", \"kind\": \"yellow dragon\", \"personality\": [\"An ancient yellow dragon, proud, vain and clever. Speaks grandly and looks down on mortals.\", \"vain\", \"proud\"], \"likes\": [\"flattery\", \"respect\", \"treasure\", \"courage\", \"wit\"], \"dislikes\": [\"rudeness\", \"cowardice\", \"cheap offerings\", \"threats from weaklings\"], \"values\": \"Expects a bold party worthy of a dragon. Disgusted by running away and by cruelty to the helpless; pleased by brave victories against strong foes and by treasure.\"}, \"promise\": \"The party swears to Vex: \\\"i will not run from dragons\\\"\"}",
+ "rows": [
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` feel about the promise in `promise`?\", \"judge_by\": [\"`monster.values`\", \"`monster.likes`\", \"`monster.dislikes`\"]}\nProposed answer: Hates it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` feel about the promise in `promise`?\", \"judge_by\": [\"`monster.values`\", \"`monster.likes`\", \"`monster.dislikes`\"]}\nProposed answer: Dislikes it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` feel about the promise in `promise`?\", \"judge_by\": [\"`monster.values`\", \"`monster.likes`\", \"`monster.dislikes`\"]}\nProposed answer: Doesn't care\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` feel about the promise in `promise`?\", \"judge_by\": [\"`monster.values`\", \"`monster.likes`\", \"`monster.dislikes`\"]}\nProposed answer: Likes it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "score",
+   "options": 2,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` feel about the promise in `promise`?\", \"judge_by\": [\"`monster.values`\", \"`monster.likes`\", \"`monster.dislikes`\"]}\nProposed answer: Loves it\nDoes the proposed answer fit?\nOptions:\n(A) no\n(B) yes\nAnswer: ("
+   ]
+  },
+  {
+   "type": "choice",
+   "options": 7,
+   "pieces": [
+    "\n\nQuestion: {\"question\": \"How does `monster.name` react to `promise`?\", \"judge_by\": \"`monster.personality`\"}\nOptions:\n(A) line_0: Hmm. You show a flicker of worth.\n(B) line_1: Well struck. I am... mildly impressed.\n(C) line_2: *studies its claws*\n(D) line_3: ...\n(E) line_4: Pathetic.\n(F) line_5: You try my patience, mortals.\n(G) line_6: Cowardice. How tedious.\nAnswer: ("
+   ]
+  }
+ ],
+ "answers": {
+  "liking": {
+   "type": "score",
+   "score": 1.92,
+   "confidence": 0.0,
+   "x_p_max": 0.2469,
+   "certainty": 0.0112,
+   "legend": {
+    "0": "Hates it",
+    "1": "Dislikes it",
+    "2": "Doesn't care",
+    "3": "Likes it",
+    "4": "Loves it"
+   },
+   "probabilities": {
+    "0": 0.2469,
+    "1": 0.1687,
+    "2": 0.1687,
+    "3": 0.2469,
+    "4": 0.1687
+   },
+   "level_fit": {
+    "0": 0.6168,
+    "1": 0.4213,
+    "2": 0.4213,
+    "3": 0.6168,
+    "4": 0.4213
+   },
+   "fit_mass": 2.4976
+  },
+  "line": {
+   "type": "choice",
+   "choice": "line_3",
+   "confidence": 0.0951,
+   "x_p_max": 0.2244,
+   "certainty": 0.0295,
+   "probabilities": {
+    "line_0": 0.0865,
+    "line_1": 0.1768,
+    "line_2": 0.1098,
+    "line_3": 0.2244,
+    "line_4": 0.1393,
+    "line_5": 0.0865,
+    "line_6": 0.1768
+   }
+  }
+ }
+}

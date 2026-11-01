@@ -92,7 +92,7 @@ func test_an_unknown_question_type_is_an_error_not_a_crash():
 	ok(MockJev.mock_system_one({"questions": {"q": {"type": "wat"}}}, MockJev.seeded(1)).has("error"))
 
 
-func test_server_answers_the_jev_urls_records_calls_and_refuses_others():
+func test_server_answers_system_one_urls_records_calls_and_refuses_others():
 	var server := MockJev.Server.new(5)
 	var body := {"model": "jev-latest", "state": {}, "questions": {"q1": {"type": "noul", "instructions": "x"}}}
 	var res: Dictionary = await server.fetch(MockJev.JEV_URL, {}, body)
@@ -100,7 +100,7 @@ func test_server_answers_the_jev_urls_records_calls_and_refuses_others():
 	eq(res["json"]["answers"]["q1"]["noul"], MockJev.mock_system_one(body, MockJev.seeded(5))["answers"]["q1"]["noul"])
 	eq(server.calls.size(), 1)
 	eq(server.calls[0]["model"], "jev-latest")
-	var via_openrouter: Dictionary = await server.fetch("https://openrouter.ai/api/alpha/decisions", {}, body)
-	eq(via_openrouter["status"], 200)
-	ok((await server.fetch("https://example.com/", {}, body)).has("error"), "only the Jev endpoints are mocked")
+	var elsewhere: Dictionary = await server.fetch("http://gpu-box:8000/v1/systemone", {}, body)
+	eq(elsewhere["status"], 200, "any System One endpoint")
+	ok((await server.fetch("https://example.com/", {}, body)).has("error"), "only System One endpoints are mocked")
 	eq(server.calls.size(), 2)
