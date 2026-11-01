@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 - **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
 - The macOS build asks for the microphone (it has the usage description and audio-input entitlement). Godot's microphone input is on in every build but the web one.
+- The game opens in Genre Halls (`run/main_scene` is `genre_halls.tscn`, so `godot --path .`, the exported builds and the web page start there). The original Donjon is Esc on the Genre Halls title card, or the new `main` flag (`godot --path . -- main mock floor5`); the title card now says so.
 
 ## [0.3.0] - 2026-10-29
 

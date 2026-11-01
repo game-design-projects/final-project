@@ -538,6 +538,27 @@ func test_escape_on_the_title_and_the_route_screen_goes_back_when_there_is_a_mai
 	eq(scene.G.mode, "explore", "no main scene: Esc is just a key")
 
 
+func test_the_project_starts_in_the_genre_halls_and_the_main_game_is_one_escape_away():
+	eq(ProjectSettings.get_setting("application/run/main_scene"), "res://src/genre/genre_halls.tscn", "Genre Halls is the startup scene")
+	ok(ResourceLoader.exists(scene_path_of_main()), "the main game stays reachable (Esc on the title)")
+	eq(preload("res://src/genre/genre_halls.gd").TITLE_HINT, "ESC: THE ORIGINAL DONJON", "the title says how to get to it")
+
+
+func test_the_main_flag_asks_for_the_main_game_and_nothing_else_does():
+	var Halls = preload("res://src/genre/genre_halls.gd")
+	for yes in ["main", "main mock", "mock main debug", "--main", "?main&nofx", "#main", "floor5 main"]:
+		Flags.override = yes
+		ok(Halls.wants_main(), "'%s' asks for the main game" % yes)
+	for no in ["", "mock", "meet=rock", "--only=ui/main", "domain", "main_menu", "floor5-debug"]:
+		Flags.override = no
+		ok(not Halls.wants_main(), "'%s' stays in the Genre Halls" % no)
+	Flags.override = null
+
+
+func scene_path_of_main() -> String:
+	return preload("res://src/genre/genre_halls.gd").MAIN_SCENE
+
+
 func test_with_the_real_sfx_the_fight_makes_its_sounds():
 	Flags.override = "" # sound on
 	_start("rock")

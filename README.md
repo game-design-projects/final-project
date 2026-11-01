@@ -16,7 +16,7 @@ Donjon is a Godot 4.7 project (GDScript). It runs in the browser, on Windows, on
 - **Real dice.** Combat follows D&D 5e, simplified. Every roll shows in the log in words, and d20s tumble across the view. Spell slots, death saves, advantage, critical hits, levels.
 - **A run worth restarting.** Floors are new mazes every time. Every flight of stairs earns a Roll of Fate (a random boon that stacks), every fifth floor has a red champion, and death is permanent.
 - **It looks and sounds like a place.** Wireframe corridors in true perspective run through a shader that makes the lines glow like an old vector monitor. The screen drains of color, closes in red and starts a heartbeat when the party is dying. The music is original baroque dungeon music; every sound effect is synthesized.
-- **Genre Halls.** A side mode that pitches Undertale-style battles on the same dungeon: each faction attacks in its own genre (goo rain, chess, shadow, rhythm).
+- **Genre Halls.** The game opens here: Undertale-style battles on the same dungeon, where each faction attacks in its own genre (goo rain, chess, shadow, rhythm). Esc on its title card goes to the original turn-based Donjon.
 
 ## Run it
 
@@ -24,8 +24,8 @@ You need [Godot 4.7.2](https://godotengine.org/download). From the project folde
 
 ```bash
 godot --headless --path . --import   # once, and again after adding files or assets
-godot --path .                       # play
-godot --path . -- mock               # play on mock Jev: no key, no credits
+godot --path .                       # play: opens in Genre Halls (no key needed)
+godot --path . -- main mock          # the original Donjon on mock Jev: no key, no credits
 ```
 
 With no Jev key, the monsters run on **mock Jev**: random but well-formed answers, so everything works, but the monsters act at random instead of sensibly. The game says so in the log when that happens. [Setting up Jev](#setting-up-jev) puts a real key in. Everything after `--` is a [run flag](#run-flags).
@@ -41,7 +41,7 @@ Prebuilt web, Windows, macOS and Linux builds come out of CI: every push has the
 | Menus | ↑/↓ (or W/S) move the highlight, ←/→ jump columns, **Enter** picks it · **1–9** and **0** pick directly · **Esc** goes back |
 | Anywhere | hold **Space** to talk · **K** achievements · **H** tips off / back on from the start · **P** music on/off · **O** sound effects on/off · **L** voices (monsters read aloud): the next voice, then off · (**J** Jev mind panel, debug runs only) |
 
-Keys pressed with Cmd, Ctrl or Alt are left to the system. On the title card, any key starts the game and **G** opens [Genre Halls](#genre-halls-undertale-style-battles). Every key on the screen is also a button: click it.
+Keys pressed with Cmd, Ctrl or Alt are left to the system. On the original Donjon's title card, any key starts the game and **G** opens [Genre Halls](#genre-halls-undertale-style-battles). Every key on the screen is also a button: click it.
 
 **The screen.** The top line says where you are: the floor, the way you face (or that you're in a fight), gold, boons, and the switches as keycaps with pixel icons (H tips, J Jev panel in debug runs, K achievements, L voices, O sound, P music; slashed red when off, hover for what they do). Beside the view sit **the party** (top), your active vows (bottom) and the log between them; monster allies get one line each under an "ALLIES 2/3" count (the party holds six: your three adventurers and up to three monsters). The automap sits right under the view with a small key (you, stairs down, the champion), and steps aside in a fight. Everything you can do sits in the **command dock right under the view**, as keycap buttons: press the key or click the button. Hover a button to read what it does on the line beneath. When the game waits on you (a menu like CHOOSE MOVES' spell list, the talk box, "any key" after a Roll of Fate), the dock lights up in the floor's color, and a key it doesn't take shakes it instead of vanishing. The window can be any size: the screen lays itself out for 1180 × 820 and scales or rearranges from there.
 
@@ -139,9 +139,9 @@ The rate limit's `namespace_id` in `proxy/wrangler.jsonc` has to be unique on th
 Flags change one run. From source they go after `--`; on the web build they come from the address (`index.html?mock&nofx`, `index.html#floor5-debug`). They are matched anywhere in the text, ignoring case, so `debug`, `--debug` and `floor5-debug` all work.
 
 ```bash
-godot --path . -- mock debug         # mock Jev, debug mode
-godot --path . -- floor5-debug       # start on floor 5, debug mode
-godot --path . res://src/genre/genre_halls.tscn -- meet=rock   # Genre Halls, straight into a rock fight
+godot --path . -- main mock debug    # the original Donjon: mock Jev, debug mode
+godot --path . -- main floor5-debug  # the original Donjon: start on floor 5, debug mode
+godot --path . -- meet=rock          # Genre Halls, straight into a rock fight
 ```
 
 | Flag | Does |
@@ -153,7 +153,8 @@ godot --path . res://src/genre/genre_halls.tscn -- meet=rock   # Genre Halls, st
 | `floorN` | a **test run**: start on floor N (clamped to 2 to 30) with a party that got there, every member at level N, one Roll of Fate boon per floor cleared, some gold, fully rested |
 | `nofx` | no shader: the plain view |
 | `tts=<voice>` | start with that voice: `cosyvoice3`, `qwen3`, `feiyu`, `qwen` or `system` (see [Voices](#voices)) |
-| `genre-halls` | open [Genre Halls](#genre-halls-undertale-style-battles) instead of the game |
+| `main` | open the original Donjon instead of [Genre Halls](#genre-halls-undertale-style-battles), which is where the game starts. Combine it with the others: `-- main mock floor5` (on the web, `index.html?main&mock`) |
+| `genre-halls` | from the original Donjon (`res://src/ui/main.tscn`), jump to Genre Halls |
 | `meet=<species>` | in Genre Halls, jump into that faction's fight: `slime`, `bandit`, `snake`, `rock` or `dragon` |
 | `nosound` or `nosfx` | Genre Halls without sound |
 | `pad` | Genre Halls with its on-screen arrow pad (always on a touch screen) |
@@ -339,7 +340,7 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 ## Genre Halls: Undertale-style battles
 
-Genre Halls is a pitch for the next version of the fights, built on the same renderer, monster art, species, feelings and synth. Open it with **G** on the title card, with the `genre-halls` flag, or as its own scene (`godot --path . res://src/genre/genre_halls.tscn`). It needs no key; Esc on its title or route screen goes back to the game.
+Genre Halls is the next version of the fights, built on the same renderer, monster art, species, feelings and synth. It is the project's startup scene (`godot --path .`, the exported builds, the web page). The original Donjon is one **Esc** away on its title or route screen, or `-- main`; from the original Donjon, **G** on its title card or the `genre-halls` flag comes back. It needs no key.
 
 - **One floor, five fights.** A 13×13 maze holds one slime, bandit, snake person and rock entity, plus a red dragon champion in the 5×5 hall at the center. Monsters are drawn down the corridor when you can see them, and show on the automap.
 - **One box, one rule: lit squares hurt.** When a monster attacks, you dodge on a 7×7 grid with the arrow keys (or WASD). Every faction attacks in its own genre. Slimes rain goo, and the shadow of each drop shows where it will land. Bandits play chess: a rook lights its row and column, a bishop its diagonals, a knight its L-jumps. Snake people swing a lantern around the box, and you hide in a pillar's shadow. Rock entities stomp on the beat, with each pattern shown two beats ahead. The champion changes genre every turn.
@@ -436,7 +437,7 @@ Players never see Jev's raw output. Turn debug mode on with the `debug` flag, `d
 
 **Every API request, in detail.** The panel has a **REQUESTS** tab: every call the game makes to Jev's rules (`group-turn`, `ally-reactions`, `ally-talk`, `vow`, `vow-broken`), newest first, the last hundred, with its status, time, how many Jev calls it took, questions and tokens. Open one to read exactly what was sent and answered, and below it each raw Jev call: the `state` Jev was given, the `questions`, and its `answers` with all their probabilities, each with a COPY button that puts the pretty-printed JSON on the clipboard. The key never appears in it.
 
-**Test runs:** `godot --path . -- floor5` (any number from 2 to 30) starts on that floor with a party that got there. Add `debug` for debug mode: `floor5-debug`.
+**Test runs:** `godot --path . -- main floor5` (any number from 2 to 30) starts on that floor with a party that got there. Add `debug` for debug mode: `floor5-debug`.
 
 ## Coming from the browser version
 
@@ -444,8 +445,8 @@ The game was a browser game with a Node server and was rewritten in Godot; the J
 
 | Before | Now |
 | --- | --- |
-| `npm run crawler` | `godot --path .` |
-| `npm run crawler:mock` | `godot --path . -- mock` |
+| `npm run crawler` | `godot --path . -- main` (plain `godot --path .` opens Genre Halls) |
+| `npm run crawler:mock` | `godot --path . -- main mock` |
 | `?debug`, `#floor5-debug`, `?nofx`, `?nodebug` in the URL | the same words after `--`, or in the address on the web build |
 | `npm test` | `godot --headless --path . -s res://tests/run_tests.gd` |
 | `npm run crawler:scenarios`, `crawler:social` | `cli/scenarios.gd`, `cli/social_scenarios.gd` |
