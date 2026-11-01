@@ -15,3 +15,5 @@ __pycache__/
 !/build/.gdignore
 /config/jev_config.json
 *.translation
+
+/native/dist/

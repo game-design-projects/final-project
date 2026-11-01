@@ -8,6 +8,8 @@
 #                                          # (openrouter.ai/settings/keys). This is how the itch.io and release builds ship.
 #   tools/build.sh --proxy https://halls-of-jev-api.<you>.workers.dev [platforms...]
 #                                          # Jev via your Worker (proxy/), which holds the key: nothing secret ships
+# Each desktop build carries its system's speech helper from native/dist/<platform>/ (native/asr/build.sh); without
+# it that build has no hold-to-talk, and this script says so.
 # GODOT points at the Godot 4.7 binary (default: godot on PATH), with export templates installed for it.
 # The key is written into config/jev_config.json only for the export and removed afterwards; it is never committed.
 set -euo pipefail
@@ -59,6 +61,9 @@ for p in "${platforms[@]}"; do
   rm -rf "$out" "$zip"
   mkdir -p "$out"
   echo "== $p (preset $preset) -> $out/$file"
+  if [[ $p != web && ! -s native/dist/$p/VERSION ]]; then
+    echo "   no speech helper in native/dist/$p: this build won't hear the player (native/asr/build.sh $p)" >&2
+  fi
   "$GODOT" --headless --path . --export-release "$preset" "$out/$file"
   [[ -s "$out/$file" ]] || { echo "export for $p produced no $out/$file" >&2; exit 1; }
   if [[ $p == macos ]]; then

@@ -19,6 +19,8 @@ boot_splash/minimum_display_time=0
 
 [audio]
 
+driver/enable_input=true
+driver/enable_input.web=false
 general/text_to_speech=true
 
 [autoload]

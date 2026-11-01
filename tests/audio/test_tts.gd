@@ -142,9 +142,9 @@ func test_a_cancelled_line_ending_late_doesnt_lift_the_duck_from_under_the_next_
 	n.free()
 
 
-func test_the_default_engine_matches_what_the_system_offers():
+func test_the_system_voice_is_offered_exactly_when_the_system_has_one():
 	var n := Tts.Narrator.new({"store": StoreScript.Memory.new({"donjon.tts": "on"})})
-	eq(n.supported, DisplayServer.has_feature(DisplayServer.FEATURE_TEXT_TO_SPEECH))
+	eq(n.order.has("system"), DisplayServer.has_feature(DisplayServer.FEATURE_TEXT_TO_SPEECH))
 	if not n.supported:
 		eq(n.say("Hello.", "slime"), null)
 	n.free()

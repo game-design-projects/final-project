@@ -1,11 +1,15 @@
-## Monsters read their lines aloud with the system's text to speech (DisplayServer.tts_*; on the web build that is the
-## browser's speechSynthesis: Chrome, Edge, Safari). Off by default, and on by itself once you've talked to the game
-## with your voice (hold Space): someone speaking to the monsters wants to hear them answer. L turns it on or off for good.
-## The pure parts (speakable, pickVoice, ttsOn) are tested without any speech engine.
+## Monsters read their lines aloud. Off by default, and on by itself once you've talked to the game with your voice
+## (hold Space): someone speaking to the monsters wants to hear them answer. The voices are pluggable
+## (tts_engines.gd): lines rendered ahead of time with CosyVoice3 (the Feiyu stack) or Qwen3-TTS, a Feiyu or Qwen3-TTS
+## service on your network, or the system's text to speech (DisplayServer.tts_*; on the web build the browser's
+## speechSynthesis). L steps through the ones this build has, then off, and the choice is kept (tts_config.gd says
+## which there are). The pure parts (speakable, line_key, pick_voice, tts_on) are tested without any speech engine.
 ## Load it with `const Tts = preload("res://src/audio/tts.gd")` and use `Tts.Narrator`.
 extends RefCounted
 
 const Self = preload("res://src/audio/tts.gd")
+const Engines = preload("res://src/audio/tts_engines.gd")
+const TtsConfig = preload("res://src/audio/tts_config.gd")
 
 # Each kind of monster sounds like itself: pitch 0..2 and rate 0.1..10 as DisplayServer.tts_speak takes them
 const VOICES := {
@@ -51,6 +55,11 @@ static func speakable(line) -> String:
 	return s.strip_edges()
 
 
+## What a rendered line is filed under: the words said, lower case, single spaces (tts_engines.gd Bank)
+static func line_key(text) -> String:
+	return _spaces.sub(speakable(text).to_lower(), " ", true).strip_edges()
+
+
 ## Monster lines are English: pick an English voice, preferring local ones (no network) and the better
 ## engines' voices; species with a deep voice prefer a male-sounding name when the system offers one.
 ## A voice is {name, lang (or language), localService (assumed true when missing), ...}; null if none is English.
@@ -88,10 +97,12 @@ static func tts_on(opts := {}) -> bool:
 
 
 ## One line being spoken: what DisplayServer.tts_speak is given, and what to do as it starts and ends.
-## `voice` is one of the dictionaries pick_voice returned (or null: the engine's default voice).
+## `voice` is one of the dictionaries pick_voice returned (or null: the engine's default voice); `species` is who
+## speaks (the rendered banks and the services pick the monster's voice by it).
 class Utterance:
 	extends RefCounted
 	var text := ""
+	var species = null
 	var voice = null
 	var lang := "en-US"
 	var pitch := 1.0
@@ -155,11 +166,15 @@ class DisplayServerSynth:
 
 class Narrator:
 	extends Node
-	## opts: `synth` (get_voices / speak / cancel; null means no speech; default: the system's), `store` (get_item /
+	## opts: `synth` (one engine: get_voices / speak / cancel; null means no speech), or `engines` (the lineup L steps
+	## through: {order: [ids], make: Callable(id) -> engine}; default: what tts_config.gd finds), `store` (get_item /
 	## set_item: Store, or Store.Memory in tests), `onDuck` (Callable(on: bool)): called with true when a monster starts
 	## speaking and false once it (and any line right after) is done. Speech can't go louder than the engine's full
 	## volume, so the music and effects make room instead.
 	var synth = null
+	var order: Array = []  # engine ids, in the order L steps through them
+	var engine := ""  # the one speaking
+	var _make := Callable()
 	var store = null
 	var on_duck := Callable()
 	var queued := 0  # lines waiting or being spoken
@@ -167,12 +182,65 @@ class Narrator:
 	var gen := 0  # bumped by hush(): late events from cancelled lines are ignored
 
 	func _init(opts := {}) -> void:
-		if opts.has("synth"):
-			synth = opts["synth"]
-		elif DisplayServerSynth.available():
-			synth = DisplayServerSynth.new()
 		store = opts.get("store")
 		on_duck = opts.get("onDuck", Callable())
+		if opts.has("synth"):
+			synth = opts["synth"]
+			order = ["default"] if synth != null else []
+			engine = "default" if synth != null else ""
+			return
+		var lineup: Dictionary = opts["engines"] if opts.has("engines") else _lineup()
+		order = lineup.order
+		_make = lineup.make
+		var saved = store.get_item("donjon.ttsEngine") if store != null else null
+		use(saved if saved != null and order.has(saved) else (order[0] if not order.is_empty() else ""))
+
+	## What tts_config.gd finds, made into engines that share one player (a child of this node)
+	func _lineup() -> Dictionary:
+		var cfg := TtsConfig.resolve()
+		for w in cfg.warnings:
+			push_warning(w)
+		var player := Engines.Player.new()
+		player.name = "Speech"
+		add_child(player)
+		var made := {}
+		var make_one := func(id: String):
+			if made.has(id):
+				return made[id]
+			var e = null
+			if cfg.banks.has(id):
+				e = Engines.Bank.open(cfg.banks[id], player)
+			elif id == "feiyu":
+				e = Engines.Feiyu.new(cfg.feiyu, player)
+			elif id == "qwen":
+				e = Engines.Qwen.new(cfg.qwen, player)
+			elif id == "system":
+				e = DisplayServerSynth.new()
+			made[id] = e
+			return e
+		# The chosen engine first; a rendered bank falls back to the live services; anything to the system's voice
+		var make := func(id: String):
+			var list := [make_one.call(id)]
+			if cfg.banks.has(id):
+				for live in ["feiyu", "qwen"]:
+					if cfg.order.has(live):
+						list.append(make_one.call(live))
+			if id != "system" and cfg.order.has("system"):
+				list.append(make_one.call("system"))
+			return Engines.Chain.new(list.filter(func(e): return e != null))
+		print_verbose("tts: engines %s" % ", ".join(cfg.order))
+		return {"order": cfg.order, "make": make}
+
+	## Speak with this engine from now on
+	func use(id: String) -> void:
+		if synth != null:
+			synth.cancel()
+		engine = id
+		synth = _make.call(id) if id != "" and _make.is_valid() else null
+
+	var label: String:
+		get:
+			return TtsConfig.label(engine)
 
 	var supported: bool:
 		get:
@@ -192,10 +260,21 @@ class Narrator:
 		if store != null:
 			store.set_item("donjon.usedVoice", "1")
 
+	## L: off -> the first engine -> the next... -> off (with one engine, simply on and off). True when it's on.
 	func toggle() -> bool:
 		var next := "off" if on else "on"
+		var i := order.find(engine)
+		if on and i >= 0 and i + 1 < order.size():
+			next = "on"
+			hush()
+			use(order[i + 1])
+		elif next == "off" and not order.is_empty() and order[0] != engine:
+			hush()
+			use(order[0])  # back to the first one, for next time
 		if store != null:
 			store.set_item("donjon.tts", next)
+			if engine != "" and engine != "default":
+				store.set_item("donjon.ttsEngine", engine)
 		if next == "off":
 			hush()
 		return next == "on"
@@ -209,6 +288,7 @@ class Narrator:
 			hush()
 		var u := Utterance.new()
 		u.text = words
+		u.species = species
 		var voice = Self.pick_voice(synth.get_voices(), species)
 		if voice != null:
 			u.voice = voice
@@ -232,7 +312,7 @@ class Narrator:
 		u.onend = finished
 		u.onerror = finished
 		synth.speak(u)
-		print_verbose("tts: %s \"%s\"" % [species if species != null else "?", words])
+		print_verbose("tts (%s): %s \"%s\"" % [engine, species if species != null else "?", words])
 		return u
 
 	## Stop at once (e.g. while the microphone listens, so the game doesn't hear itself)

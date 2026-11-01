@@ -1,12 +1,14 @@
-## Hold to talk: the browser's built-in speech recognition (Web Speech API) turns what you say into the words
-## you'd otherwise type to a monster. Chrome, Edge and Safari have it; the web build reaches it through
-## JavaScriptBridge. Everywhere else (the desktop builds, Firefox) `supported` is false and the game just keeps
-## the text box (the ui hides the mic button).
+## Hold to talk: speech recognition turns what you say into the words you'd otherwise type to a monster.
+## The desktop builds hear you on your own machine (asr.gd: sherpa-onnx and NVIDIA's Nemotron streaming model in a
+## helper program, the model a one-time download). The web build uses the browser's own (Web Speech API, through
+## JavaScriptBridge: Chrome, Edge, Safari). Where there is neither (Firefox, a build without the helper) `supported` is
+## false and the game just keeps the text box (the ui hides the mic button).
 ## Load it with `const Voice = preload("res://src/audio/voice.gd")` and use `Voice.Listener`.
 extends RefCounted
 
 const Self = preload("res://src/audio/voice.gd")
 const J = preload("res://src/core/js.gd")
+const Asr = preload("res://src/audio/asr.gd")
 
 ## How long a key must be held before it means "listen" rather than a tap
 const HOLD_MS := 280
@@ -15,12 +17,15 @@ static var _spaces := RegEx.create_from_string("\\s+")
 
 
 ## The recognizer class (anything with `.new()` giving a Recognition: see Listener), or null if there is none.
-## `win` is a Dictionary standing in for `window` (tests); by default, the browser's, on the web build.
+## `win` is a Dictionary standing in for `window` (tests); by default, the browser's on the web build, and the
+## native helper (asr.gd) on a desktop build that carries it.
 static func recognizer(win = null):
 	if win is Dictionary:
 		return J.nz(win.get("SpeechRecognition"), win.get("webkitSpeechRecognition"))
-	if OS.has_feature("web") and WebRecognition.available():
-		return WebRecognition
+	if OS.has_feature("web"):
+		return WebRecognition if WebRecognition.available() else null
+	if Asr.NativeRecognition.available():
+		return Asr.NativeRecognition
 	return null
 
 
@@ -117,11 +122,13 @@ class Listener:
 	## One listening session at a time: start() resolves with the words heard (possibly "") once you stop,
 	## or null if it was cancelled or speech isn't supported. onText gets the words so far as they come in.
 	## opts: `Recognition` (a class with .new() giving a Recognition, see WebRecognition; default: Voice.recognizer()),
-	## `lang`, `onText` (Callable(String)), `onError` (Callable(String)).
+	## `lang`, `onText` (Callable(String)), `onError` (Callable(String)), `onStatus` (Callable(String): news from the
+	## native recognizer for the log, e.g. its model finished downloading).
 	var recognition = null
 	var lang := "en-US"
 	var on_text := Callable()
 	var on_error := Callable()
+	var on_status := Callable()
 	var rec = null
 	var _session: Dictionary = {}
 
@@ -133,6 +140,9 @@ class Listener:
 			lang = WebRecognition.page_language()
 		on_text = opts.get("onText", Callable())
 		on_error = opts.get("onError", Callable())
+		on_status = opts.get("onStatus", Callable())
+		if native:
+			Asr.NativeRecognition.rt().said.connect(_on_status)  # a method: let go of when this node is freed
 
 	var supported: bool:
 		get:
@@ -141,6 +151,24 @@ class Listener:
 	var listening: bool:
 		get:
 			return rec != null
+
+	var native: bool:
+		get:
+			return recognition == Asr.NativeRecognition
+
+	## Before start(): "" when it can listen now, otherwise what to tell the player instead (the native recognizer
+	## may need its model first: the first try offers the one-time download, the next starts it)
+	func prepare() -> String:
+		return Asr.NativeRecognition.rt().prepare() if native else ""
+
+	## Get the recognizer going ahead of the first words (the native one takes seconds to load its model)
+	func warm() -> void:
+		if native:
+			Asr.NativeRecognition.rt().warm()
+
+	func _on_status(text: String) -> void:
+		if on_status.is_valid():
+			on_status.call(text)
 
 	func start():
 		if recognition == null:
