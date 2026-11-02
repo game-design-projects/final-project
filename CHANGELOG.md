@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-01
+
 ### Changed
 - Genre Halls walks in the 3D set: the camera glides cell to cell and bumps walls, torches light the corridor, and the monsters you can see are 3D models standing in their cells with their genre over their heads. Fights stay the flat battle screen; the `flat` flag keeps the old 2D corridor.
 
