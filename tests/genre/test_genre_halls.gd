@@ -734,3 +734,45 @@ func test_the_view_keeps_its_size_through_every_mode():
 	win.size = was
 	for k in seen:
 		eq(seen[k], base, "%s: %s vs %s" % [k, seen[k], base])
+
+
+func test_walking_is_the_3d_set_and_a_fight_is_the_flat_battle_screen():
+	_start()
+	ok(scene.stage != null, "the 3D set is there")
+	await _draw_frame()
+	ok(scene.stage.visible, "walking shows it")
+	eq(scene.stage._map, scene.G.map, "built from the floor's map")
+	var x: int = scene.G.x
+	var y: int = scene.G.y
+	var spot = scene.stage._goal
+	eq([spot.x, spot.y, spot.dir], [x, y, scene.G.dir], "the camera stands where the party does")
+	# a monster in view stands in the 3D set: stand next to one, facing it
+	var m: Dictionary = scene.G.map.monsters[0]
+	for i in 4:
+		var d: Array = Render.DIRS[i]
+		if scene._open(m.x - d[0], m.y - d[1]):
+			scene.G.x = m.x - d[0]
+			scene.G.y = m.y - d[1]
+			scene.G.dir = i
+			break
+	await _draw_frame()
+	ok(scene.monsters_in_view().any(func(v): return is_same(v.m, m)), "the monster is in view")
+	ok(scene.stage._wild.size() >= 1, "and stands in the 3D set")
+	scene.start_encounter(m)
+	await _draw_frame()
+	ok(not scene.stage.visible, "a fight is drawn flat")
+	scene.explore()
+	await _draw_frame()
+	ok(scene.stage.visible, "and the corridor comes back")
+
+
+func test_the_flat_flag_keeps_the_old_2d_corridor():
+	Flags.override = "nosound flat"
+	scene = SCENE.instantiate()
+	scene.clock_override = 1000.0
+	_tree().root.add_child(scene)
+	scene.set_process(false)
+	scene.on_key("Enter")
+	ok(scene.stage == null, "no 3D set with `flat`")
+	await _draw_frame()
+	eq(scene.G.mode, "explore")
