@@ -644,11 +644,25 @@ func step(forward: int) -> void:
 
 
 ## The monsters you can see, far to near: [{ m, d, k }] (d cells ahead, k to the right). That includes the ones
-## diagonal to you, down a side opening, not only the one straight ahead.
+## diagonal to you, down a side opening, not only the one straight ahead. With the 3D set it is what the camera
+## sees (its field of view, a clear line over the floor); the flat corridor keeps the old six-cell rule.
 func monsters_in_view() -> Array:
 	var out := []
+	var sight := {}
+	var by_camera: bool = stage != null and stage.placed()
+	if by_camera:
+		for c in stage.sight(G.map.grid, G.x, G.y):
+			sight[Vector2i(c[0], c[1])] = true
 	for m in G.map.monsters:
 		if J.truthy(m.gone):
+			continue
+		if by_camera:
+			if not sight.has(Vector2i(m.x, m.y)):
+				continue
+			var f: Array = Render.DIRS[G.dir]
+			var dx: int = m.x - G.x
+			var dy: int = m.y - G.y
+			out.append({"m": m, "d": dx * f[0] + dy * f[1], "k": dx * -f[1] + dy * f[0]})
 			continue
 		var slot = Render.slot_of(G.map, G.x, G.y, G.dir, m.x, m.y)
 		if slot != null:
@@ -1385,21 +1399,34 @@ func _draw_walk_3d(ctx, t: float) -> void:
 	stage.use_map(G.map)
 	stage.place(G.x, G.y, G.dir, t)
 	stage.light(t)
-	for c in Render.visible_cells(G.map, G.x, G.y, G.dir):
+	for c in stage.sight(G.map.grid, G.x, G.y):
 		G.seen[c[1] * G.map.n + c[0]] = true
+	# Every monster still on the floor stands in its cell (the walls hide the ones you can't see); the name tags are
+	# only for the ones the camera sees, fading with distance like the lines
 	var list := []
-	var seen_now := monsters_in_view()
-	for v in seen_now:
-		var m: Dictionary = v.m
-		list.append({"id": G.map.monsters.find(m), "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y})
+	for i in G.map.monsters.size():
+		var m: Dictionary = G.map.monsters[i]
+		if J.truthy(m.gone):
+			continue
+		list.append({"id": i, "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y})
 	stage.show_wanderers(list, t)
+	var seen_now := monsters_in_view()
 	ctx.font = '8px "Press Start 2P", monospace'
 	ctx.text_align = "center"
-	for v in seen_now:
+	var placed := [] # tag rects already painted, nearest first: a farther monster's tag that would overlap one is left out
+	for i in range(seen_now.size() - 1, -1, -1):
+		var v: Dictionary = seen_now[i]
 		var m: Dictionary = v.m
 		var at := stage.wanderer_tag(m.x, m.y)
-		ctx.fill_style = BOSS_COLOR if m.boss else Species.SPECIES[m.species].color
-		ctx.fill_text("CHAMPION" if m.boss else Rules.GENRES[m.genre].name, at.x, at.y)
+		var label: String = "CHAMPION" if m.boss else Rules.GENRES[m.genre].name
+		var rect := Rect2(at.x - label.length() * 4.0, at.y - 8.0, label.length() * 8.0, 8.0).grow(5.0) # (the text, with room around it)
+		if placed.any(func(r): return r.intersects(rect)):
+			continue
+		placed.append(rect)
+		var tint := Color.html(BOSS_COLOR if m.boss else Species.SPECIES[m.species].color)
+		tint.a = clampf(1.15 - float(v.d) * 0.16, 0.35, 1.0)
+		ctx.fill_style = tint
+		ctx.fill_text(label, at.x, at.y)
 	ctx.text_align = "left"
 
 

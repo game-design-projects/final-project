@@ -63,6 +63,14 @@ func _pump(ms: float, seen := {}) -> void:
 			await _draw_frame()
 
 
+## Let the camera finish its glide or swing, then draw
+func _settle() -> void:
+	scene.clock_override += 5000.0
+	await _draw_frame() # the camera starts moving now (its clock is the drawing's)
+	scene.clock_override += 5000.0
+	await _draw_frame()
+
+
 func _draw_frame() -> void:
 	scene._view_canvas.queue_redraw()
 	scene._map_canvas.queue_redraw()
@@ -639,6 +647,7 @@ func test_a_monster_diagonal_to_you_is_in_the_view():
 	eq([seen[0].d, seen[0].k], [1, 1])
 	await _draw_frame()
 	scene.G.dir = 2 # turned away: nothing in view
+	await _settle() # (the camera swings round first, and sight is what the camera sees)
 	eq(scene.monsters_in_view().size(), 0)
 
 
@@ -755,7 +764,7 @@ func test_walking_is_the_3d_set_and_a_fight_is_the_flat_battle_screen():
 			scene.G.y = m.y - d[1]
 			scene.G.dir = i
 			break
-	await _draw_frame()
+	await _settle()
 	ok(scene.monsters_in_view().any(func(v): return is_same(v.m, m)), "the monster is in view")
 	ok(scene.stage._wild.size() >= 1, "and stands in the 3D set")
 	scene.start_encounter(m)

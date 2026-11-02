@@ -12,12 +12,13 @@ uniform vec4 torches[MAX_TORCHES];               // xyz: a flame; w: how bright 
 uniform vec3 torch_color = vec3(1.0, 0.7, 0.28);
 uniform float cell = 2.0;                        // world units per cell (Dungeon3D.CELL)
 uniform float eye_back = 0.43;                   // how far behind your cell's near edge the camera is, in cells
+uniform float fade_floor = 0.15;                 // the dimmest a line gets far away (monsters standing on the way stay readable)
 
 // How bright a line is at world position `p` seen from `cam`: render.gd's _fog, by the cells between the near edge
 // of your cell and the point
 float line_fade(vec3 p, vec3 cam) {
 	float z = max(0.0, length(cam - p) / cell - eye_back);
-	return clamp(1.15 - z * 0.16, 0.15, 1.0);
+	return clamp(1.15 - z * 0.16, fade_floor, 1.0);
 }
 
 // The torches' glow at `p`: the accent at a third at the flame, falling off to nothing a little over half a wall away

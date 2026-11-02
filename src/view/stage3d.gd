@@ -51,7 +51,12 @@ const FIGHT_SIDE_ROOM := 0.8
 const MAX_TORCHES := 10
 ## A monster standing in its cell (show_wanderers): its size, and how high above the floor its name tag floats
 const WILD_SCALE := 0.92
+## Their lines fade with distance only down to this (the walls' floor is 0.15), so a monster down a long corridor shows
+const WILD_FADE_FLOOR := 0.55
 const WILD_TAG_H := 1.55
+## Where in a cell sight() looks (the middle and near the corners), in cells from its middle
+const SIGHT_SAMPLES := [Vector2(0, 0), Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)]
+const WILD_TAG_GAP := 0.12 ## and its tag floats this far above the head
 ## Line widths, in the view's pixels: art.gd's monsters, render.gd's decorations
 const MONSTER_LINE := 2.5
 const PROP_LINE := 1.5
@@ -83,6 +88,8 @@ var _shake := Vector2.ZERO
 var _fighters := {}
 var _wild := {} # the monsters standing in their cells (show_wanderers), by key
 var _wild_root: Node3D
+var _sight: Array = []
+var _sight_key := 0
 var _boss = null
 
 
@@ -118,6 +125,7 @@ func _init() -> void:
 	_mats.ceiling = _material(STONE_SHADER, {"kind": 2})
 	_mats.ink_props = _material(INK_SHADER, {"ink_px": PROP_LINE})
 	_mats.ink_monsters = _material(INK_SHADER, {"ink_px": MONSTER_LINE})
+	_mats.ink_wild = _material(INK_SHADER, {"ink_px": MONSTER_LINE, "fade_floor": WILD_FADE_FLOOR})
 	_mats.props = _material(FILL_SHADER)
 	_mats.props.next_pass = _mats.ink_props
 	_mats.flames = ShaderMaterial.new()
@@ -146,6 +154,13 @@ func _share(key: String, value) -> void:
 func monster_material() -> ShaderMaterial:
 	var m := _material(FILL_SHADER)
 	m.next_pass = _mats.ink_monsters
+	return m
+
+
+## The material of a monster standing on the way: like monster_material, but its lines stay readable from far
+func wild_material() -> ShaderMaterial:
+	var m := _material(FILL_SHADER, {"fade_floor": WILD_FADE_FLOOR})
+	m.next_pass = _mats.ink_wild
 	return m
 
 
@@ -443,10 +458,13 @@ func show_wanderers(list: Array, t: float) -> void:
 		keep[key] = true
 		var model = _wild.get(key)
 		if model == null:
-			model = Monsters3D.build(e.species, e.look, monster_material())
+			model = Monsters3D.build(e.species, e.look, wild_material())
+			model.set_meta("top", _top_of(model, Transform3D.IDENTITY))
 			_wild[key] = model
 			_wild_root.add_child(model)
 		var at := Dungeon3D.cell_center(e.x, e.y)
+		model.set_meta("cell", Vector2i(int(e.x), int(e.y)))
+		model.set_meta("tag", at + Vector3(0, float(model.get_meta("top")) * WILD_SCALE + WILD_TAG_GAP, 0))
 		model.position = at
 		var to_cam := camera.transform.origin - at
 		model.rotation = Vector3(0, atan2(to_cam.x, to_cam.z), 0)
@@ -458,9 +476,70 @@ func show_wanderers(list: Array, t: float) -> void:
 			_wild.erase(key)
 
 
-## Where a standing monster's name tag goes: a point above its head, in the view's coordinates
+## Whether the camera has been put somewhere yet (before that it has no pose to see from)
+func placed() -> bool:
+	return _goal != null
+
+
+## The floor cells the camera can see, as [x, y]: some part of the cell (its middle or a point near each corner, at
+## eye height) is inside the camera's real view (its field of view, not a fixed number of cells), and a straight ray
+## from the middle of the party's cell reaches it over open floor only. Kept while the camera stays where it is.
+func sight(grid: Array, px: int, py: int) -> Array:
+	if not camera.is_inside_tree() or _goal == null:
+		return []
+	var key := hash([px, py, snappedf(_pos.x, 0.01), snappedf(_pos.z, 0.01), snappedf(_yaw, 0.001), snappedf(_pitch, 0.001), grid.size()])
+	if key == _sight_key:
+		return _sight
+	_sight_key = key
+	_sight = []
+	var from := Vector2((px + 0.5) * Dungeon3D.CELL, (py + 0.5) * Dungeon3D.CELL)
+	for cy in grid.size():
+		for cx in grid[cy].size():
+			if grid[cy][cx] != 1:
+				continue
+			if cx == px and cy == py:
+				_sight.append([cx, cy])
+				continue
+			for o in SIGHT_SAMPLES:
+				var p := Vector3((cx + 0.5 + o.x) * Dungeon3D.CELL, EYE_H, (cy + 0.5 + o.y) * Dungeon3D.CELL)
+				if camera.is_position_in_frustum(p) and _ray_clear(grid, from, Vector2(p.x, p.z)):
+					_sight.append([cx, cy])
+					break
+	return _sight
+
+
+# A straight line over the floor plan that never enters a wall cell
+static func _ray_clear(grid: Array, a: Vector2, b: Vector2) -> bool:
+	var n := maxi(1, ceili(a.distance_to(b) / 0.25))
+	for i in range(1, n):
+		var p := a.lerp(b, float(i) / n)
+		var cx := floori(p.x / Dungeon3D.CELL)
+		var cy := floori(p.y / Dungeon3D.CELL)
+		if cy < 0 or cy >= grid.size() or cx < 0 or cx >= grid[cy].size() or grid[cy][cx] != 1:
+			return false
+	return true
+
+
+## Where a standing monster's name tag goes: a point just above its head, in the view's coordinates
 func wanderer_tag(x: int, y: int) -> Vector2:
+	for model in _wild.values():
+		if model.get_meta("cell", Vector2i(-1, -1)) == Vector2i(x, y):
+			return project(model.get_meta("tag"))
 	return project(Dungeon3D.cell_center(x, y) + Vector3(0, WILD_TAG_H, 0))
+
+
+# The highest point of a model, in its own units (a model's parts are meshes under transformed nodes)
+static func _top_of(node: Node3D, parent: Transform3D) -> float:
+	var best := 0.0
+	var here := parent * node.transform
+	if node is MeshInstance3D and node.mesh != null:
+		var bb: AABB = node.mesh.get_aabb()
+		for i in 8:
+			best = maxf(best, (here * bb.get_endpoint(i)).y)
+	for c in node.get_children():
+		if c is Node3D:
+			best = maxf(best, _top_of(c, here))
+	return best
 
 
 # A model leaves the stage, and its material stops taking the shared light
