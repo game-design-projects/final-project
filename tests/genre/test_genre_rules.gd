@@ -150,8 +150,9 @@ func test_mercy_grows_with_friendliness_and_shrinks_with_anger_pressure_is_a_0_3
 	ok(mercy.call({"anger": 80}) < mercy.call({"anger": 10}))
 	for meters in [{"anger": 0, "friendliness": 100}, {"anger": 100, "friendliness": 0}, {}]:
 		var p = Rules.ask_pressure(_monster("dragon", meters))
+		eq(p.type, "pressure", "pressure is a deterministic combat value")
 		ok(p.score >= 0 and p.score <= 3)
-		ok(absf(_sum(p.probabilities) - 1.0) < 1e-9)
+		ok(not p.has("probabilities"), "no odds are reported for an unrolled score")
 	ok(Rules.ask_pressure(_monster("dragon", {"anger": 100, "friendliness": 0})).score > Rules.ask_pressure(_monster("dragon", {"anger": 0, "friendliness": 100})).score)
 
 

@@ -1,7 +1,7 @@
 ## DONJON: Genre Halls. Exploration is DONJON's wireframe maze; encounters switch into an Undertale-style box where each
 ## faction attacks in its own genre (chess, shadow, rhythm, goo rain), all with one rule: lit squares hurt.
-## FIGHT / ACT / SPARE / FLEE. The monster's mind answers Jev-shaped questions (choice / score / yes-no with
-## probabilities); here a local stand-in answers them. The rules live in genre_rules.gd; this file draws and plays.
+## FIGHT / ACT / SPARE / FLEE. The monster's mind answers Jev-shaped questions (choice and yes/no with
+## probabilities, or a fixed pressure score); here a local stand-in answers them. The rules live in genre_rules.gd.
 ## Port of crawler/public/genre-halls.js + genre-halls.html.
 ##
 ## Launch:  godot --path .   (the main menu starts it: src/menu/main_menu.tscn; `-- meet=slime` goes straight to a fight)
@@ -58,9 +58,7 @@ const C_WARN := "#ff5a4a"
 const C_YOU := "#8fd3ff"
 const C_MERCY := "#ffd27a"
 
-const SPARE_TIP := "Spare a monster and it may ask to join. Allies ride along as passive charms, and they leave if you cross their values."
-const SPARE_TIP_READY := "It looks ready to stop. " + SPARE_TIP
-const SPARE_TIP_NOT_READY := "It isn't ready yet. " + SPARE_TIP
+const SPARE_TIP := "Acceptance is a roll at any odds. Gold marks a 50%+ chance, not a guarantee. A spared monster may join as a passive charm."
 
 const SAY_H := 66 ## the log: 3 lines of 20px
 const SLOT_H := 74 ## the commands (two rows of 34) or the talk box
@@ -496,6 +494,10 @@ func _question(q: Dictionary) -> Control:
 		if a.has("yes"):
 			label += " → YES" if a.yes else " → NO"
 		bars.add_child(_bar_row(label, a.noul, true))
+	elif a.type == "pressure":
+		var note := _rich(_term, 17, C_INK)
+		note.text = "Pressure %.2f / 3 sets the next dodge's pace." % a.score
+		bars.add_child(note)
 	else:
 		for k in a.probabilities:
 			bars.add_child(_bar_row("LEVEL %s" % k, a.probabilities[k], J.round_js(a.score) == int(k)))
@@ -507,9 +509,17 @@ func _bar_row(label: String, p: float, pick: bool) -> Control:
 	row.label = label
 	row.p = p
 	row.pick = pick
-	row.pct = "%d%%" % J.round_js(p * 100.0)
+	row.pct = chance_label(p)
 	row.font = _term
 	return row
+
+
+static func chance_label(p: float) -> String:
+	if p > 0.0 and p < 0.01:
+		return "<1%"
+	if p < 1.0 and p > 0.99:
+		return ">99%"
+	return "%d%%" % J.round_js(p * 100.0)
 
 
 # ---------------------------------------------------------------- dock (text + menu)
@@ -796,7 +806,7 @@ func main_menu(msg := "") -> void:
 		[
 			{"label": "FIGHT", "sub": "Time the strike", "run": func(): fight_bar()},
 			{"label": "ACT", "sub": "Say or do something", "run": func(): act_menu()},
-			{"label": "SPARE", "sub": SPARE_TIP_READY if mercy >= 0.5 else SPARE_TIP_NOT_READY, "gold": mercy >= 0.5, "run": func(): spare()},
+			{"label": "SPARE", "sub": "%s chance to accept. %s" % [chance_label(mercy), SPARE_TIP], "gold": mercy >= 0.5, "run": func(): spare()},
 			{"label": "FLEE", "sub": "Champions block the way" if m.boss else "Back away", "run": func(): flee()},
 		],
 		kbd("↑") + kbd("↓") + " CHOOSE " + kbd("ENTER") + " PICK " + kbd("1") + "-" + kbd("4"),
@@ -856,6 +866,17 @@ func decide(m: Dictionary, act, act_label: String, words = null) -> Dictionary:
 	return {"em": em, "id": feeling.choice, "pressure": pressure.score, "pacified": Emotions.PACIFYING.has(em.get("cond"))}
 
 
+## The shared emotion descriptions include D&D conditions that this mode does not use.
+## Report the meter changes Genre Halls actually applies; after_player reports a skipped attack.
+static func genre_effect(em: Dictionary) -> String:
+	var changes := []
+	for k in ["friendliness", "anger", "fear"]:
+		var amount: float = em.get("meters", {}).get(k, 0)
+		if amount != 0:
+			changes.append("%s %s" % [k, "rises" if amount > 0 else "falls"])
+	return "; ".join(changes) if not changes.is_empty() else "its mood shifts"
+
+
 func do_act(act: Dictionary) -> void:
 	var m: Dictionary = G.foe
 	if m.species in ["bandit", "snake"] and act.intent == "gold":
@@ -864,7 +885,7 @@ func do_act(act: Dictionary) -> void:
 	var r := decide(m, [{"intent": act.intent, "w": 1}], act.label)
 	judge(act.intent)
 	_sfx_play("good" if r.em.tone == "good" else ("bad" if r.em.tone == "bad" else "odd"))
-	after_player("%s %s is %s: %s." % [sys("You %s." % esc(act.label.to_lower())), esc(m.name), bold(r.em.label), esc(r.em.effect.to_lower())], r)
+	after_player("%s %s is %s: %s." % [sys("You %s." % esc(act.label.to_lower())), esc(m.name), bold(r.em.label), genre_effect(r.em)], r)
 
 
 func offer_cut(m: Dictionary, act: Dictionary, words = null) -> void:
@@ -935,43 +956,76 @@ func say_text(text: String) -> void:
 		else:
 			var reason := "It guards its secrets" if m.traits.has("secretive") else ("It keeps watching the exit" if m.traits.has("jumpy") else "It does not trust you yet")
 			extra = "\n" + sys(reason + " and gives no answer.")
-	var message := sys("You ask a question.") + " " + esc(m.name) + " is " + bold(r.em.label) + "." + extra if asked else "%s %s is %s: %s.%s" % [sys('You say "%s".' % esc(text)), esc(m.name), bold(r.em.label), esc(r.em.effect.to_lower()), extra]
+	var message := sys("You ask a question.") + " " + esc(m.name) + " is " + bold(r.em.label) + "." + extra if asked else "%s %s is %s: %s.%s" % [sys('You say "%s".' % esc(text)), esc(m.name), bold(r.em.label), genre_effect(r.em), extra]
 	after_player(message, r, not asked)
 
 
 # Facts come from this run's map and living monsters. The stair direction is the first walkable step,
 # not a compass bearing through a wall.
+static func _has_question_term(q: String, terms: Array) -> bool:
+	for term in terms:
+		if q.contains(" " + term + " "):
+			return true
+	return false
+
+
 func hint_for(m: Dictionary, question := "") -> String:
-	var q: String = question.to_lower()
-	if q == "" or "stair" in q or "exit" in q or "way out" in q:
+	var words_re := RegEx.create_from_string("[^a-z0-9]+")
+	var q: String = " " + words_re.sub(question.to_lower(), " ", true).strip_edges() + " "
+	var asks_stairs := q == "  " or _has_question_term(q, ["stair", "stairs", "exit", "way out"])
+	var asks_champion := _has_question_term(q, ["champion", "boss", "dragon", "vexalith"])
+	if asks_stairs and asks_champion:
+		return "...ask about the stairs or the champion, one at a time."
+	var names := []
+	for o in G.map.monsters:
+		var name: String = words_re.sub(str(o.name).to_lower(), " ", true)
+		if q.contains(" " + name + " "):
+			names.append(o)
+	if names.size() > 1:
+		return "...which monster do you mean?"
+	var species_matches := []
+	for o in G.map.monsters:
+		if q.contains(" " + str(o.species) + " "):
+			species_matches.append(o)
+	var asks_other := q.contains(" another monster ") or q.contains(" other monster ")
+	if asks_stairs and (not names.is_empty() or not species_matches.is_empty() or asks_other):
+		return "...ask about one thing at a time."
+	if asks_stairs:
+		if q != "  " and not _has_question_term(q, ["where", "way", "direction", "path", "route", "find", "reach"]) and q.strip_edges() not in ["stair", "stairs", "exit", "way out"]:
+			return "...ask which way the stairs lie."
 		if G.x == G.map.stairs.x and G.y == G.map.stairs.y:
 			return "...you are standing on the stairs."
 		return "...from here, take the corridor %s toward the stairs." % _stairs_step()
 	var champion: Dictionary = G.map.monsters.back()
-	if "champion" in q or "boss" in q or "dragon" in q or "vexalith" in q:
+	if asks_champion:
+		if (not names.is_empty() and not is_same(names[0], champion)) or species_matches.any(func(o): return not is_same(o, champion)) or asks_other:
+			return "...ask about one monster at a time."
+		if not _has_question_term(q, ["opening", "openings", "genre", "genres", "attack", "attacks", "fight", "fights", "pattern", "patterns"]) and q.strip_edges() not in ["champion", "boss", "dragon", "vexalith"]:
+			return "...ask about the champion's opening genres."
 		if champion.gone != null:
 			return "...the champion has already fallen."
 		return "...%s starts with %s, then shifts to %s." % [champion.name, Rules.GENRES[Rules.BOSS.genres[0]].name.to_lower(), Rules.GENRES[Rules.BOSS.genres[1]].name.to_lower()]
 	var target: Dictionary = {}
-	var named_gone := false
-	for o in G.map.monsters:
-		if o.species in q or o.name.to_lower() in q:
-			if J.truthy(o.gone):
-				named_gone = true
-				break
-			if is_same(o, m):
-				return "...you can see how I behave for yourself."
-			target = o
-			break
-	if named_gone:
-		return "...that monster is gone from this floor."
-	if target.is_empty():
+	if not names.is_empty():
+		target = names[0]
+	else:
+		if species_matches.size() > 1:
+			return "...which %s do you mean?" % species_matches[0].species
+		if not species_matches.is_empty():
+			target = species_matches[0]
+	if target.is_empty() and asks_other:
 		for o in G.map.monsters:
 			if not J.truthy(o.gone) and not is_same(o, m):
 				target = o
 				break
 	if target.is_empty():
-		return "...I know no one else left on this floor."
+		return "...I know no one else left on this floor." if asks_other else "...ask me about the stairs, the champion, or another monster."
+	if J.truthy(target.gone):
+		return "...that monster is gone from this floor."
+	if is_same(target, m):
+		return "...you can see how I behave for yourself."
+	if not _has_question_term(q, ["want", "wants", "like", "likes", "dislike", "dislikes", "hate", "hates", "fear", "fears", "weakness", "trait", "traits", "behave", "behavior", "about", "avoid", "avoids"]) and not asks_other and q.strip_edges() not in [str(target.name).to_lower(), str(target.species)]:
+		return "...ask what %s wants or avoids." % target.name
 	var worst: String = Rules.ACTS[target.species][0].intent
 	for a in Rules.ACTS[target.species]:
 		if Rules.aff(target, a.intent) < Rules.aff(target, worst):
@@ -1113,8 +1167,8 @@ func _fill_ally_tip(box: VBoxContainer, i: int) -> void:
 	row.font = _term
 	box.add_child(row)
 	var note := _rich(_term, 16, C_DIM)
-	var cares: String = str(Species.SPECIES[a.species].values).split(".")[0].to_lower()
-	note.text = "%s. Cares about: %s." % [esc(c.text), esc(cares)]
+	note.text = "%s. Cares about: %s" % [esc(c.text), esc(Species.SPECIES[a.species].values)]
+	note.text += "\nA refused gold offer may still affect loyalty; only an accepted offer spends gold."
 	box.add_child(note)
 
 
@@ -1153,7 +1207,7 @@ func strike(t: float) -> void:
 	var r := decide(m, "fight", "YOU HIT IT")
 	if begging:
 		judge("slay_begging")
-	after_player("%s %s is %s: %s." % [sys("%s%d damage." % ["A perfect strike! " if crit else "", dmg]), esc(m.name), bold(r.em.label), esc(r.em.effect.to_lower())], r)
+	after_player("%s %s is %s: %s." % [sys("%s%d damage." % ["A perfect strike! " if crit else "", dmg]), esc(m.name), bold(r.em.label), genre_effect(r.em)], r)
 
 
 func spare() -> void:
@@ -1170,7 +1224,7 @@ func spare() -> void:
 	_sfx_play("bad")
 	var r := {"pressure": Rules.ask_pressure(m).score, "pacified": false}
 	m.meters.anger = clampf(m.meters.anger + 4, 0, 100)
-	after_player("%s %s isn't ready to stop. (%d%% it would have)" % [sys("You offer mercy."), esc(m.name), J.round_js(mercy.noul * 100.0)], r)
+	after_player("%s %s refuses mercy. (%s chance to accept)" % [sys("You offer mercy."), esc(m.name), chance_label(mercy.noul)], r)
 
 
 func flee() -> void:
@@ -1420,7 +1474,7 @@ func update_dodge(t: float) -> void:
 	if t >= D.end:
 		D = null
 		G.foe.turn += 1
-		main_menu(sys("%s pauses. %s" % [esc(G.foe.name), "It looks ready to stop." if spareable(G.foe) else "What now?"]))
+		main_menu(sys("%s pauses. %s" % [esc(G.foe.name), "Mercy odds are at least 50%." if spareable(G.foe) else "What now?"]))
 
 
 func move_soul(dc: int, dr: int) -> void:
@@ -1628,7 +1682,7 @@ func draw_foe(ctx, t: float, small: bool) -> void:
 	var can_spare: bool = not J.truthy(m.gone) and spareable(m)
 	ctx.font = '8px "Press Start 2P", monospace'
 	ctx.fill_style = "#ffd27a" if can_spare else "#e8e8e8"
-	ctx.fill_text(str(m.name) + ("  (SPAREABLE)" if can_spare else ""), 12, 20)
+	ctx.fill_text(str(m.name) + ("  (MERCY 50%+)" if can_spare else ""), 12, 20)
 	ctx.fill_style = "#2e2e33"
 	ctx.fill_rect(12, 26, 120, 6)
 	ctx.fill_style = "#ff5a4a" if float(m.hp) / m.maxHp < 0.4 else "#9ed36b"
@@ -2362,7 +2416,7 @@ class AllyChip:
 		draw_string(font, Vector2(24, size.y / 2.0 + 4.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("#ff5a4a") if warn else Color("#e8e8e8"))
 
 
-## A command button: [> ] number label. Its help (`sub`) is the tooltip; `gold` lights the label (SPARE, when it would work)
+## A command button: [> ] number label. Its help (`sub`) is the tooltip; `gold` lights SPARE at 50%+ mercy odds.
 class MenuItem:
 	extends Control
 	signal picked(i: int)

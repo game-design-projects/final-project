@@ -511,16 +511,7 @@ static func ask_pressure(m: Dictionary) -> Dictionary:
 	var anger: float = m.meters.anger
 	var fear: float = m.meters.fear
 	var raw: float = clamp_num((anger * 1.2 - f * 0.5 - fear * 0.4 + 45.0) / 30.0 + _motive_shift(m, "pressure", str(m.get("lastIntent", ""))), 0.0, 3.0)
-	var levels := []
-	var s := 0.0
-	for i in 4:
-		var v := exp(-pow(i - raw, 2) * 1.6)
-		levels.append(v)
-		s += v
-	var probs := {}
-	for i in 4:
-		probs[str(i)] = levels[i] / s
-	return {"type": "score", "score": raw, "probabilities": probs}
+	return {"type": "pressure", "score": raw}
 
 
 static func apply_feeling(m: Dictionary, id: String) -> Dictionary:

@@ -5,6 +5,7 @@ extends "res://tests/test_case.gd"
 const Flags = preload("res://src/core/flags.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
 const Render = preload("res://src/view/render.gd")
+const Emotions = preload("res://src/rules/emotions.gd")
 const SCENE = preload("res://src/genre/genre_halls.tscn")
 const Settings = preload("res://src/menu/settings.gd")
 const MemoryStore = preload("res://src/core/store.gd").Memory
@@ -432,6 +433,34 @@ func test_recruiting_the_first_bandit_makes_a_later_gold_offer_cost_loyalty():
 	ok(scene.last_mind.answers.any(func(row): return str(row.id).begins_with("judge-")), "the ally judges the offer")
 	ok(scene.G.allies[0].loyalty < old_loyalty, "offering gold to another monster strains the recruited bandit")
 	ok(scene.last_say.contains(scene.G.allies[0].name), "the ally's objection reaches the player")
+func test_genre_emotion_feedback_reports_applied_meters_instead_of_dnd_conditions():
+	_start("slime")
+	await _pump(800.0)
+	for id in Emotions.EMOTIONS:
+		var em: Dictionary = Emotions.EMOTIONS[id]
+		var feedback: String = scene.genre_effect(em)
+		ok(not feedback.contains("advantage") and not feedback.contains("damage") and not feedback.contains("gold"), "%s: %s" % [id, feedback])
+		for meter in em.meters:
+			ok(feedback.contains("%s %s" % [meter, "rises" if em.meters[meter] > 0 else "falls"]), "%s: %s" % [id, feedback])
+	scene.on_key("2")
+	scene.on_key("3") # OFFER COMFORT
+	var feeling: String = scene.last_mind.answers[0].a.choice
+	ok(scene.last_say.contains(scene.genre_effect(Emotions.EMOTIONS[feeling])), scene.last_say)
+
+
+func test_pressure_tooltip_shows_the_fixed_value_used_for_the_next_dodge():
+	_start("bandit")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	var pressure: Dictionary = Rules.ask_pressure(m)
+	eq(pressure.type, "pressure")
+	ok(not pressure.has("probabilities"))
+	var row: Dictionary = {"id": "pressure", "label": "HOW HARD DOES IT ATTACK?", "a": pressure}
+	var display: Control = scene._question(row)
+	ok(display.get_child(1).get_child(0).text.contains("%.2f / 3" % pressure.score))
+	display.queue_free()
+	scene.start_dodge(pressure.score)
+	ok(is_equal_approx(scene.D.intensity, 0.8 + 0.25 * pressure.score))
 
 
 func test_a_bandits_personality_changes_the_next_chess_dodge():
@@ -488,6 +517,34 @@ func test_questions_reveal_floor_facts_and_personality_can_withhold_them():
 	scene.submit_talk("Where are the stairs?")
 	ok(scene.last_say.contains("guards its secrets") and not scene.last_say.contains("corridor"), scene.last_say)
 	ok(secretive.spoke)
+
+
+func test_question_targeting_prefers_exact_names_and_rejects_ambiguous_or_unknown_topics():
+	_start("slime")
+	var speaker: Dictionary = scene.G.foe
+	var rook: Dictionary = scene.G.map.monsters[1]
+	var vex: Dictionary = scene.G.map.monsters[2]
+	rook.name = "ROOK"
+	rook.gone = "spared"
+	vex.name = "VEX"
+	vex.species = "bandit"
+	var answer: String = scene.hint_for(speaker, "What does bandit VEX want?")
+	ok(answer.contains("VEX") and not answer.contains("gone"), answer)
+	ok(scene.hint_for(speaker, "What does the bandit want?").contains("which bandit"))
+	ok(scene.hint_for(speaker, "ROOK or VEX?").contains("which monster"))
+	ok(scene.hint_for(speaker, "Where are the stairs or the champion?").contains("one at a time"))
+	ok(scene.hint_for(speaker, "Where are the stairs or the bandit?").contains("one thing at a time"))
+	ok(scene.hint_for(speaker, "Where is VEX?").contains("ask what VEX wants"))
+	ok(scene.hint_for(speaker, "Are the stairs dangerous?").contains("ask which way"))
+	ok(scene.hint_for(speaker, "What does the champion want?").contains("opening genres"))
+	var unknown: String = scene.hint_for(speaker, "Who are you?")
+	ok(unknown.contains("ask me about") and not unknown.contains("uneasy"), unknown)
+	await _pump(800.0)
+	scene.interaction_roll_override = 0.0
+	scene.on_key("2")
+	scene.on_key("5")
+	scene.submit_talk("Who are you?")
+	ok(scene.last_say.contains("ask me about") and not scene.last_say.contains("uneasy"), scene.last_say)
 
 
 func _distance_to_stairs(start: Vector2i) -> int:
@@ -561,6 +618,25 @@ func test_rejected_and_unaffordable_cuts_keep_gold_and_do_not_spare():
 	ok(scene.last_say.contains("You have 5"), scene.last_say)
 
 
+func test_ally_tooltip_warns_that_a_refused_offer_can_cost_loyalty_but_not_gold():
+	_start("bandit")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	m.traits = ["jumpy"]
+	m.taste = Rules.TRAIT_TASTE.jumpy.duplicate()
+	scene.interaction_roll_override = 0.99
+	scene.G.allies = [{"species": "bandit", "name": "ROOK", "loyalty": 70.0}]
+	scene.render_party()
+	scene._show_tip("ally0", Rect2(), true)
+	var note: String = scene._tip_body.get_child(2).text
+	ok(note.contains("gold given away to monsters") and note.contains("refused gold offer"), note)
+	scene._hide_tip()
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 8)
+	ok(scene.G.allies[0].loyalty < 70.0)
+
+
 func test_typed_gold_offer_uses_the_same_real_bargain():
 	_start("bandit")
 	await _pump(800.0)
@@ -627,7 +703,7 @@ func test_mercy_refused_costs_a_round_and_a_champion_cannot_be_fled():
 	m.meters.friendliness = 0.0
 	m.meters.anger = 100.0
 	scene.on_key("3")
-	ok(scene.last_say.contains("isn't ready to stop."), scene.last_say)
+	ok(scene.last_say.contains("refuses mercy") and scene.last_say.contains("chance to accept"), scene.last_say)
 	await _pump(5000.0)
 	for i in 20:
 		if scene.G.mode == "dodge":
@@ -942,6 +1018,8 @@ func test_the_text_box_has_an_hp_bar_and_the_automap_steps_aside_in_a_fight():
 func test_spare_turns_gold_when_it_would_work_and_its_tooltip_explains_charms():
 	_start("slime")
 	await _pump(800.0)
+	eq(scene.chance_label(0.001), "<1%")
+	eq(scene.chance_label(0.999), ">99%")
 	var m: Dictionary = scene.G.foe
 	m.meters.friendliness = 100.0
 	m.meters.anger = 0.0
@@ -949,11 +1027,12 @@ func test_spare_turns_gold_when_it_would_work_and_its_tooltip_explains_charms():
 	scene.main_menu()
 	eq(scene.G.menu[2].label, "SPARE")
 	ok(scene.G.menu[2].gold, "ready to stop: SPARE is gold")
-	ok(scene.G.menu[2].sub.contains("passive charms"), scene.G.menu[2].sub)
+	ok(scene.G.menu[2].sub.contains("chance to accept") and scene.G.menu[2].sub.contains("not a guarantee"), scene.G.menu[2].sub)
 	m.meters.friendliness = 0.0
 	m.meters.anger = 100.0
 	scene.main_menu()
 	ok(not scene.G.menu[2].gold, "not ready: plain")
+	ok(scene.G.menu[2].sub.contains("Acceptance is a roll at any odds"), scene.G.menu[2].sub)
 	# the help is a tooltip, not text on the button or the log
 	ok(not scene._tip.visible)
 	scene._on_menu_hover(2, true)
@@ -1085,3 +1164,67 @@ func test_the_music_follows_the_fight_and_the_stairs():
 	eq(m.log.back(), "mood:explore")
 	s.ending()
 	eq(m.log.back(), "sting:fanfare")
+
+
+func test_slice_retry_restores_each_encounter_and_player_state():
+	_start()
+	scene.G.maxHp = 20
+	scene.start_personality_slice(7042)
+	for encounter in 2:
+		var foe: Dictionary = scene.G.foe
+		var original: Dictionary = foe.duplicate(true)
+		var hp: int = scene.G.hp
+		var gold: int = scene.G.gold
+		foe.meters.anger = 99.0
+		foe.traits = ["changed"]
+		foe.hp = 1
+		scene.G.gold = 0
+		scene.G.hp = 0
+		scene.dead()
+		scene.retry_fight()
+		eq(foe, original, "retry restores the actual foe")
+		eq(scene.G.hp, hp)
+		eq(scene.G.gold, gold)
+		if encounter == 0:
+			await _pump(800.0)
+			scene.on_key("2")
+			scene.on_key("2")
+			scene.on_key("Enter")
+			eq(scene.G.foe.name, "VEX")
+
+
+func test_slice_normal_hp_offer_then_flee_and_cleanup():
+	_start()
+	scene.G.maxHp = 20
+	scene.start_personality_slice(7042)
+	eq(scene.G.hp, 20)
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 6)
+	scene.on_key("Enter")
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 6)
+	await _pump(6300.0)
+	print("normal HP offer route after VEX attack: %d HP" % scene.G.hp)
+	if scene.G.hp > 0:
+		scene.flee()
+		eq(scene.G.mode, "explore")
+		eq(scene.interaction_roll_override, -1.0)
+	else:
+		ok(false, "normal HP route died before fleeing")
+
+
+func test_slice_override_clears_on_restart_and_load():
+	_start()
+	scene.start_personality_slice(7042)
+	var saved: Dictionary = scene.export_state().duplicate(true)
+	scene.new_run()
+	eq(scene.interaction_roll_override, -1.0)
+	ok(scene.slice_next.is_empty())
+	scene.start_personality_slice(7042)
+	ok(scene.import_state(saved))
+	eq(scene.interaction_roll_override, -1.0)
+	ok(scene.slice_next.is_empty())
