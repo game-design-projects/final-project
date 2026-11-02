@@ -327,3 +327,15 @@ func test_the_title_blinks_its_prompt():
 	eq(on.ops.count("fill_text"), 2)
 	eq(off.ops.count("fill_text"), 1)
 	eq(on.ops.count("stroke_rect"), 6, "five receding frames and the title box")
+
+
+func test_slot_of_sees_the_cell_diagonal_to_you_and_not_one_behind_a_wall():
+	var room := map_of(["#####", "#...#", "#...#", "#...#", "#####"])
+	eq(Render.slot_of(room, 1, 3, N, 1, 1), {"d": 2, "k": 0}) # straight ahead
+	eq(Render.slot_of(room, 1, 3, N, 2, 2), {"d": 1, "k": 1}) # diagonal: one ahead, one to the right
+	eq(Render.slot_of(room, 2, 3, N, 1, 1), {"d": 2, "k": -1}) # two ahead, one to the left
+	ok(Render.slot_of(room, 1, 3, N, 1, 3) == null, "your own cell")
+	ok(Render.slot_of(room, 2, 2, N, 2, 3) == null, "behind you")
+	ok(Render.slot_of(room, 1, 3, N, 2, 3) == null, "beside you, off the side of the screen")
+	var walled := map_of(["###", "#.#", "#.#", "###", "#.#"])
+	ok(Render.slot_of(walled, 1, 4, N, 1, 1) == null, "behind a wall")

@@ -15,12 +15,17 @@ All notable changes to this project are documented here. The format follows [Kee
 - Godot MCP (github.com/Coding-Solo/godot-mcp, 0.1.1) for AI agents, in Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`): both start it through `tools/godot-mcp/run.sh`, which installs the pinned package with `npm ci` on first use. Agents can run the game, read its output and edit scenes.
 
 ### Fixed
+- Monsters diagonal to you, down a side opening, are drawn in the corridor view (only the one straight ahead was).
 - Letting go of Space right after your last word no longer cuts it off ("Insolent morsel" came back "Insol"): the speech helper listens half a second past the end before it finishes. `native/asr/smoke.py` checks it, and paces its spoken test by the clock.
 - Talking before listening has started no longer loses your first word ("Know your place" came back "Your place"): the helper starts each utterance with 0.3 s of quiet. `smoke.py` checks it on `native/asr/testdata/know_your_place.wav`.
 
 ### Changed
 - **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
 - The macOS build asks for the microphone (it has the usage description and audio-input entitlement). Godot's microphone input is on in every build but the web one.
+- Genre Halls fills the window as one framed screen with far less text (Pear's playtest): the view scales to the free space, the sidebar (automap legend, party, Jev mind) is gone, and the text box under the view holds an HP bar, a three-line log and the commands, at a fixed height so the view never resizes.
+- Help moved into tooltips: a command's help on hover (SPARE turns gold when it would work, and its tooltip explains allies and charms), an ally chip's charm and loyalty, the monster's mind (what it seems like, feelings, last two answers) when you hover it in a fight, and the automap's monster colors. The highlighted command shows its tooltip when you use the keys.
+- The automap loses its title and legend and sits in the view's corner while exploring; it steps aside in a fight. Opening and exploring messages are shorter.
+- The game opens in Genre Halls (`run/main_scene` is `genre_halls.tscn`, so `godot --path .`, the exported builds and the web page start there). The original Donjon is Esc on the Genre Halls title card, or the new `main` flag (`godot --path . -- main mock floor5`); the title card now says so.
 
 ## [0.3.0] - 2026-10-29
 

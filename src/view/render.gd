@@ -247,6 +247,21 @@ static func visible_cells(map: Dictionary, x: int, y: int, dir: int) -> Array:
 	return out
 
 
+## Where a floor cell falls in the view: {d, k} (d cells ahead, k to the right: the numbers the corridor faces use), or
+## null when its middle can't be seen (behind you, off the side of the screen, or behind a wall). The cell straight
+## ahead and the ones diagonal to it both count.
+static func slot_of(map: Dictionary, x: int, y: int, dir: int, cx: int, cy: int) -> Variant:
+	var f: Array = DIRS[dir]
+	var r: Array = DIRS[(dir + 1) % 4]
+	var d: int = (cx - x) * f[0] + (cy - y) * f[1]
+	var k: int = (cx - x) * r[0] + (cy - y) * r[1]
+	if d < 1 or d > VIEW or absi(k) > REACH:
+		return null
+	if not _sees(map["grid"], x, y, dir, k, d + 0.5):
+		return null
+	return {"d": d, "k": k}
+
+
 static func _sees(grid: Array, x: int, y: int, dir: int, tx: float, tz: float) -> bool:
 	if absf(tx) > (0.5 * (EYE + tz)) / EYE:
 		return false # off the side of the screen

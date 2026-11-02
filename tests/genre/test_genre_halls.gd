@@ -108,7 +108,7 @@ func test_the_title_starts_a_floor_with_five_monsters_and_the_page_text():
 	scene.on_key("x") # any key starts (x is Esc on the other screens)
 	eq(scene.G.mode, "explore")
 	eq(scene.G.map.monsters.size(), 5)
-	ok(scene.last_say.contains("B1F. Four kinds of monster hold this floor"), scene.last_say)
+	ok(scene.last_say.contains("B1F. Find the stairs."), scene.last_say)
 	await _draw_frame()
 
 
@@ -538,6 +538,27 @@ func test_escape_on_the_title_and_the_route_screen_goes_back_when_there_is_a_mai
 	eq(scene.G.mode, "explore", "no main scene: Esc is just a key")
 
 
+func test_the_project_starts_in_the_genre_halls_and_the_main_game_is_one_escape_away():
+	eq(ProjectSettings.get_setting("application/run/main_scene"), "res://src/genre/genre_halls.tscn", "Genre Halls is the startup scene")
+	ok(ResourceLoader.exists(scene_path_of_main()), "the main game stays reachable (Esc on the title)")
+	eq(preload("res://src/genre/genre_halls.gd").TITLE_HINT, "ESC: THE ORIGINAL DONJON", "the title says how to get to it")
+
+
+func test_the_main_flag_asks_for_the_main_game_and_nothing_else_does():
+	var Halls = preload("res://src/genre/genre_halls.gd")
+	for yes in ["main", "main mock", "mock main debug", "--main", "?main&nofx", "#main", "floor5 main"]:
+		Flags.override = yes
+		ok(Halls.wants_main(), "'%s' asks for the main game" % yes)
+	for no in ["", "mock", "meet=rock", "--only=ui/main", "domain", "main_menu", "floor5-debug"]:
+		Flags.override = no
+		ok(not Halls.wants_main(), "'%s' stays in the Genre Halls" % no)
+	Flags.override = null
+
+
+func scene_path_of_main() -> String:
+	return preload("res://src/genre/genre_halls.gd").MAIN_SCENE
+
+
 func test_with_the_real_sfx_the_fight_makes_its_sounds():
 	Flags.override = "" # sound on
 	_start("rock")
@@ -589,3 +610,113 @@ func test_a_spared_monster_can_join_and_shows_in_the_party():
 	for sp in ["slime", "bandit", "snake", "rock", "dragon"]:
 		scene.G.foe = _monster(sp)
 		ok(scene.hint_for(scene.G.foe).begins_with("..."))
+
+
+func test_a_monster_diagonal_to_you_is_in_the_view():
+	_start()
+	scene.G.map = {"grid": [[0, 0, 0, 0, 0], [0, 1, 1, 1, 0], [0, 1, 1, 1, 0], [0, 1, 1, 1, 0], [0, 0, 0, 0, 0]], "n": 5, "stairs": {"x": 3, "y": 3}, "monsters": [_monster("slime")], "palette": scene.G.map.palette, "seed": 1}
+	scene.G.map.monsters[0].x = 2
+	scene.G.map.monsters[0].y = 2
+	scene.G.x = 1
+	scene.G.y = 3
+	scene.G.dir = 0
+	var seen: Array = scene.monsters_in_view()
+	eq(seen.size(), 1)
+	eq([seen[0].d, seen[0].k], [1, 1])
+	await _draw_frame()
+	scene.G.dir = 2 # turned away: nothing in view
+	eq(scene.monsters_in_view().size(), 0)
+
+
+func test_the_text_box_has_an_hp_bar_and_the_automap_steps_aside_in_a_fight():
+	_start()
+	scene.G.hp = 5
+	scene.G.maxHp = 20
+	scene.hud()
+	ok(scene._hp.text.contains("5/20"), scene._hp.text)
+	eq(scene._hp_bar.hp, 5)
+	eq(scene._hp_bar.max_hp, 20)
+	ok(scene._map_panel.visible, "the map shows while exploring")
+	scene.meet("slime")
+	ok(not scene._map_panel.visible, "and steps aside in a fight")
+
+
+func test_spare_turns_gold_when_it_would_work_and_its_tooltip_explains_charms():
+	_start("slime")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	m.meters.friendliness = 100.0
+	m.meters.anger = 0.0
+	m.meters.fear = 0.0
+	scene.main_menu()
+	eq(scene.G.menu[2].label, "SPARE")
+	ok(scene.G.menu[2].gold, "ready to stop: SPARE is gold")
+	ok(scene.G.menu[2].sub.contains("passive charms"), scene.G.menu[2].sub)
+	m.meters.friendliness = 0.0
+	m.meters.anger = 100.0
+	scene.main_menu()
+	ok(not scene.G.menu[2].gold, "not ready: plain")
+	# the help is a tooltip, not text on the button or the log
+	ok(not scene._tip.visible)
+	scene._on_menu_hover(2, true)
+	ok(scene._tip.visible)
+	eq(scene._tip_key, "menu2")
+	scene._on_menu_hover(2, false)
+	ok(not scene._tip.visible)
+	# the keys light the highlighted command's tooltip too
+	scene.move_sel(1)
+	scene.move_sel(1)
+	ok(scene._tip.visible, "keyboard: the highlighted SPARE shows its help")
+	scene.on_key("1")
+	ok(not scene._tip.visible, "a new screen starts without one")
+	scene.queue_free()
+
+
+func test_the_foe_tooltip_holds_the_mind_and_allies_are_chips_with_a_tooltip():
+	_start("slime")
+	await _pump(800.0)
+	scene._show_tip("foe", Rect2(), true)
+	ok(scene._tip.visible)
+	ok(scene._tip_body.get_child_count() >= 3, "name, feelings and the questions")
+	scene._hide_tip()
+	eq(scene._chips.get_child_count(), 0)
+	scene.G.allies = [{"name": "PIP", "species": "slime", "loyalty": 20.0}]
+	scene.render_party()
+	eq(scene._chips.get_child_count(), 1)
+	ok(scene._chips.get_child(0).warn, "about to leave: red")
+	scene._on_chip_hover(true, 0)
+	ok(scene._tip.visible)
+	scene._on_chip_hover(false, 0)
+	ok(not scene._tip.visible)
+
+
+func test_the_view_keeps_its_size_through_every_mode():
+	var win := _tree().root
+	var was := win.size
+	win.size = Vector2i(1180, 820) # the game's own window: tall enough that the height is what limits the view
+	_start()
+	await _tree().process_frame
+	await _tree().process_frame
+	var base: Vector2 = scene._view_rect.size
+	ok(base.x > 400.0 and base.y > 250.0, "the view fills the window: %s" % base)
+	scene.G.allies = [{"name": "PIP", "species": "bandit", "loyalty": 50.0}]
+	scene.render_party()
+	scene.meet("slime")
+	await _pump(800.0)
+	var seen := {"menu": scene._view_rect.size}
+	scene.on_key("2") # ACT: more commands, maybe a second row
+	await _tree().process_frame
+	await _tree().process_frame
+	seen["act"] = scene._view_rect.size
+	scene.on_key("Enter") # CHECK: a long log
+	await _tree().process_frame
+	await _tree().process_frame
+	seen["log"] = scene._view_rect.size
+	scene.on_key("2")
+	scene.on_key(str(scene.G.menu.size())) # SAY SOMETHING: the talk box
+	await _tree().process_frame
+	await _tree().process_frame
+	seen["talk"] = scene._view_rect.size
+	win.size = was
+	for k in seen:
+		eq(seen[k], base, "%s: %s vs %s" % [k, seen[k], base])

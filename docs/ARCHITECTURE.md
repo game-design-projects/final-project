@@ -83,7 +83,7 @@ Nothing is a sound file except the music and the monster lines rendered ahead (`
 
 ## Genre Halls
 
-A separate scene (`genre_halls.tscn`, one `Control` with `genre_halls.gd`) that reuses `Render`, `Art`, `Species`, `Emotions`, `Sfx` and `PostFx` but not `game.gd`. `genre_rules.gd` has the factions, the floor, the monster's local "mind", word reading and the box geometry, with no UI. `genre_halls.gd` draws and runs the fight on a clock: `tick(t)` advances it to time `t` (`_process` feeds it the real clock; tests set `clock_override` and call `on_key(key)`).
+The project's startup scene (`run/main_scene` in `project.godot`; Esc on its title or route screen, or the `main` flag, changes to `src/ui/main.tscn`, and the main game's `G` key or `genre-halls` flag comes back). One `Control` with `genre_halls.gd` that reuses `Render`, `Art`, `Species`, `Emotions`, `Sfx` and `PostFx` but not `game.gd`. `genre_rules.gd` has the factions, the floor, the monster's local "mind", word reading and the box geometry, with no UI. `genre_halls.gd` draws and runs the fight on a clock (its screen is one framed column that fills the window: top line, the 448×288 view scaled to the free space in an `AspectRatioContainer`, and a fixed-height text box with the HP bar, log and commands; the automap and ally chips are overlays on the view; the one tooltip, `_tip`, shows a command's help, an ally, the map's colors or the foe's mind, built only when it opens): `tick(t)` advances it to time `t` (`_process` feeds it the real clock; tests set `clock_override` and call `on_key(key)`).
 
 ## Testing
 
