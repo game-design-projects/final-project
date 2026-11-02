@@ -49,6 +49,9 @@ const FEET_MARGIN := 3.0
 ## How far from the middle of the corridor a monster to the side may stand
 const FIGHT_SIDE_ROOM := 0.8
 const MAX_TORCHES := 10
+## A monster standing in its cell (show_wanderers): its size, and how high above the floor its name tag floats
+const WILD_SCALE := 0.92
+const WILD_TAG_H := 1.55
 ## Line widths, in the view's pixels: art.gd's monsters, render.gd's decorations
 const MONSTER_LINE := 2.5
 const PROP_LINE := 1.5
@@ -78,6 +81,8 @@ var _pitch := 0.0
 var _shake := Vector2.ZERO
 ## The models on stage: fight monsters by id, the champion
 var _fighters := {}
+var _wild := {} # the monsters standing in their cells (show_wanderers), by key
+var _wild_root: Node3D
 var _boss = null
 
 
@@ -105,6 +110,9 @@ func _init() -> void:
 	_fight_root = Node3D.new()
 	_fight_root.name = "Fight"
 	add_child(_fight_root)
+	_wild_root = Node3D.new()
+	_wild_root.name = "Wild"
+	add_child(_wild_root)
 	_mats.walls = _material(STONE_SHADER, {"kind": 0})
 	_mats.floor = _material(STONE_SHADER, {"kind": 1})
 	_mats.ceiling = _material(STONE_SHADER, {"kind": 2})
@@ -423,6 +431,36 @@ func show_fight(list: Array, t: float) -> void:
 		if not keep.has(key):
 			_drop(_fighters[key])
 			_fighters.erase(key)
+
+
+## The monsters standing in their cells along the way (Genre Halls shows the ones in view): `list` is
+## [{id, species, look, x, y}], each turned toward the camera. Models are kept by id and rebuilt only when a
+## monster's species or look changes; walls hide the ones behind them like anything else.
+func show_wanderers(list: Array, t: float) -> void:
+	var keep := {}
+	for e in list:
+		var key := "%s|%s|%s" % [e.species, JSON.stringify(e.look), e.id]
+		keep[key] = true
+		var model = _wild.get(key)
+		if model == null:
+			model = Monsters3D.build(e.species, e.look, monster_material())
+			_wild[key] = model
+			_wild_root.add_child(model)
+		var at := Dungeon3D.cell_center(e.x, e.y)
+		model.position = at
+		var to_cam := camera.transform.origin - at
+		model.rotation = Vector3(0, atan2(to_cam.x, to_cam.z), 0)
+		model.scale = Vector3.ONE * WILD_SCALE
+		Monsters3D.pose(model, t, 0.0)
+	for key in _wild.keys():
+		if not keep.has(key):
+			_drop(_wild[key])
+			_wild.erase(key)
+
+
+## Where a standing monster's name tag goes: a point above its head, in the view's coordinates
+func wanderer_tag(x: int, y: int) -> Vector2:
+	return project(Dungeon3D.cell_center(x, y) + Vector3(0, WILD_TAG_H, 0))
 
 
 # A model leaves the stage, and its material stops taking the shared light

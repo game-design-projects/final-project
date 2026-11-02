@@ -24,6 +24,7 @@ const Canvas2D = preload("res://src/view/canvas2d.gd")
 const Render = preload("res://src/view/render.gd")
 const Art = preload("res://src/view/art.gd")
 const Postfx = preload("res://src/view/postfx.gd")
+const Stage3D = preload("res://src/view/stage3d.gd")
 const SfxModule = preload("res://src/audio/sfx.gd")
 const Species = preload("res://src/rules/species.gd")
 const Emotions = preload("res://src/rules/emotions.gd")
@@ -108,6 +109,7 @@ var _applied_hash := 0
 
 # UI nodes
 var _view_vp: SubViewport
+var stage: Stage3D ## the dungeon as a 3D set drawn as lines (null with the `flat` flag: the old 2D corridor)
 var _view_canvas: DrawArea
 var _view_rect: TextureRect
 var _map_panel: PanelContainer
@@ -627,6 +629,8 @@ func step(forward: int) -> void:
 	if not _open(nx, ny):
 		_sfx_play("bump")
 		_shake(160.0)
+		if stage != null:
+			stage.bump(now())
 		return
 	var m = monster_at(nx, ny)
 	if m != null:
@@ -1325,6 +1329,8 @@ func _paint_map(canvas: Control) -> void:
 
 
 func draw_frame(ctx, t: float) -> void:
+	if stage != null and G.mode != "explore" and G.mode != "end":
+		stage.visible = false # the title and the battle screen are drawn flat
 	ctx.save()
 	if t < G.shake:
 		ctx.translate((randf() - 0.5) * 6.0, (randf() - 0.5) * 6.0)
@@ -1338,10 +1344,13 @@ func draw_frame(ctx, t: float) -> void:
 		ctx.fill_text(TITLE_HINT, W / 2.0, H * 0.82)
 		ctx.text_align = "left"
 	elif G.mode == "explore" or G.mode == "end":
-		var seen: Array = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
-		for c in seen:
-			G.seen[c[1] * G.map.n + c[0]] = true
-		draw_monsters_in_view(ctx, t)
+		if stage != null:
+			_draw_walk_3d(ctx, t)
+		else:
+			var seen: Array = Render.draw_corridor(ctx, G.map, G.x, G.y, G.dir, t)
+			for c in seen:
+				G.seen[c[1] * G.map.n + c[0]] = true
+			draw_monsters_in_view(ctx, t)
 	elif G.foe != null:
 		Render.clear(ctx)
 		if G.mode == "dodge" and D != null:
@@ -1367,6 +1376,31 @@ func draw_frame(ctx, t: float) -> void:
 			ctx.fill_style = Color(1.0, 90 / 255.0, 74 / 255.0, 0.25)
 			ctx.fill_rect(0, 0, W, H)
 	ctx.restore()
+
+
+## Walking: the corridor is the 3D set (the camera glides to each cell), the monsters you can see stand in their
+## cells, and their name tags are painted over it. Fights are the battle screen, drawn flat below.
+func _draw_walk_3d(ctx, t: float) -> void:
+	stage.visible = true
+	stage.use_map(G.map)
+	stage.place(G.x, G.y, G.dir, t)
+	stage.light(t)
+	for c in Render.visible_cells(G.map, G.x, G.y, G.dir):
+		G.seen[c[1] * G.map.n + c[0]] = true
+	var list := []
+	var seen_now := monsters_in_view()
+	for v in seen_now:
+		var m: Dictionary = v.m
+		list.append({"id": G.map.monsters.find(m), "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y})
+	stage.show_wanderers(list, t)
+	ctx.font = '8px "Press Start 2P", monospace'
+	ctx.text_align = "center"
+	for v in seen_now:
+		var m: Dictionary = v.m
+		var at := stage.wanderer_tag(m.x, m.y)
+		ctx.fill_style = BOSS_COLOR if m.boss else Species.SPECIES[m.species].color
+		ctx.fill_text("CHAMPION" if m.boss else Rules.GENRES[m.genre].name, at.x, at.y)
+	ctx.text_align = "left"
 
 
 func draw_monsters_in_view(ctx, t: float) -> void:
@@ -1815,10 +1849,16 @@ func _build_ui() -> void:
 	# The 448x288 view: Canvas2D drawing in a SubViewport, shown scaled up
 	_view_vp = SubViewport.new()
 	_view_vp.size = Vector2i(W, H)
-	_view_vp.disable_3d = true
+	_view_vp.disable_3d = Flags.test("flat")
+	_view_vp.own_world_3d = true
+	_view_vp.msaa_3d = Viewport.MSAA_4X
 	_view_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_view_vp.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	add_child(_view_vp)
+	if not _view_vp.disable_3d:
+		stage = Stage3D.new()
+		stage.visible = false
+		_view_vp.add_child(stage)
 	_view_canvas = DrawArea.new()
 	_view_canvas.painter = _paint_view
 	_view_canvas.custom_minimum_size = Vector2(W, H)

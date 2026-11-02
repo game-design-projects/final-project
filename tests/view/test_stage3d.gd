@@ -223,3 +223,24 @@ func test_the_title_is_a_lit_corridor_and_the_map_builds_once():
 	stage.title(1700.0)
 	ok(not stage.camera.transform.is_equal_approx(a), "the camera breathes")
 	ok(stage._set_root.get_child_count() >= 3, "walls, floor and ceiling")
+
+
+func test_wanderers_stand_in_their_cells_facing_you_and_leave_when_out_of_view():
+	var map := map_of(["#######", "#.....#", "#######"], {"seed": 3})
+	stage.use_map(map)
+	stage.place(1, 1, 1, 0.0)
+	var slime := {"id": 0, "species": "slime", "look": {}, "x": 4, "y": 1}
+	var champ := {"id": 1, "species": "dragon", "look": {"color": "#ff5a4a"}, "x": 5, "y": 1}
+	stage.show_wanderers([slime, champ], 0.0)
+	eq(stage._wild_root.get_child_count(), 2)
+	for m in stage._wild_root.get_children():
+		near(m.scale.x, Stage3D.WILD_SCALE, 1e-6)
+	var at: Vector3 = stage._wild_root.get_child(0).position
+	ok(at.is_equal_approx(Dungeon3D.cell_center(4, 1)), "in the middle of its cell")
+	var model = stage._wild_root.get_child(0)
+	stage.show_wanderers([slime, champ], 100.0)
+	ok(stage._wild_root.get_child(0) == model, "the same model, not a rebuilt one, while it stays in view")
+	stage.show_wanderers([champ], 200.0)
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	eq(stage._wild.size(), 1, "the slime left the stage")
+	ok(stage.wanderer_tag(4, 1) is Vector2)
