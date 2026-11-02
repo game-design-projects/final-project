@@ -785,3 +785,28 @@ func test_the_flat_flag_keeps_the_old_2d_corridor():
 	ok(scene.stage == null, "no 3D set with `flat`")
 	await _draw_frame()
 	eq(scene.G.mode, "explore")
+
+
+class MusicLog:
+	extends RefCounted
+	var log: Array = []
+
+	func set_mood(m: String) -> void:
+		log.append("mood:" + m)
+
+	func sting(n: String) -> void:
+		log.append("sting:" + n)
+
+
+func test_the_music_follows_the_fight_and_the_stairs():
+	var s := _start()
+	var m := MusicLog.new()
+	s.music = m
+	s.meet("slime")
+	eq(m.log.back(), "mood:battle")
+	s.defeat(s.G.foe, "spared")
+	eq(m.log.back(), "sting:victory")
+	s.explore()
+	eq(m.log.back(), "mood:explore")
+	s.ending()
+	eq(m.log.back(), "sting:fanfare")

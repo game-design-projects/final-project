@@ -26,6 +26,7 @@ const Art = preload("res://src/view/art.gd")
 const Postfx = preload("res://src/view/postfx.gd")
 const Stage3D = preload("res://src/view/stage3d.gd")
 const SfxModule = preload("res://src/audio/sfx.gd")
+const Ambient = preload("res://src/audio/ambient.gd")
 const Species = preload("res://src/rules/species.gd")
 const Emotions = preload("res://src/rules/emotions.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
@@ -100,6 +101,10 @@ var _timers: Array = []
 var _last_map := 0.0
 
 var sfx = null
+## The music (src/audio/ambient.gd): the dungeon loop while walking, a battle loop in a fight, stings for wins and stairs.
+## Null with `nosound`; tests may put a recorder here.
+var music = null
+var _music_started := false
 var postfx = null
 ## Tests turn this off so Esc doesn't change the scene under the test runner
 var navigate := true
@@ -165,6 +170,7 @@ func _ready() -> void:
 	_bold = heavy
 	_build_ui()
 	sfx = _make_sfx()
+	music = _make_music()
 	if not OS.has_feature("web"):
 		_sfx_init() # browsers keep audio locked until the first key press (on_key calls it again)
 	_attach_postfx()
@@ -226,6 +232,47 @@ func _make_sfx():
 func _sfx_init() -> void:
 	if sfx != null and sfx.has_method("init"):
 		sfx.init()
+	_music_init()
+
+
+## The music (src/audio/ambient.gd) lives under this node; `nosound` has none
+func _make_music():
+	if Flags.test("nosound|nomusic") or DisplayServer.get_name() == "headless":
+		return null
+	var m = Ambient.Ambient.new()
+	m.name = "Music"
+	add_child(m)
+	m.attach()
+	return m
+
+
+## Starts the music once (on the web that waits for the first key press, since browsers keep audio locked until then)
+func _music_init() -> void:
+	if music == null or _music_started:
+		return
+	_music_started = true
+	var r = await music.start()
+	if r is Dictionary and r.has("error"):
+		push_warning("music: %s" % r.error)
+		_music_started = false
+
+
+func _music_mood(mood: String) -> void:
+	if music != null:
+		music.set_mood(mood)
+
+
+func _music_sting(name: String) -> void:
+	if music != null:
+		music.sting(name)
+
+
+func _exit_tree() -> void:
+	if music is Node and is_instance_valid(music):
+		music.stop() # the sound stops first, so no player is freed mid-stream
+		for c in music.get_children():
+			if c is AudioStreamPlayer:
+				c.stop()
 
 
 func _sfx_play(name: String, opts := {}) -> void:
@@ -506,6 +553,7 @@ func hud() -> void:
 func explore(msg := "", autosave := true) -> void:
 	G.mode = "explore"
 	G.foe = null
+	_music_mood("explore")
 	if postfx != null and G.map != null:
 		postfx.set_accent(G.map.palette.accent)
 	if msg != "":
@@ -680,6 +728,7 @@ func start_encounter(m: Dictionary) -> void:
 	if postfx != null:
 		postfx.set_accent(BOSS_COLOR if m.boss else Species.SPECIES[m.species].color)
 	_sfx_play("boss" if m.boss else "encounter")
+	_music_mood("battle")
 	intro_until = now() + 700.0
 	render_mind(m, [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "a": Rules.ask_mercy(m)}])
 	var rule: String = "The champion shifts its rules every turn: chess, shadow, rhythm, goo." if m.boss else "It fights in %s. %s." % [Rules.GENRES[m.genre].name, Rules.GENRES[m.genre].rule]
@@ -1045,6 +1094,7 @@ func defeat(m: Dictionary, how: String) -> void:
 		notes = "\n" + "\n".join(pending_judgement.notes)
 	pending_judgement = null
 	G.mode = "result"
+	_music_sting("victory")
 	hud()
 	var verdict: String
 	if how == "spared":
@@ -1269,6 +1319,7 @@ func retry_fight() -> void:
 func ending() -> void:
 	G.mode = "end"
 	_sfx_play("stairs")
+	_music_sting("fanfare")
 	var t: Dictionary = G.tally
 	var met: int = t.spared + t.slain
 	var route: String
