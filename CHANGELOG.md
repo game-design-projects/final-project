@@ -4,9 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-01
+
 The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
 
 ### Changed
+- The game starts in the main menu, not in Genre Halls; Esc on Genre Halls' title or route screen goes to the menu instead of the original Donjon, which stays behind the `main` flag.
 - **The view is a 3D set drawn as the wireframe.** Walls, floor and ceiling are built from each floor's map (`src/view/dungeon3d.gd`), and the six monsters are models made of simple shapes (`src/view/monsters3d.gd`). Shaders fill every surface black and draw only lines, the way the 2D view did: every wall face outlined in the floor's wall color, each monster in its own color (red champions, gold shinies), the dots and slits filled in, lines dimming with distance exactly as before, torches glowing on the walls with flickering accent flames, the same decorations on the same walls, the stairs as a pit with accent steps. The vector-monitor shader is unchanged, so it glows the same.
 - **Moving is a camera move**: a step glides, a turn swings round, walking into a wall lunges at it (same timings as before). When a fight starts the camera backs off and looks down a little, and the monsters stand in the corridor in front of you, two or three in a V; their names, health bars, dice and floating numbers stay 2D, drawn over them.
 - **The floor's red champion stands in its hall**, turned toward you, so you can see it from anywhere down a corridor, not only straight ahead.
@@ -14,6 +17,10 @@ The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
 - Genre Halls keeps its 2D drawing (the same look).
 
 ### Added
+- **A main menu** as the startup scene (`src/menu/`): Continue, New Game, Load Game, Save Manager (copy, rename, delete), Settings, Credits, Quit (not on the web). Esc while walking or in a fight's command menu opens a pause menu: resume, save, load, settings, main menu.
+- **Settings** kept in the game's saved data and applied at once: window mode, vsync and frame-rate cap, the CRT glow, calm hits, screen shake, sound effects and volume; a Data page resets them, opens the save folder and deletes saves.
+- **Saves** for Genre Halls: an autosave whenever you are back to walking, six slots from the pause menu, one file each in `user://saves/`; Continue loads the newest. A fight in progress isn't saved.
+- `cli/menu_shots.gd` (screenshots of the menus) and tests for settings, saves, the menu pages and saving in Genre Halls.
 - `cli/stage_shots.gd`: screenshots of the 3D view through the shader at 2× (the title hall, corridors on four palettes, the stairs, the champion down a corridor, every monster in a fight, a shiny, a champion, a hurt one, groups, boxed in by walls, danger).
 - Tests for the 3D view (`tests/view/test_dungeon3d.gd`, `test_monsters3d.gd`, `test_stage3d.gd`): wall faces, the stairwell, decorations in the wall color, torches, mesh winding, every model's size, single color and movement, the camera's easing, the fight camera and where monsters stand, the champion, the torches' glow, line widths, the title hall.
 - **Hold Space to talk in the desktop builds**, on your own computer with nothing sent anywhere: NVIDIA's Nemotron Speech Streaming model (English, 160 ms chunks, int8) in a small helper program on sherpa-onnx 1.13.8 (`native/asr/donjon_asr.c`), which the game runs and streams the microphone to (`src/audio/asr.gd`). The model is a one-time 662 MB download (pinned, SHA-256 checked) that the first hold of Space offers and the next starts. Each desktop build carries its own helper (Windows x86_64, macOS universal, Linux x86_64). The web build keeps the browser's recognizer.
@@ -31,6 +38,7 @@ The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
 - Talking before listening has started no longer loses your first word ("Know your place" came back "Your place"): the helper starts each utterance with 0.3 s of quiet. `smoke.py` checks it on `native/asr/testdata/know_your_place.wav`.
 
 ### Changed
+- The game starts in the main menu, not in Genre Halls; Esc on Genre Halls' title or route screen goes to the menu instead of the original Donjon, which stays behind the `main` flag.
 - **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
 - The macOS build asks for the microphone (it has the usage description and audio-input entitlement). Godot's microphone input is on in every build but the web one.
 - Genre Halls fills the window as one framed screen with far less text (Pear's playtest): the view scales to the free space, the sidebar (automap legend, party, Jev mind) is gone, and the text box under the view holds an HP bar, a three-line log and the commands, at a fixed height so the view never resizes.

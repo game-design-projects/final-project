@@ -6,16 +6,24 @@ const Flags = preload("res://src/core/flags.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
 const Render = preload("res://src/view/render.gd")
 const SCENE = preload("res://src/genre/genre_halls.tscn")
+const Settings = preload("res://src/menu/settings.gd")
+const MemoryStore = preload("res://src/core/store.gd").Memory
 
 var scene: Control
 
 
 func before_each() -> void:
 	Flags.override = "nosound" # no audio in the tests: the real Sfx has its own tests
+	Settings.store_override = MemoryStore.new() # the player's own settings stay out of the tests
+	Settings.apply_enabled = false
+	Settings.forget()
 
 
 func after_each() -> void:
 	Flags.override = null
+	Settings.store_override = null
+	Settings.apply_enabled = true
+	Settings.forget()
 	if scene != null:
 		scene.queue_free()
 		scene = null
@@ -364,7 +372,7 @@ func test_dying_offers_the_fight_again_with_full_health():
 	scene.D.hazards.append({"cells": {here: true}, "warn": t, "hit": t + 50.0, "end": t + 2000.0, "kind": "chess", "sounded": false})
 	await _pump(300.0)
 	eq(scene.G.mode, "dead")
-	eq(_menu_labels(), ["TRY THIS FIGHT AGAIN", "NEW FLOOR"])
+	eq(_menu_labels(), ["TRY THIS FIGHT AGAIN", "NEW FLOOR", "MAIN MENU"])
 	await _draw_frame()
 	scene.on_key("Enter")
 	eq(scene.G.mode, "intro")
@@ -527,21 +535,27 @@ func test_escape_in_the_typed_line_goes_back_to_the_acts_and_enter_says_it():
 	ok(scene.last_say.contains("You say \"you have such beautiful scales\"."), scene.last_say)
 
 
-func test_escape_on_the_title_and_the_route_screen_goes_back_when_there_is_a_main_scene():
+func test_escape_on_the_title_and_the_route_screen_goes_to_the_main_menu():
 	scene = SCENE.instantiate()
 	scene.clock_override = 1000.0
+	scene.navigate = false # a real scene change would pull the test runner's tree apart
 	_tree().root.add_child(scene)
 	scene.set_process(false)
-	if ResourceLoader.exists(scene.MAIN_SCENE):
-		return # changing scenes would pull the test runner's tree apart: it is checked by hand
 	scene.on_key("Escape")
-	eq(scene.G.mode, "explore", "no main scene: Esc is just a key")
+	eq(scene.left_for, "menu", "Esc on the title leaves for the menu")
+	eq(scene.G.mode, "title", "and doesn't start a run")
+	scene.left_for = ""
+	scene.on_key("Enter")
+	scene.G.mode = "end"
+	scene.on_key("Escape")
+	eq(scene.left_for, "menu", "Esc on the route screen too")
 
 
-func test_the_project_starts_in_the_genre_halls_and_the_main_game_is_one_escape_away():
-	eq(ProjectSettings.get_setting("application/run/main_scene"), "res://src/genre/genre_halls.tscn", "Genre Halls is the startup scene")
-	ok(ResourceLoader.exists(scene_path_of_main()), "the main game stays reachable (Esc on the title)")
-	eq(preload("res://src/genre/genre_halls.gd").TITLE_HINT, "ESC: THE ORIGINAL DONJON", "the title says how to get to it")
+func test_the_project_starts_in_the_main_menu_and_the_original_donjon_stays_behind_a_flag():
+	eq(ProjectSettings.get_setting("application/run/main_scene"), "res://src/menu/main_menu.tscn", "the menu is the startup scene")
+	ok(ResourceLoader.exists(scene_path_of_main()), "the original Donjon is still there (the main flag)")
+	ok(ResourceLoader.exists(preload("res://src/genre/genre_halls.gd").MENU_SCENE))
+	eq(preload("res://src/genre/genre_halls.gd").TITLE_HINT, "ESC: MENU")
 
 
 func test_the_main_flag_asks_for_the_main_game_and_nothing_else_does():
