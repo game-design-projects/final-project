@@ -100,6 +100,7 @@ var last_say := "" # the dock text as BBCode, for tests and tools
 var clock_override := -1.0
 ## Tests can pin a negotiation or answer roll; normal play always rolls afresh.
 var interaction_roll_override := -1.0
+var slice_next: Dictionary = {}
 var _timers: Array = []
 var _last_map := 0.0
 
@@ -188,6 +189,10 @@ func _ready() -> void:
 	elif req.get("kind", "") == "load":
 		if not import_state(req.state):
 			new_run()
+	if Flags.test("(^|[\\s?#&-])personality-slice($|[\\s&])"):
+		var slice_seed := int(Flags.capture("seed=(\\d+)")) if Flags.capture("seed=(\\d+)") != "" else 7042
+		start_personality_slice(slice_seed)
+		return
 	var species := Flags.capture("meet=(\\w+)")
 	if species != "":
 		meet(species)
@@ -350,6 +355,8 @@ static func esc(s) -> String:
 # ---------------------------------------------------------------- run
 
 func new_run() -> void:
+	slice_next = {}
+	interaction_roll_override = -1.0
 	G.map = Rules.gen_floor()
 	G.map.palette = J.pick(Render.PALETTES)
 	G.map.seed = randi() % 1000000000
@@ -380,6 +387,33 @@ func meet(species := "bandit") -> void:
 		if m.species == species and not J.truthy(m.gone):
 			start_encounter(m)
 			return
+
+
+## A reproducible two-bandit encounter for the personality playtest. The same fair-cut offer
+## succeeds for the straight dealer and fails for the wary one at the fixed interaction roll.
+func start_personality_slice(slice_seed := 7042) -> void:
+	seed(slice_seed)
+	new_run()
+	G.gold = 12 # Both can hear the same 6-gold offer, even if the first accepts.
+	interaction_roll_override = 0.5
+	var pair: Array = G.map.monsters.slice(0, 2)
+	var traits := ["surprisingly honest about being dishonest", "jumpy"]
+	var names := ["ROOK", "VEX"]
+	for i in 2:
+		var m: Dictionary = pair[i]
+		m.species = "bandit"
+		m.genre = "chess"
+		m.name = names[i]
+		m.hp = 24
+		m.maxHp = 24
+		m.threshold = Species.SPECIES.bandit.joinThreshold
+		m.traits = [traits[i]]
+		m.taste = Rules.TRAIT_TASTE[traits[i]].duplicate()
+		m.meters = {"friendliness": 78.0, "anger": 12.0, "fear": 15.0}
+		m.lastIntent = ""
+	slice_next = pair[1]
+	print("genre halls: personality slice seed %d: %s then %s" % [slice_seed, pair[0].name, pair[1].name])
+	start_encounter(pair[0])
 
 
 # ---------------------------------------------------------------- the mind (Jev-shaped questions, local answers)
@@ -615,6 +649,8 @@ func import_state(st: Dictionary) -> bool:
 	G.gold = maxi(0, int(st.get("gold", 8)))
 	G.tally = st.tally
 	G.allies = st.allies
+	slice_next = {}
+	interaction_roll_override = -1.0
 	D = null
 	bar = null
 	pending_judgement = null
@@ -628,7 +664,7 @@ func import_state(st: Dictionary) -> bool:
 
 
 func _autosave() -> void:
-	if clock_override >= 0.0 or G.map == null or Flags.test("nosave"):
+	if clock_override >= 0.0 or G.map == null or Flags.test("nosave|personality-slice"):
 		return
 	Saves.write(Saves.AUTO, export_state(), summary())
 
@@ -1196,7 +1232,15 @@ func defeat(m: Dictionary, how: String, allow_join := true, settlement := "") ->
 	else:
 		verdict = "SLAIN."
 	say(text + "\n" + sys(verdict) + notes)
-	set_menu([{"label": "CONTINUE", "run": func(): explore()}], kbd("ENTER") + " CONTINUE")
+	set_menu([{"label": "CONTINUE", "run": func(): continue_result()}], kbd("ENTER") + " CONTINUE")
+
+
+func continue_result() -> void:
+	if not slice_next.is_empty() and not is_same(G.foe, slice_next) and not J.truthy(slice_next.gone):
+		start_encounter(slice_next)
+		return
+	slice_next = {}
+	explore()
 
 
 func after_player(msg: String, r: Dictionary, show_attack_line := true) -> void:
