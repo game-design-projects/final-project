@@ -644,11 +644,25 @@ func step(forward: int) -> void:
 
 
 ## The monsters you can see, far to near: [{ m, d, k }] (d cells ahead, k to the right). That includes the ones
-## diagonal to you, down a side opening, not only the one straight ahead.
+## diagonal to you, down a side opening, not only the one straight ahead. With the 3D set it is what the camera
+## sees (its field of view, a clear line over the floor); the flat corridor keeps the old six-cell rule.
 func monsters_in_view() -> Array:
 	var out := []
+	var sight := {}
+	var by_camera: bool = stage != null and stage.placed()
+	if by_camera:
+		for c in stage.sight(G.map.grid, G.x, G.y):
+			sight[Vector2i(c[0], c[1])] = true
 	for m in G.map.monsters:
 		if J.truthy(m.gone):
+			continue
+		if by_camera:
+			if not sight.has(Vector2i(m.x, m.y)):
+				continue
+			var f: Array = Render.DIRS[G.dir]
+			var dx: int = m.x - G.x
+			var dy: int = m.y - G.y
+			out.append({"m": m, "d": dx * f[0] + dy * f[1], "k": dx * -f[1] + dy * f[0]})
 			continue
 		var slot = Render.slot_of(G.map, G.x, G.y, G.dir, m.x, m.y)
 		if slot != null:
@@ -1378,29 +1392,28 @@ func draw_frame(ctx, t: float) -> void:
 	ctx.restore()
 
 
-## Walking: the corridor is the 3D set (the camera glides to each cell), the monsters you can see stand in their
-## cells, and their name tags are painted over it. Fights are the battle screen, drawn flat below.
-func _draw_walk_3d(ctx, t: float) -> void:
+## Walking: the corridor is the 3D set (the camera glides to each cell), the monsters stand in their cells with their
+## name tags. Fights are the battle screen, drawn flat below.
+func _draw_walk_3d(_ctx, t: float) -> void:
 	stage.visible = true
 	stage.use_map(G.map)
 	stage.place(G.x, G.y, G.dir, t)
 	stage.light(t)
-	for c in Render.visible_cells(G.map, G.x, G.y, G.dir):
+	for c in stage.sight(G.map.grid, G.x, G.y):
 		G.seen[c[1] * G.map.n + c[0]] = true
+	# Every monster still on the floor stands in its cell with its genre over its head (3D text: the walls hide it,
+	# like the monster, and it fades with distance)
 	var list := []
-	var seen_now := monsters_in_view()
-	for v in seen_now:
-		var m: Dictionary = v.m
-		list.append({"id": G.map.monsters.find(m), "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y})
+	for i in G.map.monsters.size():
+		var m: Dictionary = G.map.monsters[i]
+		if J.truthy(m.gone):
+			continue
+		list.append({
+			"id": i, "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y,
+			"label": "CHAMPION" if m.boss else Rules.GENRES[m.genre].name,
+			"color": BOSS_COLOR if m.boss else Species.SPECIES[m.species].color,
+		})
 	stage.show_wanderers(list, t)
-	ctx.font = '8px "Press Start 2P", monospace'
-	ctx.text_align = "center"
-	for v in seen_now:
-		var m: Dictionary = v.m
-		var at := stage.wanderer_tag(m.x, m.y)
-		ctx.fill_style = BOSS_COLOR if m.boss else Species.SPECIES[m.species].color
-		ctx.fill_text("CHAMPION" if m.boss else Rules.GENRES[m.genre].name, at.x, at.y)
-	ctx.text_align = "left"
 
 
 func draw_monsters_in_view(ctx, t: float) -> void:

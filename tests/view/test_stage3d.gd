@@ -244,3 +244,59 @@ func test_wanderers_stand_in_their_cells_facing_you_and_leave_when_out_of_view()
 	await (Engine.get_main_loop() as SceneTree).process_frame
 	eq(stage._wild.size(), 1, "the slime left the stage")
 	ok(stage.wanderer_tag(4, 1) is Vector2)
+
+
+func test_a_far_wanderer_stays_readable_and_its_tag_clears_its_head():
+	var map := map_of(["#########", "#.......#", "#########"], {"seed": 3})
+	stage.use_map(map)
+	stage.place(1, 1, 1, 0.0)
+	var slime := {"id": 0, "species": "slime", "look": {}, "x": 7, "y": 1}
+	var dragon := {"id": 1, "species": "dragon", "look": {}, "x": 5, "y": 1}
+	stage.show_wanderers([slime, dragon], 0.0)
+	for m in stage._wild_root.get_children():
+		eq(m.material_override if m is MeshInstance3D else null, null)
+	var tall: float = stage._wild["dragon||1".replace("||", "|{}|")].get_meta("top")
+	var small: float = stage._wild["slime|{}|0"].get_meta("top")
+	ok(tall > small, "the dragon stands taller than the slime (%s vs %s)" % [tall, small])
+	ok(stage._wild["slime|{}|0"].get_meta("tag").y > small * Stage3D.WILD_SCALE, "the tag floats above the head")
+	eq(stage.wild_material().get_shader_parameter("fade_floor"), Stage3D.WILD_FADE_FLOOR)
+	eq(stage.wild_material().next_pass.get_shader_parameter("fade_floor"), Stage3D.WILD_FADE_FLOOR)
+
+
+func test_sight_follows_the_camera_field_of_view_and_stops_at_walls():
+	# a long hall running east, a side room to the south behind a wall, open floor north of the start
+	var rows := ["###########", "#.........#", "#########.#", "#.......#.#", "###########"]
+	var map := map_of(rows, {"seed": 3})
+	stage.use_map(map)
+	stage.place(1, 1, 1, 0.0)
+	var cells := stage.sight(map.grid, 1, 1).map(func(c): return Vector2i(c[0], c[1]))
+	ok(cells.has(Vector2i(1, 1)), "the cell you stand in")
+	ok(cells.has(Vector2i(8, 1)), "eight cells down the hall: farther than the old six-cell rule saw")
+	ok(not cells.has(Vector2i(3, 3)), "not the room behind the wall")
+	stage.place(5, 1, 1, 0.0)
+	stage.place(5, 1, 1, 10000.0) # the glide is over
+	cells = stage.sight(map.grid, 5, 1).map(func(c): return Vector2i(c[0], c[1]))
+	ok(not cells.has(Vector2i(1, 1)), "not what is behind the camera")
+	ok(cells.has(Vector2i(9, 1)))
+	ok(stage.sight(map.grid, 5, 1) == stage.sight(map.grid, 5, 1), "kept while the camera stays put")
+
+
+func test_name_tags_are_3d_text_that_fade_and_give_way_to_a_nearer_tag():
+	var map := map_of(["#########", "#.......#", "#########"], {"seed": 3})
+	stage.use_map(map)
+	stage.place(1, 1, 1, 0.0)
+	var near := {"id": 0, "species": "slime", "look": {}, "x": 3, "y": 1, "label": "GOO RAIN", "color": "#ffa040"}
+	var far := {"id": 1, "species": "slime", "look": {}, "x": 7, "y": 1, "label": "CHESS", "color": "#ffa040"}
+	stage.show_wanderers([near, far], 0.0)
+	eq(stage._tags.size(), 2)
+	for tag in stage._tags.values():
+		ok(tag is Label3D and tag.fixed_size and not tag.no_depth_test, "real 3D text: walls hide it")
+	var tn: Label3D = stage._tags["slime|{}|0"]
+	var tf: Label3D = stage._tags["slime|{}|1"]
+	ok(tn.modulate.a > tf.modulate.a, "the far tag is dimmer")
+	ok(tn.visible, "the nearer tag shows")
+	ok(not tf.visible, "a farther tag right behind it gives way")
+	stage.show_wanderers([far], 0.0)
+	await (Engine.get_main_loop() as SceneTree).process_frame
+	eq(stage._tags.size(), 1, "the tag leaves with its monster")
+	ok(stage._tags["slime|{}|1"].visible, "and the far one shows once nothing is in front of it")
