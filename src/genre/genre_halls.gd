@@ -591,6 +591,11 @@ func open_pause() -> void:
 			if st.is_empty() or not import_state(st):
 				say(sys("That save can't be loaded.")),
 	}
+	if not OS.has_feature("web"):
+		ctx["quit"] = func():
+			print("genre halls: quit from the pause menu")
+			if navigate:
+				get_tree().quit()
 	if G.mode == "explore":
 		ctx["save_slot"] = func(slot) -> bool:
 			var wrote := Saves.write(slot, export_state(), summary())

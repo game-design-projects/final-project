@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- QUIT GAME on the pause menu (it asks first), and the main menu's Quit is now called QUIT GAME; neither shows in the web build.
+
 ## [0.5.0] - 2026-11-01
 
 The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
