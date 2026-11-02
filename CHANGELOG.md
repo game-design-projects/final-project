@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-01
+
 ### Changed
 - README shrunk to the pitch, the run commands and the key table; the rest moved to `docs/GAME.md`, `docs/DEVELOPMENT.md` and `docs/AUDIO.md`, and `AGENTS.md` added for coding agents.
 
