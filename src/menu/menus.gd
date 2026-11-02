@@ -35,7 +35,7 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 		{"label": "CREDITS", "run": _go(panel, func(): return credits())},
 	]
 	if ctx.has("quit"):
-		items.append({"label": "QUIT", "run": func(): ctx.quit.call()})
+		items.append({"label": "QUIT GAME", "run": func(): ctx.quit.call()})
 	return {"title": "DONJON", "items": items, "hint": KEYS_HINT}
 
 
@@ -53,6 +53,11 @@ static func pause(panel, ctx: Dictionary) -> Dictionary:
 			"run": _go(panel, func(): return confirm(panel, "LEAVE THE RUN?", "Anything since your last save is lost.", "MAIN MENU", func(): ctx.to_main_menu.call())),
 		},
 	]
+	if ctx.has("quit"):
+		items.append({
+			"label": "QUIT GAME", "sub": "Progress since the last save is lost",
+			"run": _go(panel, func(): return confirm(panel, "QUIT THE GAME?", "Anything since your last save is lost.", "QUIT GAME", func(): ctx.quit.call())),
+		})
 	return {"title": "PAUSED", "items": items, "hint": KEYS_HINT, "back": func(): ctx.resume.call()}
 
 

@@ -133,7 +133,7 @@ func test_esc_opens_the_pause_menu_while_walking_and_takes_the_keys() -> void:
 	scene.on_key("Escape")
 	ok(scene.pause_open())
 	var items: Array = scene._pause.page.items
-	eq(items.map(func(i): return i.label), ["RESUME", "SAVE GAME", "LOAD GAME", "SETTINGS", "MAIN MENU"])
+	eq(items.map(func(i): return i.label), ["RESUME", "SAVE GAME", "LOAD GAME", "SETTINGS", "MAIN MENU", "QUIT GAME"])
 	ok(items[1].get("enabled", true), "saving is on while walking")
 	scene._pause.on_key("Enter") # RESUME
 	ok(not scene.pause_open())
@@ -219,3 +219,16 @@ func test_the_effects_volume_follows_the_setting() -> void:
 	Settings.set_value("sfx", false)
 	scene.apply_settings()
 	near(scene.sfx.volume, 0.0, 1e-6, "sound off is silent")
+
+
+func test_quit_game_on_the_pause_menu_asks_first() -> void:
+	_scene()
+	scene.new_run()
+	scene.on_key("Escape")
+	for _i in 5:
+		scene._pause.on_key("ArrowDown")
+	scene._pause.on_key("Enter")
+	eq(scene._pause.page.title, "QUIT THE GAME?")
+	eq(scene._pause.sel, 0, "NO is highlighted")
+	scene._pause.on_key("ArrowDown")
+	scene._pause.on_key("Enter") # navigate is off: the scene doesn't quit the test runner

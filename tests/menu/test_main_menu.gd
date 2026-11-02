@@ -63,7 +63,7 @@ func _state() -> Dictionary:
 func test_the_main_menu_lists_the_classic_entries() -> void:
 	_open()
 	eq(menu.panel.page.title, "DONJON")
-	eq(_labels(), ["CONTINUE", "NEW GAME", "LOAD GAME", "SAVE MANAGER", "SETTINGS", "CREDITS", "QUIT"])
+	eq(_labels(), ["CONTINUE", "NEW GAME", "LOAD GAME", "SAVE MANAGER", "SETTINGS", "CREDITS", "QUIT GAME"])
 
 
 func test_with_no_saves_continue_and_load_are_greyed_and_new_game_is_selected() -> void:
