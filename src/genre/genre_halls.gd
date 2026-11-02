@@ -406,6 +406,9 @@ func _fill_mind_tip(box: VBoxContainer) -> void:
 	if not m.traits.is_empty():
 		var note := _rich(_term, 16, C_DIM)
 		note.text = "Seems %s." % esc(" and ".join(m.traits))
+		var clues: Array = Rules.personality_clues(m)
+		if not clues.is_empty():
+			note.text += "\nIt %s." % esc(". It ".join(clues))
 		box.add_child(note)
 	var meters := HBoxContainer.new()
 	meters.add_theme_constant_override("separation", 16)
@@ -782,16 +785,25 @@ func check() -> void:
 	var likes := []
 	for l in sp.likes.slice(0, 2):
 		likes.append(esc(l))
-	main_menu(sys("%s seems %s. Its kind likes %s and hates %s. This one may differ." % [esc(m.name), " and ".join(traits), ", ".join(likes), esc(sp.dislikes[0])]))
+	var clues: Array = Rules.personality_clues(m)
+	var individual := "This one may differ." if clues.is_empty() else "It %s." % esc(". It ".join(clues))
+	main_menu(sys("%s seems %s. Its kind likes %s and hates %s. %s" % [esc(m.name), " and ".join(traits), ", ".join(likes), esc(sp.dislikes[0]), individual]))
 
 
 ## One round of the mind: how it feels about `act` ("fight" or a list of { intent, w }), whether it would accept
 ## mercy, and how hard it attacks. Applies the feeling to its meters.
 func decide(m: Dictionary, act, act_label: String, words = null) -> Dictionary:
+	if words != null:
+		m.lastIntent = words.choice
+	elif act is String:
+		m.lastIntent = act
+	elif not act.is_empty():
+		m.lastIntent = act[0].intent
 	var feeling := Rules.ask_feeling(m, act)
 	var em := Rules.apply_feeling(m, feeling.choice)
 	var mercy := Rules.ask_mercy(m)
 	var pressure := Rules.ask_pressure(m)
+	print_verbose("genre halls mind: %s (%s) hears %s -> %s, mercy %d%%, pressure %.2f" % [m.name, ", ".join(m.traits), m.lastIntent, feeling.choice, J.round_js(mercy.noul * 100.0), pressure.score])
 	var rows := []
 	if words != null:
 		rows.append({"id": "words", "label": "WHAT DID YOUR WORDS MEAN?", "a": words})
@@ -1075,9 +1087,8 @@ func defeat(m: Dictionary, how: String) -> void:
 	var text := sys("%s falls." % esc(m.name))
 	var joined := false
 	if how == "spared":
-		var f: float = m.meters.friendliness
 		var room: bool = G.allies.size() < 3
-		var p := Rules.sigmoid((f - m.threshold - 4.0) / 7.0 + Rules.aff(m, "join") * 0.4) if room else 0.0
+		var p: float = Rules.ask_join(m).noul if room else 0.0
 		joined = randf() < p
 		var rows := [{"id": "join", "label": "DOES IT WANT TO COME ALONG?" if room else "DOES IT WANT TO COME ALONG? (PARTY FULL)", "a": {"type": "noul", "noul": p, "yes": joined}}]
 		render_mind(m, rows + pending_judgement.rows if pending_judgement != null else rows)
@@ -1313,6 +1324,7 @@ func retry_fight() -> void:
 	G.foe.hp = G.foe.maxHp
 	G.foe.turn = 0
 	G.foe.meters = Species.SPECIES[G.foe.species].start.duplicate()
+	G.foe.lastIntent = ""
 	start_encounter(G.foe)
 
 

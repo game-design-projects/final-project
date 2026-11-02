@@ -303,6 +303,40 @@ func test_act_check_and_say_something_once():
 	ok(scene.last_say.contains("You've had your say this fight."))
 
 
+func test_personality_clues_are_visible_before_an_act_and_the_act_is_remembered():
+	_start("bandit")
+	var m: Dictionary = scene.G.foe
+	m.traits = ["surprisingly honest about being dishonest", "quick-fingered"]
+	m.taste = {}
+	await _pump(800.0)
+	scene._show_tip("foe", Rect2(), true)
+	ok(scene._tip_body.get_child(1).text.contains("straight terms"), "the foe tooltip hints at its need")
+	scene._hide_tip()
+	scene.on_key("2") # ACT
+	scene.on_key("1") # CHECK is free
+	ok(scene.last_say.contains("straight terms"), "CHECK gives the same clue before any commitment")
+	eq(m.lastIntent, "")
+	scene.on_key("2")
+	scene.on_key("2") # OFFER A FAIR CUT
+	eq(m.lastIntent, "gold")
+	ok(Rules.ask_join(m).noul > 0.0 and Rules.ask_join(m).noul < 1.0)
+
+
+func test_a_bandits_personality_changes_the_next_chess_dodge():
+	_start("bandit")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	m.meters = {"friendliness": 55, "anger": 20, "fear": 20}
+	m.lastIntent = "threat"
+	m.traits = ["jumpy"]
+	scene.start_dodge(Rules.ask_pressure(m).score)
+	var cautious: float = scene.D.intensity
+	m.traits = ["surprisingly honest about being dishonest"]
+	scene.start_dodge(Rules.ask_pressure(m).score)
+	ok(scene.D.intensity > cautious, "the defiant bandit's chess attacks are more intense")
+	eq(scene.D.genre, "chess", "personality does not change its combat genre")
+
+
 func test_an_empty_line_goes_back_to_the_acts_and_nonsense_is_noticed():
 	_start("rock")
 	await _pump(800.0)

@@ -23,6 +23,14 @@ func _monster(species: String, meters := {}) -> Dictionary:
 	return {"species": species, "hp": 20, "maxHp": 20, "threshold": Species.SPECIES[species].joinThreshold, "taste": {}, "meters": m}
 
 
+func _person(species: String, defining_trait: String, intent: String, meters := {}) -> Dictionary:
+	var m := _monster(species, meters)
+	m.traits = [defining_trait]
+	m.taste = Rules.TRAIT_TASTE.get(defining_trait, {}).duplicate()
+	m.lastIntent = intent
+	return m
+
+
 func _sum(d: Dictionary) -> float:
 	var s := 0.0
 	for k in d:
@@ -55,6 +63,9 @@ func test_every_faction_has_its_genre_acts_tastes_charm_and_values_and_every_fee
 		ok(Rules.CHARMS.has(s) and Rules.APPROVE.has(s) and Rules.GIBBERISH_NEG.has(s), s)
 		for a in Rules.ACTS[s]:
 			ok(Rules.AFF[s].has(a.intent), "%s: %s" % [s, a.intent])
+		ok(Species.SPECIES[s].traits.any(func(t): return Rules.MOTIVES.has(t)), "%s has a motive trait" % s)
+	for t in Rules.MOTIVES:
+		ok(_kinds().any(func(s): return Species.SPECIES[s].traits.has(t)), "%s is an existing trait" % t)
 	for intent in Rules.AFF.slime:
 		ok(Rules.INTENT_WORDS.get(intent, "") != "", intent)
 	var named := []
@@ -92,6 +103,7 @@ func test_a_floor_puts_the_stairs_and_every_monster_within_reach_apart_and_the_c
 		ok(not at.has("1,1") and not at.has(stairs_key), "nobody on the start or the stairs")
 		for m in map.monsters:
 			ok(reach.has("%d,%d" % [m.x, m.y]), "%s reachable" % m.species)
+			ok(not Rules.personality_clues(m).is_empty(), "%s has a visible individual need" % m.species)
 		var boss = null
 		for m in map.monsters:
 			if m.boss:
@@ -141,6 +153,73 @@ func test_mercy_grows_with_friendliness_and_shrinks_with_anger_pressure_is_a_0_3
 		ok(p.score >= 0 and p.score <= 3)
 		ok(absf(_sum(p.probabilities) - 1.0) < 1e-9)
 	ok(Rules.ask_pressure(_monster("dragon", {"anger": 100, "friendliness": 0})).score > Rules.ask_pressure(_monster("dragon", {"anger": 0, "friendliness": 100})).score)
+
+
+func test_a_lonely_slime_and_a_curious_slime_need_different_things():
+	var lonely := _person("slime", "lonely", "kindness")
+	var curious := _person("slime", "curious", "kindness")
+	var comfort := [{"intent": "kindness", "w": 1.0}]
+	ok(Rules.ask_feeling(lonely, comfort).probabilities.touched > Rules.ask_feeling(curious, comfort).probabilities.touched)
+	ok(Rules.ask_feeling(lonely, comfort).probabilities.touched < 0.85, "comfort is not a guaranteed result")
+	ok(Rules.ask_mercy(lonely).noul > Rules.ask_mercy(curious).noul)
+	ok(Rules.ask_join(lonely).noul > Rules.ask_join(curious).noul)
+	curious.lastIntent = "question"
+	lonely.lastIntent = "question"
+	var question := [{"intent": "question", "w": 1.0}]
+	ok(Rules.ask_feeling(curious, question).probabilities.intrigued > Rules.ask_feeling(lonely, question).probabilities.intrigued)
+	ok(Rules.ask_feeling(curious, question).probabilities.intrigued < 0.85, "questions retain another eligible feeling")
+	ok(Rules.ask_mercy(curious).noul > Rules.ask_mercy(lonely).noul)
+	lonely.lastIntent = "kindness"
+	curious.lastIntent = "kindness"
+	Rules.apply_feeling(lonely, "touched")
+	Rules.apply_feeling(curious, "touched")
+	eq(lonely.meters.friendliness - curious.meters.friendliness, 6, "the same feeling moves a lonely slime further")
+	ok(Rules.personality_clues(lonely)[0].contains("voice"))
+	ok(Rules.personality_clues(curious)[0].contains("unfamiliar"))
+
+
+func test_two_bandits_react_differently_to_a_threat_and_change_the_next_dodge():
+	var jumpy := _person("bandit", "jumpy", "threat", {"friendliness": 55, "anger": 20, "fear": 20})
+	var direct := _person("bandit", "surprisingly honest about being dishonest", "threat", {"friendliness": 55, "anger": 20, "fear": 20})
+	var threat := [{"intent": "threat", "w": 1.0}]
+	var scared: Dictionary = Rules.ask_feeling(jumpy, threat).probabilities
+	var defiant: Dictionary = Rules.ask_feeling(direct, threat).probabilities
+	ok(scared.terrified > defiant.terrified)
+	ok(defiant.enraged > scared.enraged)
+	ok(scared.terrified < 0.85 and defiant.enraged < 0.85, "neither response is certain")
+	ok(Rules.ask_mercy(jumpy).noul > Rules.ask_mercy(direct).noul)
+	ok(Rules.ask_pressure(jumpy).score < Rules.ask_pressure(direct).score, "the next dodge is less intense")
+	Rules.apply_feeling(jumpy, "confused")
+	Rules.apply_feeling(direct, "confused")
+	eq(jumpy.meters.fear - direct.meters.fear, 8)
+	eq(direct.meters.anger - jumpy.meters.anger, 8)
+	direct.lastIntent = "gold"
+	jumpy.lastIntent = "gold"
+	ok(Rules.ask_feeling(direct, [{"intent": "gold", "w": 1.0}]).probabilities.intrigued > Rules.ask_feeling(jumpy, [{"intent": "gold", "w": 1.0}]).probabilities.intrigued)
+	ok(Rules.ask_join(direct).noul > Rules.ask_join(jumpy).noul)
+	ok(Rules.personality_clues(jumpy)[0].contains("exit"))
+	ok(Rules.personality_clues(direct)[0].contains("straight terms"))
+
+
+func test_every_faction_has_an_act_that_exposes_a_personal_need():
+	var cases := [
+		["slime", "curious", "lonely", "joke", "amused"],
+		["bandit", "jumpy", "surprisingly honest about being dishonest", "joke", "offended"],
+		["snake", "secretive", "vain about its scales", "gold", "offended"],
+		["rock", "remembers everything", "patient", "flattery", "flattered"],
+		["dragon", "bored", "vain", "courage", "intrigued"],
+	]
+	for row in cases:
+		var species: String = row[0]
+		var intent: String = row[3]
+		ok(Rules.ACTS[species].any(func(a): return a.intent == intent), "%s can choose %s" % [species, intent])
+		var need := _person(species, row[1], intent)
+		var other := _person(species, row[2], intent)
+		var act := [{"intent": intent, "w": 1.0}]
+		var feeling: String = row[4]
+		var odds: Dictionary = Rules.ask_feeling(need, act).probabilities
+		ok(odds[feeling] > Rules.ask_feeling(other, act).probabilities[feeling], "%s's %s changes %s" % [species, row[1], intent])
+		ok(odds.values().filter(func(p): return p >= 0.15).size() >= 2, "%s keeps more than one eligible feeling" % species)
 
 
 func test_typed_words_are_read_by_intent_and_a_keyboard_mash_is_nonsense():
