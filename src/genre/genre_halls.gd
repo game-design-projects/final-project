@@ -99,6 +99,8 @@ var clock_override := -1.0
 ## Tests can pin a negotiation or answer roll; normal play always rolls afresh.
 var interaction_roll_override := -1.0
 var slice_next: Dictionary = {}
+var slice_active := false
+var encounter_start: Dictionary = {}
 var _timers: Array = []
 var _last_map := 0.0
 
@@ -274,6 +276,7 @@ func _music_sting(name: String) -> void:
 
 
 func _exit_tree() -> void:
+	_end_personality_slice()
 	if music is Node and is_instance_valid(music):
 		music.stop() # the sound stops first, so no player is freed mid-stream
 		for c in music.get_children():
@@ -352,8 +355,17 @@ static func esc(s) -> String:
 
 # ---------------------------------------------------------------- run
 
-func new_run() -> void:
+func _end_personality_slice() -> void:
+	if slice_active:
+		randomize()
+		interaction_roll_override = -1.0
+		slice_active = false
 	slice_next = {}
+
+
+func new_run() -> void:
+	_end_personality_slice()
+	encounter_start = {}
 	interaction_roll_override = -1.0
 	G.map = Rules.gen_floor()
 	G.map.palette = J.pick(Render.PALETTES)
@@ -390,10 +402,12 @@ func meet(species := "bandit") -> void:
 ## A reproducible two-bandit encounter for the personality playtest. The same fair-cut offer
 ## succeeds for the straight dealer and fails for the wary one at the fixed interaction roll.
 func start_personality_slice(slice_seed := 7042) -> void:
+	_end_personality_slice()
 	seed(slice_seed)
 	new_run()
 	G.gold = 12 # Both can hear the same 6-gold offer, even if the first accepts.
 	interaction_roll_override = 0.5
+	slice_active = true
 	var pair: Array = G.map.monsters.slice(0, 2)
 	var traits := ["surprisingly honest about being dishonest", "jumpy"]
 	var names := ["ROOK", "VEX"]
@@ -659,8 +673,9 @@ func import_state(st: Dictionary) -> bool:
 	G.gold = maxi(0, int(st.get("gold", 8)))
 	G.tally = st.tally
 	G.allies = st.allies
-	slice_next = {}
+	_end_personality_slice()
 	interaction_roll_override = -1.0
+	encounter_start = {}
 	D = null
 	bar = null
 	pending_judgement = null
@@ -778,6 +793,7 @@ func monsters_in_view() -> Array:
 func start_encounter(m: Dictionary) -> void:
 	G.foe = m
 	m.spoke = false
+	encounter_start = {"foe": m.duplicate(true), "hp": G.hp, "gold": G.gold, "allies": G.allies.duplicate(true), "tally": G.tally.duplicate(true)}
 	G.mode = "intro"
 	G.sel = 0
 	if postfx != null:
@@ -1232,6 +1248,7 @@ func flee() -> void:
 	if m.boss:
 		main_menu(sys("The champion's tail blocks the way back."))
 		return
+	_end_personality_slice()
 	G.tally.fled += 1
 	_sfx_play("flee")
 	judge("flee")
@@ -1293,7 +1310,7 @@ func continue_result() -> void:
 	if not slice_next.is_empty() and not is_same(G.foe, slice_next) and not J.truthy(slice_next.gone):
 		start_encounter(slice_next)
 		return
-	slice_next = {}
+	_end_personality_slice()
 	explore()
 
 
@@ -1501,12 +1518,17 @@ func dead() -> void:
 
 
 func retry_fight() -> void:
-	G.hp = G.maxHp
-	G.foe.hp = G.foe.maxHp
-	G.foe.turn = 0
-	G.foe.meters = Species.SPECIES[G.foe.species].start.duplicate()
-	G.foe.lastIntent = ""
-	start_encounter(G.foe)
+	var foe: Dictionary = G.foe
+	foe.clear()
+	foe.merge(encounter_start.foe.duplicate(true))
+	G.hp = encounter_start.hp
+	G.gold = encounter_start.gold
+	G.allies = encounter_start.allies.duplicate(true)
+	G.tally = encounter_start.tally.duplicate(true)
+	pending_judgement = null
+	_timers.clear()
+	render_party()
+	start_encounter(foe)
 
 
 func ending() -> void:
@@ -1881,6 +1903,7 @@ func on_key(raw: String) -> void:
 func to_menu() -> bool:
 	if not ResourceLoader.exists(MENU_SCENE) or not is_inside_tree():
 		return false
+	_end_personality_slice()
 	left_for = "menu"
 	if navigate:
 		get_tree().change_scene_to_file.call_deferred(MENU_SCENE)

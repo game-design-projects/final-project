@@ -6,7 +6,7 @@ Run the seeded Genre Halls slice with Godot 4.7.2:
 godot --path . -- personality-slice seed=7042 nosound
 ```
 
-The run starts with two bandits, ROOK and VEX, in consecutive encounters. CHECK is free; the foe tooltip also shows each clue. Both begin with the same meters, 12 gold is available, and the slice fixes the negotiation and answer roll at 0.5. Other combat and mercy rolls use the seed, so repeat the same actions to reproduce a branch. The slice does not autosave. After the second encounter, the ordinary floor remains playable.
+The run starts with two bandits, ROOK and VEX, in consecutive encounters. CHECK is free; the foe tooltip also shows each clue. Both begin with the same meters, 12 gold is available, and the slice fixes the negotiation and answer roll at 0.5. Other combat and mercy rolls use the seed, so repeat the same actions to reproduce a branch. The slice does not autosave. After the second encounter, or after fleeing, the fixed interaction roll is cleared and the ordinary floor remains playable. A new floor, loading a save, or leaving the scene also clears it. A retry restores the encounter-start state, including HP, gold, allies, and the monster’s personality and meters. Manual saves contain the floor state but not the temporary fixed roll or queued encounter.
 
 Suggested routes (restart the command for each route):
 
@@ -24,3 +24,17 @@ For **5–8 participants**, record the first choice at each bandit, whether they
 - Would you want to encounter another monster with a different personality? Why?
 
 Automated tests verify state changes and reachable outcomes. They cannot establish whether the choices feel clear, fair, or enjoyable; use the participant observations for that judgement.
+
+## Automated reproduction and survival
+
+With Godot 4.7.2 on PATH, run:
+
+```bash
+godot --headless --path . -s res://tests/run_tests.gd -- --only=genre
+godot --headless --path . -s res://tests/run_tests.gd -- --only=game
+godot --headless --path . -s res://tests/run_tests.gd
+```
+
+The normal 20 HP automated route offers ROOK a fair cut, offers VEX the same cut, stands still during VEX's ensuing chess attack, then flees. With seed 7042 it reaches exploration with 5 HP and 6 gold; VEX remains on the floor. Standing still through additional attacks can kill the player. Dodge movement and combat timing change the outcome; defeating VEX at normal HP has not been established by this test. The existing automated victory route uses elevated HP, so it does not establish normal-HP combat survivability.
+
+For a facilitated session, start a fresh command for each of 5–8 participants. Give them the controls and goal, but do not explain the personalities. Ask them to try the fair-cut route and then a route of their own, including retry if they die. Record actions, HP, gold, deaths, and their interpretation before asking the questions above. Do not coach dodge movement until after observing the first attempt; note whether they flee or defeat VEX and whether they can continue exploring.
