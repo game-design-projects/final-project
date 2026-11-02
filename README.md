@@ -16,7 +16,8 @@ Donjon is a Godot 4.7 project (GDScript). It runs in the browser, on Windows, on
 - **Real dice.** Combat follows D&D 5e, simplified. Every roll shows in the log in words, and d20s tumble across the view. Spell slots, death saves, advantage, critical hits, levels.
 - **A run worth restarting.** Floors are new mazes every time. Every flight of stairs earns a Roll of Fate (a random boon that stacks), every fifth floor has a red champion, and death is permanent.
 - **It looks and sounds like a place.** Wireframe corridors in true perspective run through a shader that makes the lines glow like an old vector monitor. The screen drains of color, closes in red and starts a heartbeat when the party is dying. The music is original baroque dungeon music; every sound effect is synthesized.
-- **Genre Halls.** The game opens here: Undertale-style battles on the same dungeon, where each faction attacks in its own genre (goo rain, chess, shadow, rhythm). Esc on its title card goes to the original turn-based Donjon.
+- **A real main menu.** Continue, New Game, Load Game, a Save Manager (copy, rename, delete), Settings (window mode, vsync, frame rate, the CRT glow, calm hits, screen shake, sound) and Credits. Esc while walking pauses: resume, save, load, settings, back to the menu.
+- **Genre Halls.** The game: Undertale-style battles on the same dungeon, where each faction attacks in its own genre (goo rain, chess, shadow, rhythm). The original turn-based Donjon stays behind the `main` flag.
 
 ## Run it
 
@@ -24,7 +25,7 @@ You need [Godot 4.7.2](https://godotengine.org/download). From the project folde
 
 ```bash
 godot --headless --path . --import   # once, and again after adding files or assets
-godot --path .                       # play: opens in Genre Halls (no key needed)
+godot --path .                       # play: the main menu, then Genre Halls (no key needed)
 godot --path . -- main mock          # the original Donjon on mock Jev: no key, no credits
 ```
 
@@ -38,6 +39,7 @@ Prebuilt web, Windows, macOS and Linux builds come out of CI: every push has the
 | --- | --- |
 | Exploring | ↑/W forward · ↓/S back · ←/A and →/D turn · **C** camp (long rest; may be ambushed) · **E** talk to an ally · **V** make a vow to an ally · **B** boons · **M** map |
 | Combat | **F** quick attack: everyone does their usual move at once (weapons; the wizard's free Fire Bolt; no spell slots) · **C** choose moves: pick each adventurer's action one by one (attack, Second Wind or Action Surge, or any spell they have slots for) · **T** talk (everyone hears) · **R** recruit the target · **G** give gold · **V** vow to the target · **E** escape · **1–3** pick target |
+| Genre Halls | ↑/W forward · ↓/S back · ←/A and →/D turn · **Esc** pause menu (walking, or the fight's command menu) · in a fight **Enter** strikes, arrows dodge |
 | Menus | ↑/↓ (or W/S) move the highlight, ←/→ jump columns, **Enter** picks it · **1–9** and **0** pick directly · **Esc** goes back |
 | Anywhere | hold **Space** to talk · **K** achievements · **H** tips off / back on from the start · **P** music on/off · **O** sound effects on/off · **L** voices (monsters read aloud): the next voice, then off · (**J** Jev mind panel, debug runs only) |
 
@@ -157,6 +159,7 @@ godot --path . -- meet=rock          # Genre Halls, straight into a rock fight
 | `genre-halls` | from the original Donjon (`res://src/ui/main.tscn`), jump to Genre Halls |
 | `meet=<species>` | in Genre Halls, jump into that faction's fight: `slime`, `bandit`, `snake`, `rock` or `dragon` |
 | `nosound` or `nosfx` | Genre Halls without sound |
+| `nosave` | Genre Halls doesn't write its autosave |
 | `pad` | Genre Halls with its on-screen arrow pad (always on a touch screen) |
 
 `godot --path . --verbose` prints the game's debug logging (flag choice, Jev provider, API timing, audio start, boon draws, the voices found and each line spoken, the speech helper's own log).
@@ -219,6 +222,7 @@ Scripts for looking at the game, in `cli/`:
 | `social_scenarios.gd` | `godot --headless --path . -s res://cli/social_scenarios.gd -- [filter] [--live] [--seed=N]` | group fights, ally talk and vows |
 | `shots.gd` | `godot --path . -s res://cli/shots.gd -- out=<dir>` | opens a window, plays the real screen on mock Jev, saves a screenshot of every state (title, exploring, a question, a fight, CHOOSE MOVES, the talk box, the Jev panel, the achievements list, the Roll of Fate, danger, game over, a tip, `nofx`, a small window) and fails on any script error |
 | `view_shots.gd` | `godot --path . -s res://cli/view_shots.gd -- --out=<dir>` | the view modules alone: the title, corridors on three palettes, the automap, every monster (plus a shiny, a champion and a group of three), and the shader at two danger levels |
+| `menu_shots.gd` | `godot --path . -s res://cli/menu_shots.gd -- out=<dir>` | The main menu, save manager, settings pages and the pause menu |
 | `genre_shots.gd` | `godot --path . -s res://cli/genre_shots.gd -- out=<dir> [sound]` | Genre Halls: each faction's box, the foe's mind tooltip, the strike bar, a route screen |
 | `sfx_dump.gd` | `godot --headless --path . -s res://cli/sfx_dump.gd -- --out=<dir>` | renders every sound effect to WAV with a table of length, peak and RMS, to listen to or measure |
 | `voice_lines.gd` | `godot --headless --path . -s res://cli/voice_lines.gd -- --out=build/voice-lines.json` | every line a monster can say aloud, for rendering a voice bank (see [Voices](#voices)) |
@@ -340,7 +344,7 @@ So allies conflict with each other. Killing a monster that was pleading pleases 
 
 ## Genre Halls: Undertale-style battles
 
-Genre Halls is the next version of the fights, built on the same renderer, monster art, species, feelings and synth. It is the project's startup scene (`godot --path .`, the exported builds, the web page). The original Donjon is one **Esc** away on its title or route screen, or `-- main`; from the original Donjon, **G** on its title card or the `genre-halls` flag comes back. It needs no key.
+Genre Halls is the next version of the fights, built on the same renderer, monster art, species, feelings and synth. The main menu starts it (`godot --path .`, the exported builds, the web page); **New Game** or **Continue** opens it. The original Donjon is behind `-- main`; from the original Donjon, **G** on its title card or the `genre-halls` flag comes back. It needs no key.
 
 - **One floor, five fights.** A 13×13 maze holds one slime, bandit, snake person and rock entity, plus a red dragon champion in the 5×5 hall at the center. Monsters are drawn down the corridor when you can see them, straight ahead or diagonal down a side opening, and show on the automap.
 - **One box, one rule: lit squares hurt.** When a monster attacks, you dodge on a 7×7 grid with the arrow keys (or WASD). Every faction attacks in its own genre. Slimes rain goo, and the shadow of each drop shows where it will land. Bandits play chess: a rook lights its row and column, a bishop its diagonals, a knight its L-jumps. Snake people swing a lantern around the box, and you hide in a pillar's shadow. Rock entities stomp on the beat, with each pattern shown two beats ahead. The champion changes genre every turn.
@@ -349,6 +353,7 @@ Genre Halls is the next version of the fights, built on the same renderer, monst
 - **Allies are charms.** A spared monster may ask to join, up to three. Each ally gives a passive charm: BOUNCY absorbs the first hit, KEEN EYE keeps warnings lit longer, SLIPPERY lengthens your safety after a hit, STEADY slows the strike bar, and HOARD-FIRE adds 4 damage. Allies judge what you do (killing a monster that was ready to stop, fleeing, insults) and walk out when their loyalty runs low.
 - **The screen is one frame that fills the window**, with as little text as possible. Top line: where you are and your route. Under the view, the text box: an HP bar, the log (three lines), and the commands, at a fixed height so the view never changes size. The automap sits in the view's corner while you explore (hover it for the monster colors) and steps aside in a fight; allies are small chips in the view's bottom-left corner (red when about to leave). Explanations are tooltips: hover a command for what it does (SPARE turns gold when it would work, and its tooltip explains allies and charms), an ally for its charm and loyalty, the monster for its mind. With the keys, the highlighted command shows its tooltip too.
 - **Routes.** The stairs name how you played: ghost (met no one), quiet (killed no one), blood (spared no one) or tangled.
+- **Saves.** A run is one floor. It is autosaved whenever you are back to walking (the floor's start, after a fight, after backing away), and the pause menu saves into six slots while you walk; a fight in progress isn't saved, so loading puts you in the corridor before it. **Continue** loads the newest save. Saves are files in `user://saves/` (IndexedDB on the web), one per slot; the Save Manager copies, renames and deletes them.
 
 The rules (factions, floor, mind, word reading, box geometry) are in `src/genre/genre_rules.gd`, with no UI, and are tested in `tests/genre/`. Drawing and input are in `src/genre/genre_halls.gd`. The `meet=<species>` flag jumps straight into that faction's fight.
 

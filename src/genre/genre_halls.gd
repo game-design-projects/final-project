@@ -4,10 +4,11 @@
 ## probabilities); here a local stand-in answers them. The rules live in genre_rules.gd; this file draws and plays.
 ## Port of crawler/public/genre-halls.js + genre-halls.html.
 ##
-## Launch:  godot --path . [-- meet=slime]   (this is the project's startup scene)
+## Launch:  godot --path .   (the main menu starts it: src/menu/main_menu.tscn; `-- meet=slime` goes straight to a fight)
 ## `meet=<species>` (slime, bandit, snake, rock, dragon) jumps straight into that faction's fight, like the
 ## console hook genreHalls.meet("rock"). Keys: arrows / WASD, Enter / Space / Z, Esc / X, 1-9 on the menus.
-## Esc on the title or the route screen goes to the main game (res://src/ui/main.tscn) when it exists.
+## Esc while walking or in a fight's menu opens the pause menu (save, load, settings, main menu); Esc on the route screen
+## or the title card goes to the main menu. Opened by the menu it starts a run or loads a save (src/menu/session.gd).
 ##
 ## The screen is one framed CRT that fills the window: a thin top line (where, route), the 448x288 view (Canvas2D, drawn
 ## in a SubViewport and scaled up to the free space) with the automap and the allies as small overlays, and a text box
@@ -27,9 +28,15 @@ const SfxModule = preload("res://src/audio/sfx.gd")
 const Species = preload("res://src/rules/species.gd")
 const Emotions = preload("res://src/rules/emotions.gd")
 const Rules = preload("res://src/genre/genre_rules.gd")
+const Settings = preload("res://src/menu/settings.gd")
+const Saves = preload("res://src/menu/saves.gd")
+const Session = preload("res://src/menu/session.gd")
+const Menus = preload("res://src/menu/menus.gd")
+const MenuPanel = preload("res://src/menu/menu_panel.gd")
 
-const MAIN_SCENE := "res://src/ui/main.tscn"
-const TITLE_HINT := "ESC: THE ORIGINAL DONJON" ## on the title card: how to reach the main game
+const MAIN_SCENE := "res://src/ui/main.tscn" ## the original Donjon, reached with the `main` flag
+const MENU_SCENE := "res://src/menu/main_menu.tscn"
+const TITLE_HINT := "ESC: MENU" ## on the title card (only seen when this scene is opened without the menu)
 const W := Rules.W
 const H := Rules.H
 const COLS := Rules.COLS
@@ -93,6 +100,11 @@ var _last_map := 0.0
 
 var sfx = null
 var postfx = null
+## Tests turn this off so Esc doesn't change the scene under the test runner
+var navigate := true
+var left_for := "" ## where the last scene change went ("menu"), for tests
+var _pause: MenuPanel
+var _applied_hash := 0
 
 # UI nodes
 var _view_vp: SubViewport
@@ -158,6 +170,13 @@ func _ready() -> void:
 	say(sys("Press any key to start."))
 	set_menu([], kbd("ANY KEY") + " START")
 	hud()
+	apply_settings()
+	var req := Session.take()
+	if req.get("kind", "") == "new":
+		new_run()
+	elif req.get("kind", "") == "load":
+		if not import_state(req.state):
+			new_run()
 	var species := Flags.capture("meet=(\\w+)")
 	if species != "":
 		meet(species)
@@ -167,6 +186,7 @@ func _process(_delta: float) -> void:
 	if clock_override >= 0.0 or _view_canvas == null:
 		return # a fake clock in tests, or on the way to the main game
 	var t := now()
+	apply_settings()
 	tick(t)
 	if postfx != null:
 		postfx.render(t)
@@ -196,7 +216,7 @@ class NullSfx:
 func _make_sfx():
 	if Flags.test("nosound|nosfx"):
 		return NullSfx.new()
-	var s = SfxModule.Sfx.new(0.5)
+	var s = SfxModule.Sfx.new(Settings.sfx_gain(Settings.current()))
 	add_child(s)
 	return s
 
@@ -215,9 +235,41 @@ func _sfx_play(name: String, opts := {}) -> void:
 func _attach_postfx() -> void:
 	if DisplayServer.get_name() == "headless":
 		return # nothing is rendered, and the shader compiler has nothing to build for
-	postfx = Postfx.PostFx.create({})
+	if not Settings.get_value("crt"):
+		return
+	postfx = Postfx.PostFx.create({"reducedMotion": Settings.get_value("calm")})
 	if postfx != null:
 		postfx.attach(_view_rect)
+		if G.map != null:
+			postfx.set_accent(G.map.palette.accent)
+		hud()
+
+
+## Pick up changes made on the settings pages: the glow, calm hits and the sound volume (the window is applied by
+## the settings module itself, the shake is read when it happens)
+func apply_settings() -> void:
+	var s := Settings.current()
+	if s.hash() == _applied_hash:
+		return
+	_applied_hash = s.hash()
+	if s.crt and postfx == null:
+		_attach_postfx()
+	elif not s.crt and postfx != null:
+		postfx.detach()
+		postfx = null
+	if postfx != null:
+		postfx.reduced_motion = s.calm
+	if sfx != null and sfx.get("volume") != null:
+		var g := Settings.sfx_gain(s)
+		sfx.volume = g
+		if sfx.get("out_gain") != null:
+			sfx.out_gain.set_value_at_time(g, sfx.clock.call())
+
+
+func _shake(ms: float, at := -1.0) -> void:
+	if Settings.get_value("shake"):
+		G.shake = (now() if at < 0.0 else at) + ms
+
 
 
 # ---------------------------------------------------------------- BBCode helpers (the page's spans)
@@ -449,7 +501,7 @@ func hud() -> void:
 
 # ---------------------------------------------------------------- exploring
 
-func explore(msg := "") -> void:
+func explore(msg := "", autosave := true) -> void:
 	G.mode = "explore"
 	G.foe = null
 	if postfx != null and G.map != null:
@@ -458,6 +510,97 @@ func explore(msg := "") -> void:
 		say(msg)
 	set_menu([], kbd("↑") + kbd("↓") + " WALK  " + kbd("←") + kbd("→") + " TURN")
 	hud()
+	if autosave:
+		_autosave()
+
+
+# ---------------------------------------------------------------- saving
+
+## A run is one floor: what is saved is the map, where you stand, HP, allies and the tally, written whenever you are
+## back to walking (a floor's start, after a fight, after backing away). A fight in progress isn't saved: loading
+## puts you back on the corridor before it.
+func export_state() -> Dictionary:
+	return {
+		"map": G.map, "x": G.x, "y": G.y, "dir": G.dir, "seen": G.seen, "visited": G.visited,
+		"hp": G.hp, "maxHp": G.maxHp, "tally": G.tally, "allies": G.allies,
+	}
+
+
+func summary() -> String:
+	var t: Dictionary = G.tally
+	var text := "B1F · HP %d/%d · spared %d · slain %d" % [G.hp, G.maxHp, t.spared, t.slain]
+	if not G.allies.is_empty():
+		text += " · %d allies" % G.allies.size()
+	return text
+
+
+## Puts a saved state on the screen. False (nothing changed) if it isn't a state this game wrote.
+func import_state(st: Dictionary) -> bool:
+	var map = st.get("map")
+	var ok: bool = map is Dictionary and map.get("grid") is Array and map.get("monsters") is Array and map.get("stairs") is Dictionary \
+		and map.get("palette") is Dictionary and map.has("n") and st.get("tally") is Dictionary and st.get("allies") is Array \
+		and st.has("x") and st.has("y") and st.has("dir") and st.has("hp") and st.has("maxHp")
+	if ok:
+		var gy := int(st.y)
+		var gx := int(st.x)
+		ok = gy >= 0 and gy < map.grid.size() and gx >= 0 and gx < map.grid[gy].size() and map.grid[gy][gx] == 1
+	if not ok:
+		push_warning("genre halls: that save isn't one this version can load")
+		return false
+	G.map = map
+	G.x = int(st.x)
+	G.y = int(st.y)
+	G.dir = posmod(int(st.dir), 4)
+	G.seen = st.get("seen", {}) if st.get("seen") is Dictionary else {}
+	G.visited = st.get("visited", {}) if st.get("visited") is Dictionary else {}
+	G.maxHp = int(st.maxHp)
+	G.hp = clampi(int(st.hp), 1, G.maxHp)
+	G.tally = st.tally
+	G.allies = st.allies
+	D = null
+	bar = null
+	pending_judgement = null
+	_timers.clear()
+	if _talk != null:
+		close_talk()
+	render_party()
+	print("genre halls: loaded a run (%s)" % summary())
+	explore(sys("Welcome back. " + summary().replace(" · ", ", ") + "."), false)
+	return true
+
+
+func _autosave() -> void:
+	if clock_override >= 0.0 or G.map == null or Flags.test("nosave"):
+		return
+	Saves.write(Saves.AUTO, export_state(), summary())
+
+
+# ---------------------------------------------------------------- the pause menu
+
+func open_pause() -> void:
+	if _pause == null:
+		_pause = MenuPanel.new()
+		_pause.backdrop = 0.86
+		add_child(_pause)
+	var ctx := {
+		"resume": func(): _pause.close(),
+		"to_main_menu": func(): to_menu(),
+		"load_slot": func(slot):
+			var st := Saves.read(slot)
+			_pause.close()
+			if st.is_empty() or not import_state(st):
+				say(sys("That save can't be loaded.")),
+	}
+	if G.mode == "explore":
+		ctx["save_slot"] = func(slot) -> bool:
+			var wrote := Saves.write(slot, export_state(), summary())
+			say(sys("Saved to slot %s." % str(slot)) if wrote else sys("Couldn't save to slot %s." % str(slot)))
+			return wrote
+	_pause.open(func(): return Menus.pause(_pause, ctx))
+
+
+func pause_open() -> bool:
+	return _pause != null and _pause.visible
 
 
 func monster_at(x: int, y: int):
@@ -478,7 +621,7 @@ func step(forward: int) -> void:
 	var ny: int = G.y + d[1]
 	if not _open(nx, ny):
 		_sfx_play("bump")
-		G.shake = now() + 160.0
+		_shake(160.0)
 		return
 	var m = monster_at(nx, ny)
 	if m != null:
@@ -1056,7 +1199,7 @@ func update_dodge(t: float) -> void:
 				postfx.hurt(1.0)
 			D.iframes = t + safe
 			D.hitFlash = t
-			G.shake = t + 200.0
+			_shake(200.0, t)
 			_sfx_play("hurt")
 			hud()
 			if G.hp <= 0:
@@ -1086,6 +1229,7 @@ func dead() -> void:
 		[
 			{"label": "TRY THIS FIGHT AGAIN", "run": func(): retry_fight()},
 			{"label": "NEW FLOOR", "run": func(): new_run()},
+			{"label": "MAIN MENU", "run": func(): to_menu()},
 		],
 		kbd("ENTER") + " PICK",
 	)
@@ -1128,7 +1272,7 @@ func ending() -> void:
 		tail += " · still with you: %s" % esc(", ".join(names))
 	tail += ". In the full game the route carries into the next floor and the story's three acts."
 	say(who(route + ".") + " " + esc(text) + "\n" + sys(tail))
-	set_menu([{"label": "NEW FLOOR", "run": func(): new_run()}], kbd("ENTER") + " PLAY AGAIN")
+	set_menu([{"label": "NEW FLOOR", "run": func(): new_run()}, {"label": "MAIN MENU", "run": func(): to_menu()}], kbd("ENTER") + " PICK")
 
 
 # ---------------------------------------------------------------- clock
@@ -1388,12 +1532,14 @@ func on_key(raw: String) -> void:
 	var key: String = KEYMAP.get(raw, KEYMAP.get(raw.to_lower(), raw))
 	var t := now()
 	if G.mode == "title":
-		if raw == "Escape" and back_to_main():
+		if raw == "Escape" and to_menu():
 			return
 		new_run()
 		return
 	if G.mode == "explore":
-		if key == "ArrowUp":
+		if key == "Escape":
+			open_pause()
+		elif key == "ArrowUp":
 			step(1)
 		elif key == "ArrowDown":
 			step(-1)
@@ -1417,7 +1563,7 @@ func on_key(raw: String) -> void:
 			strike(t)
 		return
 	if G.mode in ["menu", "act", "result", "dead", "end"]:
-		if G.mode == "end" and raw == "Escape" and back_to_main():
+		if G.mode == "end" and raw == "Escape" and to_menu():
 			return
 		if key == "ArrowUp" or key == "ArrowLeft":
 			move_sel(-1)
@@ -1428,20 +1574,26 @@ func on_key(raw: String) -> void:
 				G.menu[G.sel].run.call()
 		elif key == "Escape" and G.mode == "act":
 			main_menu()
+		elif key == "Escape" and G.mode == "menu":
+			open_pause()
 		elif key.length() == 1 and key >= "1" and key <= "9" and int(key) - 1 < G.menu.size():
 			G.sel = int(key) - 1
 			G.menu[G.sel].run.call()
 
 
-## Esc on the title / route screen: back to the main game, when it exists
-func back_to_main() -> bool:
-	if not ResourceLoader.exists(MAIN_SCENE) or not is_inside_tree():
+## Esc on the title / route screen, or MAIN MENU on the pause menu
+func to_menu() -> bool:
+	if not ResourceLoader.exists(MENU_SCENE) or not is_inside_tree():
 		return false
-	get_tree().change_scene_to_file.call_deferred(MAIN_SCENE)
+	left_for = "menu"
+	if navigate:
+		get_tree().change_scene_to_file.call_deferred(MENU_SCENE)
 	return true
 
 
 func _input(event: InputEvent) -> void:
+	if pause_open():
+		return # the pause menu has the keys
 	if _view_canvas == null or not event is InputEventKey or not event.pressed:
 		return
 	if event.meta_pressed or event.ctrl_pressed or event.alt_pressed:

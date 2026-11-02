@@ -4,7 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-01
+
 ### Added
+- **A main menu** as the startup scene (`src/menu/`): Continue, New Game, Load Game, Save Manager (copy, rename, delete), Settings, Credits, Quit (not on the web). Esc while walking or in a fight's command menu opens a pause menu: resume, save, load, settings, main menu.
+- **Settings** kept in the game's saved data and applied at once: window mode, vsync and frame-rate cap, the CRT glow, calm hits, screen shake, sound effects and volume; a Data page resets them, opens the save folder and deletes saves.
+- **Saves** for Genre Halls: an autosave whenever you are back to walking, six slots from the pause menu, one file each in `user://saves/`; Continue loads the newest. A fight in progress isn't saved.
+- `cli/menu_shots.gd` (screenshots of the menus) and tests for settings, saves, the menu pages and saving in Genre Halls.
 - **Hold Space to talk in the desktop builds**, on your own computer with nothing sent anywhere: NVIDIA's Nemotron Speech Streaming model (English, 160 ms chunks, int8) in a small helper program on sherpa-onnx 1.13.8 (`native/asr/donjon_asr.c`), which the game runs and streams the microphone to (`src/audio/asr.gd`). The model is a one-time 662 MB download (pinned, SHA-256 checked) that the first hold of Space offers and the next starts. Each desktop build carries its own helper (Windows x86_64, macOS universal, Linux x86_64). The web build keeps the browser's recognizer.
 - **Pluggable monster voices** (`src/audio/tts_engines.gd`, `tts_config.gd`): rendered voice banks in `assets/voices/` (CosyVoice3, the Feiyu stack's engine, and Qwen3-TTS; the banks themselves follow), a Feiyu voice service or a Qwen3-TTS service on your network synthesising lines as they're said (`config/tts_config.json` or `.env`), and the system's voice as before. The Feiyu service is only used with a voice of our own named, never its default Feiyu voice library. Flag `tts=<voice>` starts with one.
 - `cli/voice_lines.gd`: every line a monster can say aloud (322, `{name}` filled in), for rendering a bank.
@@ -20,6 +26,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Talking before listening has started no longer loses your first word ("Know your place" came back "Your place"): the helper starts each utterance with 0.3 s of quiet. `smoke.py` checks it on `native/asr/testdata/know_your_place.wav`.
 
 ### Changed
+- The game starts in the main menu, not in Genre Halls; Esc on Genre Halls' title or route screen goes to the menu instead of the original Donjon, which stays behind the `main` flag.
 - **L** steps through the voices this build has, then off (with only one, it's on and off as before), and the choice is kept.
 - The macOS build asks for the microphone (it has the usage description and audio-input entitlement). Godot's microphone input is on in every build but the web one.
 - Genre Halls fills the window as one framed screen with far less text (Pear's playtest): the view scales to the free space, the sidebar (automap legend, party, Jev mind) is gone, and the text box under the view holds an HP bar, a three-line log and the commands, at a fixed height so the view never resizes.
