@@ -80,6 +80,7 @@ var G := {
 	"visited": {},
 	"hp": 20,
 	"maxHp": 20,
+	"gold": 8,
 	"foe": null,
 	"menu": [],
 	"sel": 0,
@@ -97,6 +98,8 @@ var last_say := "" # the dock text as BBCode, for tests and tools
 
 ## Tests and tools set this (ms, >= 0) to drive the clock by hand and call `tick` themselves.
 var clock_override := -1.0
+## Tests can pin a negotiation or answer roll; normal play always rolls afresh.
+var interaction_roll_override := -1.0
 var _timers: Array = []
 var _last_map := 0.0
 
@@ -361,6 +364,7 @@ func new_run() -> void:
 	G.seen = {}
 	G.visited = {G.map.n + 1: true}
 	G.hp = G.maxHp
+	G.gold = 8
 	G.tally = {"spared": 0, "slain": 0, "fled": 0, "recruited": 0, "left": 0}
 	G.allies = []
 	render_party()
@@ -542,7 +546,7 @@ func foe_genre() -> String:
 func hud() -> void:
 	if postfx != null:
 		postfx.set_danger(clampf((0.5 - float(G.hp) / G.maxHp) * 2.0, 0.0, 1.0))
-	_hp.text = "HP [color=%s]%d/%d[/color]" % [C_YOU, maxi(0, G.hp), G.maxHp]
+	_hp.text = "HP [color=%s]%d/%d[/color]   GOLD [color=%s]%d[/color]" % [C_YOU, maxi(0, G.hp), G.maxHp, C_MERCY, G.gold]
 	_hp_bar.set_hp(G.hp, G.maxHp)
 	var spared: int = G.tally.spared
 	var slain: int = G.tally.slain
@@ -575,13 +579,13 @@ func explore(msg := "", autosave := true) -> void:
 func export_state() -> Dictionary:
 	return {
 		"map": G.map, "x": G.x, "y": G.y, "dir": G.dir, "seen": G.seen, "visited": G.visited,
-		"hp": G.hp, "maxHp": G.maxHp, "tally": G.tally, "allies": G.allies,
+		"hp": G.hp, "maxHp": G.maxHp, "gold": G.gold, "tally": G.tally, "allies": G.allies,
 	}
 
 
 func summary() -> String:
 	var t: Dictionary = G.tally
-	var text := "B1F · HP %d/%d · spared %d · slain %d" % [G.hp, G.maxHp, t.spared, t.slain]
+	var text := "B1F · HP %d/%d · gold %d · spared %d · slain %d" % [G.hp, G.maxHp, G.gold, t.spared, t.slain]
 	if not G.allies.is_empty():
 		text += " · %d allies" % G.allies.size()
 	return text
@@ -608,6 +612,7 @@ func import_state(st: Dictionary) -> bool:
 	G.visited = st.get("visited", {}) if st.get("visited") is Dictionary else {}
 	G.maxHp = int(st.maxHp)
 	G.hp = clampi(int(st.hp), 1, G.maxHp)
+	G.gold = maxi(0, int(st.get("gold", 8)))
 	G.tally = st.tally
 	G.allies = st.allies
 	D = null
@@ -726,6 +731,7 @@ func monsters_in_view() -> Array:
 
 func start_encounter(m: Dictionary) -> void:
 	G.foe = m
+	m.spoke = false
 	G.mode = "intro"
 	G.sel = 0
 	if postfx != null:
@@ -768,11 +774,11 @@ func act_menu() -> void:
 	G.sel = 0
 	var items := [{"label": "CHECK", "sub": "Free: read it", "run": func(): check()}]
 	for a in Rules.ACTS[m.species]:
-		items.append({"label": a.label, "run": func(): do_act(a)})
+		items.append({"label": a.label, "sub": "Costs 6 gold if accepted; ends the fight" if m.species in ["bandit", "snake"] and a.intent == "gold" else "", "run": func(): do_act(a)})
 	if m.spoke:
 		items.append({"label": "SAY SOMETHING", "sub": "Already spoke this fight", "run": func(): main_menu(sys("You've had your say this fight."))})
 	else:
-		items.append({"label": "SAY SOMETHING", "sub": "Optional: type once per fight", "run": func(): open_talk()})
+		items.append({"label": "SAY SOMETHING", "sub": "Ask about stairs, the champion or another monster; one line per fight", "run": func(): open_talk()})
 	set_menu(items, kbd("ENTER") + " PICK " + kbd("ESC") + " BACK")
 
 
@@ -816,10 +822,31 @@ func decide(m: Dictionary, act, act_label: String, words = null) -> Dictionary:
 
 func do_act(act: Dictionary) -> void:
 	var m: Dictionary = G.foe
+	if m.species in ["bandit", "snake"] and act.intent == "gold":
+		offer_cut(m, act)
+		return
 	var r := decide(m, [{"intent": act.intent, "w": 1}], act.label)
 	judge(act.intent)
 	_sfx_play("good" if r.em.tone == "good" else ("bad" if r.em.tone == "bad" else "odd"))
 	after_player("%s %s is %s: %s." % [sys("You %s." % esc(act.label.to_lower())), esc(m.name), bold(r.em.label), esc(r.em.effect.to_lower())], r)
+
+
+func offer_cut(m: Dictionary, act: Dictionary, words = null) -> void:
+	if G.gold < 6:
+		main_menu(sys("A fair cut is 6 gold. You have %d.%s" % [G.gold, " Your line is spent." if words != null else ""]))
+		return
+	var accepted := Rules.accepts_cut(m, interaction_roll_override)
+	var refusal_reason := "It is too angry to trust an offer" if m.meters.anger >= 60 else ("It watches for a catch" if m.traits.has("secretive") else ("It keeps watching the exit" if m.traits.has("jumpy") else ("Its pride outweighs the coins" if m.traits.has("proud") else "It decides the risk is not worth the coins")))
+	var r := decide(m, [{"intent": "gold", "w": 1}], act.label, words)
+	judge("gold")
+	if accepted:
+		G.gold -= 6
+		print("genre halls: %s accepted a 6 gold cut; %d gold left" % [m.name, G.gold])
+		var reason := "It keeps its word." if m.traits.has("surprisingly honest about being dishonest") else ("It needed the coins." if m.traits.has("owes money to someone") else "The bargain suits it.")
+		defeat(m, "spared", false, "SPARED. It takes 6 gold and leaves. " + reason)
+		return
+	_sfx_play("bad")
+	after_player("%s %s. You keep your gold." % [sys("You offer 6 gold."), esc(refusal_reason)], r)
 
 
 # ---------------------------------------------------------------- talking (optional, once per fight)
@@ -828,7 +855,7 @@ func open_talk() -> void:
 	G.mode = "talk"
 	_talk.visible = true
 	_talk_in.text = ""
-	set_menu([], "TYPE ANYTHING " + kbd("ENTER") + " SAY IT " + kbd("ESC") + " NEVER MIND · NONSENSE COUNTS TOO")
+	set_menu([], "TYPE ANYTHING " + kbd("ENTER") + " SAY IT " + kbd("ESC") + " NEVER MIND · GOLD OFFERS COST 6 IF ACCEPTED")
 	_talk_in.call_deferred("grab_focus")
 
 
@@ -851,6 +878,9 @@ func say_text(text: String) -> void:
 	var m: Dictionary = G.foe
 	m.spoke = true
 	var words := Rules.read_words(text)
+	if m.species in ["bandit", "snake"] and words.choice == "gold":
+		offer_cut(m, {"label": "YOUR OFFER"}, words)
+		return
 	var parts := []
 	for k in words.probabilities:
 		if k != "other" and words.probabilities[k] >= 0.12:
@@ -859,34 +889,83 @@ func say_text(text: String) -> void:
 	var top: String = words.choice
 	judge(null if top == "other" else top)
 	var extra := ""
+	var asked: bool = words.probabilities.question >= 0.25 and top != "gibberish"
 	if top == "gibberish":
 		extra = "\n" + sys("It didn't understand a word of that.")
-	elif words.probabilities.question >= 0.25 and r.em.tone != "bad":
-		extra = "\n" + who(esc(m.name) + ":") + " " + esc(hint_for(m))
-	after_player("%s %s is %s: %s.%s" % [sys('You say "%s".' % esc(text)), esc(m.name), bold(r.em.label), esc(r.em.effect.to_lower()), extra], r)
+	elif asked:
+		if Rules.will_reveal(m, interaction_roll_override):
+			var reason := "Curious, it answers" if m.traits.has("curious") else ("It speaks plainly" if m.traits.has("surprisingly honest about being dishonest") else "It trusts you enough to answer")
+			extra = "\n" + who(esc(m.name) + ":") + " " + esc(reason + ": " + hint_for(m, text).trim_prefix("..."))
+		else:
+			var reason := "It guards its secrets" if m.traits.has("secretive") else ("It keeps watching the exit" if m.traits.has("jumpy") else "It does not trust you yet")
+			extra = "\n" + sys(reason + " and gives no answer.")
+	var message := sys("You ask a question.") + " " + esc(m.name) + " is " + bold(r.em.label) + "." + extra if asked else "%s %s is %s: %s.%s" % [sys('You say "%s".' % esc(text)), esc(m.name), bold(r.em.label), esc(r.em.effect.to_lower()), extra]
+	after_player(message, r, not asked)
 
 
-# Talking can pay off in information: where the stairs are, or what another monster can't stand
-func hint_for(m: Dictionary) -> String:
-	var s: Dictionary = G.map.stairs
-	var dir: String
-	if absi(s.x - m.x) > absi(s.y - m.y):
-		dir = "east" if s.x > m.x else "west"
-	else:
-		dir = "south" if s.y > m.y else "north"
-	var pool := ["...the way down is to the %s." % dir]
+# Facts come from this run's map and living monsters. The stair direction is the first walkable step,
+# not a compass bearing through a wall.
+func hint_for(m: Dictionary, question := "") -> String:
+	var q: String = question.to_lower()
+	if q == "" or "stair" in q or "exit" in q or "way out" in q:
+		if G.x == G.map.stairs.x and G.y == G.map.stairs.y:
+			return "...you are standing on the stairs."
+		return "...from here, take the corridor %s toward the stairs." % _stairs_step()
+	var champion: Dictionary = G.map.monsters.back()
+	if "champion" in q or "boss" in q or "dragon" in q or "vexalith" in q:
+		if champion.gone != null:
+			return "...the champion has already fallen."
+		return "...%s starts with %s, then shifts to %s." % [champion.name, Rules.GENRES[Rules.BOSS.genres[0]].name.to_lower(), Rules.GENRES[Rules.BOSS.genres[1]].name.to_lower()]
+	var target: Dictionary = {}
+	var named_gone := false
 	for o in G.map.monsters:
-		if J.truthy(o.gone) or is_same(o, m):
-			continue
-		var worst: String = ""
-		var best: String = ""
-		for k in Rules.AFF[o.species]:
-			if worst == "" or Rules.aff(o, k) < Rules.aff(o, worst):
-				worst = k
-			if best == "" or Rules.aff(o, k) > Rules.aff(o, best):
-				best = k
-		pool.append("...%s the %s? it hates %s. loves %s." % [o.name[0] + o.name.substr(1).to_lower(), Species.SPECIES[o.species].label, Rules.INTENT_WORDS[worst], Rules.INTENT_WORDS[best]])
-	return J.pick(pool)
+		if o.species in q or o.name.to_lower() in q:
+			if J.truthy(o.gone):
+				named_gone = true
+				break
+			if is_same(o, m):
+				return "...you can see how I behave for yourself."
+			target = o
+			break
+	if named_gone:
+		return "...that monster is gone from this floor."
+	if target.is_empty():
+		for o in G.map.monsters:
+			if not J.truthy(o.gone) and not is_same(o, m):
+				target = o
+				break
+	if target.is_empty():
+		return "...I know no one else left on this floor."
+	var worst: String = Rules.ACTS[target.species][0].intent
+	for a in Rules.ACTS[target.species]:
+		if Rules.aff(target, a.intent) < Rules.aff(target, worst):
+			worst = a.intent
+	var clues: Array = Rules.personality_clues(target)
+	var clue := " It %s." % clues[0] if not clues.is_empty() else ""
+	return "...%s seems uneasy around %s.%s" % [target.name, Rules.INTENT_WORDS[worst], clue]
+
+
+func _stairs_step() -> String:
+	var start := Vector2i(G.x, G.y)
+	var goal := Vector2i(int(G.map.stairs.x), int(G.map.stairs.y))
+	if start == goal:
+		return "now; you are on them"
+	var queue := [start]
+	var first := {start: -1}
+	var head := 0
+	while head < queue.size():
+		var at: Vector2i = queue[head]
+		head += 1
+		for i in Render.DIRS.size():
+			var d: Array = Render.DIRS[i]
+			var next := at + Vector2i(d[0], d[1])
+			if next.y < 0 or next.y >= G.map.grid.size() or next.x < 0 or next.x >= G.map.grid[next.y].size() or G.map.grid[next.y][next.x] != 1 or first.has(next):
+				continue
+			first[next] = i if at == start else first[at]
+			if next == goal:
+				return ["north", "east", "south", "west"][first[next]]
+			queue.append(next)
+	return "unknown"
 
 
 # ---------------------------------------------------------------- allies: passive charms that judge you
@@ -1076,7 +1155,7 @@ func flee() -> void:
 	explore(sys("You back away. %s stays where it is." % esc(m.name)) + notes)
 
 
-func defeat(m: Dictionary, how: String) -> void:
+func defeat(m: Dictionary, how: String, allow_join := true, settlement := "") -> void:
 	m.gone = how
 	G.tally[how] += 1
 	if m.boss:
@@ -1086,7 +1165,7 @@ func defeat(m: Dictionary, how: String) -> void:
 		postfx.flash(C_MERCY if how == "spared" else BOSS_COLOR, 0.4)
 	var text := sys("%s falls." % esc(m.name))
 	var joined := false
-	if how == "spared":
+	if how == "spared" and allow_join:
 		var room: bool = G.allies.size() < 3
 		var p: float = Rules.ask_join(m).noul if room else 0.0
 		joined = randf() < p
@@ -1098,6 +1177,10 @@ func defeat(m: Dictionary, how: String) -> void:
 			_sfx_play("join")
 			render_party()
 		text = line(m, "join_party" if joined else "leave_peacefully")
+	elif how == "spared":
+		text = line(m, "leave_peacefully")
+		if pending_judgement != null:
+			render_mind(m, pending_judgement.rows)
 	elif pending_judgement != null:
 		render_mind(m, pending_judgement.rows)
 	var notes := ""
@@ -1109,14 +1192,14 @@ func defeat(m: Dictionary, how: String) -> void:
 	hud()
 	var verdict: String
 	if how == "spared":
-		verdict = "SPARED. It joins you: %s, %s." % [Rules.CHARMS[m.species].name, Rules.CHARMS[m.species].text] if joined else "SPARED. It goes its own way."
+		verdict = settlement if settlement != "" else ("SPARED. It joins you: %s, %s." % [Rules.CHARMS[m.species].name, Rules.CHARMS[m.species].text] if joined else "SPARED. It goes its own way.")
 	else:
 		verdict = "SLAIN."
 	say(text + "\n" + sys(verdict) + notes)
 	set_menu([{"label": "CONTINUE", "run": func(): explore()}], kbd("ENTER") + " CONTINUE")
 
 
-func after_player(msg: String, r: Dictionary) -> void:
+func after_player(msg: String, r: Dictionary, show_attack_line := true) -> void:
 	var m: Dictionary = G.foe
 	if pending_judgement != null:
 		msg += "\n" + "\n".join(pending_judgement.notes)
@@ -1125,7 +1208,7 @@ func after_player(msg: String, r: Dictionary) -> void:
 	if r.pacified:
 		main_menu(msg + "\n" + sys("It doesn't attack this turn."))
 		return
-	say(msg + "\n" + line(m, "attack"))
+	say(msg + ("\n" + line(m, "attack") if show_attack_line else ""))
 	G.mode = "wait"
 	set_menu([], "")
 	_after(650.0, func(): if G.foe != null and is_same(G.foe, m): start_dodge(r.pressure))

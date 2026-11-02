@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- Every newly generated Genre Halls monster has an individual motive, including proud or jumpy bandits, with clues in CHECK and the tooltip; motives change reactions, emotional meters, mercy, recruitment and attack pressure.
+- Genre Halls questions can reveal a reachable stair direction, another living monster's aversion and clue, or the champion's opening; personality shifts the chance of an answer.
+- Genre Halls starts with 8 gold, enough for one 6-gold bandit or snake truce; acceptance remains uncertain, accepted bargains spare without recruitment, and refusals keep gold but cost a turn.
+
 ## [0.5.3] - 2026-11-02
 
 ### Added

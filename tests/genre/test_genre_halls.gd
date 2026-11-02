@@ -301,6 +301,12 @@ func test_act_check_and_say_something_once():
 	scene.on_key("5")
 	eq(scene.G.mode, "menu")
 	ok(scene.last_say.contains("You've had your say this fight."))
+	scene.flee()
+	scene.meet("slime")
+	await _pump(800.0)
+	ok(not scene.G.foe.spoke, "a new encounter gives a new single message")
+	scene.on_key("2")
+	eq(scene.G.menu[4].sub, "Ask about stairs, the champion or another monster; one line per fight")
 
 
 func test_personality_clues_are_visible_before_an_act_and_the_act_is_remembered():
@@ -335,6 +341,135 @@ func test_a_bandits_personality_changes_the_next_chess_dodge():
 	scene.start_dodge(Rules.ask_pressure(m).score)
 	ok(scene.D.intensity > cautious, "the defiant bandit's chess attacks are more intense")
 	eq(scene.D.genre, "chess", "personality does not change its combat genre")
+
+
+func test_questions_reveal_floor_facts_and_personality_can_withhold_them():
+	_start("slime")
+	await _pump(800.0)
+	var slime: Dictionary = scene.G.foe
+	slime.traits = ["curious"]
+	slime.taste = Rules.TRAIT_TASTE.curious.duplicate()
+	scene.interaction_roll_override = 0.0
+	var direction: String = scene._stairs_step()
+	ok(["north", "east", "south", "west"].has(direction))
+	var directions := {"north": Vector2i(0, -1), "east": Vector2i(1, 0), "south": Vector2i(0, 1), "west": Vector2i(-1, 0)}
+	var next: Vector2i = Vector2i(scene.G.x, scene.G.y) + directions[direction]
+	eq(scene.G.map.grid[next.y][next.x], 1, "the first step is an open corridor")
+	ok(_distance_to_stairs(next) < _distance_to_stairs(Vector2i(scene.G.x, scene.G.y)), "the step actually approaches the stairs by the maze route")
+	scene.on_key("2")
+	scene.on_key("5")
+	scene.submit_talk("Where are the stairs?")
+	ok(scene.last_say.contains("corridor %s toward the stairs" % direction), scene.last_say)
+	ok(slime.spoke)
+	var snake: Dictionary = _monster("snake")
+	snake.taste = {"flattery": 20.0, "rush": -20.0}
+	var hint: String = scene.hint_for(slime, "what does the snake want?")
+	ok(hint.contains(snake.name) and hint.contains("being rushed"), hint)
+	snake.taste = {"flattery": -20.0, "rush": 20.0}
+	ok(scene.hint_for(slime, "what does the snake want?").contains("praise"), "the tip uses this monster's current taste")
+	ok(scene.hint_for(slime, "what is the champion's opening?").contains("chess"))
+	scene.queue_free()
+	await _tree().process_frame
+	scene = null
+	_start("snake")
+	await _pump(800.0)
+	var secretive: Dictionary = scene.G.foe
+	secretive.traits = ["secretive"]
+	secretive.taste = Rules.TRAIT_TASTE.secretive.duplicate()
+	scene.interaction_roll_override = 0.99
+	scene.on_key("2")
+	scene.on_key("5")
+	scene.submit_talk("Where are the stairs?")
+	ok(scene.last_say.contains("guards its secrets") and not scene.last_say.contains("corridor"), scene.last_say)
+	ok(secretive.spoke)
+
+
+func _distance_to_stairs(start: Vector2i) -> int:
+	var goal := Vector2i(scene.G.map.stairs.x, scene.G.map.stairs.y)
+	var queue := [[start, 0]]
+	var seen := {start: true}
+	var head := 0
+	while head < queue.size():
+		var entry: Array = queue[head]
+		head += 1
+		if entry[0] == goal:
+			return entry[1]
+		for d in Render.DIRS:
+			var next: Vector2i = entry[0] + Vector2i(d[0], d[1])
+			if next.x >= 0 and next.y >= 0 and next.y < scene.G.map.grid.size() and next.x < scene.G.map.grid[next.y].size() and scene.G.map.grid[next.y][next.x] == 1 and not seen.has(next):
+				seen[next] = true
+				queue.append([next, entry[1] + 1])
+	return 999
+
+
+func test_a_fair_cut_spends_gold_and_ends_the_fight_without_recruitment():
+	_start("bandit")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	m.traits = ["surprisingly honest about being dishonest"]
+	m.taste = Rules.TRAIT_TASTE["surprisingly honest about being dishonest"].duplicate()
+	m.meters.anger = 10
+	scene.interaction_roll_override = 0.0
+	eq(scene.G.gold, 8)
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 2)
+	eq(m.gone, "spared")
+	eq(scene.G.tally.spared, 1)
+	eq(scene.G.tally.recruited, 0)
+	eq(scene.G.allies.size(), 0)
+	eq(scene.G.mode, "result")
+	ok(scene.last_say.contains("takes 6 gold"), scene.last_say)
+	ok(scene.export_state().gold == 2, "the cost survives saving")
+	scene.on_key("Enter")
+	scene.meet("snake")
+	await _pump(800.0)
+	scene.G.foe.traits = ["always bargaining"]
+	scene.G.foe.meters.anger = 10
+	scene.on_key("2")
+	scene.on_key("3") # the snake also asks for 6; the same purse cannot pay twice
+	eq(scene.G.gold, 2)
+	eq(scene.G.foe.gone, null)
+	ok(scene.last_say.contains("You have 2"), scene.last_say)
+
+
+func test_rejected_and_unaffordable_cuts_keep_gold_and_do_not_spare():
+	_start("bandit")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	m.traits = ["jumpy"]
+	m.taste = Rules.TRAIT_TASTE.jumpy.duplicate()
+	scene.interaction_roll_override = 0.99
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 8)
+	eq(m.gone, null)
+	ok(scene.last_say.contains("keep your gold"), scene.last_say)
+	ok(scene.G.mode == "wait" or scene.G.mode == "menu", "a refused offer uses a turn")
+	scene.G.gold = 5
+	scene.main_menu()
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 5)
+	eq(scene.G.mode, "menu")
+	ok(scene.last_say.contains("You have 5"), scene.last_say)
+
+
+func test_typed_gold_offer_uses_the_same_real_bargain():
+	_start("bandit")
+	await _pump(800.0)
+	var m: Dictionary = scene.G.foe
+	m.traits = ["surprisingly honest about being dishonest"]
+	m.taste = Rules.TRAIT_TASTE["surprisingly honest about being dishonest"].duplicate()
+	m.meters.anger = 10
+	scene.interaction_roll_override = 0.0
+	scene.on_key("2")
+	scene.on_key("5")
+	scene.submit_talk("I offer gold, a fair cut")
+	eq(m.gone, "spared")
+	eq(scene.G.gold, 2)
+	ok(m.spoke)
+	ok(scene.last_mind.answers.any(func(row): return row.id == "words"), "the typed offer is still read by the local mind")
 
 
 func test_an_empty_line_goes_back_to_the_acts_and_nonsense_is_noticed():

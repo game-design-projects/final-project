@@ -65,7 +65,7 @@ func test_every_faction_has_its_genre_acts_tastes_charm_and_values_and_every_fee
 			ok(Rules.AFF[s].has(a.intent), "%s: %s" % [s, a.intent])
 		ok(Species.SPECIES[s].traits.any(func(t): return Rules.MOTIVES.has(t)), "%s has a motive trait" % s)
 	for t in Rules.MOTIVES:
-		ok(_kinds().any(func(s): return Species.SPECIES[s].traits.has(t)), "%s is an existing trait" % t)
+		ok(t == "proud" or _kinds().any(func(s): return Species.SPECIES[s].traits.has(t)), "%s can be rolled" % t)
 	for intent in Rules.AFF.slime:
 		ok(Rules.INTENT_WORDS.get(intent, "") != "", intent)
 	var named := []
@@ -199,6 +199,10 @@ func test_two_bandits_react_differently_to_a_threat_and_change_the_next_dodge():
 	ok(Rules.ask_join(direct).noul > Rules.ask_join(jumpy).noul)
 	ok(Rules.personality_clues(jumpy)[0].contains("exit"))
 	ok(Rules.personality_clues(direct)[0].contains("straight terms"))
+	var proud := _person("bandit", "proud", "threat", {"friendliness": 55, "anger": 20, "fear": 20})
+	ok(Rules.ask_feeling(proud, threat).probabilities.enraged > scared.enraged)
+	ok(Rules.ask_pressure(proud).score > Rules.ask_pressure(jumpy).score)
+	ok(Rules.personality_clues(proud)[0].contains("challenged"))
 
 
 func test_every_faction_has_an_act_that_exposes_a_personal_need():
@@ -226,10 +230,35 @@ func test_typed_words_are_read_by_intent_and_a_keyboard_mash_is_nonsense():
 	eq(Rules.read_words("you are so beautiful and strong").choice, "flattery")
 	eq(Rules.read_words("I can offer gold, a fair share of the loot").choice, "gold")
 	eq(Rules.read_words("where are the stairs?").choice, "question")
+	eq(Rules.read_words("snake weakness").choice, "question")
 	eq(Rules.read_words("asdfgh qwrtzp").choice, "gibberish")
 	ok(Rules.gibberish_odds("hello friend") < 0.2)
 	var p = Rules.read_words("knock knock, a joke for you").probabilities
 	ok(absf(_sum(p) - 1.0) < 1e-9)
+
+
+func test_personal_motives_change_whether_a_question_gets_an_answer_or_a_cut_is_accepted():
+	var curious := _person("slime", "curious", "question")
+	var guarded := _person("snake", "secretive", "question")
+	var open_snake := _person("snake", "vain about its scales", "question")
+	var remembering := _person("rock", "remembers everything", "question")
+	ok(Rules.reveal_odds(curious) > Rules.reveal_odds(guarded))
+	ok(Rules.reveal_odds(open_snake) > Rules.reveal_odds(guarded), "two snakes have different odds")
+	ok(Rules.reveal_odds(remembering) > Rules.reveal_odds(guarded))
+	ok(Rules.will_reveal(curious, 0.5) and not Rules.will_reveal(guarded, 0.5))
+	ok(not Rules.will_reveal(curious, 0.99) and Rules.will_reveal(guarded, 0.0), "neither answer is guaranteed")
+	var honest := _person("bandit", "surprisingly honest about being dishonest", "gold")
+	var jumpy := _person("bandit", "jumpy", "gold")
+	ok(Rules.cut_odds(honest) > Rules.cut_odds(jumpy))
+	ok(Rules.accepts_cut(honest, 0.5) and not Rules.accepts_cut(jumpy, 0.5))
+	ok(not Rules.accepts_cut(honest, 0.99) and Rules.accepts_cut(jumpy, 0.0), "both outcomes remain possible")
+	var calm_odds: float = Rules.cut_odds(honest)
+	honest.meters.anger = 70
+	ok(Rules.cut_odds(honest) < calm_odds, "anger makes an honest bargain less likely")
+	var bargaining := _person("snake", "always bargaining", "gold")
+	ok(Rules.cut_odds(bargaining) > Rules.cut_odds(guarded), "a snake can ask for the same scarce gold")
+	var proud := _person("bandit", "proud", "gold")
+	ok(Rules.cut_odds(proud) < Rules.cut_odds(honest))
 
 
 func test_every_chess_piece_and_every_stomp_leaves_a_safe_square_wherever_you_stand():

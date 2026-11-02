@@ -79,6 +79,7 @@ const TRAIT_TASTE = {
 	"curious": {"question": 1, "joke": 0.5}, "sleepy": {"peace": 1, "joke": -1}, "shy": {"flattery": -1, "kindness": 0.5},
 	"greedy": {"gold": 1}, "charming": {"flattery": 1}, "jumpy": {"threat": -1.5, "joke": -2.5, "noise": -1}, "owes money to someone": {"gold": 1.5},
 	"quick-fingered": {"joke": 0.5}, "surprisingly honest about being dishonest": {"insult": 0.5, "flattery": -0.5, "gold": 1, "threat": -1, "courage": 1},
+	"proud": {"threat": -1.5, "courage": 1, "gold": -0.5},
 	"patient": {"peace": 1, "rush": -0.5}, "secretive": {"question": -1.5, "gold": -2}, "vain about its scales": {"flattery": 1},
 	"always bargaining": {"gold": 1}, "holds grudges": {"insult": -1, "threat": -0.5}, "curious about humans": {"question": 1, "kindness": 0.5},
 	"cold-blooded": {"kindness": -1}, "half asleep": {"gibberish": 0.5, "noise": -1}, "slow to anger": {"threat": 1, "insult": 0.5},
@@ -109,6 +110,13 @@ const MOTIVES = {
 		"meters": {"threat": {"fear": 8}, "joke": {"fear": 4}},
 		"mercy": {"threat": 0.7, "joke": 0.2}, "join": {"threat": -0.6, "joke": -0.2},
 		"pressure": {"threat": -0.6, "joke": -0.2},
+	},
+	"proud": {
+		"clue": "holds its ground and bristles when challenged",
+		"feelings": {"threat": {"enraged": 1.2, "terrified": -0.5}, "courage": {"intrigued": 0.8}},
+		"meters": {"threat": {"anger": 8}, "courage": {"friendliness": 4}},
+		"mercy": {"threat": -0.7, "courage": 0.3}, "join": {"threat": -0.7, "courage": 0.3},
+		"pressure": {"threat": 0.6, "courage": -0.1},
 	},
 	"surprisingly honest about being dishonest": {
 		"clue": "insists on straight terms without looking away",
@@ -306,6 +314,8 @@ static func make_monster(r: Dictionary, x: int, y: int) -> Dictionary:
 	meters.friendliness = clamp_num(sp.start.friendliness + rnd(-10, 10), 0, 100)
 	meters.anger = clamp_num(sp.start.anger + rnd(-5, 10), 0, 100)
 	var traits: Array = sp.traits.duplicate()
+	if r.species == "bandit":
+		traits.append("proud")
 	traits.shuffle()
 	var chosen: Array = traits.slice(0, 2)
 	var has_motive := false
@@ -357,6 +367,43 @@ static func personality_clues(m: Dictionary) -> Array:
 		if MOTIVES.has(t):
 			clues.append(MOTIVES[t].clue)
 	return clues
+
+
+# A question costs a combat turn. Cooperation stays uncertain, even for a curious monster.
+static func reveal_odds(m: Dictionary) -> float:
+	var willingness := aff(m, "question") + float(m.meters.friendliness) / 50.0 - float(m.meters.anger) / 50.0
+	for t in m.get("traits", []):
+		match t:
+			"curious", "remembers everything", "surprisingly honest about being dishonest":
+				willingness += 0.8
+			"secretive", "jumpy":
+				willingness -= 1.5
+	return clampf(sigmoid((willingness - 0.8) * 1.4), 0.12, 0.88)
+
+
+static func will_reveal(m: Dictionary, roll := -1.0) -> bool:
+	return (randf() if roll < 0.0 else roll) < reveal_odds(m)
+
+
+# A gold truce can fail even with favorable terms, and succeeds less often when angered.
+static func cut_odds(m: Dictionary) -> float:
+	var willingness := -0.6 + aff(m, "gold") * 0.45 + float(m.meters.friendliness) / 75.0 - float(m.meters.anger) / 35.0
+	if m.species == "bandit":
+		for t in m.get("traits", []):
+			if t in ["surprisingly honest about being dishonest", "greedy", "owes money to someone"]:
+				willingness += 0.7
+			if t in ["jumpy", "proud"]:
+				willingness -= 1.3
+	if m.species == "snake":
+		if m.get("traits", []).has("always bargaining"):
+			willingness += 0.7
+		if m.get("traits", []).has("secretive"):
+			willingness -= 1.3
+	return clampf(sigmoid(willingness * 1.7), 0.12, 0.88)
+
+
+static func accepts_cut(m: Dictionary, roll := -1.0) -> bool:
+	return (randf() if roll < 0.0 else roll) < cut_odds(m)
 
 
 static func _motive_shift(m: Dictionary, field: String, intent: String) -> float:
@@ -512,7 +559,7 @@ static func _make_cues() -> Dictionary:
 		"insult": "\\b(stupid|ugly|gross|dumb|idiot|weak|pathetic|slimy|loser|worm|thief|rock-head)\\b",
 		"peace": "\\b(peace|stop|truce|calm|quiet|rest|wait|no fight|don't fight|leave)\\b",
 		"join": "\\b(join|come with|team|together|party|follow|with us)\\b",
-		"question": "\\?|\\b(where|what|who|why|how|stairs|way out|exit|tell me|secret)\\b",
+		"question": "\\?|\\b(where|what|who|why|how|stairs|way out|exit|champion|boss|weakness|personality|trait|tell me|secret)\\b",
 		"rush": "\\b(hurry|quick|faster|now now|move it)\\b",
 		"noise": "\\b(loud|bang|scream|yell)\\b|!{3,}",
 	}
