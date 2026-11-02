@@ -1,6 +1,6 @@
 # Architecture
 
-How the Godot code is put together, for someone about to change it. What the game is and how to run it: [README.md](../README.md).
+How the Godot code is put together, for someone about to change it. What the game is and how to run it: [README.md](../README.md); the rules and the setup in depth: [GAME.md](GAME.md), [DEVELOPMENT.md](DEVELOPMENT.md).
 
 Donjon was a browser game (`crawler/` in git history, last at `12d2be7`) and was rewritten in GDScript on Godot 4.7. Many comments say "the JS" or name `game.js`: that is the browser version, `git show 12d2be7:crawler/public/game.js`. The port kept every player-facing string, balance number and Jev question byte for byte, because Jev's answers depend on the wording.
 
@@ -19,7 +19,7 @@ Donjon was a browser game (`crawler/` in git history, last at `12d2be7`) and was
 | `src/genre/` | Genre Halls: `genre_rules.gd` (rules, no UI) and `genre_halls.gd` + `.tscn` (its own scene) |
 | `assets/` | `audio/*.ogg` (the music), `voices/<bank>/` (monster lines rendered ahead, with a `manifest.json`), `fonts/` (Press Start 2P, VT323), `CREDITS.txt` |
 | `tests/` | Mirrors `src/`, plus `run_tests.gd` and `test_case.gd` |
-| `cli/` | Scenario runners and screenshot/sound dump scripts (see the README) |
+| `cli/` | Scenario runners and screenshot/sound dump scripts (see [DEVELOPMENT.md](DEVELOPMENT.md#tests)) |
 | `tools/` | `build.sh`, `check-html5.mjs`, `music/` (offline music renders), `voices/` (voice bank renders, their checker and the Creative Commons reference clips), `godot-mcp/` (the Godot MCP server `.mcp.json` and `.codex/config.toml` start). Godot ignores it (`.gdignore`) |
 | `native/` | `asr/`: the speech-recognition helper's C source, `build.sh`, `smoke.py` and the licences it ships with (Godot ignores it). `dist/<platform>/`: what `build.sh` builds, not committed; each desktop export carries its own |
 | `proxy/` | The Cloudflare Worker that holds the Jev key and forwards the game's requests (JavaScript, its own `package.json` and tests; `.gdignore`) |
@@ -58,7 +58,7 @@ Donjon was a browser game (`crawler/` in git history, last at `12d2be7`) and was
 
 Below it: `enemy.gd` (a round for 1 to 3 monsters), `allies.gd` (the after-fight judgement) and `bonds.gd` (ally talk, vows) build the questions with `q.gd` (`Q.noul`, `Q.choice`, `Q.score`), call `Jev.jev(state, questions, trace)`, and fold the answers into numbers, choices and lines. The split to keep: Jev reads and picks; code owns the rules, the odds and what is allowed.
 
-`jev.gd` sends one request and retries 429/529. A **transport** (anything with `fetch(url, headers, body)`) can replace the real `HTTPRequest`; that is how the mock and the tests plug in. `config.gd` decides once which provider to configure (mock, `config/jev_config.json`, the project's `.env`, or nothing): see the README's "Setting up Jev". `mock_jev.gd` answers every question with a seeded, well-formed random answer (its `mulberry32` is bit-exact with the browser's).
+`jev.gd` sends one request and retries 429/529. A **transport** (anything with `fetch(url, headers, body)`) can replace the real `HTTPRequest`; that is how the mock and the tests plug in. `config.gd` decides once which provider to configure (mock, `config/jev_config.json`, the project's `.env`, or nothing): see [DEVELOPMENT.md](DEVELOPMENT.md#setting-up-jev). `mock_jev.gd` answers every question with a seeded, well-formed random answer (its `mulberry32` is bit-exact with the browser's).
 
 ## View
 
