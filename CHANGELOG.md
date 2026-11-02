@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-11-02
+## [0.5.3] - 2026-11-02
 
 ### Added
 - Genre Halls has the music again: the dungeon loop while walking, a battle loop in each fight, the victory sting after one and the fanfare at the stairs, as in the original Donjon (`nomusic` turns it off).

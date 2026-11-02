@@ -6,7 +6,7 @@ config_version=5
 
 config/name="Donjon"
 config/description="A Wizardry-style wireframe dungeon crawler, rendered in 3D, whose monsters are driven by Jev."
-config/version="0.6.0"
+config/version="0.5.3"
 run/main_scene="res://src/menu/main_menu.tscn"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="donjon"
