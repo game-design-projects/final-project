@@ -329,6 +329,13 @@ func test_the_title_blinks_its_prompt():
 	eq(on.ops.count("stroke_rect"), 6, "five receding frames and the title box")
 
 
+func test_over_the_3d_title_corridor_the_title_card_is_just_its_box():
+	var ctx := Rec.new()
+	Render.draw_title(ctx, 0, "PRESS ANY KEY", false)
+	eq(ctx.ops.count("stroke_rect"), 1, "the title box, no frames")
+	ok(not ctx.rects.any(func(r): return r[1] == 0.0 and r[2] == 0.0 and r[3] == 448.0), "no black over the view")
+	eq(ctx.ops.count("fill_text"), 2)
+
 func test_slot_of_sees_the_cell_diagonal_to_you_and_not_one_behind_a_wall():
 	var room := map_of(["#####", "#...#", "#...#", "#...#", "#####"])
 	eq(Render.slot_of(room, 1, 3, N, 1, 1), {"d": 2, "k": 0}) # straight ahead
