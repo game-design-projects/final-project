@@ -1392,42 +1392,28 @@ func draw_frame(ctx, t: float) -> void:
 	ctx.restore()
 
 
-## Walking: the corridor is the 3D set (the camera glides to each cell), the monsters you can see stand in their
-## cells, and their name tags are painted over it. Fights are the battle screen, drawn flat below.
-func _draw_walk_3d(ctx, t: float) -> void:
+## Walking: the corridor is the 3D set (the camera glides to each cell), the monsters stand in their cells with their
+## name tags. Fights are the battle screen, drawn flat below.
+func _draw_walk_3d(_ctx, t: float) -> void:
 	stage.visible = true
 	stage.use_map(G.map)
 	stage.place(G.x, G.y, G.dir, t)
 	stage.light(t)
 	for c in stage.sight(G.map.grid, G.x, G.y):
 		G.seen[c[1] * G.map.n + c[0]] = true
-	# Every monster still on the floor stands in its cell (the walls hide the ones you can't see); the name tags are
-	# only for the ones the camera sees, fading with distance like the lines
+	# Every monster still on the floor stands in its cell with its genre over its head (3D text: the walls hide it,
+	# like the monster, and it fades with distance)
 	var list := []
 	for i in G.map.monsters.size():
 		var m: Dictionary = G.map.monsters[i]
 		if J.truthy(m.gone):
 			continue
-		list.append({"id": i, "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y})
+		list.append({
+			"id": i, "species": m.species, "look": {"color": BOSS_COLOR} if m.boss else {}, "x": m.x, "y": m.y,
+			"label": "CHAMPION" if m.boss else Rules.GENRES[m.genre].name,
+			"color": BOSS_COLOR if m.boss else Species.SPECIES[m.species].color,
+		})
 	stage.show_wanderers(list, t)
-	var seen_now := monsters_in_view()
-	ctx.font = '8px "Press Start 2P", monospace'
-	ctx.text_align = "center"
-	var placed := [] # tag rects already painted, nearest first: a farther monster's tag that would overlap one is left out
-	for i in range(seen_now.size() - 1, -1, -1):
-		var v: Dictionary = seen_now[i]
-		var m: Dictionary = v.m
-		var at := stage.wanderer_tag(m.x, m.y)
-		var label: String = "CHAMPION" if m.boss else Rules.GENRES[m.genre].name
-		var rect := Rect2(at.x - label.length() * 4.0, at.y - 8.0, label.length() * 8.0, 8.0).grow(5.0) # (the text, with room around it)
-		if placed.any(func(r): return r.intersects(rect)):
-			continue
-		placed.append(rect)
-		var tint := Color.html(BOSS_COLOR if m.boss else Species.SPECIES[m.species].color)
-		tint.a = clampf(1.15 - float(v.d) * 0.16, 0.35, 1.0)
-		ctx.fill_style = tint
-		ctx.fill_text(label, at.x, at.y)
-	ctx.text_align = "left"
 
 
 func draw_monsters_in_view(ctx, t: float) -> void:

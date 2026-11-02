@@ -19,6 +19,7 @@ const Juice = preload("res://src/rules/juice.gd")
 const Dungeon3D = preload("res://src/view/dungeon3d.gd")
 const Monsters3D = preload("res://src/view/monsters3d.gd")
 const MeshKit = preload("res://src/view/mesh_kit.gd")
+const Canvas2D = preload("res://src/view/canvas2d.gd")
 
 const STONE_SHADER = preload("res://src/view/stone.gdshader")
 const FILL_SHADER = preload("res://src/view/fill.gdshader")
@@ -56,6 +57,9 @@ const WILD_FADE_FLOOR := 0.55
 const WILD_TAG_H := 1.55
 ## Where in a cell sight() looks (the middle and near the corners), in cells from its middle
 const SIGHT_SAMPLES := [Vector2(0, 0), Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)]
+## The name tags: Label3D text, sized to match the 8-pixel text of the flat battle screen
+const TAG_FONT_PX := 16
+const TAG_PIXEL_SIZE := 0.002
 const WILD_TAG_GAP := 0.12 ## and its tag floats this far above the head
 ## Line widths, in the view's pixels: art.gd's monsters, render.gd's decorations
 const MONSTER_LINE := 2.5
@@ -89,6 +93,7 @@ var _fighters := {}
 var _wild := {} # the monsters standing in their cells (show_wanderers), by key
 var _wild_root: Node3D
 var _sight: Array = []
+var _tags := {} # a name tag (Label3D) per standing monster, by the same key as _wild
 var _sight_key := 0
 var _boss = null
 
@@ -448,9 +453,10 @@ func show_fight(list: Array, t: float) -> void:
 			_fighters.erase(key)
 
 
-## The monsters standing in their cells along the way (Genre Halls shows the ones in view): `list` is
-## [{id, species, look, x, y}], each turned toward the camera. Models are kept by id and rebuilt only when a
-## monster's species or look changes; walls hide the ones behind them like anything else.
+## The monsters standing in their cells along the way (Genre Halls): `list` is [{id, species, look, x, y, label?,
+## color?}], each turned toward the camera. Models are kept by id and rebuilt only when a monster's species or look
+## changes. A `label` is a name tag above the head: real 3D text, so walls hide it like they hide the monster, and the
+## view's edge cuts it; it fades with distance like the lines, and gives way to a nearer monster's tag it would overlap.
 func show_wanderers(list: Array, t: float) -> void:
 	var keep := {}
 	for e in list:
@@ -470,10 +476,81 @@ func show_wanderers(list: Array, t: float) -> void:
 		model.rotation = Vector3(0, atan2(to_cam.x, to_cam.z), 0)
 		model.scale = Vector3.ONE * WILD_SCALE
 		Monsters3D.pose(model, t, 0.0)
+		_tag(key, e, model)
 	for key in _wild.keys():
 		if not keep.has(key):
 			_drop(_wild[key])
 			_wild.erase(key)
+			if _tags.has(key):
+				_tags[key].queue_free()
+				_tags.erase(key)
+	_declutter_tags()
+
+
+# A name tag for a standing monster: made once, then moved
+func _tag(key: String, e: Dictionary, model: Node3D) -> void:
+	var text := str(e.get("label", ""))
+	if text == "":
+		return
+	var tag: Label3D = _tags.get(key)
+	if tag == null:
+		tag = Label3D.new()
+		tag.name = "Tag"
+		tag.font = Canvas2D.pixel_font("press start 2p")
+		tag.font_size = TAG_FONT_PX
+		tag.pixel_size = TAG_PIXEL_SIZE
+		tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		tag.fixed_size = true # the same size on screen near or far, like the 2D text it replaces
+		tag.shaded = false
+		tag.double_sided = true
+		tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		tag.outline_size = 0
+		_wild_root.add_child(tag)
+		_tags[key] = tag
+	tag.text = text
+	tag.position = model.get_meta("tag")
+	var d := camera.transform.origin.distance_to(model.position) / Dungeon3D.CELL
+	var c := Color.html(str(e.get("color", "#e8e8e8")))
+	c.a = clampf(1.15 - maxf(0.0, d - 0.43) * 0.16, 0.35, 1.0)
+	tag.modulate = c
+	tag.visible = true
+
+
+# Nearest tag first: one that would sit on top of a nearer tag is hidden
+func _declutter_tags() -> void:
+	var order := _tags.keys()
+	order.sort_custom(func(a, b): return _tags[a].position.distance_to(camera.transform.origin) < _tags[b].position.distance_to(camera.transform.origin))
+	var placed := []
+	for key in order:
+		var tag: Label3D = _tags[key]
+		var at := project(tag.position)
+		var rect := Rect2(at.x - tag.text.length() * 4.0, at.y - 8.0, tag.text.length() * 8.0, 8.0).grow(5.0)
+		var clear: bool = not placed.any(func(r): return r.intersects(rect))
+		tag.visible = clear
+		if clear:
+			placed.append(rect)
+
+
+## Where a standing monster's name tag is: a point just above its head, in the view's coordinates
+func wanderer_tag(x: int, y: int) -> Vector2:
+	for model in _wild.values():
+		if model.get_meta("cell", Vector2i(-1, -1)) == Vector2i(x, y):
+			return project(model.get_meta("tag"))
+	return project(Dungeon3D.cell_center(x, y) + Vector3(0, WILD_TAG_H, 0))
+
+
+# The highest point of a model, in its own units (a model's parts are meshes under transformed nodes)
+static func _top_of(node: Node3D, parent: Transform3D) -> float:
+	var best := 0.0
+	var here := parent * node.transform
+	if node is MeshInstance3D and node.mesh != null:
+		var bb: AABB = node.mesh.get_aabb()
+		for i in 8:
+			best = maxf(best, (here * bb.get_endpoint(i)).y)
+	for c in node.get_children():
+		if c is Node3D:
+			best = maxf(best, _top_of(c, here))
+	return best
 
 
 ## Whether the camera has been put somewhere yet (before that it has no pose to see from)
@@ -518,28 +595,6 @@ static func _ray_clear(grid: Array, a: Vector2, b: Vector2) -> bool:
 		if cy < 0 or cy >= grid.size() or cx < 0 or cx >= grid[cy].size() or grid[cy][cx] != 1:
 			return false
 	return true
-
-
-## Where a standing monster's name tag goes: a point just above its head, in the view's coordinates
-func wanderer_tag(x: int, y: int) -> Vector2:
-	for model in _wild.values():
-		if model.get_meta("cell", Vector2i(-1, -1)) == Vector2i(x, y):
-			return project(model.get_meta("tag"))
-	return project(Dungeon3D.cell_center(x, y) + Vector3(0, WILD_TAG_H, 0))
-
-
-# The highest point of a model, in its own units (a model's parts are meshes under transformed nodes)
-static func _top_of(node: Node3D, parent: Transform3D) -> float:
-	var best := 0.0
-	var here := parent * node.transform
-	if node is MeshInstance3D and node.mesh != null:
-		var bb: AABB = node.mesh.get_aabb()
-		for i in 8:
-			best = maxf(best, (here * bb.get_endpoint(i)).y)
-	for c in node.get_children():
-		if c is Node3D:
-			best = maxf(best, _top_of(c, here))
-	return best
 
 
 # A model leaves the stage, and its material stops taking the shared light

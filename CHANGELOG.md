@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Fixed
-- Genre Halls monsters no longer vanish down a corridor: what you can see is what the 3D camera sees (its field of view and a clear line over the floor), not the old six-cell rule, every monster on the floor stands in its cell (walls hide the ones you can't see), their lines fade only down to 55% with distance, and their name tags sit above their heads, fade with distance and give way to a nearer monster's tag. The automap reveals what the camera saw.
+- Genre Halls monsters no longer vanish down a corridor: what you can see is what the 3D camera sees (its field of view and a clear line over the floor), not the old six-cell rule, every monster on the floor stands in its cell (walls hide the ones you can't see), their lines fade only down to 55% with distance, and their name tags are real 3D text above their heads (walls hide them like the monster, the view's edge cuts them), fade with distance and give way to a nearer monster's tag. The automap reveals what the camera saw.
 
 ## [0.5.1] - 2026-11-01
 
