@@ -1,0 +1,116 @@
+{
+ "feelings": {
+  "delighted": {
+   "label": "DELIGHTED",
+   "meters": {
+    "friendliness": 20,
+    "anger": -12
+   },
+   "cond": "charmed",
+   "rounds": 1,
+   "effect": "WON'T ATTACK THIS ROUND",
+   "tone": "good"
+  },
+  "amused": {
+   "label": "IN STITCHES",
+   "meters": {
+    "friendliness": 14,
+    "anger": -8
+   },
+   "cond": "laughing",
+   "rounds": 1,
+   "effect": "TOO BUSY LAUGHING TO FIGHT",
+   "tone": "good"
+  },
+  "touched": {
+   "label": "TOUCHED",
+   "meters": {
+    "friendliness": 26,
+    "anger": -16
+   },
+   "effect": "ITS HEART OPENS TO YOU",
+   "tone": "good"
+  },
+  "flattered": {
+   "label": "FLATTERED",
+   "meters": {
+    "friendliness": 16
+   },
+   "cond": "exposed",
+   "rounds": 2,
+   "effect": "PRIDE LOWERS ITS GUARD: ADVANTAGE AGAINST IT",
+   "tone": "good"
+  },
+  "intrigued": {
+   "label": "INTRIGUED",
+   "meters": {
+    "friendliness": 8,
+    "fear": -6
+   },
+   "cond": "weakspot",
+   "rounds": 99,
+   "effect": "IT LETS SLIP A WEAK SPOT: +2 TO HIT IT",
+   "tone": "odd"
+  },
+  "confused": {
+   "label": "CONFUSED",
+   "meters": {
+    "anger": 4
+   },
+   "cond": "confused",
+   "rounds": 1,
+   "effect": "LOSES ITS TURN",
+   "tone": "odd"
+  },
+  "sad": {
+   "label": "SADDENED",
+   "meters": {
+    "friendliness": 6,
+    "fear": 8,
+    "anger": -6
+   },
+   "cond": "demoralized",
+   "rounds": 3,
+   "effect": "DISADVANTAGE ON ITS ATTACKS",
+   "tone": "sad"
+  },
+  "offended": {
+   "label": "OFFENDED",
+   "meters": {
+    "anger": 22,
+    "friendliness": -14
+   },
+   "cond": "spiteful",
+   "rounds": 3,
+   "effect": "+2 DAMAGE AGAINST YOU",
+   "tone": "bad"
+  },
+  "enraged": {
+   "label": "ENRAGED",
+   "meters": {
+    "anger": 38,
+    "friendliness": -22
+   },
+   "cond": "enraged",
+   "rounds": 3,
+   "effect": "ADVANTAGE AND +3 DAMAGE, BUT RECKLESS: ARMOR -3",
+   "tone": "bad"
+  },
+  "terrified": {
+   "label": "TERRIFIED",
+   "meters": {
+    "fear": 38,
+    "anger": -6
+   },
+   "cond": "frightened",
+   "rounds": 3,
+   "effect": "DISADVANTAGE ON ATTACKS. IT DROPS SOME GOLD",
+   "tone": "fear"
+  }
+ },
+ "pacifying": [
+  "charmed",
+  "confused",
+  "laughing"
+ ]
+}

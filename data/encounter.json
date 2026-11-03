@@ -1,0 +1,198 @@
+{
+ "genres": {
+  "bullet": {
+   "name": "GOO RAIN",
+   "rule": "WATCH WHERE THE GOO WILL LAND"
+  },
+  "chess": {
+   "name": "CHESS",
+   "rule": "ROOK: ROW + COLUMN · BISHOP: DIAGONALS · KNIGHT: L-JUMPS"
+  },
+  "shadow": {
+   "name": "SHADOW",
+   "rule": "THE LANTERN FLARES. HIDE IN A PILLAR'S SHADOW"
+  },
+  "rhythm": {
+   "name": "RHYTHM",
+   "rule": "IT STOMPS ON THE BEAT. MOVE BETWEEN BEATS"
+  }
+ },
+ "roster": [
+  {
+   "species": "slime",
+   "genre": "bullet",
+   "hp": 18
+  },
+  {
+   "species": "bandit",
+   "genre": "chess",
+   "hp": 24
+  },
+  {
+   "species": "snake",
+   "genre": "shadow",
+   "hp": 22
+  },
+  {
+   "species": "rock",
+   "genre": "rhythm",
+   "hp": 30
+  }
+ ],
+ "boss": {
+  "species": "dragon",
+  "genres": [
+   "chess",
+   "shadow",
+   "rhythm",
+   "bullet"
+  ],
+  "hp": 56,
+  "name": "VEXALITH"
+ },
+ "acts": {
+  "slime": [
+   {
+    "label": "TELL A JOKE",
+    "intent": "joke"
+   },
+   {
+    "label": "OFFER COMFORT",
+    "intent": "kindness"
+   },
+   {
+    "label": "CALL IT GROSS",
+    "intent": "insult"
+   }
+  ],
+  "bandit": [
+   {
+    "label": "OFFER A FAIR CUT",
+    "intent": "gold"
+   },
+   {
+    "label": "SHOW A CLEVER TRICK",
+    "intent": "joke"
+   },
+   {
+    "label": "SNEER AT IT",
+    "intent": "insult"
+   }
+  ],
+  "snake": [
+   {
+    "label": "PRAISE ITS SCALES",
+    "intent": "flattery"
+   },
+   {
+    "label": "PROPOSE A BARGAIN",
+    "intent": "gold"
+   },
+   {
+    "label": "HURRY IT ALONG",
+    "intent": "rush"
+   }
+  ],
+  "rock": [
+   {
+    "label": "WAIT QUIETLY",
+    "intent": "peace"
+   },
+   {
+    "label": "ADMIRE THE OLD STONE",
+    "intent": "flattery"
+   },
+   {
+    "label": "BANG ON YOUR SHIELD",
+    "intent": "noise"
+   }
+  ],
+  "dragon": [
+   {
+    "label": "FLATTER ITS HOARD",
+    "intent": "flattery"
+   },
+   {
+    "label": "STAND YOUR GROUND",
+    "intent": "courage"
+   },
+   {
+    "label": "OFFER ONE COPPER",
+    "intent": "cheap"
+   }
+  ]
+ },
+ "charms": {
+  "slime": {
+   "name": "BOUNCY",
+   "text": "absorbs the first hit of every fight"
+  },
+  "bandit": {
+   "name": "KEEN EYE",
+   "text": "warnings stay lit longer"
+  },
+  "snake": {
+   "name": "SLIPPERY",
+   "text": "longer safety after you get hit"
+  },
+  "rock": {
+   "name": "STEADY",
+   "text": "the strike bar moves slower"
+  },
+  "dragon": {
+   "name": "HOARD-FIRE",
+   "text": "+4 damage on every strike"
+  }
+ },
+ "ally_approval": {
+  "slime": {
+   "slay": -2,
+   "slay_begging": -3,
+   "spare": 1.5,
+   "flee": 0,
+   "insult": -1,
+   "threat": -1,
+   "kindness": 0.5,
+   "joke": 0.5,
+   "noise": -0.5
+  },
+  "bandit": {
+   "slay": 1,
+   "slay_begging": 0.5,
+   "spare": -0.5,
+   "flee": -1,
+   "gold": -1.5,
+   "cheap": 1,
+   "insult": 0.5
+  },
+  "snake": {
+   "slay": -0.5,
+   "slay_begging": -2,
+   "spare": 1,
+   "flee": 0,
+   "gold": 1,
+   "rush": -1,
+   "noise": -1.5,
+   "threat": -1
+  },
+  "rock": {
+   "slay": -1,
+   "slay_begging": -1.5,
+   "spare": 1,
+   "flee": -1.5,
+   "noise": -2,
+   "rush": -1,
+   "gold": -1,
+   "peace": 1
+  },
+  "dragon": {
+   "slay": 1,
+   "slay_begging": 0,
+   "spare": -0.5,
+   "flee": -2.5,
+   "cheap": -1,
+   "courage": 1.5,
+   "insult": 0.5
+  }
+ }
+}
