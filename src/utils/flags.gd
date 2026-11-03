@@ -13,6 +13,7 @@ const KNOWN := {
 	"seed": "seed=N: fixed random seed for the floor and the monsters",
 	"floor": "floor=N: start on floor N",
 	"meet": "meet=<species>: start in a fight with that monster",
+	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
 	"nosound": "no sound effects and no music",
 	"nosave": "never read or write saved data",

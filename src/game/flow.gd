@@ -39,6 +39,11 @@ var encounter
 ## The game clock in ms, as last given to `tick`.
 var clock := 0.0
 var busy := false
+## The personality slice (personality_slice.gd): while `slice_active`, the cut and the answer are drawn at `fixed_roll`,
+## and `slice_next` names the monster that follows this fight.
+var slice_active := false
+var fixed_roll := -1.0
+var slice_next := ""
 
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
@@ -56,6 +61,7 @@ func _init(game_rng, game_mind) -> void:
 ## A fresh run: a new floor, standing at its start.
 func new_run() -> void:
 	await _leave_current()
+	end_slice()
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.floor_map = FloorGen.generate(rng)
@@ -76,12 +82,22 @@ func load_state(saved: Dictionary) -> bool:
 	if loaded == null:
 		return false
 	await _leave_current()
+	end_slice()
 	state = loaded
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())
 	await go("explore", {"lines": [State.sys_line(Texts.welcome_back(state.summary()))]})
 	return true
+
+
+## Back to ordinary rolls (and no queued fight).
+func end_slice() -> void:
+	if slice_active:
+		print("flow: personality slice over")
+	slice_active = false
+	fixed_roll = -1.0
+	slice_next = ""
 
 
 ## Move to another stage. Moves the table doesn't allow are refused and reported.

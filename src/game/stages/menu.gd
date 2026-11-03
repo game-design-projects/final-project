@@ -64,6 +64,7 @@ func _flee(flow) -> void:
 		await flow.go("menu")
 		return
 	s.tally.fled += 1
+	flow.end_slice()
 	flow.event("sound", {"name": "flee"})
 	flow.encounter.judge("flee")
 	m.hp = m.max_hp

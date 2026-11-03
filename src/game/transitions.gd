@@ -6,7 +6,7 @@
 ##      │                 │  ▶ fightbar   │
 ##      ▼                 ▼        ▼      ▼
 ##     end            wait ─▶ dodge ─▶ dead
-##                      result ─▶ explore
+##                      result ─▶ explore (or, in the personality slice, intro)
 extends RefCounted
 
 const ALLOWED := {
@@ -19,7 +19,7 @@ const ALLOWED := {
 	"fightbar": ["wait", "result", "menu"],
 	"wait": ["dodge"],
 	"dodge": ["menu", "dead"],
-	"result": ["explore"],
+	"result": ["explore", "intro"], # intro: the personality slice goes straight on to its second bandit
 	"dead": ["intro", "explore"],
 	"end": ["explore"],
 }

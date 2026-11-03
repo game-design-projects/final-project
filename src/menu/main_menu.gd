@@ -1,5 +1,5 @@
 ## The first scene: the title and the main menu. Starting or loading a run hands a request to session.gd and changes to the
-## gameplay scene. Flag `meet=<species>` skips the menu and starts a fight at once (a testing hook).
+## gameplay scene. Flags `meet=<species>` and `personality-slice` skip the menu and start a fight at once (testing hooks).
 extends Control
 
 const Flags = preload("res://src/utils/flags.gd")
@@ -24,7 +24,7 @@ func _ready() -> void:
 	back.set_anchors_preset(Control.PRESET_FULL_RECT)
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(back)
-	if Flags.value("meet") != "":
+	if Flags.value("meet") != "" or Flags.on("personality-slice"):
 		print("menu: straight to a fight (flag)")
 		_start(Session.start_new)
 		return

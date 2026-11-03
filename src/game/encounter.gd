@@ -159,7 +159,7 @@ func offer_cut(m, label: String, words = null) -> void:
 		s.say([State.sys_line(Texts.cut_too_poor(s.gold, words != null))])
 		await flow.go("menu")
 		return
-	var accepted := Odds.succeeds(flow.rng, Odds.cut_odds(m))
+	var accepted := Odds.succeeds(flow.rng, Odds.cut_odds(m), flow.fixed_roll)
 	var refusal := Texts.cut_refused(m) # worded from how it felt before this offer shifts its mood
 	var decision := await decide(m, [{"intent": "gold", "w": 1.0}], label, words)
 	judge("gold")
@@ -178,7 +178,7 @@ func retry_fight() -> void:
 	var snap: Dictionary = s.encounter_start
 	var fresh = Monster.from_dict(snap.foe)
 	s.floor_map.monsters[s.floor_map.monsters.find(s.foe)] = fresh
-	s.hp = s.max_hp
+	s.hp = snap.hp if flow.slice_active else s.max_hp # the playtest slice replays its exact start
 	s.gold = snap.gold
 	s.allies = snap.allies.map(func(a): return Ally.from_dict(a))
 	s.tally = snap.tally.duplicate()

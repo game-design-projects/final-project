@@ -14,6 +14,7 @@ const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
+const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const PostFx = preload("res://src/view/postfx.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
@@ -60,7 +61,7 @@ func _ready() -> void:
 	if not pending.is_empty():
 		request = pending
 	_build_screen()
-	_rng = Rng.new()
+	_rng = Rng.new(PersonalitySlice.seed_value()) if PersonalitySlice.wanted() else Rng.new()
 	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", ""))))
 	audio = Audio.new()
 	add_child(audio)
@@ -92,12 +93,15 @@ func _begin() -> void:
 	_after_start()
 
 
-## Wire the views to the state the flow now holds, and handle the testing flag `meet=<species>`.
+## Wire the views to the state the flow now holds, and handle the testing flags `meet=<species>` and `personality-slice`.
 func _after_start() -> void:
 	_overlay.state = flow.state
 	_header.state = flow.state
 	_status.state = flow.state
 	_dock.state = flow.state
+	if PersonalitySlice.wanted() and request.get("kind", "new") == "new":
+		await PersonalitySlice.start(flow)
+		return
 	var species := Flags.value("meet")
 	if species != "":
 		for m in flow.state.floor_map.monsters:
@@ -323,6 +327,8 @@ func _load_slot(slot: String) -> void:
 
 
 func _autosave() -> void:
+	if flow.slice_active: # the playtest slice leaves no save behind
+		return
 	Saves.write(Saves.AUTO, flow.state.to_dict(), flow.state.summary())
 
 
