@@ -13,7 +13,7 @@ __pycache__/
 .godot/
 /build/*
 !/build/.gdignore
-/config/jev_config.json
+/config/jev_url.txt
 *.translation
 
 /native/dist/

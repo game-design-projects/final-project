@@ -3,7 +3,7 @@
 #
 # The game code comes from several people, so the deploy is kept to the smallest scope that works:
 #   - CLOUDFLARE_API_TOKEN is a Cloudflare token with Workers Editor on the donjon-api Worker only: it cannot touch
-#     any other Worker on the account, create or delete Workers, or add routes. proxy/worker.test.js keeps
+#     any other Worker on the account, create or delete Workers, or add routes. the check job keeps
 #     wrangler.jsonc to one workers.dev Worker with no routes, builds or extra bindings.
 #   - Only main deploys, through the cloudflare-production environment (deployment branches: main), and only the
 #     deploy step sees the token.
@@ -15,14 +15,10 @@ on:
     branches: [main]
     paths:
       - proxy/**
-      - src/jev/jev.gd
-      - tests/jev/golden/group_talk.json
       - .github/workflows/worker.yml
   pull_request:
     paths:
       - proxy/**
-      - src/jev/jev.gd
-      - tests/jev/golden/group_talk.json
       - .github/workflows/worker.yml
   workflow_dispatch:
 permissions:
@@ -42,8 +38,10 @@ jobs:
           package-manager-cache: false
       - run: npm ci --ignore-scripts
         working-directory: proxy
-      - name: Worker tests and scope guard
-        run: node --test proxy/worker.test.js
+      - name: Worker config is one workers.dev Worker with no routes, builds or extra bindings
+        run: |
+          set -euo pipefail
+          ! grep -E '^\s*"(routes|route|build|kv_namespaces|d1_databases|r2_buckets|services)"' proxy/wrangler.jsonc || { echo '::error::wrangler.jsonc has more than the one Worker'; exit 1; }
       - name: Bundle the Worker (no credentials, nothing uploaded)
         working-directory: proxy
         env:

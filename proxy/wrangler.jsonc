@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // CI's Cloudflare token is scoped to the Worker with this name; proxy/worker.test.js guards what else this file
+  // CI's Cloudflare token is scoped to the Worker with this name; the Worker workflow guards what else this file
   // may hold (no routes, builds or extra bindings)
   "name": "donjon-api",
   "main": "worker.js",

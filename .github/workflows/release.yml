@@ -1,6 +1,6 @@
 # Pushing a tag vX.Y.Z publishes a GitHub release with every platform's zip and that version's CHANGELOG section.
 # The tag is the only trigger (ci.yml doesn't run on tags itself): it must match config/version in project.godot,
-# then ci.yml runs as a called workflow (tests, then web, Windows, macOS and Linux builds) and the release publishes
+# then ci.yml runs as a called workflow (the checks, then web, Windows, macOS and Linux builds) and the release publishes
 # the very zips that passed, so a tag builds once. Only the publish job may write, and only the release itself.
 name: Release
 on:
