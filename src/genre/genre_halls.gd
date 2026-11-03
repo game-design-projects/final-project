@@ -1521,7 +1521,7 @@ func retry_fight() -> void:
 	var foe: Dictionary = G.foe
 	foe.clear()
 	foe.merge(encounter_start.foe.duplicate(true))
-	G.hp = encounter_start.hp
+	G.hp = encounter_start.hp if slice_active else G.maxHp # the playtest slice replays its exact state; a normal retry heals
 	G.gold = encounter_start.gold
 	G.allies = encounter_start.allies.duplicate(true)
 	G.tally = encounter_start.tally.duplicate(true)

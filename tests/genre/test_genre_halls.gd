@@ -720,6 +720,17 @@ func test_mercy_refused_costs_a_round_and_a_champion_cannot_be_fled():
 	ok(scene.last_say.contains("The champion's tail blocks the way back."))
 
 
+func test_retry_heals_even_when_the_fight_began_at_low_health():
+	_start("bandit")
+	await _pump(800.0)
+	scene.G.hp = 3
+	scene.start_encounter(scene.G.foe) # walked in hurt: the encounter starts at 3 HP
+	scene.G.hp = 0
+	scene.dead()
+	scene.retry_fight()
+	eq(scene.G.hp, scene.G.maxHp, "a retry outside the playtest slice starts at full health")
+
+
 func test_dying_offers_the_fight_again_with_full_health():
 	_start("bandit")
 	await _pump(800.0)
