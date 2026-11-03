@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - CI imports the project, plays whole games headless, and builds web, Windows, macOS and Linux with `tools/build.sh`; the Jev proxy address is baked into the build from `config/jev_url.txt`.
 
 ### Added
+- Restored `tools/godot-mcp/` (pinned Godot MCP 0.1.1 with its lockfile and `run.sh`), which the rewrite deleted while `.mcp.json` and `.codex/config.toml` still started it, so the `godot` server failed with CONNECTION_CLOSED.
 - A seeded personality slice (`godot --path . -- personality-slice seed=7042`) pairs two bandits, ROOK and VEX, with different clues, answers and reactions to the same offer, plus a short participant playtest checklist (`docs/PERSONALITY_PLAYTEST.md`).
 - Every newly generated monster has an individual motive, including proud or jumpy bandits, with clues in CHECK and the tooltip; motives change reactions, emotional meters, mercy, recruitment and attack pressure.
 - Questions can reveal a reachable stair direction, another living monster's aversion and clue, or the champion's opening; personality shifts the chance of an answer.
