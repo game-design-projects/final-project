@@ -329,6 +329,110 @@ func test_personality_clues_are_visible_before_an_act_and_the_act_is_remembered(
 	ok(Rules.ask_join(m).noul > 0.0 and Rules.ask_join(m).noul < 1.0)
 
 
+func test_seeded_personality_slice_changes_the_same_offer_and_can_be_won():
+	_start()
+	scene.start_personality_slice(7042)
+	var honest: Dictionary = scene.G.foe
+	var wary: Dictionary = scene.slice_next
+	eq([honest.species, wary.species], ["bandit", "bandit"])
+	eq([honest.name, wary.name], ["ROOK", "VEX"])
+	ok(Rules.personality_clues(honest)[0].contains("straight terms"))
+	ok(Rules.personality_clues(wary)[0].contains("exit"))
+	ok(Rules.cut_odds(honest) > 0.5 and Rules.cut_odds(wary) < 0.5, "the clues predict different incentives")
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2") # the identical fair-cut action succeeds for ROOK
+	eq(honest.gone, "spared")
+	eq(scene.G.gold, 6)
+	eq(scene.G.tally.recruited, 0, "a paid truce does not recruit")
+	ok(scene.last_say.contains("takes 6 gold") and scene.last_say.contains("keeps its word"), scene.last_say)
+	scene.on_key("Enter")
+	eq(scene.G.foe, wary)
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2") # VEX hears the same offer and refuses it
+	eq(wary.gone, null)
+	eq(scene.G.gold, 6)
+	ok(scene.last_say.contains("keeps watching the exit") and scene.last_say.contains("keep your gold"), scene.last_say)
+	var pressure: float = Rules.ask_pressure(wary).score
+	await _pump(800.0)
+	eq(scene.G.mode, "dodge")
+	ok(is_equal_approx(scene.D.intensity, 0.8 + 0.25 * pressure), "the next chess attack uses the reported pressure")
+	await _pump(5500.0)
+	eq(scene.G.mode, "menu")
+	for hit in 2:
+		scene.on_key("1")
+		scene.clock_override += 550.0
+		scene.on_key("Enter")
+		if scene.G.mode == "result":
+			break
+		await _pump(6300.0)
+	eq(wary.gone, "slain", "refusing the offer still leaves a combat victory")
+	eq(scene.G.mode, "result")
+	ok(scene.G.hp > 0)
+	scene.on_key("Enter")
+	eq(scene.G.mode, "explore")
+	eq(scene.G.tally.spared + scene.G.tally.slain, 2)
+	eq(scene.export_state().gold, 6)
+	ok(scene.import_state(scene.export_state()), "the completed slice still loads through the ordinary save path")
+	eq(scene.G.gold, 6)
+
+
+func test_personality_slice_flag_starts_the_seeded_pair_from_the_menu_route():
+	Flags.override = "nosound personality-slice seed=7042"
+	scene = SCENE.instantiate()
+	scene.clock_override = 1000.0
+	_tree().root.add_child(scene)
+	scene.set_process(false)
+	eq(scene.G.mode, "intro")
+	eq(scene.G.foe.name, "ROOK")
+	eq(scene.slice_next.name, "VEX")
+	eq(scene.G.gold, 12)
+
+
+func test_seeded_pair_answers_the_same_question_differently():
+	_start()
+	scene.start_personality_slice(7042)
+	var honest: Dictionary = scene.G.foe
+	var wary: Dictionary = scene.slice_next
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("5")
+	scene.submit_talk("Where are the stairs?")
+	ok(scene.last_say.contains("corridor") and honest.spoke, scene.last_say)
+	var known_step: String = scene._stairs_step()
+	ok(scene.last_say.contains("corridor %s" % known_step), "the answer matches this floor")
+	if scene.G.mode != "menu":
+		await _pump(6300.0)
+	eq(scene.G.mode, "menu")
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(honest.gone, "spared")
+	scene.on_key("Enter")
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("5")
+	scene.submit_talk("Where are the stairs?")
+	ok(scene.last_say.contains("keeps watching the exit") and not scene.last_say.contains("corridor"), scene.last_say)
+	ok(wary.spoke)
+
+
+func test_recruiting_the_first_bandit_makes_a_later_gold_offer_cost_loyalty():
+	_start()
+	scene.start_personality_slice(7042)
+	var honest: Dictionary = scene.G.foe
+	await _pump(800.0)
+	scene.spare()
+	eq(honest.gone, "spared")
+	eq(scene.G.allies.size(), 1)
+	var old_loyalty: float = scene.G.allies[0].loyalty
+	scene.on_key("Enter")
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2")
+	ok(scene.last_mind.answers.any(func(row): return str(row.id).begins_with("judge-")), "the ally judges the offer")
+	ok(scene.G.allies[0].loyalty < old_loyalty, "offering gold to another monster strains the recruited bandit")
+	ok(scene.last_say.contains(scene.G.allies[0].name), "the ally's objection reaches the player")
 func test_genre_emotion_feedback_reports_applied_meters_instead_of_dnd_conditions():
 	_start("slime")
 	await _pump(800.0)
@@ -629,6 +733,17 @@ func test_mercy_refused_costs_a_round_and_a_champion_cannot_be_fled():
 	scene.on_key("4")
 	eq(scene.G.mode, "menu")
 	ok(scene.last_say.contains("The champion's tail blocks the way back."))
+
+
+func test_retry_heals_even_when_the_fight_began_at_low_health():
+	_start("bandit")
+	await _pump(800.0)
+	scene.G.hp = 3
+	scene.start_encounter(scene.G.foe) # walked in hurt: the encounter starts at 3 HP
+	scene.G.hp = 0
+	scene.dead()
+	scene.retry_fight()
+	eq(scene.G.hp, scene.G.maxHp, "a retry outside the playtest slice starts at full health")
 
 
 func test_dying_offers_the_fight_again_with_full_health():
@@ -1075,3 +1190,67 @@ func test_the_music_follows_the_fight_and_the_stairs():
 	eq(m.log.back(), "mood:explore")
 	s.ending()
 	eq(m.log.back(), "sting:fanfare")
+
+
+func test_slice_retry_restores_each_encounter_and_player_state():
+	_start()
+	scene.G.maxHp = 20
+	scene.start_personality_slice(7042)
+	for encounter in 2:
+		var foe: Dictionary = scene.G.foe
+		var original: Dictionary = foe.duplicate(true)
+		var hp: int = scene.G.hp
+		var gold: int = scene.G.gold
+		foe.meters.anger = 99.0
+		foe.traits = ["changed"]
+		foe.hp = 1
+		scene.G.gold = 0
+		scene.G.hp = 0
+		scene.dead()
+		scene.retry_fight()
+		eq(foe, original, "retry restores the actual foe")
+		eq(scene.G.hp, hp)
+		eq(scene.G.gold, gold)
+		if encounter == 0:
+			await _pump(800.0)
+			scene.on_key("2")
+			scene.on_key("2")
+			scene.on_key("Enter")
+			eq(scene.G.foe.name, "VEX")
+
+
+func test_slice_normal_hp_offer_then_flee_and_cleanup():
+	_start()
+	scene.G.maxHp = 20
+	scene.start_personality_slice(7042)
+	eq(scene.G.hp, 20)
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 6)
+	scene.on_key("Enter")
+	await _pump(800.0)
+	scene.on_key("2")
+	scene.on_key("2")
+	eq(scene.G.gold, 6)
+	await _pump(6300.0)
+	print("normal HP offer route after VEX attack: %d HP" % scene.G.hp)
+	if scene.G.hp > 0:
+		scene.flee()
+		eq(scene.G.mode, "explore")
+		eq(scene.interaction_roll_override, -1.0)
+	else:
+		ok(false, "normal HP route died before fleeing")
+
+
+func test_slice_override_clears_on_restart_and_load():
+	_start()
+	scene.start_personality_slice(7042)
+	var saved: Dictionary = scene.export_state().duplicate(true)
+	scene.new_run()
+	eq(scene.interaction_roll_override, -1.0)
+	ok(scene.slice_next.is_empty())
+	scene.start_personality_slice(7042)
+	ok(scene.import_state(saved))
+	eq(scene.interaction_roll_override, -1.0)
+	ok(scene.slice_next.is_empty())

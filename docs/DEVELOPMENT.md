@@ -74,6 +74,7 @@ godot --path . -- meet=rock          # Genre Halls, straight into a rock fight
 | `main` | open the original Donjon instead of [Genre Halls](GAME.md#genre-halls-undertale-style-battles), which is where the game starts. Combine it with the others: `-- main mock floor5` (on the web, `index.html?main&mock`) |
 | `genre-halls` | from the original Donjon (`res://src/ui/main.tscn`), jump to Genre Halls |
 | `meet=<species>` | in Genre Halls, jump into that faction's fight: `slime`, `bandit`, `snake`, `rock` or `dragon` |
+| `personality-slice` | play the seeded two-bandit [personality test](PERSONALITY_PLAYTEST.md); use `seed=7042 nosound` for its checked routes |
 | `flat` | Genre Halls walks in the old 2D corridor instead of the 3D set |
 | `nosound` or `nosfx` | Genre Halls without sound |
 | `nosave` | Genre Halls doesn't write its autosave |

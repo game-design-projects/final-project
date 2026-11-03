@@ -33,7 +33,7 @@ func _ready() -> void:
 		print("menu: main game (flag)")
 		get_tree().change_scene_to_file.call_deferred(DONJON_SCENE)
 		return
-	if navigate and Flags.capture("meet=(\\w+)") != "":
+	if navigate and (Flags.capture("meet=(\\w+)") != "" or Flags.test("(^|[\\s?#&-])personality-slice($|[\\s&])")):
 		print("menu: straight to a fight (flag)")
 		Session.start_new()
 		get_tree().change_scene_to_file.call_deferred(HALLS_SCENE)
