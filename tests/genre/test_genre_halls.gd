@@ -550,6 +550,21 @@ func test_typed_gold_offer_uses_the_same_real_bargain():
 	ok(scene.last_mind.answers.any(func(row): return row.id == "words"), "the typed offer is still read by the local mind")
 
 
+func test_typed_deal_words_without_money_do_not_spend_gold():
+	for text in ["I offer peace", "let's make a deal and stop fighting"]:
+		_start("bandit")
+		await _pump(800.0)
+		var m: Dictionary = scene.G.foe
+		scene.interaction_roll_override = 0.0 # a real bargain would be accepted
+		eq(Rules.read_words(text).choice, "gold", text)
+		scene.on_key("2")
+		scene.on_key("5")
+		scene.submit_talk(text)
+		eq(m.gone, null, text)
+		eq(scene.G.gold, 8, text)
+		ok(not scene.last_say.contains("6 gold"), scene.last_say)
+
+
 func test_an_empty_line_goes_back_to_the_acts_and_nonsense_is_noticed():
 	_start("rock")
 	await _pump(800.0)

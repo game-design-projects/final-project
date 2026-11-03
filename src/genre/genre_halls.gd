@@ -899,7 +899,7 @@ func say_text(text: String) -> void:
 	var m: Dictionary = G.foe
 	m.spoke = true
 	var words := Rules.read_words(text)
-	if m.species in ["bandit", "snake"] and words.choice == "gold":
+	if m.species in ["bandit", "snake"] and words.choice == "gold" and Rules.names_money(text):
 		offer_cut(m, {"label": "YOUR OFFER"}, words)
 		return
 	var parts := []

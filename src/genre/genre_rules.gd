@@ -607,6 +607,14 @@ static func read_words(text: String) -> Dictionary:
 	return {"type": "choice", "choice": top, "probabilities": probs}
 
 
+# The gold cue also hears "deal", "offer" or "share"; only words that name money make a typed line a paid truce
+static var _money_re := RegEx.create_from_string("\\b(gold|coins?|pay|money)\\b")
+
+
+static func names_money(text: String) -> bool:
+	return _money_re.search(text.to_lower()) != null
+
+
 const INTENT_WORDS = {
 	"kindness": "kindness", "joke": "jokes", "flattery": "praise", "gold": "gold", "threat": "threats", "insult": "insults", "peace": "quiet and peace",
 	"join": "company", "question": "questions", "gibberish": "nonsense", "courage": "courage", "cheap": "cheap offers", "noise": "noise", "rush": "being rushed",
