@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- Genre Halls: holding an arrow key no longer restarts the camera glide on every key repeat (it repeats once the glide ends), and a far monster's name tag is no longer cut by wall edges (it is hidden only when its monster is out of sight).
+
 ### Changed
 - README shrunk to the pitch, the run commands and the key table; the rest moved to `docs/GAME.md`, `docs/DEVELOPMENT.md` and `docs/AUDIO.md`, and `AGENTS.md` added for coding agents.
 

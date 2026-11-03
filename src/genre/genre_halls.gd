@@ -1652,6 +1652,8 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.echo and G.mode != "dodge" and G.mode != "explore":
 		return
+	if event.echo and G.mode == "explore" and stage != null and stage.moving():
+		return # a held arrow repeats once the glide is over; restarting it every repeat never lets it finish
 	if _talk_in.has_focus():
 		return # typing a line: the LineEdit has it (Esc is handled by its gui_input)
 	var k := _js_key(event)

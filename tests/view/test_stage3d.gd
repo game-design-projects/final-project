@@ -290,7 +290,7 @@ func test_name_tags_are_3d_text_that_fade_and_give_way_to_a_nearer_tag():
 	stage.show_wanderers([near, far], 0.0)
 	eq(stage._tags.size(), 2)
 	for tag in stage._tags.values():
-		ok(tag is Label3D and tag.fixed_size and not tag.no_depth_test, "real 3D text: walls hide it")
+		ok(tag is Label3D and tag.fixed_size and tag.no_depth_test, "real 3D text that no wall edge slices")
 	var tn: Label3D = stage._tags["slime|{}|0"]
 	var tf: Label3D = stage._tags["slime|{}|1"]
 	ok(tn.modulate.a > tf.modulate.a, "the far tag is dimmer")
@@ -300,3 +300,16 @@ func test_name_tags_are_3d_text_that_fade_and_give_way_to_a_nearer_tag():
 	await (Engine.get_main_loop() as SceneTree).process_frame
 	eq(stage._tags.size(), 1, "the tag leaves with its monster")
 	ok(stage._tags["slime|{}|1"].visible, "and the far one shows once nothing is in front of it")
+
+
+func test_a_tag_shows_only_for_a_monster_in_sight():
+	var rows := ["###########", "#.........#", "#########.#", "#.......#.#", "###########"]
+	var map := map_of(rows, {"seed": 3})
+	stage.use_map(map)
+	stage.place(1, 1, 1, 0.0)
+	stage.sight(map.grid, 1, 1)
+	var seen := {"id": 0, "species": "slime", "look": {}, "x": 8, "y": 1, "label": "FAR", "color": "#ffa040"}
+	var hidden := {"id": 1, "species": "slime", "look": {}, "x": 3, "y": 3, "label": "ROOM", "color": "#ffa040"}
+	stage.show_wanderers([seen, hidden], 0.0)
+	ok(stage._tags["slime|{}|0"].visible, "eight cells down the hall: its name shows")
+	ok(not stage._tags["slime|{}|1"].visible, "behind a wall: no name floating in the dark")

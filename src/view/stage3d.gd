@@ -95,6 +95,8 @@ var _wild_root: Node3D
 var _sight: Array = []
 var _tags := {} # a name tag (Label3D) per standing monster, by the same key as _wild
 var _sight_key := 0
+## The cells of the last sight() as a set (null until sight() has run once)
+var _sight_cells = null
 var _boss = null
 
 
@@ -502,6 +504,7 @@ func _tag(key: String, e: Dictionary, model: Node3D) -> void:
 		tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		tag.fixed_size = true # the same size on screen near or far, like the 2D text it replaces
 		tag.shaded = false
+		tag.no_depth_test = true # a wall's edge must not slice the name in two (the tag is hidden when its monster is out of sight)
 		tag.double_sided = true
 		tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		tag.outline_size = 0
@@ -513,7 +516,7 @@ func _tag(key: String, e: Dictionary, model: Node3D) -> void:
 	var c := Color.html(str(e.get("color", "#e8e8e8")))
 	c.a = clampf(1.15 - maxf(0.0, d - 0.43) * 0.16, 0.35, 1.0)
 	tag.modulate = c
-	tag.visible = true
+	tag.visible = _in_sight(model.get_meta("cell"))
 
 
 # Nearest tag first: one that would sit on top of a nearer tag is hidden
@@ -523,6 +526,8 @@ func _declutter_tags() -> void:
 	var placed := []
 	for key in order:
 		var tag: Label3D = _tags[key]
+		if not tag.visible:
+			continue # out of sight: no tag, and it takes no room from the others
 		var at := project(tag.position)
 		var rect := Rect2(at.x - tag.text.length() * 4.0, at.y - 8.0, tag.text.length() * 8.0, 8.0).grow(5.0)
 		var clear: bool = not placed.any(func(r): return r.intersects(rect))
@@ -569,6 +574,7 @@ func sight(grid: Array, px: int, py: int) -> Array:
 		return _sight
 	_sight_key = key
 	_sight = []
+	_sight_cells = {}
 	var from := Vector2((px + 0.5) * Dungeon3D.CELL, (py + 0.5) * Dungeon3D.CELL)
 	for cy in grid.size():
 		for cx in grid[cy].size():
@@ -582,7 +588,14 @@ func sight(grid: Array, px: int, py: int) -> Array:
 				if camera.is_position_in_frustum(p) and _ray_clear(grid, from, Vector2(p.x, p.z)):
 					_sight.append([cx, cy])
 					break
+	for c in _sight:
+		_sight_cells[Vector2i(c[0], c[1])] = true
 	return _sight
+
+
+# Whether a cell is one sight() found. Before sight() has ever run nothing is known, so every cell counts.
+func _in_sight(cell: Vector2i) -> bool:
+	return _sight_cells == null or _sight_cells.has(cell)
 
 
 # A straight line over the floor plan that never enters a wall cell

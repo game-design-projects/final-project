@@ -785,3 +785,19 @@ func test_the_flat_flag_keeps_the_old_2d_corridor():
 	ok(scene.stage == null, "no 3D set with `flat`")
 	await _draw_frame()
 	eq(scene.G.mode, "explore")
+
+
+func test_a_held_arrow_waits_for_the_camera_glide_before_it_repeats():
+	_start()
+	await _draw_frame()
+	var dir0: int = scene.G.dir
+	scene._input(_key(KEY_RIGHT))
+	await _draw_frame() # the stage sees the new heading and starts to turn
+	ok(scene.stage.moving(), "the camera is turning")
+	scene._input(_key(KEY_RIGHT, 0, true))
+	eq(scene.G.dir, (dir0 + 1) % 4, "a repeat during the glide is dropped")
+	scene.clock_override += 1000.0
+	await _draw_frame()
+	ok(not scene.stage.moving())
+	scene._input(_key(KEY_RIGHT, 0, true))
+	eq(scene.G.dir, (dir0 + 2) % 4, "a repeat after the glide turns again")
