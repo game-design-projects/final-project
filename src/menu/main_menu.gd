@@ -7,6 +7,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Menus = preload("res://src/menu/menus.gd")
 const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const Palette = preload("res://src/view/palette.gd")
+const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Saves = preload("res://src/menu/saves.gd")
 const Session = preload("res://src/menu/session.gd")
 const Settings = preload("res://src/menu/settings.gd")
@@ -24,7 +25,7 @@ func _ready() -> void:
 	back.set_anchors_preset(Control.PRESET_FULL_RECT)
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(back)
-	if Flags.value("meet") != "" or Flags.on("personality-slice"):
+	if Flags.value("meet") != "" or PersonalitySlice.pending():
 		print("menu: straight to a fight (flag)")
 		_start(Session.start_new)
 		return

@@ -9,11 +9,8 @@ func enter(flow, _args: Dictionary) -> void:
 
 
 func pick(flow, _index: int) -> void:
-	var s = flow.state
-	if flow.slice_next != "" and s.foe.name != flow.slice_next:
-		for m in s.floor_map.monsters:
-			if m.name == flow.slice_next and not m.is_gone():
-				await flow.go("intro", {"foe": m})
-				return
+	if not flow.slice_queue.is_empty():
+		await flow.go("intro", {"foe": flow.slice_queue.pop_front()})
+		return
 	flow.end_slice()
 	await flow.go("explore")

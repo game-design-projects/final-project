@@ -18,13 +18,14 @@ static func shipped_url() -> String:
 	return FileAccess.get_file_as_string(SHIPPED_URL).strip_edges() if FileAccess.file_exists(SHIPPED_URL) else ""
 
 
-static func create(rng: Rng, saved_url := ""):
+## `offline` never asks Jev, whatever address is saved, given or shipped (the playtest slice, which must repeat exactly).
+static func create(rng: Rng, saved_url := "", offline := false):
 	var mind
 	if Flags.on("mock"):
 		mind = SeededMind.new(rng)
 	else:
 		mind = LocalMind.new()
-		var url: String = Flags.value("jev", saved_url if saved_url != "" else shipped_url())
+		var url: String = "" if offline else Flags.value("jev", saved_url if saved_url != "" else shipped_url())
 		if url != "":
 			mind = JevMind.new(url, mind)
 	print("mind: %s" % mind.label())

@@ -4,18 +4,28 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-03
+
 ### Changed
-- Rewrote the game from scratch as two scenes (menu, gameplay) with the gameplay stages as one state machine and a transition table; the old Genre Halls code stays in history only.
+- Rewrote the game from scratch as a menu scene and a gameplay scene, with the stages as one state machine and a transition table.
 - Monsters think through one mind interface: local rules, a seeded random mind, or Jev through the proxy with the local rules as fallback.
 - All network traffic goes through one manager with a shared timeout, retries and a short offline period after repeated failures.
-- CI imports the project, plays whole games headless, and builds web, Windows, macOS and Linux with `tools/build.sh`; the Jev proxy address is baked into the build from `config/jev_url.txt`.
+- CI imports the project, plays whole games headless, checks the personality slice, and builds four platforms with `tools/build.sh`.
 
 ### Added
-- Restored `tools/godot-mcp/` (pinned Godot MCP 0.1.1 with its lockfile and `run.sh`), which the rewrite deleted while `.mcp.json` and `.codex/config.toml` still started it, so the `godot` server failed with CONNECTION_CLOSED.
-- A seeded personality slice (`godot --path . -- personality-slice seed=7042`) pairs two bandits, ROOK and VEX, with different clues, answers and reactions to the same offer, plus a short participant playtest checklist (`docs/PERSONALITY_PLAYTEST.md`).
-- Every newly generated monster has an individual motive, including proud or jumpy bandits, with clues in CHECK and the tooltip; motives change reactions, emotional meters, mercy, recruitment and attack pressure.
-- Questions can reveal a reachable stair direction, another living monster's aversion and clue, or the champion's opening; personality shifts the chance of an answer.
-- The run starts with 8 gold, enough for one 6-gold bandit or snake truce; acceptance remains uncertain, accepted bargains spare without recruitment, and refusals keep gold but cost a turn.
+- A seeded personality slice (`-- personality-slice seed=7042`) pairs two bandits, ROOK and VEX, with different clues and reactions, plus a participant checklist in `docs/PERSONALITY_PLAYTEST.md`.
+- `tools/slice_test.gd` checks the slice headless: its routes, what ends it, the retry, the autosave rule, the seed and the mind.
+- Every new monster has an individual motive (proud, jumpy...) that shows in CHECK and the tooltip and shifts its reactions, mercy and recruiting.
+- Questions can reveal a stair direction, another monster's aversion and clue, or the champion's opening, depending on personality.
+- The run starts with 8 gold, enough for one 6-gold fair cut; acceptance stays uncertain and a refusal keeps the gold but costs a turn.
+- Restored `tools/godot-mcp/` (pinned Godot MCP 0.1.1), so the `godot` server in `.mcp.json` starts again.
+
+### Fixed
+- The slice's floor is never autosaved, so it no longer overwrites your earlier run in the AUTO slot.
+- Trying a fight again starts at full HP, so a retry after a low-HP first fight can no longer loop forever.
+- The slice always uses the local rules, and `seed=-5` or `seed=abc` fall back to 7042 instead of a random or zero seed.
+- With the flag on, MAIN MENU shows the real menu instead of restarting the slice, and the title card is skipped like `meet`.
+- The second slice fight is the queued VEX, not whichever monster shares his name.
 
 ### Removed
 - The speech helper (hold to talk), the old test suites, the original Donjon code and the old JS-port helpers.
@@ -82,6 +92,12 @@ The dungeon is 3D now, drawn as the 2D line art it always was ("3渲2").
 - Help moved into tooltips: a command's help on hover (SPARE turns gold when it would work, and its tooltip explains allies and charms), an ally chip's charm and loyalty, the monster's mind (what it seems like, feelings, last two answers) when you hover it in a fight, and the automap's monster colors. The highlighted command shows its tooltip when you use the keys.
 - The automap loses its title and legend and sits in the view's corner while exploring; it steps aside in a fight. Opening and exploring messages are shorter.
 - The game opens in Genre Halls (`run/main_scene` is `genre_halls.tscn`, so `godot --path .`, the exported builds and the web page start there). The original Donjon is Esc on the Genre Halls title card, or the new `main` flag (`godot --path . -- main mock floor5`); the title card now says so.
+
+## [0.4.0] - 2026-11-01
+
+### Changed
+- Genre Halls fills the window with a fixed-height text box, HP bar and tooltips, and monsters diagonal to you are drawn.
+- The game opens in Genre Halls; Esc on its title reaches the original Donjon.
 
 ## [0.3.0] - 2026-10-29
 
@@ -176,6 +192,13 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - Music cues for good news, both quoting the same melody: a bright 8-bit fanfare when you go down the stairs, and a short victory jingle when you win a fight.
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
-[Unreleased]: https://github.com/game-design-projects/week4-jev-game-ai-by-Aalfalasi/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/game-design-projects/final-project/compare/v0.5.3...v0.6.0
+[0.5.3]: https://github.com/game-design-projects/final-project/compare/v0.5.2...v0.5.3
+[0.5.2]: https://github.com/game-design-projects/final-project/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/game-design-projects/final-project/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/game-design-projects/final-project/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/game-design-projects/final-project/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/game-design-projects/final-project/releases/tag/v0.3.0
 [0.2.1]: https://github.com/game-design-projects/week4-jev-game-ai-by-Aalfalasi/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/game-design-projects/week4-jev-game-ai-by-Aalfalasi/releases/tag/v0.2.0

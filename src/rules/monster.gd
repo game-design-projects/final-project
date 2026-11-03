@@ -50,6 +50,23 @@ static func make(rng: Rng, entry: Dictionary, cell: Vector2i):
 	return m
 
 
+## A monster whose personality is given instead of rolled (the playtest slice): the same species, genre and hp fields as
+## `make`, and the taste its traits shift, without the random part. `entry` is a roster line, `meters` its starting feelings.
+static func given(entry: Dictionary, cell: Vector2i, given_name: String, given_traits: Array, meters: Dictionary):
+	var m = new()
+	m.species = entry.species
+	m.genre = entry.genre
+	m.cell = cell
+	m.max_hp = int(entry.hp)
+	m.hp = m.max_hp
+	m.meters = meters.duplicate()
+	m.name = given_name
+	m.threshold = float(Content.species(m.species).joinThreshold)
+	m.traits = given_traits.duplicate()
+	m._add_trait_shifts()
+	return m
+
+
 ## Two traits, and at least one of them a trait that wants something (has a motive), so every monster has a personality
 ## the player can read.
 static func _pick_traits(rng: Rng, species_id: String, sp: Dictionary) -> Array:
@@ -73,8 +90,13 @@ func _roll_taste(rng: Rng) -> void:
 	var taste_table := Content.table("taste")
 	for intent in taste_table.affinity[species]:
 		taste[intent] = (rng.real() - 0.5) * 1.2
+	_add_trait_shifts()
+
+
+func _add_trait_shifts() -> void:
+	var shifts: Dictionary = Content.table("taste").trait_shift
 	for t in traits:
-		var shift: Dictionary = taste_table.trait_shift.get(t, {})
+		var shift: Dictionary = shifts.get(t, {})
 		for intent in shift:
 			taste[intent] = float(taste.get(intent, 0.0)) + float(shift[intent])
 

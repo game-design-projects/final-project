@@ -61,8 +61,9 @@ func _ready() -> void:
 	if not pending.is_empty():
 		request = pending
 	_build_screen()
-	_rng = Rng.new(PersonalitySlice.seed_value()) if PersonalitySlice.wanted() else Rng.new()
-	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", ""))))
+	var slice := PersonalitySlice.pending()
+	_rng = Rng.new(PersonalitySlice.seed_value()) if slice else Rng.new()
+	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), slice))
 	audio = Audio.new()
 	add_child(audio)
 	audio.bind(flow)
@@ -71,7 +72,7 @@ func _ready() -> void:
 	_header.state = flow.state
 	_status.state = flow.state
 	_dock.state = flow.state
-	if request.is_empty() and Flags.value("meet") == "":
+	if request.is_empty() and Flags.value("meet") == "" and not slice:
 		_on_title = true
 		_overlay.title_card = true
 		flow.state.say([State.sys_line("Press any key to start.")])
@@ -99,7 +100,7 @@ func _after_start() -> void:
 	_header.state = flow.state
 	_status.state = flow.state
 	_dock.state = flow.state
-	if PersonalitySlice.wanted() and request.get("kind", "new") == "new":
+	if PersonalitySlice.pending() and request.get("kind", "new") == "new":
 		await PersonalitySlice.start(flow)
 		return
 	var species := Flags.value("meet")
@@ -327,7 +328,7 @@ func _load_slot(slot: String) -> void:
 
 
 func _autosave() -> void:
-	if flow.slice_active: # the playtest slice leaves no save behind
+	if flow.slice_floor: # the playtest slice's floor leaves no save behind
 		return
 	Saves.write(Saves.AUTO, flow.state.to_dict(), flow.state.summary())
 

@@ -1,52 +1,51 @@
 ## A reproducible two-bandit encounter for the personality playtest (flag `personality-slice`, with `seed=N`). ROOK deals
 ## straight and VEX is jumpy, so the same fair-cut offer is taken by one and refused by the other at the fixed roll. While
-## it is on, the flow draws the cut and the answer at `fixed_roll`, nothing is autosaved, and a retry keeps the HP the
-## fight began with. It ends after the second fight, on fleeing, on a new floor, on a load, or on leaving.
+## it is on, the monsters think with the local rules, the flow draws the cut and the answer at `fixed_roll`, and the floor
+## is never autosaved. The slice ends after the second fight, on fleeing, on a new floor, on a load, or on leaving.
 extends RefCounted
 
 const Combat = preload("res://src/rules/combat.gd")
-const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
+const Monster = preload("res://src/rules/monster.gd")
 
 const DEFAULT_SEED := 7042
-const GOLD := 12 # enough to hear the same 6-gold offer twice, even if the first one takes it
+const GOLD := Combat.CUT_COST * 2 # enough to hear the same offer twice, even if the first one takes it
 const ROLL := 0.5
+const BANDIT := {"species": "bandit", "genre": "chess", "hp": 24}
+const METERS := {"friendliness": 78.0, "anger": 12.0, "fear": 15.0}
 const FOES := [
 	{"name": "ROOK", "trait": "surprisingly honest about being dishonest"},
 	{"name": "VEX", "trait": "jumpy"},
 ]
 
-
-static func wanted() -> bool:
-	return Flags.on("personality-slice")
+static var _started := false # the flag starts one slice per launch, so MAIN MENU from inside it shows the real menu
 
 
-## The seed of the slice: `seed=N`, or the one the playtest document names.
+## The flag is on and its slice hasn't begun yet.
+static func pending() -> bool:
+	return Flags.on("personality-slice") and not _started
+
+
+## The seed of the slice: `seed=N` (0 or more), or the one the playtest document names.
 static func seed_value() -> int:
-	return int(Flags.value("seed", str(DEFAULT_SEED)))
+	var text := Flags.value("seed", "")
+	if text.is_valid_int() and int(text) >= 0:
+		return int(text)
+	if text != "":
+		push_warning("slice: seed=%s is not a seed (a whole number, 0 or more); using %d" % [text, DEFAULT_SEED])
+	return DEFAULT_SEED
 
 
 ## Turn the first two monsters of the fresh run into ROOK and VEX and start the fight with ROOK.
 static func start(flow) -> void:
+	_started = true
 	var s = flow.state
 	s.gold = GOLD
 	flow.fixed_roll = ROLL
-	flow.slice_active = true
-	var shifts: Dictionary = Content.table("taste").trait_shift
+	flow.slice_floor = true
+	var monsters: Array = s.floor_map.monsters
 	for i in FOES.size():
-		var m = s.floor_map.monsters[i]
-		m.species = "bandit"
-		m.genre = "chess"
-		m.name = FOES[i].name
-		m.max_hp = 24
-		m.hp = 24
-		m.threshold = float(Content.species("bandit").joinThreshold)
-		m.traits = [FOES[i].trait]
-		m.taste = {}
-		for intent in shifts.get(FOES[i].trait, {}):
-			m.taste[intent] = float(shifts[FOES[i].trait][intent])
-		m.meters = {"friendliness": 78.0, "anger": 12.0, "fear": 15.0}
-		m.last_intent = ""
-	flow.slice_next = FOES[1].name
+		monsters[i] = Monster.given(BANDIT, monsters[i].cell, FOES[i].name, [FOES[i].trait], METERS)
+	flow.slice_queue = [monsters[1]]
 	print("slice: seed %d, %s then %s, %d gold" % [flow.rng.seed_value, FOES[0].name, FOES[1].name, s.gold])
-	await flow.go("intro", {"foe": s.floor_map.monsters[0]})
+	await flow.go("intro", {"foe": monsters[0]})

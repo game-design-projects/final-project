@@ -178,7 +178,7 @@ func retry_fight() -> void:
 	var snap: Dictionary = s.encounter_start
 	var fresh = Monster.from_dict(snap.foe)
 	s.floor_map.monsters[s.floor_map.monsters.find(s.foe)] = fresh
-	s.hp = snap.hp if flow.slice_active else s.max_hp # the playtest slice replays its exact start
+	s.hp = s.max_hp
 	s.gold = snap.gold
 	s.allies = snap.allies.map(func(a): return Ally.from_dict(a))
 	s.tally = snap.tally.duplicate()
