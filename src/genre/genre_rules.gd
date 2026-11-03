@@ -76,25 +76,105 @@ const AFF = {
 # Traits shift those tastes, so two slimes don't want the same thing
 const TRAIT_TASTE = {
 	"easily startled": {"threat": -1.5, "noise": -1}, "ticklish": {"joke": 1}, "lonely": {"join": 1.5, "kindness": 0.5}, "hungry": {"gold": 1},
-	"curious": {"question": 1}, "sleepy": {"peace": 1, "joke": -1}, "shy": {"flattery": -1, "kindness": 0.5},
-	"greedy": {"gold": 1}, "charming": {"flattery": 1}, "jumpy": {"threat": -1.5, "noise": -1}, "owes money to someone": {"gold": 1.5},
-	"quick-fingered": {"joke": 0.5}, "surprisingly honest about being dishonest": {"insult": 0.5, "flattery": -0.5},
-	"patient": {"peace": 1, "rush": -0.5}, "secretive": {"question": -1.5}, "vain about its scales": {"flattery": 1},
+	"curious": {"question": 1, "joke": 0.5}, "sleepy": {"peace": 1, "joke": -1}, "shy": {"flattery": -1, "kindness": 0.5},
+	"greedy": {"gold": 1}, "charming": {"flattery": 1}, "jumpy": {"threat": -1.5, "joke": -2.5, "noise": -1}, "owes money to someone": {"gold": 1.5},
+	"quick-fingered": {"joke": 0.5}, "surprisingly honest about being dishonest": {"insult": 0.5, "flattery": -0.5, "gold": 1, "threat": -1, "courage": 1},
+	"proud": {"threat": -1.5, "courage": 1, "gold": -0.5},
+	"patient": {"peace": 1, "rush": -0.5}, "secretive": {"question": -1.5, "gold": -2}, "vain about its scales": {"flattery": 1},
 	"always bargaining": {"gold": 1}, "holds grudges": {"insult": -1, "threat": -0.5}, "curious about humans": {"question": 1, "kindness": 0.5},
 	"cold-blooded": {"kindness": -1}, "half asleep": {"gibberish": 0.5, "noise": -1}, "slow to anger": {"threat": 1, "insult": 0.5},
-	"remembers everything": {"question": 1.5}, "ancient": {"flattery": 0.5}, "covered in moss": {"kindness": 0.5},
-	"vain": {"flattery": 1}, "bored": {"joke": 1, "peace": -1}, "loves riddles": {"question": 1, "joke": 0.5}, "hoards gold coins": {"gold": 1},
+	"remembers everything": {"question": 1.5, "flattery": 0.5}, "ancient": {"flattery": 0.5}, "covered in moss": {"kindness": 0.5},
+	"vain": {"flattery": 1}, "bored": {"joke": 1, "courage": 0.5, "peace": -1}, "loves riddles": {"question": 1, "joke": 0.5}, "hoards gold coins": {"gold": 1},
 	"old battle scars": {"courage": 1, "threat": 0.5},
+}
+# Some existing traits carry a need of their own. The clues describe visible behavior, while the odds stay hidden.
+# The last action changes what that need means for mercy, recruitment and the next dodge; old saves default to none.
+const MOTIVES = {
+	"lonely": {
+		"clue": "edges toward every nearby voice",
+		"feelings": {"kindness": {"touched": 0.9}, "join": {"touched": 0.8}},
+		"meters": {"kindness": {"friendliness": 6}, "join": {"friendliness": 6}},
+		"mercy": {"kindness": 0.7, "join": 0.7}, "join": {"kindness": 0.9, "join": 1.0},
+		"pressure": {"kindness": -0.2, "join": -0.2},
+	},
+	"curious": {
+		"clue": "pauses to study each unfamiliar detail",
+		"feelings": {"question": {"intrigued": 1.0}, "joke": {"amused": 0.8}},
+		"meters": {"question": {"friendliness": 5}, "joke": {"friendliness": 3}},
+		"mercy": {"question": 0.5, "joke": 0.3}, "join": {"question": 0.4, "joke": 0.2},
+		"pressure": {"question": -0.3, "joke": -0.2},
+	},
+	"jumpy": {
+		"clue": "keeps one eye on the nearest exit",
+		"feelings": {"threat": {"terrified": 1.1, "enraged": -0.4}, "joke": {"terrified": 0.9}},
+		"meters": {"threat": {"fear": 8}, "joke": {"fear": 4}},
+		"mercy": {"threat": 0.7, "joke": 0.2}, "join": {"threat": -0.6, "joke": -0.2},
+		"pressure": {"threat": -0.6, "joke": -0.2},
+	},
+	"proud": {
+		"clue": "holds its ground and bristles when challenged",
+		"feelings": {"threat": {"enraged": 1.2, "terrified": -0.5}, "courage": {"intrigued": 0.8}},
+		"meters": {"threat": {"anger": 8}, "courage": {"friendliness": 4}},
+		"mercy": {"threat": -0.7, "courage": 0.3}, "join": {"threat": -0.7, "courage": 0.3},
+		"pressure": {"threat": 0.6, "courage": -0.1},
+	},
+	"surprisingly honest about being dishonest": {
+		"clue": "insists on straight terms without looking away",
+		"feelings": {"gold": {"intrigued": 1.0}, "threat": {"enraged": 1.1, "terrified": -0.4}, "courage": {"intrigued": 1.0}},
+		"meters": {"gold": {"friendliness": 5}, "threat": {"anger": 8}},
+		"mercy": {"gold": 0.5, "threat": -0.7}, "join": {"gold": 0.8, "threat": -0.8},
+		"pressure": {"threat": 0.5},
+	},
+	"patient": {
+		"clue": "waits for you to finish before moving",
+		"feelings": {"peace": {"touched": 0.8}, "rush": {"offended": 0.8}},
+		"meters": {"peace": {"friendliness": 4}, "rush": {"anger": 4}},
+		"mercy": {"peace": 0.4, "rush": -0.4}, "join": {"peace": 0.4, "rush": -0.4},
+		"pressure": {"peace": -0.2, "rush": 0.2},
+	},
+	"secretive": {
+		"clue": "watches every offer for a hidden catch",
+		"feelings": {"question": {"offended": 0.9}, "gold": {"offended": 0.8}},
+		"meters": {"question": {"anger": 5}, "gold": {"anger": 4}},
+		"mercy": {"question": -0.5, "gold": -0.3}, "join": {"question": -0.4, "gold": -0.3},
+		"pressure": {"question": 0.3, "gold": 0.2},
+	},
+	"vain about its scales": {
+		"clue": "turns its scales toward the light",
+		"feelings": {"flattery": {"flattered": 0.9}},
+		"meters": {"flattery": {"friendliness": 5}},
+		"mercy": {"flattery": 0.5}, "join": {"flattery": 0.5}, "pressure": {"flattery": -0.2},
+	},
+	"remembers everything": {
+		"clue": "traces old marks as if recalling their makers",
+		"feelings": {"question": {"intrigued": 0.9}, "flattery": {"flattered": 0.8}},
+		"meters": {"question": {"friendliness": 4}, "flattery": {"friendliness": 3}},
+		"mercy": {"question": 0.4, "flattery": 0.3}, "join": {"question": 0.3, "flattery": 0.2},
+		"pressure": {"question": -0.2, "flattery": -0.1},
+	},
+	"bored": {
+		"clue": "lets its gaze wander between attacks",
+		"feelings": {"joke": {"amused": 0.9}, "courage": {"intrigued": 0.8}},
+		"meters": {"joke": {"friendliness": 4}, "courage": {"friendliness": 3}},
+		"mercy": {"joke": 0.3, "courage": 0.3}, "join": {"joke": 0.3, "courage": 0.2},
+		"pressure": {"joke": -0.2, "courage": -0.1},
+	},
+	"vain": {
+		"clue": "holds its head high whenever watched",
+		"feelings": {"flattery": {"flattered": 0.9}},
+		"meters": {"flattery": {"friendliness": 4}},
+		"mercy": {"flattery": 0.4}, "join": {"flattery": 0.4}, "pressure": {"flattery": -0.1},
+	},
 }
 const POS = {
 	"kindness": ["touched", "delighted"], "joke": ["amused", "delighted"], "flattery": ["flattered", "delighted"], "gold": ["delighted", "intrigued"],
-	"peace": ["touched", "delighted"], "join": ["touched", "delighted"], "question": ["intrigued"], "courage": ["intrigued", "touched"],
+	"peace": ["touched", "delighted"], "join": ["touched", "delighted"], "question": ["intrigued", "amused"], "courage": ["intrigued", "touched"],
 	"gibberish": ["amused", "confused"], "threat": ["intrigued"], "cheap": ["confused"], "noise": ["confused"], "rush": ["confused"], "insult": ["confused"],
 }
 const NEG = {
-	"kindness": ["confused"], "joke": ["confused", "offended"], "flattery": ["confused", "offended"], "gold": ["offended"], "peace": ["confused"],
-	"join": ["offended"], "question": ["offended"], "courage": ["enraged"], "threat": ["terrified", "enraged"], "insult": ["offended", "enraged"],
-	"cheap": ["offended", "enraged"], "noise": ["enraged", "confused"], "rush": ["offended"], "gibberish": ["offended"],
+	"kindness": ["confused"], "joke": ["confused", "offended"], "flattery": ["confused", "offended"], "gold": ["offended", "confused"], "peace": ["confused"],
+	"join": ["offended"], "question": ["offended", "confused"], "courage": ["enraged"], "threat": ["terrified", "enraged"], "insult": ["offended", "enraged"],
+	"cheap": ["offended", "enraged"], "noise": ["enraged", "confused"], "rush": ["offended", "confused"], "gibberish": ["offended"],
 }
 # Nonsense makes each kind mad or sad in its own way
 const GIBBERISH_NEG = {"bandit": ["offended"], "snake": ["offended", "enraged"], "rock": ["confused", "sad"], "dragon": ["enraged"], "slime": ["confused"]}
@@ -234,7 +314,19 @@ static func make_monster(r: Dictionary, x: int, y: int) -> Dictionary:
 	meters.friendliness = clamp_num(sp.start.friendliness + rnd(-10, 10), 0, 100)
 	meters.anger = clamp_num(sp.start.anger + rnd(-5, 10), 0, 100)
 	var traits: Array = sp.traits.duplicate()
+	if r.species == "bandit":
+		traits.append("proud")
 	traits.shuffle()
+	var chosen: Array = traits.slice(0, 2)
+	var has_motive := false
+	for t in chosen:
+		if MOTIVES.has(t):
+			has_motive = true
+	if not has_motive:
+		for t in traits:
+			if MOTIVES.has(t):
+				chosen[1] = t
+				break
 	return {
 		"species": r.species,
 		"genre": r.genre,
@@ -245,8 +337,9 @@ static func make_monster(r: Dictionary, x: int, y: int) -> Dictionary:
 		"hp": r.hp,
 		"maxHp": r.hp,
 		"meters": meters,
-		"traits": traits.slice(0, 2),
+		"traits": chosen,
 		"taste": {},
+		"lastIntent": "",
 		"spoke": false,
 		"threshold": sp.joinThreshold + 5 if boss else sp.joinThreshold,
 		"turn": 0,
@@ -266,6 +359,59 @@ static func roll_taste(m: Dictionary) -> Dictionary:
 
 static func aff(m: Dictionary, intent: String) -> float:
 	return float(AFF[m.species].get(intent, 0)) + float(m.taste.get(intent, 0))
+
+
+static func personality_clues(m: Dictionary) -> Array:
+	var clues := []
+	for t in m.get("traits", []):
+		if MOTIVES.has(t):
+			clues.append(MOTIVES[t].clue)
+	return clues
+
+
+# A question costs a combat turn. Cooperation stays uncertain, even for a curious monster.
+static func reveal_odds(m: Dictionary) -> float:
+	var willingness := aff(m, "question") + float(m.meters.friendliness) / 50.0 - float(m.meters.anger) / 50.0
+	for t in m.get("traits", []):
+		match t:
+			"curious", "remembers everything", "surprisingly honest about being dishonest":
+				willingness += 0.8
+			"secretive", "jumpy":
+				willingness -= 1.5
+	return clampf(sigmoid((willingness - 0.8) * 1.4), 0.12, 0.88)
+
+
+static func will_reveal(m: Dictionary, roll := -1.0) -> bool:
+	return (randf() if roll < 0.0 else roll) < reveal_odds(m)
+
+
+# A gold truce can fail even with favorable terms, and succeeds less often when angered.
+static func cut_odds(m: Dictionary) -> float:
+	var willingness := -0.6 + aff(m, "gold") * 0.45 + float(m.meters.friendliness) / 75.0 - float(m.meters.anger) / 35.0
+	if m.species == "bandit":
+		for t in m.get("traits", []):
+			if t in ["surprisingly honest about being dishonest", "greedy", "owes money to someone"]:
+				willingness += 0.7
+			if t in ["jumpy", "proud"]:
+				willingness -= 1.3
+	if m.species == "snake":
+		if m.get("traits", []).has("always bargaining"):
+			willingness += 0.7
+		if m.get("traits", []).has("secretive"):
+			willingness -= 1.3
+	return clampf(sigmoid(willingness * 1.7), 0.12, 0.88)
+
+
+static func accepts_cut(m: Dictionary, roll := -1.0) -> bool:
+	return (randf() if roll < 0.0 else roll) < cut_odds(m)
+
+
+static func _motive_shift(m: Dictionary, field: String, intent: String) -> float:
+	var total := 0.0
+	for t in m.get("traits", []):
+		if MOTIVES.has(t):
+			total += float(MOTIVES[t].get(field, {}).get(intent, 0.0))
+	return total
 
 
 # ---------------------------------------------------------------- the mind (Jev-shaped questions, local answers)
@@ -334,6 +480,11 @@ static func ask_feeling(m: Dictionary, act) -> Dictionary:
 				pool = NEG.get(it.intent, [])
 			for k in pool:
 				logits[k] += it.w * (1.4 + 1.1 * absf(a) + (-anger / 50.0 if a >= 0 else anger / 50.0))
+			for t in m.get("traits", []):
+				if MOTIVES.has(t):
+					var bias: Dictionary = MOTIVES[t].feelings.get(it.intent, {})
+					for k in bias:
+						logits[k] += it.w * bias[k]
 		logits.terrified += fear / 60.0
 	var probs := softmax(logits)
 	return {"type": "choice", "choice": roll_odds(probs), "probabilities": probs}
@@ -345,6 +496,13 @@ static func ask_mercy(m: Dictionary) -> Dictionary:
 	var fear: float = m.meters.fear
 	var low: bool = float(m.hp) / m.maxHp < 0.4
 	var x: float = (f - m.threshold) / 9.0 + ((fear - 40.0) / 25.0) * (1.0 if low else 0.3) - anger / 30.0
+	x += _motive_shift(m, "mercy", str(m.get("lastIntent", "")))
+	return {"type": "noul", "noul": sigmoid(x)}
+
+
+static func ask_join(m: Dictionary) -> Dictionary:
+	var x: float = (float(m.meters.friendliness) - float(m.threshold) - 4.0) / 7.0 + aff(m, "join") * 0.4
+	x += _motive_shift(m, "join", str(m.get("lastIntent", "")))
 	return {"type": "noul", "noul": sigmoid(x)}
 
 
@@ -352,17 +510,8 @@ static func ask_pressure(m: Dictionary) -> Dictionary:
 	var f: float = m.meters.friendliness
 	var anger: float = m.meters.anger
 	var fear: float = m.meters.fear
-	var raw: float = clamp_num((anger * 1.2 - f * 0.5 - fear * 0.4 + 45.0) / 30.0, 0.0, 3.0)
-	var levels := []
-	var s := 0.0
-	for i in 4:
-		var v := exp(-pow(i - raw, 2) * 1.6)
-		levels.append(v)
-		s += v
-	var probs := {}
-	for i in 4:
-		probs[str(i)] = levels[i] / s
-	return {"type": "score", "score": raw, "probabilities": probs}
+	var raw: float = clamp_num((anger * 1.2 - f * 0.5 - fear * 0.4 + 45.0) / 30.0 + _motive_shift(m, "pressure", str(m.get("lastIntent", ""))), 0.0, 3.0)
+	return {"type": "pressure", "score": raw}
 
 
 static func apply_feeling(m: Dictionary, id: String) -> Dictionary:
@@ -370,6 +519,12 @@ static func apply_feeling(m: Dictionary, id: String) -> Dictionary:
 	var shift: Dictionary = em.get("meters", {})
 	for k in shift:
 		m.meters[k] = clamp_num(m.meters.get(k, 0) + shift[k], 0, 100)
+	var intent: String = str(m.get("lastIntent", ""))
+	for t in m.get("traits", []):
+		if MOTIVES.has(t):
+			var extra: Dictionary = MOTIVES[t].meters.get(intent, {})
+			for k in extra:
+				m.meters[k] = clamp_num(m.meters.get(k, 0) + extra[k], 0, 100)
 	return em
 
 
@@ -395,7 +550,7 @@ static func _make_cues() -> Dictionary:
 		"insult": "\\b(stupid|ugly|gross|dumb|idiot|weak|pathetic|slimy|loser|worm|thief|rock-head)\\b",
 		"peace": "\\b(peace|stop|truce|calm|quiet|rest|wait|no fight|don't fight|leave)\\b",
 		"join": "\\b(join|come with|team|together|party|follow|with us)\\b",
-		"question": "\\?|\\b(where|what|who|why|how|stairs|way out|exit|tell me|secret)\\b",
+		"question": "\\?|\\b(where|what|who|why|how|stairs|way out|exit|champion|boss|weakness|personality|trait|tell me|secret)\\b",
 		"rush": "\\b(hurry|quick|faster|now now|move it)\\b",
 		"noise": "\\b(loud|bang|scream|yell)\\b|!{3,}",
 	}
@@ -450,6 +605,14 @@ static func read_words(text: String) -> Dictionary:
 			top = k
 			top_p = probs[k]
 	return {"type": "choice", "choice": top, "probabilities": probs}
+
+
+# The gold cue also hears "deal", "offer" or "share"; only words that name money make a typed line a paid truce
+static var _money_re := RegEx.create_from_string("\\b(gold|coins?|pay|money)\\b")
+
+
+static func names_money(text: String) -> bool:
+	return _money_re.search(text.to_lower()) != null
 
 
 const INTENT_WORDS = {

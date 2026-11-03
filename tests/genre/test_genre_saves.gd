@@ -7,6 +7,7 @@ const Session = preload("res://src/menu/session.gd")
 const Settings = preload("res://src/menu/settings.gd")
 const MemoryStore = preload("res://src/core/store.gd").Memory
 const SCENE = preload("res://src/genre/genre_halls.tscn")
+const Rules = preload("res://src/genre/genre_rules.gd")
 
 var scene: Control
 var root := ""
@@ -55,8 +56,10 @@ func test_a_run_survives_export_json_free_roundtrip_through_a_save_slot() -> voi
 	scene.new_run()
 	scene.G.x = 3
 	scene.G.hp = 11
+	scene.G.gold = 2
 	scene.G.tally.spared = 2
 	scene.G.allies.append({"species": "slime", "name": "Drip", "loyalty": 70.0})
+	scene.G.map.monsters[0].lastIntent = "kindness"
 	scene.G.seen[17] = true
 	ok(Saves.write(1, scene.export_state(), scene.summary()), "the whole state can be written")
 	var saved := Saves.read(1)
@@ -71,11 +74,19 @@ func test_a_run_survives_export_json_free_roundtrip_through_a_save_slot() -> voi
 	eq(other.G.mode, "explore")
 	eq(other.G.x, 3)
 	eq(other.G.hp, 11)
+	eq(other.G.gold, 2)
 	eq(other.G.tally.spared, 2)
 	eq(other.G.allies[0].name, "Drip")
 	ok(other.G.seen.has(17), "integer keys of the seen set survive")
 	eq(other.G.map.stairs, scene.G.map.stairs)
+	eq(other.G.map.monsters[0].lastIntent, "kindness", "the monster's recent impression survives a save")
 	other.queue_free()
+	# Saves from before the impression field was added still use the species baseline.
+	saved.map.monsters[0].erase("lastIntent")
+	saved.erase("gold")
+	ok(scene.import_state(saved))
+	eq(scene.G.gold, 8, "older saves receive the starting purse")
+	ok(Rules.ask_mercy(scene.G.map.monsters[0]).noul > 0.0)
 
 
 func test_a_state_that_is_not_ours_is_refused() -> void:
