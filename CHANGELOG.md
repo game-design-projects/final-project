@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- Feature flags for all new game features, on by default: `no-<name>` or `<name>=off` turns one off, and `classic` turns them all off.
+- `real-floors`: the stairs lead to the next floor and carry over HP, gold, allies and the tally, and the run ends at the last floor.
+- `piece-icons`, `gentle-dodge` and `mini-games`: chess attacks show a piece's shape and reach, dodges run slower and adapt, and every third attack is a mini-game.
+- `recruit-step`, `mercy-link`, `party-aid` and `last-door`: a spared monster asks to join, mercy odds show as a gauge, allies help in fights, and the last stairs need a friend.
+- `story`: the opening says why you are here, each floor says who holds it, and the header counts the floors.
+- `tutorial` and `walk-heal`: one-at-a-time tips with a setting to turn them off, slower first fights, and slow healing while walking.
+- `mood-cues` and `show-mind`: a bubble shows how a deed landed, a chime marks when mercy is likely, and `no-show-mind` hides the mind's answers for an A/B test.
+- `clear-hp`: the foe's health sits over its head with a number and damage trail, its mood is named, and your bar shows an arrow as it moves.
+- `reveal`: CHECK reads one clue at a time, likes and hates are learned by trying them, and monsters answer in their own words.
+- `chat`: typed words fly to the monster, its reply gets its own box, and the info key keeps the talk so far.
+- `boss-at-exit`, `flee-cost` and `boss-reward`: the champion holds the stairs, backing away has a cost, and beating or befriending a champion makes you stronger.
+- `branching`: the stairs offer two seeded ways down to compare.
+- `clans`: monsters belong to clans that remember your deeds, later ones say so and start in a different mood, and Jev is told the history.
+- `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
+
+### Changed
+- Each mini-game now lives in its own file under `src/rules/minigames/`.
+
 ## [0.6.1] - 2026-11-03
 
 ### Added
