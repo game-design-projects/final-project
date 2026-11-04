@@ -218,7 +218,7 @@ static func controls() -> Dictionary:
 
 static func data(panel) -> Dictionary:
 	var items := []
-	if not OS.has_feature("web"):
+	if not OS.has_feature("web") and not Saves.in_memory(): # with `nosave` the saves are not in that folder
 		items.append({"label": "OPEN SAVE FOLDER", "act": func(): OS.shell_open(ProjectSettings.globalize_path(Saves.dir_path))})
 	items.append({"label": "RESET SETTINGS", "act": func(): panel.push(func(): return confirm(panel, "RESET SETTINGS?", "Everything on the settings pages goes back to its default.", "RESET", _do_reset.bind(panel)))})
 	items.append({"label": "DELETE ALL SAVES", "act": func(): panel.push(func(): return confirm(panel, "DELETE ALL SAVES?", "Every slot, the autosave too. It can't be brought back.", "DELETE ALL", _do_delete_all.bind(panel)))})

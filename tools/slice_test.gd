@@ -30,6 +30,7 @@ func _run() -> void:
 	await _names_do_not_matter()
 	await _allies_are_fixed()
 	await _flee_judges_before_it_ends()
+	_draws_go_through_the_flow()
 	await _retry_heals()
 	await _flee_ends_it()
 	_finish()
@@ -65,6 +66,7 @@ func _random_seed_repeats() -> void:
 	var printable := true
 	var repeats := true
 	for i in 64:
+		Flags.set_args(PackedStringArray([])) # without the previous round's seed, or every round would replay the first
 		var first := Rng.new()
 		Flags.set_args(PackedStringArray(["seed=%d" % first.seed_value])) # what a player does with the printed seed
 		var again := Rng.new()
@@ -89,7 +91,7 @@ func _bad_seed_everywhere() -> void:
 	for big in ["99999999999999999999", "9223372036854775808"]:
 		Flags.set_args(PackedStringArray(["seed=" + big]))
 		_check(Rng.flag_seed() == -1, "seed=%s is out of range, so it is ignored (not clamped or wrapped)" % big)
-	for edge in [["9223372036854775807", 9223372036854775807], ["999999999999999999", 999999999999999999], ["0000000000000000000005", 5], ["0", 0]]:
+	for edge in [["9223372036854775807", 9223372036854775807], ["999999999999999999", 999999999999999999], ["0000000000000000000005", 5], ["0", 0], ["-0", 0]]:
 		Flags.set_args(PackedStringArray(["seed=" + edge[0]]))
 		_check(Rng.flag_seed() == edge[1], "seed=%s is a seed and is kept as it is" % edge[0])
 	Flags.set_args(PackedStringArray([]))
@@ -172,11 +174,10 @@ func _names_do_not_matter() -> void:
 
 
 ## An ally's verdict on a deed, whether it leaves and a recruit's starting loyalty are drawn at the fixed roll too, so the
-## same actions leave the ally in the same mood for every seed: after sparing, after fleeing, and with loyalty low enough
-## for the leaving roll to be drawn.
+## same actions leave the ally in the same mood for every seed: after sparing, and with loyalty low enough for the leaving
+## roll to be drawn. (Fleeing is `_flee_judges_before_it_ends`.)
 func _allies_are_fixed() -> void:
 	var after_spare := {}
-	var after_flee := {}
 	var after_low := {}
 	for seed_value in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
 		var flow = await _start(seed_value)
@@ -186,15 +187,11 @@ func _allies_are_fixed() -> void:
 		await _press(flow, [3]) # VEX is spared and joins
 		var ally = s.allies[0]
 		after_spare[ally.loyalty] = true
-		flow.fixed_roll = 0.5 # a flee judged with the slice still on
-		flow.encounter.judge("flee")
-		after_flee["%s/%s" % [ally.loyalty, s.allies.size()]] = true
 		ally.loyalty = 35.0 # a verdict that lowers it goes under the line, so the leaving roll is drawn
 		flow.encounter.judge("spare")
 		after_low["%s/%s" % [ally.loyalty, s.allies.size()]] = true
 	_check(after_spare.size() == 1, "a recruit's starting loyalty is the same for every seed (%s)" % [after_spare.keys()])
 	_check(after_low.size() == 1, "whether a low-loyalty ally leaves, and its loyalty after the verdict, are the same for every seed (%s)" % [after_low.keys()])
-	_check(after_flee.size() == 1, "an ally's verdict on fleeing is the same for every seed (%s)" % [after_flee.keys()])
 
 
 ## Fleeing judges the deed while the roll is still fixed, and only then ends the slice.
@@ -232,3 +229,18 @@ func _flee_ends_it() -> void:
 	var flow = await _start()
 	await _press(flow, [4])
 	_check(flow.fixed_roll < 0.0 and flow.slice_queue.is_empty(), "fleeing ends the slice")
+
+
+## Every interaction chance is drawn through the flow, which applies the slice's fixed roll; a draw made straight from the
+## rng or the odds would silently vary by seed in the slice. Reads the game's sources for one.
+func _draws_go_through_the_flow() -> void:
+	var offenders := []
+	for dir in ["res://src/game", "res://src/game/stages"]:
+		for file in DirAccess.get_files_at(dir):
+			if not file.ends_with(".gd") or (dir == "res://src/game" and file == "flow.gd"):
+				continue
+			var text := FileAccess.get_file_as_string("%s/%s" % [dir, file])
+			for call in ["Odds.succeeds(", "Odds.pick_by_odds(", "Allies.judge(", "Allies.start_loyalty("]:
+				if text.contains(call):
+					offenders.append("%s uses %s" % [file, call])
+	_check(offenders.is_empty(), "no game script draws an interaction chance around the flow (%s)" % [offenders])

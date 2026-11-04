@@ -13,6 +13,15 @@ const NAME_MAX := 24
 ## Where the saves live. Tools that must not touch the player's saves point this somewhere else.
 static var dir_path := "user://saves"
 
+## With the `nosave` flag the slots live here, in memory, and the player's saves are neither read nor changed: a scenario
+## run can save, list and load as usual, and nothing reaches the disk. slot -> document.
+static var _memory := {}
+
+
+## Whether the slots are kept in memory (the `nosave` flag).
+static func in_memory() -> bool:
+	return Flags.on("nosave")
+
 
 static func slots() -> Array:
 	var out: Array = [AUTO]
@@ -38,9 +47,6 @@ static func write(slot: String, state: Dictionary, summary: String, name := "") 
 	if not slots().has(slot):
 		push_warning("saves: no slot '%s'" % slot)
 		return false
-	if Flags.on("nosave"):
-		print_verbose("saves: nosave, not writing slot %s" % slot)
-		return true
 	if name == "":
 		name = info(slot).name
 	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(Time.get_unix_time_from_system()), "state": var_to_str(state)}, slot)
@@ -101,7 +107,9 @@ static func copy(from: String, to: String) -> bool:
 
 
 static func delete(slot: String) -> void:
-	if Flags.on("nosave"):
+	if in_memory():
+		_memory.erase(slot)
+		print_verbose("saves: nosave, deleted slot %s from memory" % slot)
 		return
 	if slots().has(slot) and FileAccess.file_exists(path(slot)):
 		DirAccess.remove_absolute(path(slot))
@@ -113,9 +121,11 @@ static func delete_all() -> void:
 		delete(s)
 
 
-## null when there is no file (with `nosave` there never is), {} when it is damaged, else the document.
+## null when there is no file, {} when it is damaged, else the document.
 static func _read_doc(slot: String):
-	if Flags.on("nosave") or not FileAccess.file_exists(path(slot)):
+	if in_memory():
+		return _memory.get(slot)
+	if not FileAccess.file_exists(path(slot)):
 		return null
 	var json := JSON.new()
 	if json.parse(FileAccess.get_file_as_string(path(slot))) != OK or not json.data is Dictionary or not json.data.has("state"):
@@ -124,7 +134,9 @@ static func _read_doc(slot: String):
 
 
 static func _store(doc: Dictionary, slot: String) -> bool:
-	if Flags.on("nosave"):
+	if in_memory():
+		_memory[slot] = doc.duplicate(true)
+		print_verbose("saves: nosave, kept slot %s in memory (%s)" % [slot, doc.summary])
 		return true
 	DirAccess.make_dir_recursive_absolute(dir_path)
 	var tmp := path(slot) + ".tmp"

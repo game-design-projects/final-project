@@ -16,7 +16,7 @@ const KNOWN := {
 	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
 	"nosound": "no sound effects and no music",
-	"nosave": "never read, write, rename, copy or delete saved data (the menus see no saves)",
+	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 }
 

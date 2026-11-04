@@ -54,7 +54,13 @@ func _hints_fit(panel) -> void:
 	_check(frame_h >= MenuPanel.PAD * 2.0 + MenuPanel.TITLE_H + 24.0 + rows + panel.hint_height(), "the settings frame is as tall as its rows plus its whole hint")
 
 
-## The panel's title says CREDITS; the text under it must not say it again.
+## The panel's title says CREDITS; the text under its version line must not start with that heading again.
 func _credits_have_one_title() -> void:
 	var page: Dictionary = Menus.credits()
-	_check(page.title == "CREDITS" and not page.body.to_upper().contains("CREDITS\n"), "the credits text does not repeat the CREDITS heading")
+	var lines: PackedStringArray = page.body.split("\n")
+	var first := ""
+	for line in lines.slice(1): # the first line is the version
+		if line.strip_edges() != "":
+			first = line.strip_edges()
+			break
+	_check(page.title == "CREDITS" and first != "" and not first.to_upper().contains("CREDITS"), "the credits text does not start with the CREDITS heading again (starts: %s)" % first.left(30))

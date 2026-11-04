@@ -35,9 +35,7 @@ static func pending() -> bool:
 
 ## The seed of the slice: `seed=N` (0 or more), or the one the playtest document names.
 static func seed_value() -> int:
-	var seed := Rng.flag_seed()
-	if seed < 0 and Flags.value("seed", "") != "":
-		push_warning("slice: using the seed %d instead" % DEFAULT_SEED)
+	var seed := Rng.flag_seed("using %d instead" % DEFAULT_SEED)
 	return seed if seed >= 0 else DEFAULT_SEED
 
 

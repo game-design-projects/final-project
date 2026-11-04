@@ -41,7 +41,7 @@ func _init() -> void:
 
 func _play(seed_value: int) -> bool:
 	var rng := Rng.new(seed_value)
-	_autopilot = Rng.new(seed_value + 1000)
+	_autopilot = Rng.new((seed_value + 1000) & 0x7FFFFFFFFFFFFFFF) # wraps past the largest seed, and stays non-negative
 	var flow = Flow.new(rng, Minds.create(rng))
 	_stage_counts = {}
 	_event_counts = {}

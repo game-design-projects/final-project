@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - `tools/menu_test.gd` checks the menu panel and the credits headless, and CI runs it.
 - `tools/saves_test.gd` checks the save slots in a folder of their own, including `nosave`, and CI runs it.
+- A slice test reads the game's sources and fails if an interaction chance is drawn around `Flow`, so the fixed roll cannot be missed again.
 - `tools/gameplay_test.gd` checks that the views follow the state after NEW FLOOR, a death and a load, and CI runs it.
 - `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
 
@@ -18,12 +19,15 @@ All notable changes to this project are documented here. The format follows [Kee
 - The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining), so the same actions give the same results.
 - The slice also fixes an ally's verdict, whether it leaves and a recruit's starting loyalty (they still varied by seed).
 - Fleeing judges the allies before it ends the slice, so their verdict is fixed too.
-- `nosave` now also stops the menus from seeing, renaming, copying or deleting real saves (only writing was blocked).
+- `nosave` keeps the save slots in memory for the run: saving, loading, renaming, copying and deleting work, and the player's saves are neither seen nor changed.
+- With `nosave`, DATA no longer offers OPEN SAVE FOLDER, which would open the player's real saves.
 - The credits no longer repeat the CREDITS heading.
 - `mock` no longer swaps the slice's local rules.
 - `seed=` takes any whole number from 0 to 9223372036854775807, so every printed seed replays; a bigger one is ignored with a warning instead of clamped or wrapped.
 - `seed=abc` in the slice warns that it uses 7042 instead.
-- `tools/autoplay.gd` reads `seed=` through the same rule, so `seed=abc` plays the default seeds with a warning.
+- `tools/autoplay.gd` reads `seed=` through the same rule, so `seed=abc` plays the default seeds with a warning, and a seed near the largest no longer wraps its autopilot seed negative.
+- A bad `seed=` gives one warning that names the fallback; `seed=-0` is seed 0 again.
+- The random-seed test cleared no flag between rounds and so tested one seed (it passed about half the time with the bug); the credits test no longer matches any line ending in CREDITS.
 - A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.
 - The slice's bandits are built from the roster's own bandit line, like the floor's.
 - A retry no longer saves a HP value it never used.

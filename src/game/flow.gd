@@ -6,10 +6,12 @@
 ## input is dropped while one is still working (`busy`).
 extends RefCounted
 
+const Allies = preload("res://src/rules/allies.gd")
 const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const Flags = preload("res://src/utils/flags.gd")
+const Odds = preload("res://src/rules/odds.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
@@ -103,6 +105,25 @@ func autosave_allowed() -> bool:
 func _forget_slice() -> void:
 	end_slice()
 	slice_floor = false
+
+
+## The chances of an interaction. Every one is drawn through these four, so the slice's fixed roll cannot be missed at a
+## call site (a test reads the sources for a draw that bypasses them).
+func succeeds(p: float) -> bool:
+	return Odds.succeeds(rng, p, fixed_roll)
+
+
+func pick_by_odds(probs: Dictionary) -> String:
+	return Odds.pick_by_odds(rng, probs, fixed_roll)
+
+
+func start_loyalty() -> float:
+	return Allies.start_loyalty(rng, fixed_roll)
+
+
+## One ally judging one deed (see Allies.judge).
+func judge_ally(ally, deed: String) -> Dictionary:
+	return Allies.judge(ally, deed, rng, fixed_roll)
 
 
 ## Back to ordinary rolls (and no queued fight).
