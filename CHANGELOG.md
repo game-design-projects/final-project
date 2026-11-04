@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-03
+
 ### Added
 - `tools/menu_test.gd`, `tools/saves_test.gd`, `tools/gameplay_test.gd` and `tools/view_test.gd` check the menus, the save slots (including `nosave`), the views after a new floor or a load, and the 3D view; CI runs them.
 - `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
@@ -260,7 +262,9 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 or v0.6.0 tag exists yet, so those two versions have no compare link; add them when the tags are cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.5.2...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.6.1...main
+[0.6.1]: https://github.com/game-design-projects/final-project/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/game-design-projects/final-project/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/game-design-projects/final-project/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/game-design-projects/final-project/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/game-design-projects/final-project/compare/v0.4.0...v0.5.0
