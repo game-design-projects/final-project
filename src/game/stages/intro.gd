@@ -26,7 +26,7 @@ func enter(flow, args: Dictionary) -> void:
 	if m.boss:
 		rule = Texts.BOSS_RULE
 	else:
-		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre])
+		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre], flow.feature("piece-icons"))
 	var before: Array = args.get("before", [])
 	var ended: Array = before.filter(func(l): return l.kind == "sys").slice(-1) # the verdict of the fight before (the last game line, after the foe's farewell), in the personality slice
 	var lines: Array = ended if not ended.is_empty() else before.slice(0, 1)

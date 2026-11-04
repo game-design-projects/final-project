@@ -5,6 +5,7 @@ extends RefCounted
 const Ally = preload("res://src/game/ally.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Vision = preload("res://src/rules/vision.gd")
@@ -37,6 +38,8 @@ var tally := {"spared": 0, "slain": 0, "fled": 0, "recruited": 0, "left": 0}
 var foe # Monster, or null when not in a fight
 var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
+var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
+var rotate_mini_games := false # every third attack is a mini-game (the feature mini-games)
 var encounter_start := {} # snapshot (foe, purse, tally, party) taken when a fight begins, to try it again after dying; a retry starts at full HP
 
 # what the screen shows
@@ -57,6 +60,12 @@ func charms() -> Dictionary:
 	for a in allies:
 		out[a.species] = true
 	return out
+
+
+## The attack `m` fights with on its current turn.
+func genre_of(m) -> String:
+	var enc := Content.table("encounter")
+	return Dodge.genre_on_turn(m, enc.boss.genres, enc.mini_games if rotate_mini_games else [])
 
 
 func say(new_lines: Array) -> void:

@@ -19,6 +19,14 @@ const LANTERN_SPEED := 0.75 # radians per second at intensity 1
 const SHADOW_STEPS := 40
 
 
+## The attack a monster on this turn fights with: a champion cycles through all of them. With `mini_games` every third turn is
+## a mini-game instead.
+static func genre_on_turn(m, boss_genres: Array, mini_games: Array) -> String:
+	if not mini_games.is_empty() and m.turn % 3 == 2:
+		return mini_games[floori(m.turn / 3.0) % mini_games.size()]
+	return boss_genres[m.turn % boss_genres.size()] if m.boss else m.genre
+
+
 static func index(c: int, r: int) -> int:
 	return r * COLS + c
 

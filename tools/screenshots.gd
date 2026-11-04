@@ -206,7 +206,7 @@ func _walk_and_fight() -> void:
 	var real_max: int = s.max_hp
 	s.max_hp = 9999 # the camera isn't here to survive, only to look
 	s.hp = 9999
-	for genre in ["bullet", "chess", "shadow", "rhythm"]:
+	for genre in ["bullet", "chess", "shadow", "gates", "stars", "rhythm"]:
 		m.genre = genre
 		if genre == "rhythm": # the last one shows the charms
 			s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]

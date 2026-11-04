@@ -192,7 +192,7 @@ static func _box(bg: Color, border: Color, pad: float) -> StyleBoxFlat:
 func _header() -> void:
 	var where: String = "THE GENRE HALLS"
 	if state.foe != null and state.stage != "explore" and state.stage != "end":
-		var genre: String = _genre_of(state.foe)
+		var genre: String = state.genre_of(state.foe)
 		where = "%s ENCOUNTER" % Content.table("encounter").genres[genre].name
 	var y := size.y * 0.5 + 4.0
 	_text(_title, "B%dF " % state.depth, Vector2(0, y), 9, Palette.DIM)
@@ -203,13 +203,6 @@ func _header() -> void:
 	var w := _title.get_string_size(route, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	_text(_title, route, Vector2(size.x - w, y), 9, Palette.INK)
 	_text(_title, "ROUTE ", Vector2(size.x - w - _title.get_string_size("ROUTE ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, y), 9, Palette.DIM)
-
-
-func _genre_of(m) -> String:
-	if not m.boss:
-		return m.genre
-	var genres: Array = Content.table("encounter").boss.genres
-	return genres[m.turn % genres.size()]
 
 
 # ---------------------------------------------------------------- the status row

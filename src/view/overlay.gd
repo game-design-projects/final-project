@@ -7,6 +7,7 @@ extends Control
 const Art = preload("res://src/view/art.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
+const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 
@@ -199,19 +200,11 @@ func _name_and_health(m) -> void:
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.WARN if frac < 0.4 else HEALTH_OK)
-	var genre: String = state.dodge.genre if state.dodge != null else _genre_of(m)
+	var genre: String = state.dodge.genre if state.dodge != null else state.genre_of(m)
 	var label: String = Content.table("encounter").genres[genre].name
 	if m.boss:
 		label = "TURN %d · %s" % [m.turn + 1, label]
 	_text(_title, label, Vector2(0, 21), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
-
-
-## The kind of fight it is in this turn (a champion changes every turn).
-func _genre_of(m) -> String:
-	if not m.boss:
-		return m.genre
-	var genres: Array = Content.table("encounter").boss.genres
-	return genres[m.turn % genres.size()]
 
 
 func _flashes() -> void:
@@ -252,6 +245,13 @@ func _dodge_box(accent: Color) -> void:
 ## square; goo falls toward where it will land.
 func _hazard(h: Dictionary, col: Color) -> void:
 	var live: bool = clock_ms >= h.hit
+	if h.has("shows") and not live and h.hit - clock_ms > h.shows:
+		return # a wall flying in shows only its next column, so it reads as moving
+	if h.kind == "star":
+		_star(h)
+		return
+	if h.has("glyph") and icons() and not live:
+		_rays(h, col)
 	for k in h.cells:
 		var cell := _cell_rect(k)
 		if live:
@@ -262,9 +262,72 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.has("glyph"):
 		var at := _cell_rect(h.at).get_center()
 		draw_rect(Rect2(at - Vector2(11, 11), Vector2(22, 22)), Color.BLACK)
-		_text(_title, h.glyph, at + Vector2(-6, 6), 12, Color.WHITE)
+		if icons():
+			_piece(h.glyph, at, Color.WHITE)
+		else:
+			_text(_title, h.glyph, at + Vector2(-6, 6), 12, Color.WHITE)
 	if h.kind == "goo" and not live:
 		draw_circle(goo_ball(h), 5.0, col)
+
+
+## Whether chess attacks show a piece's shape (the feature piece-icons).
+func icons() -> bool:
+	return Flags.enabled("piece-icons")
+
+
+## A chess piece as a shape, so it can't be taken for a key to press: a tower, a pointed hat, a horse's head.
+func _piece(glyph: String, at: Vector2, col: Color) -> void:
+	for shape in piece_shape(glyph):
+		var pts := PackedVector2Array()
+		for p in shape:
+			pts.append(at + p)
+		draw_colored_polygon(pts, col)
+
+
+## The polygons of a piece around its middle, in picture pixels (a piece fits the 22 x 22 square it stands on).
+static func piece_shape(glyph: String) -> Array:
+	match glyph:
+		"R":
+			return [
+				[Vector2(-8, 9), Vector2(8, 9), Vector2(8, 6), Vector2(-8, 6)], # base
+				[Vector2(-5, 6), Vector2(5, 6), Vector2(5, -4), Vector2(-5, -4)], # tower
+				[Vector2(-7, -4), Vector2(-7, -9), Vector2(-4, -9), Vector2(-4, -6), Vector2(-1, -6), Vector2(-1, -9), Vector2(1, -9), Vector2(1, -6), Vector2(4, -6), Vector2(4, -9), Vector2(7, -9), Vector2(7, -4)], # teeth
+			]
+		"B":
+			return [
+				[Vector2(-8, 9), Vector2(8, 9), Vector2(8, 6), Vector2(-8, 6)],
+				[Vector2(-3, 6), Vector2(3, 6), Vector2(5, -2), Vector2(0, -9), Vector2(-5, -2)],
+			]
+		_:
+			return [
+				[Vector2(-8, 9), Vector2(8, 9), Vector2(8, 6), Vector2(-8, 6)],
+				[Vector2(-5, 6), Vector2(6, 6), Vector2(5, -5), Vector2(0, -9), Vector2(-2, -6), Vector2(-8, -1), Vector2(-7, 2), Vector2(-2, 0)],
+			]
+
+
+## Thin lines from the piece to each square it will hit, while they are still only a warning.
+func _rays(h: Dictionary, col: Color) -> void:
+	var from := _cell_rect(h.at).get_center()
+	var line := Color(col, 0.55)
+	for k in h.cells:
+		if k != h.at:
+			draw_line(from, _cell_rect(k).get_center(), line, 1.0)
+
+
+## A star falling to where it can be caught; it shines while it is there, and goes once caught.
+func _star(h: Dictionary) -> void:
+	if h.get("taken", false):
+		return
+	var live: bool = clock_ms >= h.hit
+	var to := _cell_rect(h.at).get_center()
+	var at := to if live else to - Vector2(0.0, (1.0 - clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)) * GOO_DROP)
+	if live:
+		draw_rect(_cell_rect(h.at).grow(-1), Color(Palette.MERCY, 0.45))
+	var pts := PackedVector2Array()
+	for i in 10:
+		var a := TAU * i / 10.0 - PI / 2.0
+		pts.append(at + Vector2(cos(a), sin(a)) * (8.0 if i % 2 == 0 else 3.5))
+	draw_colored_polygon(pts, Palette.MERCY)
 
 
 ## The lantern, all through a shadow dodge: a soft glow and the small flame in it.

@@ -5,7 +5,13 @@ extends "res://tools/test_base.gd"
 
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Dodge = preload("res://src/rules/dodge.gd")
+const DodgeRun = preload("res://src/rules/dodge_run.gd")
 const Flow = preload("res://src/game/flow.gd")
+const Gates = preload("res://src/rules/minigames/gates.gd")
+const Monster = preload("res://src/rules/monster.gd")
+const Overlay = preload("res://src/view/overlay.gd")
+const Pace = preload("res://src/rules/pace.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
@@ -20,35 +26,36 @@ func _name() -> String:
 func _run() -> void:
 	_flags()
 	await _real_floors()
+	await _dodges()
 	_finish()
 
 
 ## A flow on the local rules, with these flags on top of BASE.
 func _flow(seed_value: int, words := []) -> Variant:
-	_set(words)
+	_use(words)
 	var rng := Rng.new(seed_value)
 	return Flow.new(rng, LocalMind.new())
 
 
-func _set(words := []) -> void:
+func _use(words := []) -> void:
 	var all := PackedStringArray(BASE)
 	all.append_array(PackedStringArray(words))
 	Flags.set_args(all)
 
 
 func _flags() -> void:
-	_set()
+	_use()
 	_check(Flags.FEATURES.keys().all(func(f): return Flags.enabled(f)), "every feature is on by default")
 	for f in Flags.FEATURES:
-		_set(["no-" + f])
+		_use(["no-" + f])
 		_check(not Flags.enabled(f), "no-%s turns it off" % f)
-		_set([f + "=off"])
+		_use([f + "=off"])
 		_check(not Flags.enabled(f), "%s=off turns it off" % f)
-		_set(["classic"])
+		_use(["classic"])
 		_check(not Flags.enabled(f), "classic turns %s off" % f)
-		_set(["classic", f])
+		_use(["classic", f])
 		_check(Flags.enabled(f), "classic %s brings it back" % f)
-	_set()
+	_use()
 
 
 ## Walk the party onto the stairs, as the last step of a floor does.
@@ -120,4 +127,75 @@ func _real_floors() -> void:
 	var kept = classic.state
 	await classic.press("1")
 	_check(classic.state != kept and classic.state.depth == 1, "classic: NEW FLOOR starts over")
-	_set()
+	_use()
+
+
+func _dodges() -> void:
+	var entry := {"species": "bandit", "genre": "chess", "hp": 24}
+	var m = Monster.given(entry, Vector2i(1, 1), "TEST", ["jumpy"], {"friendliness": 10.0, "anger": 10.0, "fear": 10.0})
+	var base := Pace.of(m, 1, 0.0, 0, false)
+	_check(base < 1.0, "a first dodge runs slower than the classic pace (%.2f)" % base)
+	_check(Pace.of(m, 4, 0.0, 0, false) > base, "deeper floors run faster")
+	_check(Pace.of(m, 1, 3.0, 0, false) < base, "getting hit a lot slows it")
+	_check(Pace.of(m, 1, 0.0, 2, false) < base, "allies slow it")
+	_check(Pace.of(m, 1, 0.0, 0, true) < base, "EASY DODGE slows it")
+	var friend = Monster.given(entry, Vector2i(1, 1), "TEST", ["jumpy"], {"friendliness": 90.0, "anger": 10.0, "fear": 10.0})
+	_check(Pace.of(friend, 1, 0.0, 0, false) < base, "a friendlier foe attacks more gently")
+	_check(Pace.after_dodge(2.0, 0) == 1.0 and Pace.after_dodge(1.0, 2) == 3.0, "a clean dodge eases the struggle, hits add to it")
+
+	var run_slow = DodgeRun.start("chess", 1.0, false, 0, 0.0, {}, 0.5)
+	var run_full = DodgeRun.start("chess", 1.0, false, 0, 0.0, {}, 1.0)
+	var slow_rng := Rng.new(3)
+	var full_rng := Rng.new(3)
+	run_slow.update(400.0, slow_rng)
+	run_full.update(400.0, full_rng)
+	var slow_warn: float = run_slow.hazards[0].hit - run_slow.hazards[0].warn
+	var full_warn: float = run_full.hazards[0].hit - run_full.hazards[0].warn
+	_check(slow_warn > full_warn, "a slower dodge warns for longer (%d ms, %d ms)" % [slow_warn, full_warn])
+	_check(run_full.end_t > run_slow.end_t, "and is over sooner")
+	for g in ["R", "B", "N"]:
+		_check(not Overlay.piece_shape(g).is_empty(), "the piece %s has a shape" % g)
+
+	var enc: Dictionary = load("res://src/rules/content.gd").table("encounter")
+	_check(enc.genres.keys().all(func(g): return DodgeRun.MINI_GAMES.has(g)), "every attack in the data has a file of its own in rules/minigames")
+	_check(enc.genres.keys().all(func(g): return enc.genres[g].has("plain")), "every attack has its rule in plain words")
+	var plain: String = enc.genres.chess.plain.to_lower()
+	_check(not plain.contains("rook") and not plain.contains("bishop") and not plain.contains("knight"), "the chess rule needs no chess: %s" % plain)
+	var rotated: Array = enc.mini_games
+	m.turn = 2
+	_check(Dodge.genre_on_turn(m, enc.boss.genres, rotated) in rotated, "every third attack is a mini-game")
+	m.turn = 1
+	_check(Dodge.genre_on_turn(m, enc.boss.genres, rotated) == "chess", "the others are its own")
+	m.turn = 2
+	_check(Dodge.genre_on_turn(m, enc.boss.genres, []) == "chess", "without the feature it only ever fights its own way")
+
+	var wall = DodgeRun.start("gates", 1.0, false, 0, 0.0, {}, 1.0)
+	var r := Rng.new(5)
+	wall.update(400.0, r)
+	_check(wall.hazards.size() == Dodge.COLS, "a wall is one hazard per column (%d)" % wall.hazards.size())
+	var open_rows := 0
+	for row in Dodge.ROWS:
+		if not wall.hazards[0].cells.has(Dodge.index(Dodge.COLS - 1, row)):
+			open_rows += 1
+	_check(open_rows == Gates.GAP, "with a gap in it (%d rows)" % open_rows)
+	_check(wall.hazards[1].hit > wall.hazards[0].hit, "and it comes in column by column")
+
+	var stars = DodgeRun.start("stars", 1.0, false, 0, 0.0, {}, 1.0)
+	var star_rng := Rng.new(6)
+	stars.update(400.0, star_rng)
+	var star: Dictionary = stars.hazards.filter(func(h): return h.kind == "star")[0]
+	stars.soul = Vector2i(star.at % Dodge.COLS, floori(float(star.at) / Dodge.COLS))
+	stars.hazards = [star]
+	stars.next_t = 1e9
+	var got: Array = stars.update(star.hit + 1.0, star_rng)
+	_check(got.any(func(e): return e.type == "star"), "standing under a star catches it")
+	_check(not got.any(func(e): return e.type == "hurt"), "and it doesn't hurt")
+	_check(not stars.update(star.hit + 2.0, star_rng).any(func(e): return e.type == "star"), "a star is caught once")
+
+	var flow = _flow(13)
+	await flow.new_run()
+	_check(flow.state.rotate_mini_games, "the run rotates mini-games in")
+	var classic = _flow(13, ["no-mini-games"])
+	await classic.new_run()
+	_check(not classic.state.rotate_mini_games, "no-mini-games leaves them out")
+	_use()

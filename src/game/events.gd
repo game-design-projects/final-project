@@ -12,6 +12,7 @@ const FIELDS := {
 	"miss": [], # your swing missed
 	"player_hurt": ["damage"], # a hazard hit you
 	"shield": [], # the slime's charm absorbed a hit
+	"star": [], # you caught a star in the mini-game
 	"sound": ["name"], # a hazard landed (hit, slash, holy)
 	"beat": [], # the rhythm beat
 	"menu_move": [], # the cursor moved in a list of choices

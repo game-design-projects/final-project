@@ -242,6 +242,7 @@ func _process(dt: float) -> void:
 	if flow == null or _pause.visible:
 		return
 	_dock.thinking_ms = Network.waiting_ms()
+	flow.easy_dodge = Settings.get_value("easy")
 	_clock_ms += dt * 1000.0
 	flow.tick(_clock_ms)
 	var s = flow.state

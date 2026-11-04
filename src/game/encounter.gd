@@ -22,12 +22,9 @@ func _init(owner) -> void:
 	flow = owner
 
 
-## The genre the monster fights in this turn: a champion cycles through all of them.
+## The genre the monster fights in this turn.
 func foe_genre(m) -> String:
-	if not m.boss:
-		return m.genre
-	var genres: Array = Content.table("encounter").boss.genres
-	return genres[m.turn % genres.size()]
+	return flow.state.genre_of(m)
 
 
 ## A line of speech from the monster ({kind: "say", who, text}), or null if its species has none of that kind.

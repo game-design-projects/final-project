@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 GODOT="${GODOT:-godot}"
 OUT="${TMPDIR:-/tmp}/donjon-tests"
 mkdir -p "$OUT"
-SUITES=(rules_test gameplay_test slice_test menu_test saves_test network_test view_test features_test)
+SUITES=(rules_test gameplay_test slice_test menu_test saves_test network_test view_test)
 failed=0
 
 run_mode() {
@@ -22,6 +22,9 @@ run_mode() {
 		timeout 170 "$GODOT" --headless --path . -s "res://tools/$t.gd" -- nosave nosound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
 		local fails
 		fails=$(grep -c ' FAIL ' "$log" || true)
+		if ! grep -q 'all checks passed' "$log"; then
+			code=1 # a script that doesn't parse never runs and still exits with 0
+		fi
 		echo "$mode $t: exit $code, $fails failed"
 		if [ "$code" != 0 ]; then
 			failed=1
@@ -40,7 +43,9 @@ run_mode() {
 
 mode="${1:-both}"
 if [ "$mode" = both ] || [ "$mode" = on ]; then
+	SUITES+=(features_test) # it switches the features itself, so `classic` on the command line would only get in its way
 	run_mode on
+	unset 'SUITES[${#SUITES[@]}-1]'
 fi
 if [ "$mode" = both ] || [ "$mode" = classic ]; then
 	run_mode classic classic

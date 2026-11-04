@@ -2,19 +2,33 @@
  "genres": {
   "bullet": {
    "name": "GOO RAIN",
-   "rule": "WATCH WHERE THE GOO WILL LAND"
+   "rule": "WATCH WHERE THE GOO WILL LAND",
+   "plain": "GOO LANDS WHERE THE SQUARES GLOW. STEP AWAY"
   },
   "chess": {
    "name": "CHESS",
-   "rule": "ROOK: ROW + COLUMN · BISHOP: DIAGONALS · KNIGHT: L-JUMPS"
+   "rule": "ROOK: ROW + COLUMN \u00b7 BISHOP: DIAGONALS \u00b7 KNIGHT: L-JUMPS",
+   "plain": "THE PIECE HITS EVERY SQUARE THAT GLOWS. STAND ON A DARK ONE"
   },
   "shadow": {
    "name": "SHADOW",
-   "rule": "THE LANTERN FLARES. HIDE IN A PILLAR'S SHADOW"
+   "rule": "THE LANTERN FLARES. HIDE IN A PILLAR'S SHADOW",
+   "plain": "THE LANTERN BURNS ALL BUT THE SHADOWS. HIDE BEHIND A PILLAR"
   },
   "rhythm": {
    "name": "RHYTHM",
-   "rule": "IT STOMPS ON THE BEAT. MOVE BETWEEN BEATS"
+   "rule": "IT STOMPS ON THE BEAT. MOVE BETWEEN BEATS",
+   "plain": "THE GLOW IS THE NEXT STOMP. STEP OFF IT BEFORE THE BEAT"
+  },
+  "gates": {
+   "name": "WALLS",
+   "rule": "WALLS FLY IN. BE AT THE GAP WHEN ONE REACHES YOU",
+   "plain": "WALLS FLY IN. BE AT THE GAP WHEN ONE REACHES YOU"
+  },
+  "stars": {
+   "name": "STARS",
+   "rule": "CATCH THE STARS: EACH HEALS 1. KEEP OFF THE RED",
+   "plain": "CATCH THE STARS: EACH HEALS 1. KEEP OFF THE RED"
   }
  },
  "roster": [
@@ -194,5 +208,9 @@
    "courage": 1.5,
    "insult": 0.5
   }
- }
+ },
+ "mini_games": [
+  "gates",
+  "stars"
+ ]
 }

@@ -5,6 +5,7 @@ extends RefCounted
 
 const Combat = preload("res://src/rules/combat.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
+const Pace = preload("res://src/rules/pace.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
 const DURATION_MS := 5400.0
@@ -13,6 +14,14 @@ const FIRST_SPAWN_MS := 300.0
 const SAFE_MS := 700.0 # no second hit within this long of one
 const SAFE_SNAKE_MS := 1100.0 # with the snake's charm
 const WARN_BANDIT_SCALE := 1.3 # the bandit's charm keeps warnings lit longer (not stomps: those follow the beat)
+const MINI_GAMES := {
+	"bullet": preload("res://src/rules/minigames/goo.gd"),
+	"chess": preload("res://src/rules/minigames/chess.gd"),
+	"gates": preload("res://src/rules/minigames/gates.gd"),
+	"rhythm": preload("res://src/rules/minigames/rhythm.gd"),
+	"shadow": preload("res://src/rules/minigames/shadow.gd"),
+	"stars": preload("res://src/rules/minigames/stars.gd"),
+}
 
 var genre := ""
 var intensity := 1.0
@@ -32,14 +41,16 @@ var boss := false
 var foe_turn := 0
 var bandit_charm := false
 var snake_charm := false
+var pace := 1.0 # below 1 the hazards come further apart and warn for longer (rules/pace.gd)
 
 
-static func start(genre_id: String, pressure: float, boss_fight: bool, foe_turn_count: int, t: float, charms: Dictionary):
+static func start(genre_id: String, pressure: float, boss_fight: bool, foe_turn_count: int, t: float, charms: Dictionary, dodge_pace := 1.0):
 	var run = new()
+	run.pace = dodge_pace
 	run.genre = genre_id
 	run.intensity = Combat.dodge_intensity(pressure, boss_fight)
 	run.t0 = t
-	run.end_t = t + (DURATION_BOSS_MS if boss_fight else DURATION_MS)
+	run.end_t = t + (DURATION_BOSS_MS if boss_fight else DURATION_MS) * (Pace.DURATION_SCALE if dodge_pace < 1.0 else 1.0)
 	run.next_t = t + FIRST_SPAWN_MS
 	run.boss = boss_fight
 	run.foe_turn = foe_turn_count
@@ -71,7 +82,13 @@ func update(t: float, rng: Rng) -> Array:
 	for h in hazards:
 		if t >= h.hit and not h.sounded:
 			h.sounded = true
-			events.append({"type": "sound", "name": {"stomp": "hit", "chess": "slash", "light": "holy"}.get(h.kind, "")})
+			events.append({"type": "sound", "name": {"stomp": "hit", "chess": "slash", "light": "holy", "wall": "tick"}.get(h.kind, "")})
+		if h.kind == "star":
+			if t >= h.hit and t < h.end and h.cells.has(here) and not h.get("taken", false):
+				h.taken = true
+				events.append({"type": "star"})
+				events.append({"type": "sound", "name": "good"})
+			continue
 		if t >= h.hit and t < h.end and h.cells.has(here) and t > iframes:
 			iframes = t + (SAFE_SNAKE_MS if snake_charm else SAFE_MS)
 			if shield:
@@ -85,9 +102,10 @@ func update(t: float, rng: Rng) -> Array:
 	return events
 
 
-func _add_hazard(t: float, cells: Array, warn_ms: float, hit_ms: float, kind: String, extra := {}) -> void:
+func add_hazard(t: float, cells: Array, warn_ms: float, hit_ms: float, kind: String, extra := {}) -> void:
 	if kind != "stomp" and bandit_charm:
 		warn_ms *= WARN_BANDIT_SCALE
+	warn_ms /= pace if kind != "stomp" else 1.0 # a stomp's warning is its beats, which are slowed already
 	var live := {}
 	for k in cells:
 		if not blocked.has(k):
@@ -97,86 +115,9 @@ func _add_hazard(t: float, cells: Array, warn_ms: float, hit_ms: float, kind: St
 	hazards.append(h)
 
 
+## Each kind of attack is a mini-game of its own (rules/minigames/): it adds this run's hazards as time passes.
 func _spawn(t: float, rng: Rng, events: Array) -> void:
-	match genre:
-		"chess":
-			_spawn_chess(t, rng)
-		"bullet":
-			_spawn_bullet(t, rng)
-		"rhythm":
-			_spawn_rhythm(t, events)
-		"shadow":
-			_spawn_shadow(t)
-
-
-func _spawn_chess(t: float, rng: Rng) -> void:
-	if t < next_t:
-		return
-	next_t = t + 760.0 / intensity
-	var kind: String = rng.pick(["rook", "rook", "bishop", "bishop", "knight"])
-	if kind == "rook":
-		# a rook enters from an edge, lined up with you on a row or a column
-		var at: Vector2i
-		if rng.chance(0.5):
-			at = Vector2i(rng.pick([0, Dodge.COLS - 1]), soul.y)
-		else:
-			at = Vector2i(soul.x, rng.pick([0, Dodge.ROWS - 1]))
-		_add_hazard(t, Dodge.rook_cells(at), 950.0, 320.0, "chess", {"glyph": "R", "at": Dodge.index(at.x, at.y)})
-	elif kind == "bishop":
-		var d: Vector2i = rng.pick(Dodge.BISHOP_DIRS)
-		var k := rng.int_range(1, 3)
-		while k > 0 and not Dodge.in_box(soul.x + d.x * k, soul.y + d.y * k):
-			k -= 1
-		var at := soul + d * k
-		_add_hazard(t, Dodge.bishop_cells(at), 950.0, 320.0, "chess", {"glyph": "B", "at": Dodge.index(at.x, at.y)})
+	if MINI_GAMES.has(genre):
+		MINI_GAMES[genre].spawn(self, t, rng, events)
 	else:
-		var options := []
-		for j in Dodge.KNIGHT_JUMPS:
-			if Dodge.in_box(soul.x + j.x, soul.y + j.y):
-				options.append(soul + j)
-		var at: Vector2i = rng.pick(options)
-		_add_hazard(t, Dodge.knight_cells(at), 900.0, 320.0, "chess", {"glyph": "N", "at": Dodge.index(at.x, at.y)})
-
-
-func _spawn_bullet(t: float, rng: Rng) -> void:
-	if t < next_t:
-		return
-	next_t = t + 330.0 / intensity
-	var aimed := rng.chance(0.4)
-	var c := soul.x if aimed else rng.int_range(0, Dodge.COLS - 1)
-	var r := soul.y if aimed else rng.int_range(0, Dodge.ROWS - 1)
-	var cells := []
-	for d in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-		if Dodge.in_box(c + d.x, r + d.y):
-			cells.append(Dodge.index(c + d.x, r + d.y))
-	_add_hazard(t, cells, 820.0, 260.0, "goo", {"at": Dodge.index(c, r)})
-
-
-func _spawn_rhythm(t: float, events: Array) -> void:
-	var beat_ms := 600.0 / sqrt(intensity)
-	var b := floori((t - t0) / beat_ms)
-	if b <= beat:
-		return
-	beat = b
-	pulse = t
-	events.append({"type": "beat"})
-	events.append({"type": "sound", "name": "tick"})
-	if b % 2 == 1:
-		return # a new stomp every other beat, shown two beats ahead, landing on the beat
-	var pattern := (b * 5 + foe_turn % 3) % Dodge.stomp_count()
-	_add_hazard(t, Dodge.stomp_cells(pattern, soul), beat_ms * 2.0, 240.0, "stomp", {"beat_hit": true})
-
-
-func _spawn_shadow(t: float) -> void:
-	if t < next_t:
-		return
-	next_t = t + 1250.0 / intensity
-	var warn := 900.0
-	var lantern := Dodge.lantern_at(t + warn - t0, intensity)
-	var cells := []
-	for r in Dodge.ROWS:
-		for c in Dodge.COLS:
-			var k := Dodge.index(c, r)
-			if not blocked.has(k) and not Dodge.in_shadow(lantern, c, r, blocked):
-				cells.append(k)
-	_add_hazard(t, cells, warn, 300.0, "light", {"lantern": lantern})
+		push_error("dodge: no mini-game '%s'" % genre)

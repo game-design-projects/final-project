@@ -44,6 +44,8 @@ var encounter
 ## The game clock in ms, as last given to `tick`.
 var clock := 0.0
 var busy := false
+## The setting EASY DODGE, which the scene hands in: the game doesn't read settings itself.
+var easy_dodge := false
 ## The personality slice (personality_slice.gd): while `dice` is pinned, every chance of an interaction (the cut,
 ## the answer, a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds
 ## the monsters still to fight. `slice_floor` marks the floor the slice was made on, which is never autosaved; a new floor
@@ -78,6 +80,7 @@ func new_run() -> void:
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.run_seed = rng.seed_value
+	_apply_features()
 	_make_floor()
 	encounter.pending_notes = []
 	encounter.pending_rows = []
@@ -98,6 +101,11 @@ func next_floor() -> void:
 	print("flow: down to B%dF (%s)" % [state.depth, state.summary()])
 	event("state_replaced", {"how": "floor"})
 	await go("explore", {"lines": [State.sys_line(Texts.new_floor(state.depth))]})
+
+
+## What the views read from the state rather than ask the flags, because the personality slice has them off.
+func _apply_features() -> void:
+	state.rotate_mini_games = feature("mini-games")
 
 
 ## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
@@ -125,6 +133,7 @@ func load_state(saved: Dictionary) -> bool:
 	await _leave_current()
 	_forget_slice()
 	state = loaded
+	_apply_features()
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())

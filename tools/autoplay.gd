@@ -115,7 +115,7 @@ func _dodge_key(s, t: float) -> String:
 			continue
 		var score := 0 if option[0] == "" else 1
 		for h in run.hazards:
-			if h.cells.has(Dodge.index(c.x, c.y)) and h.end > t:
+			if h.kind != "star" and h.cells.has(Dodge.index(c.x, c.y)) and h.end > t:
 				score += 100 if t >= h.hit else (10 if h.hit < t + 900.0 else 1)
 		if score < best_score:
 			best_score = score

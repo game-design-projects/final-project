@@ -30,6 +30,9 @@ const KNOWN := {
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.
 const FEATURES := {
 	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",
+	"piece-icons": "chess attacks show a piece's shape and lines to the squares it reaches, not a letter, and every attack's rule is in plain words",
+	"gentle-dodge": "dodges run slower, and their pace follows the foe's friendliness, the floor, how you are doing and the EASY DODGE setting",
+	"mini-games": "every third attack is a mini-game: fly through the gaps in the walls, or catch the falling stars",
 }
 
 const OFF_WORDS := ["off", "0", "false", "no"]

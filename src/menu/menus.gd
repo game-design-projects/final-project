@@ -191,6 +191,7 @@ static func settings(panel) -> Dictionary:
 	return {"title": "SETTINGS", "hint": KEYS_HINT + " · Changes save at once.", "items": [
 		{"label": "DISPLAY", "sub": "Window, sync, frame rate", "act": _go(panel, func(): return display())},
 		{"label": "EFFECTS", "sub": "The glow, hit flashes, shaking", "act": _go(panel, func(): return effects())},
+		{"label": "GAMEPLAY", "sub": "Easier dodges, tips", "act": _go(panel, func(): return gameplay())},
 		{"label": "SOUND", "act": _go(panel, func(): return sound())},
 		{"label": "CONTROLS", "act": _go(panel, func(): return controls())},
 		{"label": "DATA", "sub": "Saves and settings", "act": _go(panel, func(): return data(panel))},
@@ -210,6 +211,13 @@ static func effects() -> Dictionary:
 		_setting("crt", "CRT GLOW", "The glow and scanlines over the picture"),
 		_setting("calm", "CALM HITS", "Softer flashes and no colour split on hits"),
 		_setting("shake", "SCREEN SHAKE"),
+	]}
+
+
+static func gameplay() -> Dictionary:
+	return {"title": "GAMEPLAY", "hint": ADJUST_HINT, "items": [
+		_setting("easy", "EASY DODGE", "Attacks come slower, with longer warnings"),
+		_setting("tips", "TIPS", "Short tips the first time you meet something; off skips the tutorial"),
 	]}
 
 
