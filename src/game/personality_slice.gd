@@ -50,11 +50,12 @@ static func bandit() -> Dictionary:
 
 ## Turn the first two monsters of the fresh run into ROOK and VEX and start the fight with ROOK.
 static func start(flow) -> void:
+	if not flow.dice.pin(ROLL): # without the fixed roll the slice would not repeat: leave the run as an ordinary one
+		push_error("slice: ROLL %s cannot be pinned, so the slice is not started" % ROLL)
+		return
 	_started = true
 	var s = flow.state
 	s.gold = GOLD
-	if not flow.dice.pin(ROLL):
-		push_error("slice: ROLL %s cannot be pinned, so the slice would not repeat" % ROLL)
 	flow.slice_floor = true
 	var monsters: Array = s.floor_map.monsters
 	for i in FOES.size():

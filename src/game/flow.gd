@@ -24,7 +24,6 @@ const STAGES := {
 	"fightbar": preload("res://src/game/stages/fightbar.gd"),
 	"wait": preload("res://src/game/stages/wait.gd"),
 	"dodge": preload("res://src/game/stages/dodge.gd"),
-	"result": preload("res://src/game/stages/result.gd"),
 	"dead": preload("res://src/game/stages/dead.gd"),
 	"end": preload("res://src/game/stages/end.gd"),
 }

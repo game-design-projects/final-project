@@ -6,20 +6,20 @@
 ##      │                 │  ▶ fightbar   │
 ##      ▼                 ▼        ▼      ▼
 ##     end            wait ─▶ dodge ─▶ dead
-##                      result ─▶ explore (or, in the personality slice, intro)
+##   A fight that ends (spared, slain, a cut paid, fled) goes from menu, act, talk or fightbar straight back to explore,
+##   or, in the personality slice, on to the next intro.
 extends RefCounted
 
 const ALLOWED := {
 	"": ["explore"], # a new run or a loaded one
 	"explore": ["intro", "end", "explore"],
 	"intro": ["menu"],
-	"menu": ["act", "fightbar", "wait", "result", "explore", "menu"],
-	"act": ["menu", "talk", "wait", "result"],
-	"talk": ["act", "menu", "wait", "result"],
-	"fightbar": ["wait", "result", "menu"],
+	"menu": ["act", "fightbar", "wait", "explore", "intro", "menu"], # explore, intro: the fight is over
+	"act": ["menu", "talk", "wait", "explore", "intro"],
+	"talk": ["act", "menu", "wait", "explore", "intro"],
+	"fightbar": ["wait", "explore", "intro", "menu"],
 	"wait": ["dodge"],
 	"dodge": ["menu", "dead"],
-	"result": ["explore", "intro"], # intro: the personality slice goes straight on to its second bandit
 	"dead": ["intro", "explore"],
 	"end": ["explore"],
 }

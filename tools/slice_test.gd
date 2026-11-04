@@ -14,6 +14,8 @@ const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Texts = preload("res://src/game/texts.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 
 
 var _clock := 0.0
@@ -34,12 +36,34 @@ func _run() -> void:
 	await _allies_are_fixed()
 	await _flee_judges_before_it_ends()
 	_dice_pin()
+	await _slice_needs_its_roll()
 	_comment_stripper()
+	_scan_patterns()
 	_no_draw_around_the_dice()
 	_seed_offset()
 	await _retry_heals()
 	await _flee_ends_it()
 	_finish()
+
+
+## A dice that refuses every roll, as if ROLL were not one.
+class RefusingDice:
+	extends "res://src/utils/dice.gd"
+
+	func pin(_roll: float) -> bool:
+		return false
+
+
+## If the fixed roll cannot be pinned the slice does not start, rather than running with random chances.
+func _slice_needs_its_roll() -> void:
+	Flags.set_args(PackedStringArray(["personality-slice", "seed=7042"]))
+	var rng := Rng.new(7042)
+	var flow = Flow.new(rng, Minds.create(rng, "", true))
+	await flow.new_run()
+	flow.dice = RefusingDice.new(rng)
+	print("slice_test: (the ERROR line that follows is the refusal under test)")
+	await PersonalitySlice.start(flow)
+	_check(not flow.slice_floor and flow.slice_queue.is_empty() and flow.state.stage == "explore", "a slice whose roll cannot be pinned does not start: the run stays an ordinary one")
 
 
 ## A slice on a fresh run: the flow, and ROOK's intro already over, at his menu.
@@ -149,22 +173,24 @@ func _mind_is_pinned() -> void:
 
 
 func _fair_cut_route() -> void:
+	_check(not Transitions.stages().has("result"), "a fight ends in the log and back to walking: there is no separate result stage")
 	var flow = await _start()
 	var s = flow.state
 	var vex = s.floor_map.monsters[1]
 	_check(s.gold == 12 and s.foe.name == "ROOK", "starts with 12 gold against ROOK")
 	_check(not flow.autosave_allowed(), "the slice floor may not be autosaved from the first fight on")
+	var rook = s.foe
 	await _press(flow, [2, 2])
-	_check(s.stage == "result" and s.gold == 6 and s.foe.gone == "spared", "ROOK takes the 6-gold cut and leaves")
-	await _press(flow, [1])
-	_check(s.stage == "intro" and s.foe == vex, "CONTINUE goes on to VEX")
+	_check(s.gold == 6 and rook.gone == "spared", "ROOK takes the 6-gold cut and leaves")
+	_check(s.stage == "intro" and s.foe == vex, "VEX comes on at once: no CONTINUE screen between the fights")
+	_check(s.lines.any(func(l): return l.text == Texts.cut_accepted(rook)), "ROOK's goodbye is still in the log when VEX's fight starts")
 	await _to_menu(flow)
 	await _press(flow, [2, 2])
 	_check(s.gold == 6 and vex.gone == "" and s.stage == "menu", "VEX refuses the cut: the gold stays, he stays, and the menu is back (no attack follows)")
 	await _press(flow, [3])
-	_check(s.stage == "result" and vex.gone == "spared" and s.allies.size() == 1, "sparing VEX recruits him")
-	await _press(flow, [1])
-	_check(s.stage == "explore" and not flow.dice.is_pinned() and flow.slice_queue.is_empty(), "the slice is over and the floor is ordinary again")
+	_check(vex.gone == "spared" and s.allies.size() == 1, "sparing VEX recruits him")
+	_check(s.stage == "explore" and not flow.dice.is_pinned() and flow.slice_queue.is_empty(), "the slice is over and the floor is ordinary again, back to walking with no CONTINUE screen")
+	_check(s.lines.any(func(l): return l.kind == "sys" and l.text.contains("joins you")), "the log says VEX joined")
 	_check(flow.slice_floor and not flow.autosave_allowed(), "the floor stays marked as the playtest floor, so it is never autosaved")
 	await flow.new_run()
 	_check(not flow.slice_floor and flow.autosave_allowed(), "a new floor is an ordinary one and may be autosaved")
@@ -186,9 +212,9 @@ func _names_do_not_matter() -> void:
 ## A slice flow with ROOK sent off and VEX spared and recruited, back in the explore stage.
 func _with_recruit(seed_value: int):
 	var flow = await _start(seed_value)
-	await _press(flow, [2, 2, 1]) # ROOK takes the cut and leaves; on to VEX
+	await _press(flow, [2, 2]) # ROOK takes the cut and leaves; on to VEX
 	await _to_menu(flow)
-	await _press(flow, [3]) # VEX is spared and joins
+	await _press(flow, [3]) # VEX is spared and joins: the slice is over, back to walking
 	return flow
 
 
@@ -203,6 +229,7 @@ func _allies_are_fixed() -> void:
 		var s = flow.state
 		var ally = s.allies[0]
 		after_spare[ally.loyalty] = true
+		flow.dice.pin(PersonalitySlice.ROLL) # as if the slice were still going
 		ally.loyalty = 35.0 # a verdict that lowers it goes under the line, so the leaving roll is drawn
 		flow.encounter.judge("spare")
 		after_low["%s/%s" % [ally.loyalty, s.allies.size()]] = true
@@ -216,7 +243,6 @@ func _flee_judges_before_it_ends() -> void:
 	for seed_value in [1, 2, 3, 4, 5, 6]:
 		var flow = await _with_recruit(seed_value)
 		var s = flow.state
-		await _press(flow, [1])
 		flow.dice.pin(PersonalitySlice.ROLL)
 		var foe = s.floor_map.monsters[2]
 		await flow.go("intro", {"foe": foe})
@@ -264,6 +290,7 @@ func _dice_pin() -> void:
 	dice.pin(Rng.BELOW_ONE)
 	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "the highest draw gives the highest starting loyalty")
 	dice.pin(0.25)
+	print("slice_test: (the four ERROR lines that follow are the refusals under test)")
 	var refused_all := true
 	for refused in [1.0, 2.0, -1.0, NAN]: # not rolls: the dice stays as it was (the old -1 means unpinned idiom must not pin it at 0)
 		refused_all = refused_all and not dice.pin(refused)
@@ -276,15 +303,37 @@ func _dice_pin() -> void:
 	_check(inside, "a recruit's loyalty always lies inside its range")
 
 
-## Interaction chances may only be drawn through the Flow's dice. Reads every script under src (comments left out) for a Dice
-## made anywhere but the Flow, and for a chance rolled straight from `flow.rng` or from a copy of it.
+## What a line of code may not do. Interaction chances are drawn through the Flow's dice, which the typed parameters of Odds
+## and Allies already insist on; this catches the other way round: a Dice made anywhere but the Flow, a chance rolled
+## straight from `flow.rng`, and (in the game's own scripts) a copy of the Flow's rng kept under another name. It cannot
+## see `flow.rng` handed on as an argument.
+func _offences(path: String, code: String) -> Array:
+	var out := []
+	if RegEx.create_from_string("Dice\\.new\\s*\\(").search(code) != null:
+		out.append("a Dice made outside the flow")
+	if RegEx.create_from_string("flow\\.rng\\.(chance|real)\\s*\\(").search(code) != null:
+		out.append("a chance from flow.rng")
+	if RegEx.create_from_string("=\\s*flow\\.rng\\s*$").search(code) != null:
+		out.append("a copy of flow.rng")
+	if path.begins_with("res://src/game/") and RegEx.create_from_string("=\\s*rng\\s*$").search(code) != null:
+		out.append("a copy of the game's rng")
+	return out
+
+
+func _scan_patterns() -> void:
+	var game := "res://src/game/stages/x.gd"
+	_check(_offences(game, "var r = rng") == ["a copy of the game's rng"], "the scan catches a bare copy of rng in the game's scripts")
+	_check(_offences(game, "\t_rng = rng") == ["a copy of the game's rng"], "and one kept in a member")
+	_check(_offences(game, "var r = flow.rng") == ["a copy of flow.rng"], "and a copy of flow.rng")
+	_check(_offences(game, "if flow.rng.chance(0.5):") == ["a chance from flow.rng"], "and a chance drawn from it")
+	_check(_offences(game, "var d = Dice.new(rng)") == ["a Dice made outside the flow"], "and a second Dice")
+	_check(_offences("res://src/rules/floor_gen.gd", "var r = rng").is_empty(), "but a generator outside src/game may name its parameter rng")
+	_check(_offences(game, "var r = Rng.new(5)").is_empty(), "and a fresh Rng of its own is not a copy")
+
+
+## Reads every script under src (comments left out) for what `_offences` lists.
 func _no_draw_around_the_dice() -> void:
 	var offenders := []
-	var bad := {
-		"a Dice made outside the flow": RegEx.create_from_string("Dice\\.new\\s*\\("),
-		"a chance from flow.rng": RegEx.create_from_string("flow\\.rng\\.(chance|real)\\s*\\("),
-		"a copy of flow.rng": RegEx.create_from_string("=\\s*flow\\.rng\\s*$"),
-	}
 	var stack := ["res://src"]
 	while not stack.is_empty():
 		var dir: String = stack.pop_back()
@@ -297,8 +346,8 @@ func _no_draw_around_the_dice() -> void:
 			var found := {}
 			for line in FileAccess.get_file_as_string(path).split("\n"):
 				var code := _without_comment(line) if line.contains("#") else line
-				for what in bad:
-					if not found.has(what) and bad[what].search(code) != null:
+				for what in _offences(path, code):
+					if not found.has(what):
 						found[what] = true
 						offenders.append("%s: %s" % [path, what])
 	_check(offenders.is_empty(), "no script under src draws an interaction chance around the flow's dice (%s)" % [offenders])

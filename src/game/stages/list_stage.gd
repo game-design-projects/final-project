@@ -1,4 +1,4 @@
-## A stage that is a list of choices (the fight menu, ACT, the result, game over). Up and down move the selection,
+## A stage that is a list of choices (the fight menu, ACT, game over). Up and down move the selection,
 ## confirm or a digit picks one, cancel goes back. A subclass fills `flow.state.menu` and answers `pick` and `cancel`.
 extends "res://src/game/stages/stage.gd"
 

@@ -36,6 +36,9 @@ var _models := {} # Monster -> Node3D
 var _floor_map = null
 var _pos := Vector3.ZERO
 var _yaw := 0.0
+var _yaw_goal := 0.0 # where the camera is turning to, counted past a full circle so a held key keeps it turning one way
+var _facing := 0 # the heading the goal was last set for
+var _spin := -1 # which way the last quarter turn went (-1 right, 1 left), for a half turn that could go either
 var _pitch := 0.0
 var _hit_at := {} # Monster -> seconds when it was last hit
 
@@ -114,6 +117,8 @@ func _load_floor(state) -> void:
 	var target := _camera_target(state)
 	_pos = target.pos
 	_yaw = target.yaw
+	_yaw_goal = target.yaw
+	_facing = target.facing
 	_pitch = target.pitch
 	_apply_camera()
 
@@ -154,6 +159,7 @@ func _camera_target(state) -> Dictionary:
 	var eye := EYE_FIGHT if fight else EYE
 	return {
 		"pos": DungeonMesh.center(state.cell) - fwd * CELL * back + Vector3(0.0, eye, 0.0),
+		"facing": facing,
 		"yaw": -facing * PI / 2.0,
 		"pitch": deg_to_rad(FIGHT_PITCH) if fight else 0.0,
 	}
@@ -163,9 +169,31 @@ func _move_camera(state, dt: float) -> void:
 	var target := _camera_target(state)
 	var k := 1.0 - exp(-CAMERA_RATE * dt)
 	_pos = _pos.lerp(target.pos, k)
-	_yaw = lerp_angle(_yaw, target.yaw, k)
+	_turn_goal(target.facing)
+	_yaw = lerpf(_yaw, _yaw_goal, k)
 	_pitch = lerpf(_pitch, target.pitch, k)
 	_apply_camera()
+
+
+## Each quarter turn since the last frame moves the goal on by a quarter in the same direction, so holding a turn key
+## spins on and on. (Taking the shortest way to the heading, which is what lerp_angle does, flips between left and
+## right as soon as the key runs ahead of the camera: the view shakes instead of turning.) The goal never gets more than
+## a full circle ahead, so letting go does not leave the camera winding down a long spin.
+func _turn_goal(facing: int) -> void:
+	match posmod(facing - _facing, 4):
+		1:
+			_yaw_goal -= PI / 2.0
+			_spin = -1
+		3:
+			_yaw_goal += PI / 2.0
+			_spin = 1
+		2:
+			_yaw_goal += _spin * PI
+	_facing = facing
+	while _yaw_goal - _yaw > TAU:
+		_yaw_goal -= TAU
+	while _yaw_goal - _yaw < -TAU:
+		_yaw_goal += TAU
 
 
 func _apply_camera() -> void:
@@ -177,11 +205,9 @@ func _show_monsters(state, now: float) -> void:
 	var visible := {}
 	if _in_fight(state):
 		visible[state.foe] = true
-	elif state.stage != "result":
-		for c in Vision.ahead(state.floor_map, state.cell, state.facing):
-			var m = state.floor_map.monster_at(c)
-			if m != null and c != state.cell:
-				visible[m] = true
+	else:
+		for m in Vision.monsters(state.floor_map, state.cell, state.facing):
+			visible[m] = true
 	for m in visible:
 		if not _models.has(m):
 			var model := MonsterModel.build(m.species, Palette.monster(m), m.boss)

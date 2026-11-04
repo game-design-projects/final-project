@@ -1,5 +1,5 @@
 ## Save slots: "auto" (the game writes it itself) and 1..SLOTS (the player's). One JSON file each in `dir_path`:
-## {version, name, summary, saved_at, saved_us, state}. A file is written beside its slot and renamed over it, so a crash mid-write
+## {version, name, summary, saved_at, seq, state}. A file is written beside its slot and renamed over it, so a crash mid-write
 ## keeps the old save, and a damaged file shows as a damaged slot rather than raising. With the `nosave` flag the slots are kept in
 ## memory for the run instead, and nothing is read from or written to `dir_path`.
 extends RefCounted
@@ -17,7 +17,10 @@ static var dir_path := "user://saves"
 ## With the `nosave` flag the slots live here, in memory, and the player's saves are neither read nor changed: a scenario
 ## run can save, list and load as usual, and nothing reaches the disk. slot -> document.
 static var _memory := {}
-static var _last_us := 0
+## The highest save number seen so far this run: each write takes the next one up. `saved_at` is the clock's time and
+## only for showing; the number is what says which save came last (two can share a second, and a clock can be set back).
+static var _seq := 0
+static var _scanned := false # whether every slot has been read this run, so `_seq` is above all of them
 
 
 ## Whether the slots are kept in memory (the `nosave` flag).
@@ -51,15 +54,14 @@ static func write(slot: String, state: Dictionary, summary: String, name := "") 
 		return false
 	if name == "":
 		name = info(slot).name
-	var stamp := _stamp()
-	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(stamp / 1000000.0), "saved_us": stamp, "state": var_to_str(state)}, slot)
+	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(Time.get_unix_time_from_system()), "seq": _next_seq(), "state": var_to_str(state)}, slot)
 
 
-## What a slot list shows: {slot, empty, corrupt, name, summary, saved_at, saved_us}. `saved_us` is the finer stamp that
-## orders two saves made in the same second.
+## What a slot list shows: {slot, empty, corrupt, name, summary, saved_at, seq}. `seq` is the save's number, higher for a
+## later save (0 for a save from before saves were numbered).
 static func info(slot: String) -> Dictionary:
 	var doc = _read_doc(slot)
-	var none := {"slot": slot, "empty": true, "corrupt": false, "name": "", "summary": "", "saved_at": 0, "saved_us": 0}
+	var none := {"slot": slot, "empty": true, "corrupt": false, "name": "", "summary": "", "saved_at": 0, "seq": 0}
 	if doc == null:
 		return none
 	if doc.is_empty():
@@ -68,7 +70,8 @@ static func info(slot: String) -> Dictionary:
 	if int(doc.get("version", 0)) != VERSION:
 		none.merge({"empty": false, "corrupt": true, "summary": "OLD SAVE, NOT COMPATIBLE"}, true)
 		return none
-	none.merge({"empty": false, "name": str(doc.get("name", "")), "summary": str(doc.get("summary", "")), "saved_at": int(doc.get("saved_at", 0)), "saved_us": int(doc.get("saved_us", 0))}, true)
+	none.merge({"empty": false, "name": str(doc.get("name", "")), "summary": str(doc.get("summary", "")), "saved_at": int(doc.get("saved_at", 0)), "seq": int(doc.get("seq", 0))}, true)
+	_seq = maxi(_seq, none.seq)
 	return none
 
 
@@ -82,14 +85,16 @@ static func read(slot: String) -> Dictionary:
 
 
 static func list() -> Array:
-	return slots().map(func(s): return info(s))
+	var out := slots().map(func(s): return info(s))
+	_scanned = true
+	return out
 
 
 ## The newest save that can be read, or {} (what Continue loads).
 static func latest() -> Dictionary:
 	var best := {}
 	for i in list():
-		if not i.empty and not i.corrupt and (best.is_empty() or i.saved_at > best.saved_at or (i.saved_at == best.saved_at and i.saved_us > best.saved_us)):
+		if not i.empty and not i.corrupt and (best.is_empty() or i.seq > best.seq or (i.seq == best.seq and i.saved_at > best.saved_at)):
 			best = i
 	if not best.is_empty():
 		print_verbose("saves: latest is %s" % best.slot)
@@ -139,15 +144,13 @@ static func _read_doc(slot: String):
 	return json.data
 
 
-## The time in microseconds, never the same or lower than the last save's (this run's, or the newest on disk at the start),
-## so two saves in the same tick of a coarse clock (a browser's milliseconds), or after the clock was set back, still say
-## which came later.
-static func _stamp() -> int:
-	if _last_us == 0: # the first of the run: carry on from the newest save there is, in case the clock was set back since
-		for i in list():
-			_last_us = maxi(_last_us, i.saved_us)
-	_last_us = maxi(int(Time.get_unix_time_from_system() * 1000000.0), _last_us + 1)
-	return _last_us
+## The number for the next save: one above every save there is. The first of a run reads the slots to find the highest
+## (the menu's Continue has usually done that already).
+static func _next_seq() -> int:
+	if not _scanned:
+		list()
+	_seq += 1
+	return _seq
 
 
 static func _store(doc: Dictionary, slot: String) -> bool:

@@ -5,41 +5,28 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
-- `tools/menu_test.gd` checks the menu panel and the credits headless, and CI runs it.
-- `tools/slice_test.gd` and `tools/menu_test.gd` also cover the dice, the seed offset, a bare `seed` and the DATA page under `nosave`.
-- `tools/saves_test.gd` checks the save slots in a folder of their own, including `nosave`, and CI runs it.
-- `Dice` (`src/utils/dice.gd`) is the one source of interaction chances; the slice pins it, and `Odds` and `Allies` take a Dice and not a Rng, so a draw cannot go around the fixed roll.
-- `tools/gameplay_test.gd` checks that the views follow the state after NEW FLOOR, a death and a load, and CI runs it.
+- `tools/menu_test.gd`, `tools/saves_test.gd`, `tools/gameplay_test.gd` and `tools/view_test.gd` check the menus, the save slots (including `nosave`), the views after a new floor or a load, and the 3D view; CI runs them.
 - `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
+- `Dice` (`src/utils/dice.gd`) is the one source of interaction chances. The slice pins it, and `Odds` and `Allies` take a Dice and not a Rng, so a draw cannot go around the fixed roll. `pin` refuses a roll outside 0 up to below 1 (or NaN), reports it, and tells its caller; a slice whose roll cannot be pinned does not start. `Rng.real()` never returns 1.0.
+- A test scan of every script under `src` finds a Dice made outside the flow, a chance rolled from `flow.rng`, and a copy of the game's rng.
+
+### Changed
+- A fight ends in the log and back to walking: the CONTINUE screen and its state machine step (`result`) are gone, and the personality slice goes straight from ROOK to VEX with ROOK's goodbye still in the log.
+- Saves are numbered (`seq`, one above the last) and Continue offers the highest; `saved_at` stays the real clock time, so a clock set forward cannot date new saves in the future.
+- A named save is labelled alike on the list, its page, COPY TO and the REPLACE question (the slot and its name in capitals); a long name is cut off before the date, and the page's title line is clipped to the panel.
 
 ### Fixed
-- A random run's printed seed is never negative, so `seed=N` can replay it (about half of them printed a seed the flag rejected).
-- A key hint longer than the menu panel wraps instead of being cut off ("Changes apply at once and are kep"); the settings hint is shorter too.
-- NEW FLOOR (from the stairs or after dying) points the header, status row, dock and overlay at the new floor's state instead of leaving them on the old one.
-- `seed=abc` and `seed=-5` are handled the same everywhere: a warning and a random seed, instead of a silent seed 0 outside the slice.
-- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining), so the same actions give the same results.
-- The slice also fixes an ally's verdict, whether it leaves and a recruit's starting loyalty (they still varied by seed).
-- Fleeing judges the allies before it ends the slice, so their verdict is fixed too.
-- `nosave` keeps the save slots in memory for the run: saving, loading, renaming, copying and deleting work, and the player's saves are neither seen nor changed.
-- With `nosave`, DATA no longer offers OPEN SAVE FOLDER, which would open the player's real saves.
+- A monster is in view when it is in front of you with nothing in the way: down a corridor however far, across a hall, off to one side. Only the ones straight ahead within six cells were drawn, so the champion in its hall was missing from the view (the automap learns the whole corridor ahead too).
+- Holding LEFT or RIGHT keeps the camera turning that way; it used to shake left and right because each held key ran ahead of the camera and the shortest way to the heading flipped.
+- The snake's eyes, the slime's mouth and the rock's crack were buried inside their bodies and never showed.
+- The allies' names at the bottom of the view sit on a dark box, so a wall line no longer runs through them.
+- A random run's printed seed is never negative, and `seed=` takes any whole number from 0 to 9223372036854775807, so every printed seed replays; a bad, bare or oversized `seed=` gives one warning that names the fallback (autoplay too), and `seed=-0` is seed 0.
+- A key hint longer than the menu panel wraps instead of being cut off; the settings hint is shorter too.
+- NEW FLOOR and a loaded save point the header, status row, dock and overlay at the new state (the same `state_replaced` event), instead of leaving them on the old one.
+- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining, an ally's verdict, whether it leaves, a recruit's starting loyalty), and fleeing judges the allies before it ends the slice, so the same actions give the same results; `mock` no longer swaps its local rules.
+- `nosave` keeps the save slots in memory (saving, loading, renaming, copying and deleting included), and DATA no longer offers OPEN SAVE FOLDER under it.
 - The credits no longer repeat the CREDITS heading.
-- `mock` no longer swaps the slice's local rules.
-- `seed=` takes any whole number from 0 to 9223372036854775807, so every printed seed replays; a bigger one is ignored with a warning instead of clamped or wrapped.
-- `seed=abc` in the slice warns that it uses 7042 instead.
-- `tools/autoplay.gd` reads `seed=` through the same rule, so `seed=abc` plays the default seeds with a warning, and a seed near the largest no longer wraps its autopilot seed negative.
-- A bad `seed=` gives one warning that names the fallback; `seed=-0` is seed 0 again.
-- A bare `seed` or `seed=` is warned about instead of silently ignored, and autoplay's warning says it plays the default seeds.
-- Continue offers the later of two saves made in the same second (each save carries a microsecond stamp).
-- `Rng.real()` never returns exactly 1.0 (Godot's `randf` can), so a range scaled from it cannot step out; a recruit's starting loyalty stays within its range.
-- `Dice.pin` refuses a roll outside 0 up to below 1 (or NaN) instead of pinning it, so the old -1 means unpinned idiom cannot make every chance succeed.
-- Two saves in the same tick of a coarse clock (a browser's), or after the clock was set back, are still ordered: each save stamp is higher than the last one of the run or on disk.
-- A renamed save's page is titled with its name in capitals, built by the same function as the list's label, and the title line is clipped to the panel.
-- `Dice.pin` reports a refused roll as an error and tells its caller, and the slice reports a ROLL that cannot be pinned; `Rng.chance` draws through `real()` too.
-- The slice test scans every script under `src` for a Dice made outside the flow or a copy of `flow.rng`, ignoring comments.
-- The random-seed test cleared no flag between rounds and so tested one seed (it passed about half the time with the bug); the credits test no longer matches any line ending in CREDITS.
-- A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.
-- The slice's bandits are built from the roster's own bandit line, like the floor's.
-- A retry no longer saves a HP value it never used.
+- The slice's bandits are built from the roster's own bandit line; a retry no longer saves a HP value it never used.
 
 ## [0.6.0] - 2026-11-03
 

@@ -158,11 +158,11 @@ static func copy_target(panel, from: String) -> Dictionary:
 		if info.slot == Saves.AUTO or info.slot == from:
 			continue
 		var to: String = info.slot
-		var item := {"label": "SLOT " + to, "sub": "EMPTY" if info.empty else "Replaces: " + info.summary}
+		var item := {"label": slot_label(info), "sub": "EMPTY" if info.empty else "Replaces: " + info.summary}
 		if info.empty:
 			item.act = _do_copy.bind(panel, from, to, 2)
 		else:
-			item.act = func(): panel.push(func(): return confirm(panel, "REPLACE SLOT %s?" % to, "The old save is replaced.", "REPLACE", _do_copy.bind(panel, from, to, 3)))
+			item.act = func(): panel.push(func(): return confirm(panel, "REPLACE SLOT %s?" % to, "%s is replaced." % slot_label(info), "REPLACE", _do_copy.bind(panel, from, to, 3)))
 		items.append(item)
 	return {"title": "COPY TO", "items": items, "hint": KEYS_HINT}
 

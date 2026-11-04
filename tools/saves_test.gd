@@ -25,7 +25,7 @@ func _run() -> void:
 		return
 	Flags.set_args(PackedStringArray([]))
 	_round_trip()
-	_stamps_rise()
+	_numbers_rise()
 	_nosave_in_memory()
 	_cleanup()
 	_finish()
@@ -76,20 +76,34 @@ func _cleanup() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_dir))
 
 
-## Two stamps are never equal or backwards, though the clock repeats itself inside a tight loop; and a run starts above the
-## newest save on disk, so a clock set back does not make a new save look old.
-func _stamps_rise() -> void:
-	var rising := true
-	var last: int = Saves._stamp()
-	for i in 2000:
-		var now: int = Saves._stamp()
-		rising = rising and now > last
-		last = now
-	_check(rising, "2000 stamps in a row each higher than the last")
-	var future := int(Time.get_unix_time_from_system()) + 3600
-	Saves._last_us = 0 # a new run
-	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from the future", "saved_at": future, "saved_us": future * 1000000, "state": var_to_str({})}, "3")
+## A new run of the game: nothing is known of the slots yet.
+func _new_run() -> void:
+	Saves._seq = 0
+	Saves._scanned = false
+
+
+## Saves are numbered one above the last, whatever the clock says: the newest save is the one written last, a run carries
+## on from the highest number on disk, and `saved_at` stays the real time.
+func _numbers_rise() -> void:
+	var ordered := true
+	for i in 40:
+		Saves.write(str(1 + i % 3), {"hp": i}, "HP %d/20" % i)
+		ordered = ordered and Saves.latest().slot == str(1 + i % 3)
+	_check(ordered, "each of 40 saves in a row is the newest when it is written")
+	var numbers: Array = Saves.list().filter(func(x): return not x.empty).map(func(x): return x.seq)
+	_check(not numbers.is_empty() and numbers.all(func(n): return n > 0), "every save has a number")
+	var before: int = Saves.info("1").seq
+	_new_run() # the game starts again: the numbers come from what is on disk
 	Saves.write("4", {"hp": 1}, "HP 1/20")
-	_check(Saves.latest().slot == "4", "a save made after the clock was set back is still the newest")
-	Saves.delete("3")
-	Saves.delete("4")
+	_check(Saves.info("4").seq > maxi(before, maxi(Saves.info("2").seq, Saves.info("3").seq)), "a new run numbers its first save above every save on disk")
+	_check(Saves.latest().slot == "4", "so it is the newest")
+	var now := int(Time.get_unix_time_from_system())
+	var future := now + 3600 * 24 * 365
+	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from the future", "saved_at": future, "state": var_to_str({})}, "5") # saved when the clock was wrong, before saves were numbered
+	_new_run()
+	Saves.write("6", {"hp": 1}, "HP 1/20")
+	_check(Saves.latest().slot == "6", "a save made after a clock that was set forward is still the newest")
+	_check(absi(Saves.info("6").saved_at - now) < 60, "and says the real time, not the future one")
+	Saves.delete("5")
+	for slot in ["2", "3", "4", "6"]: # slot 1 stays, for the nosave check that follows
+		Saves.delete(slot)

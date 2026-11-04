@@ -57,7 +57,7 @@ static func _slime(body: Node3D, solid: Material, flat: Material) -> void:
 	_part(body, _sphere(0.55), Vector3(0, 0.42, 0), solid, Vector3(1.25, 0.8, 1.15))
 	_part(body, _sphere(0.1), Vector3(-0.2, 0.55, 0.5), flat)
 	_part(body, _sphere(0.1), Vector3(0.2, 0.55, 0.5), flat)
-	_part(body, _sphere(0.05), Vector3(0, 0.38, 0.6), flat, Vector3(2.2, 0.8, 0.6)) # a small mouth
+	_part(body, _sphere(0.05), Vector3(0, 0.38, 0.64), flat, Vector3(2.2, 0.8, 0.6)) # a small mouth
 
 
 static func _bandit(body: Node3D, solid: Material, flat: Material) -> void:
@@ -74,8 +74,8 @@ static func _snake(body: Node3D, solid: Material, flat: Material) -> void:
 	_part(body, _sphere(0.42), Vector3(0, 0.46, 0), solid, Vector3(1.0, 0.36, 1.0))
 	_part(body, _sphere(0.3), Vector3(0, 0.72, 0), solid, Vector3(1.0, 0.45, 1.0))
 	_part(body, _sphere(0.24), Vector3(0, 1.02, 0.12), solid, Vector3(1.0, 0.85, 1.35))
-	_part(body, _sphere(0.045), Vector3(-0.1, 1.08, 0.3), flat)
-	_part(body, _sphere(0.045), Vector3(0.1, 1.08, 0.3), flat)
+	_part(body, _sphere(0.045), Vector3(-0.1, 1.08, 0.41), flat)
+	_part(body, _sphere(0.045), Vector3(0.1, 1.08, 0.41), flat)
 	_part(body, _box(Vector3(0.03, 0.02, 0.22)), Vector3(0, 0.98, 0.5), flat) # a tongue
 
 
@@ -84,7 +84,7 @@ static func _rock(body: Node3D, solid: Material, flat: Material) -> void:
 	_part(body, _box(Vector3(0.6, 0.5, 0.6)), Vector3(0.5, 0.25, 0.3), solid, Vector3.ONE, Vector3(0, -0.4, 0))
 	_part(body, _box(Vector3(0.5, 0.65, 0.5)), Vector3(-0.45, 0.55, -0.1), solid, Vector3.ONE, Vector3(0, 0.7, 0))
 	_part(body, _sphere(0.15), Vector3(0, 0.58, 0.5), flat, Vector3(1.0, 0.7, 0.4)) # one eye
-	_part(body, _box(Vector3(0.5, 0.03, 0.04)), Vector3(0, 0.82, 0.45), flat, Vector3.ONE, Vector3(0, 0, 0.1)) # a crack
+	_part(body, _box(Vector3(0.5, 0.03, 0.04)), Vector3(0, 0.82, 0.5), flat, Vector3.ONE, Vector3(0, 0, 0.1)) # a crack
 
 
 static func _dragon(body: Node3D, solid: Material, flat: Material) -> void:

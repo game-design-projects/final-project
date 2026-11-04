@@ -1,4 +1,5 @@
-## A fight begins: the monster says its piece and tells you how it fights, then the menu opens by itself.
+## A fight begins: the monster says its piece and tells you how it fights, then the menu opens by itself. `before` is what
+## the log said as the last fight ended (the personality slice goes straight from one fight to the next).
 ## A snapshot is taken so dying can try this fight again.
 extends "res://src/game/stages/stage.gd"
 
@@ -25,7 +26,7 @@ func enter(flow, args: Dictionary) -> void:
 		rule = Texts.BOSS_RULE
 	else:
 		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre])
-	var lines := []
+	var lines: Array = args.get("before", []).duplicate() # what ended the fight before, in the personality slice
 	var greeting = flow.encounter.foe_line(m, "converse")
 	if greeting != null:
 		lines.append(greeting)

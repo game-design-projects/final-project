@@ -24,6 +24,8 @@ func _run() -> void:
 	_credits_have_one_title()
 	_data_page_and_nosave(panel)
 	_slot_page_shows_the_name(panel)
+	_slot_rows_leave_room_for_the_date(panel)
+	_copy_page_names_the_slots(panel)
 	_finish()
 
 
@@ -96,4 +98,52 @@ func _slot_page_shows_the_name(panel) -> void:
 	var width: float = Fonts.title().get_string_size(wide, HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.TITLE_SIZE).x
 	_check(width <= MenuPanel.WIDTH - MenuPanel.PAD * 2.0, "the longest name still fits the page's title line (%d of %d px)" % [width, MenuPanel.WIDTH - MenuPanel.PAD * 2.0])
 	Saves.delete("2")
+	Flags.set_args(PackedStringArray([]))
+
+
+## A long name on a save list row is cut off before the date at the right edge, picked (with the arrows) or not.
+func _slot_rows_leave_room_for_the_date(panel) -> void:
+	Flags.set_args(PackedStringArray(["nosave"]))
+	var Saves = load("res://src/menu/saves.gd")
+	if not Saves.in_memory():
+		return
+	Saves.write("1", {"hp": 1}, "HP 1/20")
+	Saves.rename("1", "W".repeat(Saves.NAME_MAX))
+	var ctx := {"load_slot": func(_s): pass, "save_slot": func(_s): pass}
+	var row_w: float = MenuPanel.WIDTH - MenuPanel.PAD * 2.0
+	var title: Font = Fonts.title()
+	for mode in ["load", "save", "manage"]:
+		var item: Dictionary = Menus.slot_list(panel, ctx, mode).items[1] # slot 1, after the autosave
+		for picked in [false, true]:
+			var room: float = panel.label_room(item, row_w, picked)
+			var value_w: float = title.get_string_size(panel._value_shown(item, picked), HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.VALUE_SIZE).x
+			var label_w: float = title.get_string_size("SLOT 1", HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.LABEL_SIZE).x
+			var ends: float = MenuPanel.LABEL_X + room # where the label is cut off
+			var value_starts: float = row_w - MenuPanel.VALUE_RIGHT - value_w
+			_check(ends <= value_starts and room > label_w, "%s list, %s row: the label is cut off before the date (ends at %d, the date starts at %d) and still shows the slot" % [mode, "picked" if picked else "plain", ends, value_starts])
+	Saves.delete("1")
+	Flags.set_args(PackedStringArray([]))
+
+
+## COPY TO and its REPLACE question name a slot the way the list does, with its name.
+func _copy_page_names_the_slots(panel) -> void:
+	Flags.set_args(PackedStringArray(["nosave"]))
+	var Saves = load("res://src/menu/saves.gd")
+	if not Saves.in_memory():
+		return
+	Saves.write("1", {"hp": 1}, "HP 1/20")
+	Saves.write("3", {"hp": 2}, "HP 2/20")
+	Saves.rename("3", "boss run")
+	var page: Dictionary = Menus.copy_target(panel, "1")
+	var labels: Array = page.items.map(func(i): return i.label)
+	_check(labels.has("SLOT 3  BOSS RUN") and labels.has("SLOT 2"), "COPY TO lists a named slot with its name and an unnamed one without (%s)" % [labels])
+	panel.open(func(): return page)
+	var replace_page: Dictionary = {}
+	for item in page.items:
+		if item.label == "SLOT 3  BOSS RUN":
+			item.act.call()
+			replace_page = panel._page
+	_check(replace_page.get("hint", "").contains("BOSS RUN"), "and the question before replacing it names it too (%s)" % replace_page.get("hint", ""))
+	Saves.delete("1")
+	Saves.delete("3")
 	Flags.set_args(PackedStringArray([]))

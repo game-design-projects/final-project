@@ -65,6 +65,11 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/gameplay_test.gd
+      # The 3D view: which monsters are in sight (down a corridor, across a hall), the camera turning one way while a key is held, faces on the models.
+      - name: Check the 3D view
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/view_test.gd
 
   build:
     needs: check

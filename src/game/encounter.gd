@@ -148,8 +148,17 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + _take_notes()
 	s.mind_rows = rows + pending_rows
 	pending_rows = []
-	s.say(lines)
-	await flow.go("result")
+	await leave_fight(lines)
+
+
+## The fight is over: the log says how, and the party is back to walking, or in the personality slice on to its second
+## bandit (the log keeps what was said). There is no screen to confirm in between.
+func leave_fight(lines: Array) -> void:
+	if not flow.slice_queue.is_empty():
+		await flow.go("intro", {"foe": flow.slice_queue.pop_front(), "before": lines})
+		return
+	flow.end_slice()
+	await flow.go("explore", {"lines": lines})
 
 
 ## A fair cut of gold to stand down (bandits and snakes). `label` names the offer; `words` is what was read from a typed one.

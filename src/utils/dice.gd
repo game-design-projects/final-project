@@ -44,7 +44,8 @@ func real() -> float:
 	return roll
 
 
-## A whole number from a to b, both included (drawn from `real`, so not the same numbers as `Rng.int_range`).
+## A whole number from a to b, both included (drawn from `real`, so not the same numbers as `Rng.int_range`). `real` is
+## always below 1, so the product is below the count and no clamp is needed.
 func int_between(a: int, b: int) -> int:
 	assert(a <= b, "dice: int_between(%d, %d) has no numbers in it" % [a, b])
-	return a + mini(int(real() * (b - a + 1)), b - a)
+	return a + int(real() * (b - a + 1))

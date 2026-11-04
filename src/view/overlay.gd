@@ -243,6 +243,9 @@ func _strike_bar() -> void:
 func _allies() -> void:
 	var y := H - 10.0
 	for a in state.allies:
+		var name: String = a.charm().name
+		var width := _title.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x
+		draw_rect(Rect2(9.0, y - 9.0, width + 18.0, 12.0), Color(0.0, 0.0, 0.0, 0.85)) # a wall line crossing the name would hide it
 		draw_circle(Vector2(14.0, y - 3.0), 3.5, Color(Content.species(a.species).color))
-		_text(_title, a.charm().name, Vector2(22.0, y), 7, Palette.WARN if a.loyalty < 30.0 else Palette.DIM)
+		_text(_title, name, Vector2(22.0, y), 7, Palette.WARN if a.loyalty < 30.0 else Palette.DIM)
 		y -= 12.0

@@ -24,6 +24,11 @@ const HINT_H := 18.0
 const BODY_H := 300.0
 const INPUT_H := 40.0
 const SELECTED_FILL := Color("#313135")
+const LABEL_X := 16.0 # where a row's label starts, and the margin it keeps from the left edge
+const VALUE_RIGHT := 14.0 # how far in from the right edge an item's value ends
+const VALUE_GAP := 12.0 # the least space between a label and the value beside it
+const LABEL_SIZE := 13
+const VALUE_SIZE := 12
 
 ## 0..1: how much of what is behind the panel it hides (the main menu is opaque, the pause menu is not)
 var backdrop := 1.0
@@ -128,6 +133,21 @@ func _on_line_submitted(text: String) -> void:
 
 
 # ---------------------------------------------------------------- input
+
+## The value as drawn: with arrows when its row is picked (Left and Right change it).
+func _value_shown(item: Dictionary, picked: bool) -> String:
+	return "‹ %s ›" % item.value if picked else item.value
+
+
+## How wide a row's label may be: what is left of the row after the margins and the value at the right edge, so a long name
+## is cut off before it runs into the value.
+func label_room(item: Dictionary, row_width: float, picked: bool) -> float:
+	var room := row_width - LABEL_X * 2.0
+	if item.has("value"):
+		var value_w: float = Fonts.title().get_string_size(_value_shown(item, picked), HORIZONTAL_ALIGNMENT_LEFT, -1, VALUE_SIZE).x
+		room = row_width - VALUE_RIGHT - value_w - VALUE_GAP - LABEL_X
+	return maxf(room, 0.0)
+
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
@@ -295,10 +315,9 @@ func _draw() -> void:
 		if picked:
 			draw_rect(r, SELECTED_FILL)
 			draw_rect(Rect2(r.position, Vector2(4.0, r.size.y)), Palette.MERCY)
-		draw_string(title, r.position + Vector2(16.0, 24.0), item.label, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32.0, 13, color)
+		draw_string(title, r.position + Vector2(LABEL_X, 24.0), item.label, HORIZONTAL_ALIGNMENT_LEFT, label_room(item, r.size.x, picked), LABEL_SIZE, color)
 		if item.has("value"):
-			var shown: String = "‹ %s ›" % item.value if picked else item.value
-			draw_string(title, r.position + Vector2(0.0, 24.0), shown, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 14.0, 12, Palette.YOU)
+			draw_string(title, r.position + Vector2(0.0, 24.0), _value_shown(item, picked), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - VALUE_RIGHT, VALUE_SIZE, Palette.YOU)
 		if item.get("sub", "") != "":
 			draw_string(body, r.position + Vector2(16.0, 46.0), item.sub, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32.0, 18, Palette.FAINT if off else Palette.DIM)
 	var top := frame.end.y - PAD - hint_height()

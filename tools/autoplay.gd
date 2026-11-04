@@ -91,8 +91,6 @@ func _press_something(flow) -> void:
 			var key := _dodge_key(s, flow.clock)
 			if key != "":
 				await flow.press(key)
-		"result":
-			await flow.press("confirm")
 		"dead":
 			_retries += 1
 			await flow.press("1" if _retries <= 4 else "2")
