@@ -1,7 +1,7 @@
 ## A reproducible two-bandit encounter for the personality playtest (flag `personality-slice`, with `seed=N`). ROOK deals
 ## straight and VEX is jumpy, so the same fair-cut offer is taken by one and refused by the other at the fixed roll. While
-## it is on, the monsters think with the local rules, the flow draws every interaction chance (cut, answer, feeling, mercy,
-## joining, ally verdicts) at `fixed_roll`, and the floor is never autosaved. The slice ends after the second fight, on
+## it is on, the monsters think with the local rules, the flow's dice is pinned, so every interaction chance (cut, answer, feeling, mercy,
+## joining, ally verdicts) is drawn at one roll, and the floor is never autosaved. The slice ends after the second fight, on
 ## fleeing, on a new floor, on a load, or on leaving.
 extends RefCounted
 
@@ -53,7 +53,7 @@ static func start(flow) -> void:
 	_started = true
 	var s = flow.state
 	s.gold = GOLD
-	flow.fixed_roll = ROLL
+	flow.dice.pin(ROLL)
 	flow.slice_floor = true
 	var monsters: Array = s.floor_map.monsters
 	for i in FOES.size():

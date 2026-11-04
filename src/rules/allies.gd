@@ -15,7 +15,7 @@ const START_LOYALTY_MAX := 80
 
 
 static func start_loyalty(dice: Dice) -> float:
-	return float(START_LOYALTY_MIN + int(dice.real() * (START_LOYALTY_MAX - START_LOYALTY_MIN + 1)))
+	return float(dice.int_range(START_LOYALTY_MIN, START_LOYALTY_MAX))
 
 
 ## Does an ally of this species have an opinion on this deed? ("slay", "spare", "flee", or a kind of words)
@@ -43,7 +43,7 @@ static func leave_odds(loyalty: float) -> float:
 
 
 ## One ally judging one deed. Changes its loyalty and returns what happened: its score, the kind of reaction line
-## ("approve", "disapprove" or "" for a shrug), and whether it walked out. 
+## ("approve", "disapprove" or "" for a shrug), and whether it walked out.
 static func judge(ally, deed: String, dice: Dice) -> Dictionary:
 	var odds := score_odds(ally.species, deed)
 	var score := int(Odds.pick_by_odds(dice, odds))

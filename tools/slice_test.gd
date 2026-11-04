@@ -34,6 +34,7 @@ func _run() -> void:
 	await _allies_are_fixed()
 	await _flee_judges_before_it_ends()
 	_dice_pin()
+	_no_draw_around_the_dice()
 	_seed_offset()
 	await _retry_heals()
 	await _flee_ends_it()
@@ -91,6 +92,9 @@ func _bad_seed_everywhere() -> void:
 	_check(a.seed_value != b.seed_value, "seed=abc gives a random seed (two runs differ), as the warning says")
 	Flags.set_args(PackedStringArray(["seed=-5"]))
 	_check(Rng.new().seed_value >= 0, "seed=-5 gives a random, printable seed")
+	for bare in [["seed"], ["seed="]]:
+		Flags.set_args(PackedStringArray(bare))
+		_check(Rng.flag_seed() == -1 and PersonalitySlice.seed_value() == PersonalitySlice.DEFAULT_SEED and Rng.new().seed_value != Rng.new().seed_value, "%s with no number is not a seed: a random one for the game, the default for the slice" % bare[0])
 	for big in ["99999999999999999999", "9223372036854775808"]:
 		Flags.set_args(PackedStringArray(["seed=" + big]))
 		_check(Rng.flag_seed() == -1, "seed=%s is out of range, so it is ignored (not clamped or wrapped)" % big)
@@ -157,7 +161,7 @@ func _fair_cut_route() -> void:
 	await _press(flow, [3])
 	_check(s.stage == "result" and vex.gone == "spared" and s.allies.size() == 1, "sparing VEX recruits him")
 	await _press(flow, [1])
-	_check(s.stage == "explore" and flow.fixed_roll < 0.0 and flow.slice_queue.is_empty(), "the slice is over and the floor is ordinary again")
+	_check(s.stage == "explore" and not flow.dice.is_pinned() and flow.slice_queue.is_empty(), "the slice is over and the floor is ordinary again")
 	_check(flow.slice_floor and not flow.autosave_allowed(), "the floor stays marked as the playtest floor, so it is never autosaved")
 	await flow.new_run()
 	_check(not flow.slice_floor and flow.autosave_allowed(), "a new floor is an ordinary one and may be autosaved")
@@ -210,13 +214,13 @@ func _flee_judges_before_it_ends() -> void:
 		var flow = await _with_recruit(seed_value)
 		var s = flow.state
 		await _press(flow, [1])
-		flow.fixed_roll = PersonalitySlice.ROLL
+		flow.dice.pin(PersonalitySlice.ROLL)
 		var foe = s.floor_map.monsters[2]
 		await flow.go("intro", {"foe": foe})
 		await _to_menu(flow)
 		await _press(flow, [4]) # FLEE
 		if seed_value == 1:
-			_check(flow.fixed_roll < 0.0, "fleeing from the third fight ends the slice")
+			_check(not flow.dice.is_pinned(), "fleeing from the third fight ends the slice")
 		seen[s.allies[0].loyalty if not s.allies.is_empty() else -1.0] = true
 	_check(seen.size() == 1, "after a real flee from a fight the ally's loyalty is the same for every seed (%s)" % [seen.keys()])
 
@@ -228,30 +232,61 @@ func _retry_heals() -> void:
 	s.stage = "dead"
 	await flow.encounter.retry_fight()
 	_check(s.hp == s.max_hp, "trying a fight again starts at full health, so a lost fight cannot loop")
-	_check(flow.slice_queue.size() == 1 and flow.fixed_roll >= 0.0, "a retry keeps the slice going")
+	_check(flow.slice_queue.size() == 1 and flow.dice.is_pinned(), "a retry keeps the slice going")
 
 
 func _flee_ends_it() -> void:
 	var flow = await _start()
 	await _press(flow, [4])
-	_check(flow.fixed_roll < 0.0 and flow.slice_queue.is_empty(), "fleeing ends the slice")
+	_check(not flow.dice.is_pinned() and flow.slice_queue.is_empty(), "fleeing ends the slice")
 
 
 ## A pinned Dice gives the same draw every time, so the same odds give the same outcome; an unpinned one does not.
 func _dice_pin() -> void:
 	var dice := Dice.new(Rng.new(5))
-	dice.pinned = 0.5
-	_check(Odds.succeeds(dice, 0.6) and not Odds.succeeds(dice, 0.4), "a pinned dice draws 0.5 every time: 60% succeeds, 40% does not")
-	_check(Odds.pick_by_odds(dice, {"a": 0.5, "b": 0.5}) == Odds.pick_by_odds(dice, {"a": 0.5, "b": 0.5}), "a pinned dice picks the same key every time")
+	dice.pin(0.5)
+	_check(dice.is_pinned() and Odds.succeeds(dice, 0.6) and not Odds.succeeds(dice, 0.4), "a pinned dice draws 0.5 every time: 60% succeeds, 40% does not")
+	var odds := {"a": 0.5, "b": 0.5}
+	dice.pin(0.1)
+	var low := Odds.pick_by_odds(dice, odds)
+	dice.pin(0.9)
+	_check(low != Odds.pick_by_odds(dice, odds), "pinned low and pinned high pick different keys, and each is repeatable")
+	dice.unpin()
 	var varied := {}
-	dice.pinned = -1.0
 	for i in 32:
 		varied[Allies.start_loyalty(dice)] = true
-	_check(varied.size() > 1, "an unpinned dice follows the generator (loyalty varies)")
-	dice.pinned = 0.0
+	_check(not dice.is_pinned() and varied.size() > 1, "an unpinned dice follows the generator (loyalty varies)")
+	dice.pin(0.0)
 	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MIN), "the lowest draw gives the lowest starting loyalty")
-	dice.pinned = 0.999
-	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "the highest draw gives the highest starting loyalty")
+	dice.pin(1.0) # a draw of 1.0 must not step out of the range
+	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "even a draw of 1.0 gives at most the highest starting loyalty")
+	var inside := true
+	dice.unpin()
+	for i in 2000:
+		var l := Allies.start_loyalty(dice)
+		inside = inside and l >= Allies.START_LOYALTY_MIN and l <= Allies.START_LOYALTY_MAX
+	_check(inside, "a recruit's loyalty always lies inside its range")
+
+
+## Interaction chances may only be drawn through the Flow's dice. Reads the game's sources (comments left out) for a draw
+## around it: a Dice made from the rng, or a chance rolled straight from `flow.rng`.
+func _no_draw_around_the_dice() -> void:
+	var offenders := []
+	var stack := ["res://src/game"]
+	while not stack.is_empty():
+		var dir: String = stack.pop_back()
+		for sub_dir in DirAccess.get_directories_at(dir):
+			stack.append("%s/%s" % [dir, sub_dir])
+		for file in DirAccess.get_files_at(dir):
+			if not file.ends_with(".gd") or (dir == "res://src/game" and file == "flow.gd"):
+				continue
+			var code := ""
+			for line in FileAccess.get_file_as_string("%s/%s" % [dir, file]).split("\n"):
+				code += line.split("#")[0] + "\n"
+			for bad in [RegEx.create_from_string("Dice\\.new\\s*\\("), RegEx.create_from_string("flow\\.rng\\.(chance|real)\\s*\\(")]:
+				if bad.search(code) != null:
+					offenders.append("%s: %s" % [file, bad.get_pattern()])
+	_check(offenders.is_empty(), "no game script draws an interaction chance around the flow's dice (%s)" % [offenders])
 
 
 ## A seed derived from another wraps past the largest seed and stays one the flag takes back.

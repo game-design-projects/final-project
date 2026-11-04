@@ -1,20 +1,44 @@
 ## The draws behind the chances of an interaction (a cut, a feeling, mercy, joining, an ally's verdict). It hands out the
-## seeded generator's numbers, or, while `pinned` is 0 or more, always that one number: the personality slice pins it so
-## the same actions give the same outcomes. Odds and Allies take a Dice and not a Rng, so a draw cannot go around the pin.
+## seeded generator's numbers, or, while pinned, always that one number: the personality slice pins it so the same actions
+## give the same outcomes. Odds and Allies take a Dice and not a Rng, so a draw cannot go around the pin.
 extends RefCounted
 
 const Rng = preload("res://src/utils/rng.gd")
 
-## In [0, 1) while pinned; -1 for the generator's own numbers.
-var pinned := -1.0
+## The largest draw: Godot's `randf` can give 1.0, which would step outside a range built from [0, 1).
+const BELOW_ONE := 0.999999
 
 var _rng: Rng
+var _pinned := -1.0 # the one number handed out while pinned; negative otherwise
 
 
 func _init(rng: Rng) -> void:
 	_rng = rng
 
 
+## Hand out `roll` (0 to 1) every time until `unpin`.
+func pin(roll: float) -> void:
+	_pinned = clampf(roll, 0.0, BELOW_ONE)
+	print_verbose("dice: pinned at %.2f" % _pinned)
+
+
+func unpin() -> void:
+	if is_pinned():
+		print_verbose("dice: unpinned")
+	_pinned = -1.0
+
+
+func is_pinned() -> bool:
+	return _pinned >= 0.0
+
+
 ## A float in [0, 1).
 func real() -> float:
-	return _rng.real() if pinned < 0.0 else pinned
+	var roll := _pinned if is_pinned() else minf(_rng.real(), BELOW_ONE)
+	print_verbose("dice: %.3f%s" % [roll, " (pinned)" if is_pinned() else ""])
+	return roll
+
+
+## An int from a to b, both included.
+func int_range(a: int, b: int) -> int:
+	return a + mini(int(real() * (b - a + 1)), b - a)
