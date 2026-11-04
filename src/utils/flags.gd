@@ -41,6 +41,7 @@ const FEATURES := {
 	"show-mind": "the foe's card shows the mind's answers; no-show-mind leaves its mood and clues only, for an A/B test",
 	"clear-hp": "the foe's health sits over its head with a number and a trail behind the damage, its mood is named, and your bar shows an arrow as it moves",
 	"reveal": "CHECK reads one thing at a time; what a monster likes and hates is found by trying it, and it answers in its own words",
+	"chat": "what you type flies to the monster and it listens; its words get a box of their own on the picture, and the info key keeps the talk so far",
 	"recruit-step": "a spared monster asks to come along and you answer, with no second roll; peace leaves a gift, a refused SPARE no longer angers, and champions are presented as winnable",
 	"mercy-link": "the mercy odds show as a gauge beside the monster's health, and each deed says how far it moved them",
 	"party-aid": "each ally adds to your strikes, and two or more take the edge off every hit",

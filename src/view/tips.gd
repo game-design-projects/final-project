@@ -23,6 +23,7 @@ const FOE_RECT := Rect2(110, 20, 228, 258)
 const AUTOMAP_MARGIN := 10.0 # screen pixels from the picture's corner, as gameplay.gd places it
 ## The stages in which the foe's card is worth reading: the fight waits on you.
 const CARD_STAGES := ["intro", "menu", "act", "talk"]
+const CHAT_SHOWN := 8
 const MIND_ROWS_SHOWN := 2 # the card shows the last answers; the debug panel all of them
 
 var state # State, set by the owner
@@ -118,6 +119,8 @@ func targets() -> Array:
 		out.append("ally%d" % i)
 	if _allowed("map"):
 		out.append("map")
+	if _allowed("chat"):
+		out.append("chat")
 	return out
 
 
@@ -160,6 +163,8 @@ func _allowed(key: String) -> bool:
 		return state.foe != null and state.stage in CARD_STAGES
 	if key == "map":
 		return state.stage in ["explore", "end"]
+	if key == "chat":
+		return state.viewing("chat") and not state.chat.is_empty() and state.stage in CARD_STAGES
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
@@ -176,6 +181,8 @@ func _rows() -> Array:
 func _blocks_for(key: String) -> Array:
 	if key == "":
 		return []
+	if key == "chat":
+		return chat_blocks(state.chat)
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
@@ -224,6 +231,16 @@ static func found_text(m) -> String:
 	if likes.is_empty() and hates.is_empty():
 		text += "\nTry things on it and see."
 	return text
+
+
+## The talk so far this run, the latest lines.
+static func chat_blocks(chat: Array) -> Array:
+	var out := [{"kind": "head", "left": "THE TALK SO FAR", "right": ""}]
+	var text := PackedStringArray()
+	for c in chat.slice(-CHAT_SHOWN):
+		text.append("%s: %s" % [c.who, c.text])
+	out.append({"kind": "text", "text": "\n".join(text)})
+	return out
 
 
 static func mind_note(label: String) -> String:
@@ -343,7 +360,7 @@ func _anchor_for(key: String, k: float) -> Vector2:
 		return _command_rect.position
 	if key == _hover:
 		return get_global_mouse_position()
-	if key == "foe":
+	if key == "foe" or key == "chat":
 		return global_position + Vector2(12.0, 40.0) * k
 	if key == "map":
 		var map := automap_rect()

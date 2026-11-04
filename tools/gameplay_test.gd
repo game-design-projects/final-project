@@ -314,6 +314,7 @@ func _hover_and_tips(game) -> void:
 	game._on_picture_input(_click(_on_picture(game, Vector2(224, 150))))
 	_check(tips.shown() == "", "a second click closes it")
 	# the info key
+	s.chat = [] # the talk so far has a card too, once there is talk (features_test)
 	game._unhandled_input(_key(KEY_I, {}, 105))
 	_check(tips.shown() == "foe", "I shows the foe's card from the keyboard")
 	game._unhandled_input(_key(KEY_I, {}, 105))

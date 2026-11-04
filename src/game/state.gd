@@ -11,12 +11,16 @@ const Monster = preload("res://src/rules/monster.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const DEPTH_MAX := 99
+const CHAT_MAX := 60
 const GRID_MAX := 64 # the biggest floor a save may describe (the game's own is 13)
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
 var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
 var steps := 0 # how far the party has walked this run
+var chat: Array = [] # {who, text}: everything said this run, oldest first, up to CHAT_MAX
+var _said: Array = [] # the lines last said, so one carried over isn't kept twice
+var listening := false # a monster is taking in what you typed
 var views := {} # the features the picture may show, as the flow worked them out (off on the personality slice)
 var floors_of := 0 # how many floors the run has, for the header (0: it doesn't say)
 var banner = null # a moment on the picture, {title, text, t0, ms} (see flow.announce)
@@ -79,6 +83,17 @@ func viewing(feature_name: String) -> bool:
 
 func say(new_lines: Array) -> void:
 	lines = new_lines
+	for l in new_lines:
+		if l.kind == "say" and l not in _said:
+			add_chat(l.who, l.text)
+	_said = new_lines
+
+
+## Keep a line of talk for the chat card.
+func add_chat(who: String, text: String) -> void:
+	chat.append({"who": who, "text": text})
+	if chat.size() > CHAT_MAX:
+		chat = chat.slice(-CHAT_MAX)
 
 
 static func sys_line(text: String) -> Dictionary:
@@ -120,7 +135,7 @@ func to_dict() -> Dictionary:
 	return {
 		"depth": depth, "runSeed": run_seed, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
-		"allies": allies.map(func(a): return a.to_dict()),
+		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
 	}
 
 
@@ -152,6 +167,9 @@ static func from_dict(d: Dictionary):
 	s.gold = maxi(0, _int(d.gold))
 	for k in s.tally:
 		s.tally[k] = maxi(0, _int(d.tally.get(k, 0)))
+	for c in d.get("chat", []) if d.get("chat") is Array else []:
+		if c is Dictionary:
+			s.add_chat(str(c.get("who", "")), str(c.get("text", "")))
 	for a in d.allies.slice(0, Combat.PARTY_MAX):
 		var ally = Ally.from_dict(a)
 		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)

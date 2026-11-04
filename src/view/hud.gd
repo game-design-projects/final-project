@@ -306,10 +306,17 @@ static func log_fits(lines: Array, width: float) -> int:
 	return lines.size()
 
 
+## What the log shows: what the foe says has a box of its own on the picture (the feature chat) while the fight waits on it.
+func _log_lines() -> Array:
+	if not state.viewing("chat") or state.foe == null or not state.stage in Overlay.SPEECH_STAGES:
+		return state.lines
+	return state.lines.filter(func(l): return not (l.kind == "say" and l.who == state.foe.name))
+
+
 ## The log: the lines the game last said, top down, a speaker's name in gold.
 func _log(area: Rect2) -> void:
 	var y := area.position.y
-	for l in state.lines:
+	for l in _log_lines():
 		var head := _log_head(l)
 		var rich_h := _log_line_h(l, area.size.x)
 		if y + rich_h > area.end.y + 4.0:

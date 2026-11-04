@@ -39,6 +39,7 @@ func _run() -> void:
 	await _mood_cues()
 	await _clear_hp()
 	await _reveal()
+	await _chat()
 	_finish()
 
 
@@ -485,6 +486,73 @@ func _reveal() -> void:
 	await flow.press("2")
 	await flow.press("1")
 	_check(s.lines[0].text.contains("likes"), "no-reveal: CHECK tells all at once")
+	_use()
+
+
+func _chat() -> void:
+	var flow = _flow(44)
+	var m = await _at_menu(flow, "slime")
+	var s = flow.state
+	var greeted: int = s.chat.size()
+	_check(greeted >= 1 and s.chat[0].who == m.name, "what the foe says goes in the chat (%s)" % str(s.chat))
+	await flow.press("2")
+	await flow.press(str(s.menu.size()))
+	_check(s.stage == "talk" and s.hint.contains("ASK ABOUT THE FLOOR"), "the talk box says what typing is for (%s)" % s.hint)
+	var sent := []
+	var listening_then := []
+	flow.happened.connect(func(n, d):
+		if n == "said":
+			sent.append(d.text)
+			listening_then.append(s.listening))
+	await flow.submit_text("you seem kind")
+	_check(sent == ["you seem kind"], "a sent line is announced")
+	_check(not s.listening, "and the monster stops listening once it has answered")
+	_check(s.chat.any(func(c): return c.who == "YOU" and c.text == "you seem kind"), "the chat keeps what you said")
+	var count: int = s.chat.size()
+	s.say(s.lines)
+	_check(s.chat.size() == count, "a line said again isn't kept twice")
+	var saved = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	_check(saved.chat.size() == count, "a save keeps the talk")
+	var damaged: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	damaged.chat = "words"
+	_check(State.from_dict(damaged).chat.is_empty(), "and a damaged one is left out")
+	for i in State.CHAT_MAX + 5:
+		s.add_chat("YOU", "x")
+	_check(s.chat.size() == State.CHAT_MAX, "the talk has a limit")
+
+	var view = Overlay.new()
+	view.state = s
+	s.stage = "menu"
+	s.say([State.speech(m.name, "Hello there."), State.sys_line("It waits.")])
+	_check(view.speech().get("text", "") == "Hello there.", "the foe's line gets the speech box")
+	view.clock_ms = 100000.0
+	s.listening = true
+	_check(view.bubble().get("text", "").begins_with("."), "while it takes the words in, dots over its head")
+	s.listening = false
+	view.send_words("hi")
+	_check(view.bubble().get("text", "").begins_with("."), "even for a moment when the answer is quick")
+	view.clock_ms += 2000.0
+	_check(view.bubble().get("text", "") != ".", "and then they go")
+	s.stage = "dodge"
+	_check(view.speech().is_empty(), "no speech box over a dodge")
+	view.free()
+	var long_line := "x ".repeat(110)
+	_check(Overlay.speech_px(long_line) == Overlay.SPEECH_SIZES[-1], "the longest lines write smaller")
+	var body = load("res://src/view/fonts.gd").body()
+	for sp in Content.table("species"):
+		for kind in Content.species(sp).lines:
+			for l in Content.species(sp).lines[kind]:
+				var px: int = Overlay.speech_px(l)
+				if body.get_multiline_string_size(l, HORIZONTAL_ALIGNMENT_LEFT, Overlay.SPEECH.size.x - 12.0, px).y > Overlay.SPEECH.size.y - 16.0:
+					_check(false, "a line doesn't fit the speech box: %s" % l)
+	_check(true, "every monster line fits the speech box")
+	var hint_line := "It says it might as well tell you: the stairs are that way, past the third turn, and the champion waits beyond."
+	_check(body.get_multiline_string_size(hint_line, HORIZONTAL_ALIGNMENT_LEFT, Overlay.SPEECH.size.x - 12.0, Overlay.speech_px(hint_line)).y <= Overlay.SPEECH.size.y - 16.0, "and so does a long answer about the floor")
+	var tips = Tips.new()
+	tips.state = s
+	s.stage = "menu"
+	_check(tips.targets().has("chat"), "the info key can open the talk so far")
+	tips.free()
 	_use()
 
 

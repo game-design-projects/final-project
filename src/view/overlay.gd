@@ -32,6 +32,11 @@ const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
 const MOOD_STRONG := 60.0 # a meter this high names the mood
 const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
 const COMET_MS := 320.0
+const SPEECH := Rect2(96.0, 228.0, 256.0, 54.0)
+const SPEECH_SIZES := [14, 13, 12, 11, 10]
+const SPEECH_STAGES := ["intro", "menu", "ask", "act", "talk", "fightbar", "wait"]
+const FLY_MS := 550.0
+const HEARD_MS := 950.0 # the listening dots stay this long after the words were sent, however fast the answer
 const EMOTE_MS := 1100.0
 const BUBBLE_STAGES := ["intro", "menu", "act", "talk"]
 const BANNER_FADE_MS := 220.0
@@ -58,6 +63,8 @@ var intro_strength := 0.5
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _popups: Array = [] # [{text, color, at, born}]
+var _words := "" # what you last typed, on its way to the monster
+var _words_at := -1e9
 var _emote := {} # {tone, born}: the last mood shown over the monster
 var _ghost := 1.0 # where the trail behind the foe's health is
 var _ghost_foe = null # whose
@@ -144,6 +151,32 @@ func shake_offset() -> Vector2:
 	return Vector2(randf() - 0.5, randf() - 0.5) * 6.0
 
 
+## What you typed flies up from the talk box to the monster.
+func send_words(text: String) -> void:
+	_words = text
+	_words_at = clock_ms
+
+
+## The line in the speech box now: the last thing the foe said, while the fight waits on it. {} when there is none.
+func speech() -> Dictionary:
+	if state == null or not state.viewing("chat") or state.foe == null or not state.stage in SPEECH_STAGES:
+		return {}
+	for i in range(state.lines.size() - 1, -1, -1):
+		var l: Dictionary = state.lines[i]
+		if l.kind == "say" and l.who == state.foe.name:
+			return l
+	return {}
+
+
+## The size the speech box writes `text` at: as large as fits, smaller for the longest lines.
+static func speech_px(text: String) -> int:
+	var body: Font = Fonts.body()
+	for px in SPEECH_SIZES:
+		if body.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, SPEECH.size.x - 12.0, px).y <= SPEECH.size.y - 16.0:
+			return px
+	return SPEECH_SIZES[-1]
+
+
 ## A bubble over the monster's head for a moment: how a deed landed ("good", "bad" or anything else).
 func emote(tone: String) -> void:
 	_emote = {"tone": tone, "born": clock_ms}
@@ -152,7 +185,11 @@ func emote(tone: String) -> void:
 ## What the bubble over the monster says now: a mood for a moment after a deed, or the question when it would likely join;
 ## {} when nothing. {tone} or {text}.
 func bubble() -> Dictionary:
-	if not state.viewing("mood-cues") or state.foe == null or state.foe.is_gone():
+	if state.foe == null or state.foe.is_gone():
+		return {}
+	if state.viewing("chat") and (state.listening or clock_ms - _words_at < HEARD_MS):
+		return {"text": ".".repeat(1 + int(clock_ms / 300.0) % 3)}
+	if not state.viewing("mood-cues"):
 		return {}
 	if not _emote.is_empty() and clock_ms - _emote.born < EMOTE_MS:
 		return {"tone": _emote.tone}
@@ -219,6 +256,8 @@ func soul_at() -> Vector2:
 ## Where the banner goes: above the dodge box in a dodge, else low on the picture, clear of the health bars and the popups.
 func banner_rect() -> Rect2:
 	var y := 36.0 if state != null and state.dodge != null else H - BANNER_H - 8.0
+	if not speech().is_empty():
+		y = SPEECH.position.y - BANNER_H - 4.0
 	return Rect2((W - BANNER_W) / 2.0, y, BANNER_W, BANNER_H)
 
 
@@ -280,6 +319,8 @@ func _battle() -> void:
 		Art.draw(self, m.species, clock_ms, color, W / 2.0, 270.0, 0.85, hurt)
 	_name_and_health(m)
 	_bubble(Vector2(W / 2.0 + 36.0, 28.0) if small else Vector2(W / 2.0 + 74.0, 72.0))
+	_speech_box()
+	_flying_words()
 	if state.dodge != null:
 		_dodge_box(color)
 		_flashes()
@@ -346,6 +387,25 @@ func _name_and_health(m) -> void:
 	if m.boss:
 		label = "TURN %d · %s" % [m.turn + 1, label]
 	_text(_title, label, Vector2(0, 21), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
+
+
+func _speech_box() -> void:
+	var l := speech()
+	if l.is_empty():
+		return
+	draw_rect(SPEECH, Color(0.0, 0.0, 0.0, 0.92))
+	draw_rect(SPEECH, Palette.MERCY, false, 1.0)
+	_text(_title, l.who, SPEECH.position + Vector2(6, 10), 6, Palette.MERCY)
+	var px := speech_px(l.text)
+	draw_multiline_string(_body, SPEECH.position + Vector2(6, 12.0 + _body.get_ascent(px)), l.text, HORIZONTAL_ALIGNMENT_LEFT, SPEECH.size.x - 12.0, px, -1, Palette.INK)
+
+
+func _flying_words() -> void:
+	var age := (clock_ms - _words_at) / FLY_MS
+	if age < 0.0 or age >= 1.0:
+		return
+	var at := Vector2(0.0, lerpf(H - 8.0, 110.0, age))
+	_text(_body, _words.left(40), at, 13, Color(Palette.YOU, 1.0 - age * age), HORIZONTAL_ALIGNMENT_CENTER, W)
 
 
 ## The speech bubble, its tail at the monster's head, down to the left of `at`.

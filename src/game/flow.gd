@@ -20,7 +20,7 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0

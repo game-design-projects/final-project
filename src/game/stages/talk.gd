@@ -18,7 +18,7 @@ const CASHES_IN := ["bandit", "snake"]
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.menu = []
-	s.hint = "TYPE ANYTHING · ENTER SAY IT · ESC NEVER MIND · GOLD OFFERS COST 6 IF ACCEPTED"
+	s.hint = "ASK ABOUT THE FLOOR OR WIN IT OVER · ENTER SAY IT · ESC NEVER MIND · GOLD OFFERS COST 6" if flow.feature("chat") else "TYPE ANYTHING · ENTER SAY IT · ESC NEVER MIND · GOLD OFFERS COST 6 IF ACCEPTED"
 
 
 func handle(flow, key: String) -> void:
@@ -39,9 +39,13 @@ func _say(flow, text: String) -> void:
 	var s = flow.state
 	var m = s.foe
 	m.spoke = true
+	s.add_chat("YOU", text)
+	flow.event("said", {"text": text})
+	s.listening = true
 	var words: Dictionary = await flow.mind.read_words(text)
 	var top := Odds.top(words)
 	if m.species in CASHES_IN and top == "gold" and Words.mentions_money(text):
+		s.listening = false
 		await flow.encounter.offer_cut(m, "YOUR OFFER", words)
 		return
 	var heard := []
@@ -51,6 +55,7 @@ func _say(flow, text: String) -> void:
 	if heard.is_empty():
 		heard = [{"intent": "question", "w": 0.3}]
 	var decision: Dictionary = await flow.encounter.decide(m, heard, "YOUR WORDS", words)
+	s.listening = false
 	flow.encounter.judge("" if top == "other" else top)
 	var asked: bool = words.get("question", 0.0) >= ASKED_ODDS and top != "gibberish"
 	var lines := []

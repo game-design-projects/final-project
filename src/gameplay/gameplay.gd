@@ -417,6 +417,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_postfx.flash(Palette.MERCY, 0.4 * _softness())
 		"slain":
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
+		"said":
+			if s.viewing("chat"):
+				_overlay.send_words(data.text)
 		"mood":
 			_overlay.emote(data.tone)
 			if data.tone == "good" and s.viewing("clear-hp"):
