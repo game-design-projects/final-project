@@ -32,8 +32,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Continue offers the later of two saves made in the same second (each save carries a microsecond stamp).
 - `Rng.real()` never returns exactly 1.0 (Godot's `randf` can), so a range scaled from it cannot step out; a recruit's starting loyalty stays within its range.
 - `Dice.pin` refuses a roll outside 0 up to below 1 (or NaN) instead of pinning it, so the old -1 means unpinned idiom cannot make every chance succeed.
-- Two saves in the same tick of a coarse clock (a browser's) are still ordered: each save stamp is higher than the last of the run.
-- A renamed save's page is titled with its name, as the list shows it.
+- Two saves in the same tick of a coarse clock (a browser's), or after the clock was set back, are still ordered: each save stamp is higher than the last one of the run or on disk.
+- A renamed save's page is titled with its name in capitals, built by the same function as the list's label, and the title line is clipped to the panel.
+- `Dice.pin` reports a refused roll as an error and tells its caller, and the slice reports a ROLL that cannot be pinned; `Rng.chance` draws through `real()` too.
 - The slice test scans every script under `src` for a Dice made outside the flow or a copy of `flow.rng`, ignoring comments.
 - The random-seed test cleared no flag between rounds and so tested one seed (it passed about half the time with the bug); the credits test no longer matches any line ending in CREDITS.
 - A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.

@@ -53,7 +53,8 @@ static func start(flow) -> void:
 	_started = true
 	var s = flow.state
 	s.gold = GOLD
-	flow.dice.pin(ROLL)
+	if not flow.dice.pin(ROLL):
+		push_error("slice: ROLL %s cannot be pinned, so the slice would not repeat" % ROLL)
 	flow.slice_floor = true
 	var monsters: Array = s.floor_map.monsters
 	for i in FOES.size():

@@ -91,8 +91,8 @@ static func latest() -> Dictionary:
 	for i in list():
 		if not i.empty and not i.corrupt and (best.is_empty() or i.saved_at > best.saved_at or (i.saved_at == best.saved_at and i.saved_us > best.saved_us)):
 			best = i
-	if not best.is_empty() and OS.is_stdout_verbose():
-		print("saves: latest is %s (%s)" % [best.slot, when(best.saved_at)])
+	if not best.is_empty():
+		print_verbose("saves: latest is %s" % best.slot)
 	return best
 
 
@@ -139,9 +139,13 @@ static func _read_doc(slot: String):
 	return json.data
 
 
-## The time in microseconds, never the same or lower twice in one run, so two saves in the same tick of a coarse clock
-## (a browser's milliseconds) still say which came later.
+## The time in microseconds, never the same or lower than the last save's (this run's, or the newest on disk at the start),
+## so two saves in the same tick of a coarse clock (a browser's milliseconds), or after the clock was set back, still say
+## which came later.
 static func _stamp() -> int:
+	if _last_us == 0: # the first of the run: carry on from the newest save there is, in case the clock was set back since
+		for i in list():
+			_last_us = maxi(_last_us, i.saved_us)
 	_last_us = maxi(int(Time.get_unix_time_from_system() * 1000000.0), _last_us + 1)
 	return _last_us
 

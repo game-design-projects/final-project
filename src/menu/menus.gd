@@ -75,9 +75,7 @@ static func slot_list(panel, ctx: Dictionary, mode: String) -> Dictionary:
 	for i in Saves.list():
 		var info: Dictionary = i
 		var slot: String = info.slot
-		var label := "AUTOSAVE" if slot == Saves.AUTO else "SLOT " + slot
-		if info.name != "":
-			label += "  " + info.name.to_upper()
+		var label := slot_label(info)
 		var item := {"label": label, "value": Saves.when(info.saved_at), "sub": "EMPTY" if info.empty else info.summary}
 		match mode:
 			"load":
@@ -116,6 +114,14 @@ static func _do_overwrite(panel, ctx: Dictionary, slot: String) -> void:
 	panel.refresh()
 
 
+## "SLOT 2  BOSS RUN": the slot and its name, the same on the list and on the slot's page.
+static func slot_label(info: Dictionary) -> String:
+	var label: String = "AUTOSAVE" if info.slot == Saves.AUTO else "SLOT " + info.slot
+	if info.name != "":
+		label += "  " + info.name.to_upper()
+	return label
+
+
 static func slot_actions(panel, ctx: Dictionary, slot: String) -> Dictionary:
 	var info := Saves.info(slot)
 	var manual := slot != Saves.AUTO
@@ -126,10 +132,7 @@ static func slot_actions(panel, ctx: Dictionary, slot: String) -> Dictionary:
 		{"label": "DELETE", "act": func(): panel.push(func(): return confirm(panel, "DELETE THIS SAVE?", "It can't be brought back.", "DELETE", _do_delete.bind(panel, slot)))},
 	]
 	var hint := ("%s  %s" % [info.summary, Saves.when(info.saved_at)]) if not info.empty else ""
-	var title := "AUTOSAVE" if not manual else "SLOT " + slot
-	if info.name != "":
-		title += "  " + info.name # the list shows the name beside the slot, so the page does too
-	return {"title": title, "items": items, "hint": hint}
+	return {"title": slot_label(info), "items": items, "hint": hint}
 
 
 static func rename_page(panel, slot: String, current: String) -> Dictionary:

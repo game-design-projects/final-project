@@ -34,6 +34,7 @@ func _run() -> void:
 	await _allies_are_fixed()
 	await _flee_judges_before_it_ends()
 	_dice_pin()
+	_comment_stripper()
 	_no_draw_around_the_dice()
 	_seed_offset()
 	await _retry_heals()
@@ -263,9 +264,10 @@ func _dice_pin() -> void:
 	dice.pin(Rng.BELOW_ONE)
 	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "the highest draw gives the highest starting loyalty")
 	dice.pin(0.25)
+	var refused_all := true
 	for refused in [1.0, 2.0, -1.0, NAN]: # not rolls: the dice stays as it was (the old -1 means unpinned idiom must not pin it at 0)
-		dice.pin(refused)
-	_check(dice.is_pinned() and dice.real() == 0.25, "a roll outside 0 to below 1 (or NaN) is refused and the pin stays")
+		refused_all = refused_all and not dice.pin(refused)
+	_check(refused_all and dice.is_pinned() and dice.real() == 0.25, "a roll outside 0 to below 1 (or NaN) is refused and the pin stays")
 	var inside := true
 	dice.unpin()
 	for i in 2000:
@@ -281,7 +283,7 @@ func _no_draw_around_the_dice() -> void:
 	var bad := {
 		"a Dice made outside the flow": RegEx.create_from_string("Dice\\.new\\s*\\("),
 		"a chance from flow.rng": RegEx.create_from_string("flow\\.rng\\.(chance|real)\\s*\\("),
-		"a copy of flow.rng": RegEx.create_from_string("=\\s*(flow\\.)?rng\\s*$"),
+		"a copy of flow.rng": RegEx.create_from_string("=\\s*flow\\.rng\\s*$"),
 	}
 	var stack := ["res://src"]
 	while not stack.is_empty():
@@ -290,33 +292,43 @@ func _no_draw_around_the_dice() -> void:
 			stack.append("%s/%s" % [dir, sub_dir])
 		for file in DirAccess.get_files_at(dir):
 			var path := "%s/%s" % [dir, file]
-			if not file.ends_with(".gd") or path in ["res://src/game/flow.gd", "res://src/utils/dice.gd"]:
+			if not file.ends_with(".gd") or path == "res://src/game/flow.gd": # the flow makes the dice
 				continue
-			var code := PackedStringArray()
+			var found := {}
 			for line in FileAccess.get_file_as_string(path).split("\n"):
-				code.append(_without_comment(line))
-			for what in bad:
-				for line in code:
-					if path.begins_with("res://src/game") or what != "a copy of flow.rng":
-						if bad[what].search(line) != null:
-							offenders.append("%s: %s" % [path, what])
-							break
+				var code := _without_comment(line) if line.contains("#") else line
+				for what in bad:
+					if not found.has(what) and bad[what].search(code) != null:
+						found[what] = true
+						offenders.append("%s: %s" % [path, what])
 	_check(offenders.is_empty(), "no script under src draws an interaction chance around the flow's dice (%s)" % [offenders])
 
 
-## The line without a trailing `#` comment (a `#` inside a string stays).
+## The line without a trailing `#` comment (a `#` inside a string stays, and so does a quote escaped with a backslash).
 func _without_comment(line: String) -> String:
 	var quote := ""
-	for i in line.length():
+	var i := 0
+	while i < line.length():
 		var c := line[i]
 		if quote != "":
-			if c == quote and line[i - 1] != "\\":
+			if c == "\\":
+				i += 1 # the next character is escaped
+			elif c == quote:
 				quote = ""
 		elif c == "\"" or c == "'":
 			quote = c
 		elif c == "#":
 			return line.left(i)
+		i += 1
 	return line
+
+
+## The comment stripper reads strings the way the scan needs: a `#` in a string stays, a string ending in a backslash ends.
+func _comment_stripper() -> void:
+	_check(_without_comment("var a = 1 # Dice.new(") == "var a = 1 ", "a trailing comment is cut off")
+	_check(_without_comment("print(\"#%d\")") == "print(\"#%d\")", "a # inside a string is not a comment")
+	_check(_without_comment("var q = \"say \\\" # not a comment\"") == "var q = \"say \\\" # not a comment\"", "an escaped quote does not end the string, so a # after it is still inside it")
+	_check(_without_comment("var p = \"C:\\\\\" # Dice.new(x)") == "var p = \"C:\\\\\" ", "a string that ends in an escaped backslash ends, so the comment after it is cut")
 
 
 ## A seed derived from another wraps past the largest seed and stays one the flag takes back.

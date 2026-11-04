@@ -18,6 +18,7 @@ const ROW := 40.0
 const ROW_SUB := 58.0
 const WIDTH := 600.0
 const PAD := 24.0
+const TITLE_SIZE := 16
 const TITLE_H := 16.0
 const HINT_H := 18.0
 const BODY_H := 300.0
@@ -284,7 +285,7 @@ func _draw() -> void:
 	draw_rect(frame.grow(-1.0), Palette.INK, false, 2.0)
 	var title := Fonts.title()
 	var body := Fonts.body()
-	draw_string(title, frame.position + Vector2(PAD, PAD + 16.0), _page.get("title", ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Palette.MERCY)
+	draw_string(title, frame.position + Vector2(PAD, PAD + 16.0), _page.get("title", ""), HORIZONTAL_ALIGNMENT_LEFT, WIDTH - PAD * 2.0, TITLE_SIZE, Palette.MERCY)
 	for i in _page.items.size():
 		var item: Dictionary = _page.items[i]
 		var r: Rect2 = lay.rows[i]

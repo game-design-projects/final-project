@@ -25,6 +25,7 @@ func _run() -> void:
 		return
 	Flags.set_args(PackedStringArray([]))
 	_round_trip()
+	_stamps_rise()
 	_nosave_in_memory()
 	_cleanup()
 	_finish()
@@ -73,3 +74,22 @@ func _cleanup() -> void:
 	Flags.set_args(PackedStringArray([]))
 	Saves.delete_all()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_dir))
+
+
+## Two stamps are never equal or backwards, though the clock repeats itself inside a tight loop; and a run starts above the
+## newest save on disk, so a clock set back does not make a new save look old.
+func _stamps_rise() -> void:
+	var rising := true
+	var last: int = Saves._stamp()
+	for i in 2000:
+		var now: int = Saves._stamp()
+		rising = rising and now > last
+		last = now
+	_check(rising, "2000 stamps in a row each higher than the last")
+	var future := int(Time.get_unix_time_from_system()) + 3600
+	Saves._last_us = 0 # a new run
+	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from the future", "saved_at": future, "saved_us": future * 1000000, "state": var_to_str({})}, "3")
+	Saves.write("4", {"hp": 1}, "HP 1/20")
+	_check(Saves.latest().slot == "4", "a save made after the clock was set back is still the newest")
+	Saves.delete("3")
+	Saves.delete("4")

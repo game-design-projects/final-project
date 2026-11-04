@@ -83,14 +83,17 @@ func _data_page_and_nosave(panel) -> void:
 func _slot_page_shows_the_name(panel) -> void:
 	Flags.set_args(PackedStringArray(["nosave"])) # the slots live in memory, so the player's saves are not touched
 	var Saves = load("res://src/menu/saves.gd")
+	_check(Saves.in_memory(), "the slot test runs on in-memory slots, so it cannot touch the player's saves")
+	if not Saves.in_memory():
+		return
 	Saves.write("2", {"hp": 1}, "HP 1/20")
 	var ctx := {"load_slot": func(_s): pass}
 	_check(Menus.slot_actions(panel, ctx, "2").title == "SLOT 2", "an unnamed slot's page is titled with the slot")
 	Saves.rename("2", "boss run")
-	_check(Menus.slot_actions(panel, ctx, "2").title == "SLOT 2  boss run", "a renamed slot's page is titled with the slot and its name")
+	_check(Menus.slot_actions(panel, ctx, "2").title == "SLOT 2  BOSS RUN", "a renamed slot's page is titled like the list: the slot and its name in capitals")
 	Saves.rename("2", "W".repeat(Saves.NAME_MAX)) # the widest name a slot can have
 	var wide: String = Menus.slot_actions(panel, ctx, "2").title
-	var width: float = Fonts.title().get_string_size(wide, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+	var width: float = Fonts.title().get_string_size(wide, HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.TITLE_SIZE).x
 	_check(width <= MenuPanel.WIDTH - MenuPanel.PAD * 2.0, "the longest name still fits the page's title line (%d of %d px)" % [width, MenuPanel.WIDTH - MenuPanel.PAD * 2.0])
 	Saves.delete("2")
 	Flags.set_args(PackedStringArray([]))

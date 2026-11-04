@@ -70,7 +70,7 @@ func real() -> float:
 
 ## True with probability p.
 func chance(p: float) -> bool:
-	return _gen.randf() < p
+	return real() < p
 
 
 func pick(items: Array):
