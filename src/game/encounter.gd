@@ -106,7 +106,7 @@ func judge(deed: String) -> void:
 	for a in s.allies.duplicate():
 		if deed == "" or not Allies.has_opinion(a.species, deed):
 			continue
-		var verdict := Allies.judge(a, deed, flow.rng)
+		var verdict := Allies.judge(a, deed, flow.rng, {"score": flow.fixed_roll, "leave": flow.fixed_roll})
 		pending_rows.append({"id": "judge-" + a.name, "label": "%s JUDGES IT (0 HATES - 4 LOVES)" % a.name, "answer": verdict.score, "odds": verdict.odds})
 		var reactions: Dictionary = Content.species(a.species).reactions
 		if verdict.reaction != "":
@@ -134,7 +134,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 		joined = Odds.succeeds(flow.rng, wants, flow.fixed_roll)
 		rows.append({"id": "join", "label": "DOES IT WANT TO COME ALONG?" if room else "DOES IT WANT TO COME ALONG? (PARTY FULL)", "answer": wants, "picked": joined})
 		if joined:
-			s.allies.append(Ally.make(m.species, m.name, Allies.start_loyalty(flow.rng)))
+			s.allies.append(Ally.make(m.species, m.name, Allies.start_loyalty(flow.rng, flow.fixed_roll)))
 			s.tally.recruited += 1
 			flow.event("recruited", {"species": m.species})
 		line = foe_line(m, "join_party" if joined else "leave_peacefully")

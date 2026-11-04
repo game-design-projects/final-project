@@ -1,6 +1,6 @@
 ## A reproducible two-bandit encounter for the personality playtest (flag `personality-slice`, with `seed=N`). ROOK deals
 ## straight and VEX is jumpy, so the same fair-cut offer is taken by one and refused by the other at the fixed roll. While
-## it is on, the monsters think with the local rules, the flow draws the cut and the answer at `fixed_roll`, and the floor
+## it is on, the monsters think with the local rules, the flow draws every interaction chance (cut, answer, feeling, mercy, joining, ally verdicts) at `fixed_roll`, and the floor
 ## is never autosaved. The slice ends after the second fight, on fleeing, on a new floor, on a load, or on leaving.
 extends RefCounted
 
@@ -8,6 +8,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Monster = preload("res://src/rules/monster.gd")
+const Rng = preload("res://src/utils/rng.gd")
 
 const DEFAULT_SEED := 7042
 const GOLD := Combat.CUT_COST * 2 # enough to hear the same offer twice, even if the first one takes it
@@ -33,12 +34,8 @@ static func pending() -> bool:
 
 ## The seed of the slice: `seed=N` (0 or more), or the one the playtest document names.
 static func seed_value() -> int:
-	var text := Flags.value("seed", "")
-	if text.is_valid_int() and int(text) >= 0:
-		return int(text)
-	if text != "":
-		push_warning("slice: seed=%s is not a seed (a whole number, 0 or more); using %d" % [text, DEFAULT_SEED])
-	return DEFAULT_SEED
+	var seed := Rng.flag_seed()
+	return seed if seed >= 0 else DEFAULT_SEED
 
 
 ## The roster's own bandit, so the slice's bandits are built like the floor's.

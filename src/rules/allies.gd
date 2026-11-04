@@ -14,7 +14,10 @@ const START_LOYALTY_MIN := 60
 const START_LOYALTY_MAX := 80
 
 
-static func start_loyalty(rng: Rng) -> float:
+## `roll` in [0, 1) fixes the draw for a repeatable run.
+static func start_loyalty(rng: Rng, roll := -1.0) -> float:
+	if roll >= 0.0:
+		return float(START_LOYALTY_MIN + int(roll * (START_LOYALTY_MAX - START_LOYALTY_MIN + 1)))
 	return float(rng.int_range(START_LOYALTY_MIN, START_LOYALTY_MAX))
 
 

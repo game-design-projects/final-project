@@ -91,9 +91,8 @@ func _begin() -> void:
 	_after_start()
 
 
-## Wire the views to the state the flow now holds, and handle the testing flags `meet=<species>` and `personality-slice`.
+## Handle the testing flags `meet=<species>` and `personality-slice`.
 func _after_start() -> void:
-	_bind_views()
 	if PersonalitySlice.pending() and request.get("kind", "new") == "new":
 		await PersonalitySlice.start(flow)
 		return
@@ -238,7 +237,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 	var now := _clock_ms / 1000.0
 	var s = flow.state
 	match name:
-		"new_floor":
+		"state_replaced":
 			_bind_views()
 		"stage":
 			if data.to == "explore" and data.from != "":
@@ -317,10 +316,9 @@ func _load_slot(slot: String) -> void:
 		return
 	_pause.visible = false
 	await flow.load_state(saved)
-	_bind_views()
 
 
-## The views read the flow's current state; a new floor or a loaded save replaces it, so they are pointed at it again.
+## The views read the flow's current state; a new floor or a loaded save replaces it (`state_replaced`), so they are pointed at it again.
 func _bind_views() -> void:
 	_header.state = flow.state
 	_status.state = flow.state

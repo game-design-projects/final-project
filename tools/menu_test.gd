@@ -1,24 +1,17 @@
 ## Checks the menu panel with no window: a hint longer than the panel is wide wraps and grows the frame instead of being
 ## cut off at the edge. Prints one line per check and exits with 1 if any failed.
 ##   godot --headless --path . -s res://tools/menu_test.gd
-extends SceneTree
+extends "res://tools/test_base.gd"
 
 const Fonts = preload("res://src/view/fonts.gd")
 
 # loaded when the test runs: the menus read the Store autoload, which a `-s` script is compiled before
 var MenuPanel = null
 var Menus = null
-const WATCHDOG_S := 60
-
-var _failed := 0
 
 
-func _initialize() -> void:
-	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
-	create_timer(WATCHDOG_S).timeout.connect(func():
-		print("menu_test: FAIL did not finish in %d s (a script error stopped it?)" % WATCHDOG_S)
-		quit(1))
-	_run.call_deferred()
+func _name() -> String:
+	return "menu_test"
 
 
 func _run() -> void:
@@ -27,14 +20,7 @@ func _run() -> void:
 	var panel = MenuPanel.new()
 	root.add_child(panel)
 	await _hints_fit(panel)
-	print("menu_test: %s" % ("all checks passed" if _failed == 0 else "%d CHECK(S) FAILED" % _failed))
-	quit(1 if _failed > 0 else 0)
-
-
-func _check(ok: bool, what: String) -> void:
-	print("menu_test: %s %s" % ["ok  " if ok else "FAIL", what])
-	if not ok:
-		_failed += 1
+	_finish()
 
 
 func _hints_fit(panel) -> void:

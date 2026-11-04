@@ -5,14 +5,21 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
-- `tools/menu_test.gd` and `tools/gameplay_test.gd` check the menu panel and the NEW FLOOR rebinding headless, and CI runs them; the test scripts stop with a failure after a timeout instead of hanging.
+- `tools/menu_test.gd` checks the menu panel headless, and CI runs it.
+- `tools/gameplay_test.gd` checks that the views follow the state after NEW FLOOR, a death and a load, and CI runs it.
+- `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
 
 ### Fixed
 - A random run's printed seed is never negative, so `seed=N` can replay it (about half of them printed a seed the flag rejected).
 - A key hint longer than the menu panel wraps instead of being cut off ("Changes apply at once and are kep"); the settings hint is shorter too.
 - NEW FLOOR (from the stairs or after dying) points the header, status row, dock and overlay at the new floor's state instead of leaving them on the old one.
 - `seed=abc` and `seed=-5` are handled the same everywhere: a warning and a random seed, instead of a silent seed 0 outside the slice.
-- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining), so the same actions give the same results; `mock` no longer swaps its local rules.
+- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining), so the same actions give the same results.
+- The slice also fixes an ally's verdict, whether it leaves and a recruit's starting loyalty (they still varied by seed).
+- `mock` no longer swaps the slice's local rules.
+- `seed=` takes only a whole number of 0 to 18 characters; an out-of-range one is ignored with a warning instead of clamped or wrapped.
+- `tools/autoplay.gd` reads `seed=` through the same rule, so `seed=abc` plays the default seeds with a warning.
+- A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.
 - The slice's bandits are built from the roster's own bandit line, like the floor's.
 - A retry no longer saves a HP value it never used.
 

@@ -28,8 +28,9 @@ var _retries := 0
 func _init() -> void:
 	Flags.set_args(OS.get_cmdline_user_args() as PackedStringArray)
 	var seeds: Array = DEFAULT_SEEDS
-	if Flags.on("seed"):
-		seeds = [int(Flags.value("seed"))]
+	var flagged := Rng.flag_seed() # a seed that is not one is warned about and the default seeds are played
+	if flagged >= 0:
+		seeds = [flagged]
 	var failed := 0
 	for s in seeds:
 		if not await _play(int(s)):

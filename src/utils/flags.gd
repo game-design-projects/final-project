@@ -8,7 +8,7 @@ extends RefCounted
 ## name -> what it does. Add a line here when a feature gets a switch.
 const KNOWN := {
 	"debug": "show the debug panel and log more",
-	"mock": "monsters think with the seeded mind instead of calling Jev",
+	"mock": "monsters think with the seeded mind instead of calling Jev (not in the personality slice, which always uses the local rules)",
 	"jev": "jev=<url>: ask Jev through the proxy at this address (without it the rule-based mind answers)",
 	"seed": "seed=N: fixed random seed for the floor and the monsters",
 	"floor": "floor=N: start on floor N",

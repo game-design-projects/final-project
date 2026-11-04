@@ -1,7 +1,7 @@
 ## Checks the personality slice (flag `personality-slice`) with no window: the fixed fights, what ends the slice, the
 ## retry, the autosave rule, the seed and the mind. Prints one line per check and exits with 1 if any failed.
 ##   godot --headless --path . -s res://tools/slice_test.gd
-extends SceneTree
+extends "res://tools/test_base.gd"
 
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
@@ -12,18 +12,12 @@ const Monster = preload("res://src/rules/monster.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
-const WATCHDOG_S := 90
 
-var _failed := 0
 var _clock := 0.0
 
 
-func _initialize() -> void:
-	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
-	create_timer(WATCHDOG_S).timeout.connect(func():
-		print("slice_test: FAIL did not finish in %d s (a script error stopped it?)" % WATCHDOG_S)
-		quit(1))
-	_run.call_deferred()
+func _name() -> String:
+	return "slice_test"
 
 
 func _run() -> void:
@@ -34,16 +28,10 @@ func _run() -> void:
 	await _mind_is_pinned()
 	await _fair_cut_route()
 	await _names_do_not_matter()
+	await _allies_are_fixed()
 	await _retry_heals()
 	await _flee_ends_it()
-	print("slice_test: %s" % ("all checks passed" if _failed == 0 else "%d CHECK(S) FAILED" % _failed))
-	quit(1 if _failed > 0 else 0)
-
-
-func _check(ok: bool, what: String) -> void:
-	print("slice_test: %s %s" % ["ok  " if ok else "FAIL", what])
-	if not ok:
-		_failed += 1
+	_finish()
 
 
 ## A slice on a fresh run: the flow, and ROOK's intro already over, at his menu.
@@ -95,6 +83,11 @@ func _bad_seed_everywhere() -> void:
 	_check(a.seed_value != b.seed_value, "seed=abc gives a random seed (two runs differ), as the warning says")
 	Flags.set_args(PackedStringArray(["seed=-5"]))
 	_check(Rng.new().seed_value >= 0, "seed=-5 gives a random, printable seed")
+	for big in ["99999999999999999999", "9223372036854775808"]:
+		Flags.set_args(PackedStringArray(["seed=" + big]))
+		_check(Rng.flag_seed() == -1, "seed=%s is out of range, so it is ignored (not clamped or wrapped)" % big)
+	Flags.set_args(PackedStringArray(["seed=123456789012345678"]))
+	_check(Rng.flag_seed() == 123456789012345678, "the largest seed the flag takes is kept as it is")
 	Flags.set_args(PackedStringArray([]))
 
 
@@ -172,6 +165,22 @@ func _names_do_not_matter() -> void:
 	s.floor_map.monsters[2] = vex
 	await _press(flow, [2, 2, 1])
 	_check(s.stage == "intro" and s.foe == vex, "the second fight is the slice's VEX even if another monster is called VEX")
+
+
+## An ally's verdict on a deed and a recruit's starting loyalty are drawn at the fixed roll too, so ROOK's mood is the same
+## for every seed.
+func _allies_are_fixed() -> void:
+	var seen := {}
+	for seed_value in [1, 2, 3, 4, 5, 6, 7, 8]:
+		var flow = await _start(seed_value)
+		var s = flow.state
+		await _press(flow, [2, 2, 1]) # ROOK takes the cut and leaves; on to VEX
+		await _to_menu(flow)
+		await _press(flow, [3]) # VEX is spared and joins
+		var ally = s.allies[0]
+		flow.encounter.judge("spare")
+		seen["%s/%s" % [ally.loyalty, flow.encounter.pending_rows.size()]] = true
+	_check(seen.size() == 1, "a recruit's loyalty and what the ally thinks of a deed are the same for every seed (%s)" % [seen.keys()])
 
 
 func _retry_heals() -> void:

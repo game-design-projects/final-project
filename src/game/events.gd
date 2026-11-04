@@ -22,7 +22,7 @@ const FIELDS := {
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"dead": [],
 	"stairs": [], # reached the stairs
-	"new_floor": [],
+	"state_replaced": [], # a new floor or a loaded save replaced the game state; whoever holds the old one must let go
 	"pause_requested": [],
 	"leave": ["to"], # the player chose to go back to the main menu
 }

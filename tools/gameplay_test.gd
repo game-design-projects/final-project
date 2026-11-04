@@ -1,21 +1,13 @@
-## Checks the gameplay scene with no window: after NEW FLOOR (or dying and choosing it) the header, status row, dock and
-## overlay read the new floor's state, not the one that was replaced. Prints one line per check and exits with 1 if any failed.
+## Checks the gameplay scene with no window: after NEW FLOOR (or dying and choosing it) and after loading a save, the
+## header, status row, dock and overlay read the new state, not the one that was replaced. Prints one line per check and exits with 1 if any failed.
 ##   godot --headless --path . -s res://tools/gameplay_test.gd
-extends SceneTree
+extends "res://tools/test_base.gd"
 
 const Flags = preload("res://src/utils/flags.gd")
 
-const WATCHDOG_S := 60
 
-var _failed := 0
-
-
-func _initialize() -> void:
-	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
-	create_timer(WATCHDOG_S).timeout.connect(func():
-		print("gameplay_test: FAIL did not finish in %d s (a script error stopped it?)" % WATCHDOG_S)
-		quit(1))
-	_run.call_deferred()
+func _name() -> String:
+	return "gameplay_test"
 
 
 func _run() -> void:
@@ -33,8 +25,15 @@ func _run() -> void:
 	game.flow.state.stage = "dead"
 	await game.flow.new_run()
 	_check(_bound(game), "the same after a death")
-	print("gameplay_test: %s" % ("all checks passed" if _failed == 0 else "%d CHECK(S) FAILED" % _failed))
-	quit(1 if _failed > 0 else 0)
+	var saved: Dictionary = game.flow.state.to_dict()
+	await game.flow.new_run()
+	var before = game.flow.state
+	game.flow.state.gold = 99 # so the loaded state is told apart from the one it replaces
+	var loaded: bool = await game.flow.load_state(saved)
+	_check(loaded and game.flow.state != before, "loading a save makes a new state")
+	_check(_bound(game), "after loading a save the views read the loaded state (nothing else rebinds them)")
+	_check(not await game.flow.load_state({}) and _bound(game), "a save that cannot be loaded changes nothing")
+	_finish()
 
 
 func _bound(game) -> bool:
@@ -42,7 +41,3 @@ func _bound(game) -> bool:
 	return game._header.state == s and game._status.state == s and game._dock.state == s and game._overlay.state == s
 
 
-func _check(ok: bool, what: String) -> void:
-	print("gameplay_test: %s %s" % ["ok  " if ok else "FAIL", what])
-	if not ok:
-		_failed += 1
