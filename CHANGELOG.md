@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- `tools/menu_test.gd` checks the menu panel headless, and CI runs it.
+
+### Fixed
+- A random run's printed seed is never negative, so `seed=N` can replay it (about half of them printed a seed the flag rejected).
+- A key hint longer than the menu panel wraps instead of being cut off ("Changes apply at once and are kep"); the settings hint is shorter too.
+
 ## [0.6.0] - 2026-11-03
 
 ### Changed

@@ -226,7 +226,7 @@ func _layout() -> Dictionary:
 	else:
 		for item in _page.items:
 			inner += ROW_SUB if item.get("sub", "") != "" else ROW
-	var total := PAD + TITLE_H + 12.0 + inner + 12.0 + HINT_H + PAD
+	var total := PAD + TITLE_H + 12.0 + inner + 12.0 + hint_height() + PAD
 	var frame := Rect2(Vector2((size.x - WIDTH) * 0.5, (size.y - total) * 0.5).floor(), Vector2(WIDTH, total))
 	var y := frame.position.y + PAD + TITLE_H + 12.0
 	for item in _page.items:
@@ -235,6 +235,18 @@ func _layout() -> Dictionary:
 		y += rh
 	var inner_rect := Rect2(frame.position.x + PAD, frame.position.y + PAD + TITLE_H + 12.0, WIDTH - PAD * 2.0, inner)
 	return {"frame": frame, "rows": rows, "inner": inner_rect}
+
+
+## The line of key hints under the page, with its " · " gaps widened.
+func _hint_text() -> String:
+	return _page.get("hint", "UP / DOWN CHOOSE · ENTER PICK · ESC BACK").replace(" · ", "   ")
+
+
+## How tall the hint is: one line, or more when a long one wraps at the panel's edge instead of being cut off.
+func hint_height() -> float:
+	if _page.is_empty():
+		return HINT_H
+	return maxf(HINT_H, Fonts.body().get_multiline_string_size(_hint_text(), HORIZONTAL_ALIGNMENT_LEFT, WIDTH - PAD * 2.0, 18).y)
 
 
 func _place_children() -> void:
@@ -288,5 +300,5 @@ func _draw() -> void:
 			draw_string(title, r.position + Vector2(0.0, 24.0), shown, HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - 14.0, 12, Palette.YOU)
 		if item.get("sub", "") != "":
 			draw_string(body, r.position + Vector2(16.0, 46.0), item.sub, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32.0, 18, Palette.FAINT if off else Palette.DIM)
-	var hint: String = _page.get("hint", "UP / DOWN CHOOSE · ENTER PICK · ESC BACK").replace(" · ", "   ")
-	draw_string(body, frame.position + Vector2(PAD, frame.size.y - PAD - 2.0), hint, HORIZONTAL_ALIGNMENT_LEFT, WIDTH - PAD * 2.0, 18, Palette.DIM)
+	var top := frame.end.y - PAD - hint_height()
+	draw_multiline_string(body, Vector2(frame.position.x + PAD, top + 16.0), _hint_text(), HORIZONTAL_ALIGNMENT_LEFT, WIDTH - PAD * 2.0, 18, -1, Palette.DIM)

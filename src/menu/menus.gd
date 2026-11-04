@@ -176,7 +176,7 @@ static func _setting(key: String, label: String, sub := "") -> Dictionary:
 
 
 static func settings(panel) -> Dictionary:
-	return {"title": "SETTINGS", "hint": KEYS_HINT + " · Changes apply at once and are kept.", "items": [
+	return {"title": "SETTINGS", "hint": KEYS_HINT + " · Changes save at once.", "items": [
 		{"label": "DISPLAY", "sub": "Window, sync, frame rate", "act": _go(panel, func(): return display())},
 		{"label": "EFFECTS", "sub": "The glow, hit flashes, shaking", "act": _go(panel, func(): return effects())},
 		{"label": "SOUND", "act": _go(panel, func(): return sound())},

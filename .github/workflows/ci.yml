@@ -50,6 +50,11 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/slice_test.gd
+      # The menu panel: a long key hint wraps instead of being cut off at the edge.
+      - name: Check the menus
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/menu_test.gd
 
   build:
     needs: check

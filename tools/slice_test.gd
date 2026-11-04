@@ -20,6 +20,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	await _random_seed_repeats()
 	await _seed_flag()
 	await _pending_flag()
 	await _mind_is_pinned()
@@ -59,6 +60,20 @@ func _to_menu(flow) -> void:
 func _press(flow, keys: Array) -> void:
 	for k in keys:
 		await flow.press(str(k))
+
+
+## The seed a random run prints must be one `seed=N` accepts again (not negative) and must replay the same numbers.
+func _random_seed_repeats() -> void:
+	Flags.set_args(PackedStringArray([]))
+	var printable := true
+	var repeats := true
+	for i in 64:
+		var first := Rng.new()
+		var again := Rng.new(first.seed_value)
+		printable = printable and first.seed_value >= 0
+		repeats = repeats and again.seed_value == first.seed_value and again.real() == first.real()
+	_check(printable, "a random run's seed is never negative, so the flag can take it back")
+	_check(repeats, "a random run's printed seed replays the same run")
 
 
 func _seed_flag() -> void:

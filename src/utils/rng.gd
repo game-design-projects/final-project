@@ -16,7 +16,7 @@ func _init(seed := -1) -> void:
 		seed = int(Flags.value("seed", "-1"))
 	if seed < 0:
 		_gen.randomize()
-		seed = _gen.seed
+		seed = _gen.seed & 0x7FFFFFFFFFFFFFFF # the engine's seed is unsigned; a negative one could not be passed back as `seed=N`
 	seed_value = seed
 	_gen.seed = seed
 	print_verbose("rng: seed %d" % seed)
