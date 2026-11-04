@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/menu_test.gd
-      # The save slots: write, read, rename, copy, delete, and `nosave` keeping all of it away from saved data.
+      # The save slots: write, read, rename, copy, delete, and `nosave` keeping them in memory, off the disk.
       - name: Check the saves
         run: |
           set -euo pipefail

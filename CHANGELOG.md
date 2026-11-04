@@ -7,7 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - `tools/menu_test.gd` checks the menu panel and the credits headless, and CI runs it.
 - `tools/saves_test.gd` checks the save slots in a folder of their own, including `nosave`, and CI runs it.
-- A slice test reads the game's sources and fails if an interaction chance is drawn around `Flow`, so the fixed roll cannot be missed again.
+- `Dice` (`src/utils/dice.gd`) is the one source of interaction chances; the slice pins it, and `Odds` and `Allies` take a Dice and not a Rng, so a draw cannot go around the fixed roll.
 - `tools/gameplay_test.gd` checks that the views follow the state after NEW FLOOR, a death and a load, and CI runs it.
 - `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
 
@@ -27,6 +27,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - `seed=abc` in the slice warns that it uses 7042 instead.
 - `tools/autoplay.gd` reads `seed=` through the same rule, so `seed=abc` plays the default seeds with a warning, and a seed near the largest no longer wraps its autopilot seed negative.
 - A bad `seed=` gives one warning that names the fallback; `seed=-0` is seed 0 again.
+- A bare `seed` or `seed=` is warned about instead of silently ignored, and autoplay's warning says it plays the default seeds.
+- Continue offers the later of two saves made in the same second (each save carries a write counter).
+- `tools/slice_test.gd` and `tools/menu_test.gd` cover the dice, the seed offset and the DATA page under `nosave`.
 - The random-seed test cleared no flag between rounds and so tested one seed (it passed about half the time with the bug); the credits test no longer matches any line ending in CREDITS.
 - A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.
 - The slice's bandits are built from the roster's own bandit line, like the floor's.

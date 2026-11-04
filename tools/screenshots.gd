@@ -1,7 +1,7 @@
 ## Takes pictures of the game in its typical moments, to look at: the main menu, walking, the pause menu, a monster ahead, the fight menu, the strike
 ## bar, each kind of dodge, the champion, the result, the stairs. It needs a real window (it opens one briefly):
 ##   godot --path . -s res://tools/screenshots.gd -- out=/some/dir seed=7
-## Without `out` the pictures go to user://shots. It prints where. It never saves (the `nosave` flag is always on).
+## Without `out` the pictures go to user://shots. It prints where. Nothing reaches the player's saves (the `nosave` flag is always on, so a save stays in memory).
 extends SceneTree
 
 const FloorMap = preload("res://src/rules/floor_map.gd")

@@ -1,6 +1,7 @@
 ## Save slots: "auto" (the game writes it itself) and 1..SLOTS (the player's). One JSON file each in `dir_path`:
-## {version, name, summary, saved_at, state}. A file is written beside its slot and renamed over it, so a crash mid-write
-## keeps the old save, and a damaged file shows as a damaged slot rather than raising.
+## {version, name, summary, saved_at, seq, state}. A file is written beside its slot and renamed over it, so a crash mid-write
+## keeps the old save, and a damaged file shows as a damaged slot rather than raising. With the `nosave` flag the slots are kept in
+## memory for the run instead, and nothing is read from or written to `dir_path`.
 extends RefCounted
 
 const Flags = preload("res://src/utils/flags.gd")
@@ -10,12 +11,20 @@ const AUTO := "auto"
 const VERSION := 2 # 1 was the first game's format; its saves are shown as old and not loaded
 const NAME_MAX := 24
 
-## Where the saves live. Tools that must not touch the player's saves point this somewhere else.
+## Where the saves live. A test that writes real files points this somewhere else (a scenario run uses `nosave`).
 static var dir_path := "user://saves"
 
 ## With the `nosave` flag the slots live here, in memory, and the player's saves are neither read nor changed: a scenario
 ## run can save, list and load as usual, and nothing reaches the disk. slot -> document.
 static var _memory := {}
+
+## Counts the writes of this run, so of two saves made in the same second the later one is the newer.
+static var _seq := 0
+
+
+static func _next_seq() -> int:
+	_seq += 1
+	return _seq
 
 
 ## Whether the slots are kept in memory (the `nosave` flag).
@@ -49,7 +58,7 @@ static func write(slot: String, state: Dictionary, summary: String, name := "") 
 		return false
 	if name == "":
 		name = info(slot).name
-	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(Time.get_unix_time_from_system()), "state": var_to_str(state)}, slot)
+	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(Time.get_unix_time_from_system()), "seq": _next_seq(), "state": var_to_str(state)}, slot)
 
 
 ## What a slot list shows: {slot, empty, corrupt, name, summary, saved_at}.
@@ -64,7 +73,7 @@ static func info(slot: String) -> Dictionary:
 	if int(doc.get("version", 0)) != VERSION:
 		none.merge({"empty": false, "corrupt": true, "summary": "OLD SAVE, NOT COMPATIBLE"}, true)
 		return none
-	none.merge({"empty": false, "name": str(doc.get("name", "")), "summary": str(doc.get("summary", "")), "saved_at": int(doc.get("saved_at", 0))}, true)
+	none.merge({"empty": false, "name": str(doc.get("name", "")), "summary": str(doc.get("summary", "")), "saved_at": int(doc.get("saved_at", 0)), "seq": int(doc.get("seq", 0))}, true)
 	return none
 
 
@@ -85,7 +94,7 @@ static func list() -> Array:
 static func latest() -> Dictionary:
 	var best := {}
 	for i in list():
-		if not i.empty and not i.corrupt and (best.is_empty() or i.saved_at > best.saved_at):
+		if not i.empty and not i.corrupt and (best.is_empty() or i.saved_at > best.saved_at or (i.saved_at == best.saved_at and i.seq > best.seq)):
 			best = i
 	return best
 

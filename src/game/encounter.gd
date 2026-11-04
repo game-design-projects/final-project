@@ -59,7 +59,7 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 		feelings = await flow.mind.feeling_when_hit(m)
 	else:
 		feelings = await flow.mind.feeling_when_told(m, act)
-	var id: String = flow.pick_by_odds(feelings)
+	var id := Odds.pick_by_odds(flow.dice, feelings)
 	var feeling := Feelings.apply(m, id)
 	var mercy: float = await flow.mind.mercy(m)
 	var pressure: float = await flow.mind.pressure(m)
@@ -106,7 +106,7 @@ func judge(deed: String) -> void:
 	for a in s.allies.duplicate():
 		if deed == "" or not Allies.has_opinion(a.species, deed):
 			continue
-		var verdict: Dictionary = flow.judge_ally(a, deed)
+		var verdict := Allies.judge(a, deed, flow.dice)
 		pending_rows.append({"id": "judge-" + a.name, "label": "%s JUDGES IT (0 HATES - 4 LOVES)" % a.name, "answer": verdict.score, "odds": verdict.odds})
 		var reactions: Dictionary = Content.species(a.species).reactions
 		if verdict.reaction != "":
@@ -131,10 +131,10 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	if how == "spared" and allow_join:
 		var room: bool = s.allies.size() < Combat.PARTY_MAX
 		var wants: float = await flow.mind.join(m) if room else 0.0
-		joined = flow.succeeds(wants)
+		joined = Odds.succeeds(flow.dice, wants)
 		rows.append({"id": "join", "label": "DOES IT WANT TO COME ALONG?" if room else "DOES IT WANT TO COME ALONG? (PARTY FULL)", "answer": wants, "picked": joined})
 		if joined:
-			s.allies.append(Ally.make(m.species, m.name, flow.start_loyalty()))
+			s.allies.append(Ally.make(m.species, m.name, Allies.start_loyalty(flow.dice)))
 			s.tally.recruited += 1
 			flow.event("recruited", {"species": m.species})
 		line = foe_line(m, "join_party" if joined else "leave_peacefully")
@@ -159,7 +159,7 @@ func offer_cut(m, label: String, words = null) -> void:
 		s.say([State.sys_line(Texts.cut_too_poor(s.gold, words != null))])
 		await flow.go("menu")
 		return
-	var accepted: bool = flow.succeeds(Odds.cut_odds(m))
+	var accepted := Odds.succeeds(flow.dice, Odds.cut_odds(m))
 	var refusal := Texts.cut_refused(m) # worded from how it felt before this offer shifts its mood
 	var decision := await decide(m, [{"intent": "gold", "w": 1.0}], label, words)
 	judge("gold")

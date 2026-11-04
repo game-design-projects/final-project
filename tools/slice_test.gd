@@ -3,12 +3,15 @@
 ##   godot --headless --path . -s res://tools/slice_test.gd
 extends "res://tools/test_base.gd"
 
+const Allies = preload("res://src/rules/allies.gd")
 const Content = preload("res://src/rules/content.gd")
+const Dice = preload("res://src/utils/dice.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const Monster = preload("res://src/rules/monster.gd")
+const Odds = preload("res://src/rules/odds.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
@@ -30,7 +33,8 @@ func _run() -> void:
 	await _names_do_not_matter()
 	await _allies_are_fixed()
 	await _flee_judges_before_it_ends()
-	_draws_go_through_the_flow()
+	_dice_pin()
+	_seed_offset()
 	await _retry_heals()
 	await _flee_ends_it()
 	_finish()
@@ -62,7 +66,6 @@ func _press(flow, keys: Array) -> void:
 
 ## The seed a random run prints must be one `seed=N` accepts again (not negative) and must replay the same numbers.
 func _random_seed_repeats() -> void:
-	Flags.set_args(PackedStringArray([]))
 	var printable := true
 	var repeats := true
 	for i in 64:
@@ -173,6 +176,15 @@ func _names_do_not_matter() -> void:
 	_check(s.stage == "intro" and s.foe == vex, "the second fight is the slice's VEX even if another monster is called VEX")
 
 
+## A slice flow with ROOK sent off and VEX spared and recruited, back in the explore stage.
+func _with_recruit(seed_value: int):
+	var flow = await _start(seed_value)
+	await _press(flow, [2, 2, 1]) # ROOK takes the cut and leaves; on to VEX
+	await _to_menu(flow)
+	await _press(flow, [3]) # VEX is spared and joins
+	return flow
+
+
 ## An ally's verdict on a deed, whether it leaves and a recruit's starting loyalty are drawn at the fixed roll too, so the
 ## same actions leave the ally in the same mood for every seed: after sparing, and with loyalty low enough for the leaving
 ## roll to be drawn. (Fleeing is `_flee_judges_before_it_ends`.)
@@ -180,11 +192,8 @@ func _allies_are_fixed() -> void:
 	var after_spare := {}
 	var after_low := {}
 	for seed_value in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
-		var flow = await _start(seed_value)
+		var flow = await _with_recruit(seed_value)
 		var s = flow.state
-		await _press(flow, [2, 2, 1]) # ROOK takes the cut and leaves; on to VEX
-		await _to_menu(flow)
-		await _press(flow, [3]) # VEX is spared and joins
 		var ally = s.allies[0]
 		after_spare[ally.loyalty] = true
 		ally.loyalty = 35.0 # a verdict that lowers it goes under the line, so the leaving roll is drawn
@@ -198,13 +207,10 @@ func _allies_are_fixed() -> void:
 func _flee_judges_before_it_ends() -> void:
 	var seen := {}
 	for seed_value in [1, 2, 3, 4, 5, 6]:
-		var flow = await _start(seed_value)
+		var flow = await _with_recruit(seed_value)
 		var s = flow.state
-		await _press(flow, [2, 2, 1])
-		await _to_menu(flow)
-		await _press(flow, [3]) # VEX joins
 		await _press(flow, [1])
-		flow.fixed_roll = 0.5
+		flow.fixed_roll = PersonalitySlice.ROLL
 		var foe = s.floor_map.monsters[2]
 		await flow.go("intro", {"foe": foe})
 		await _to_menu(flow)
@@ -231,16 +237,26 @@ func _flee_ends_it() -> void:
 	_check(flow.fixed_roll < 0.0 and flow.slice_queue.is_empty(), "fleeing ends the slice")
 
 
-## Every interaction chance is drawn through the flow, which applies the slice's fixed roll; a draw made straight from the
-## rng or the odds would silently vary by seed in the slice. Reads the game's sources for one.
-func _draws_go_through_the_flow() -> void:
-	var offenders := []
-	for dir in ["res://src/game", "res://src/game/stages"]:
-		for file in DirAccess.get_files_at(dir):
-			if not file.ends_with(".gd") or (dir == "res://src/game" and file == "flow.gd"):
-				continue
-			var text := FileAccess.get_file_as_string("%s/%s" % [dir, file])
-			for call in ["Odds.succeeds(", "Odds.pick_by_odds(", "Allies.judge(", "Allies.start_loyalty("]:
-				if text.contains(call):
-					offenders.append("%s uses %s" % [file, call])
-	_check(offenders.is_empty(), "no game script draws an interaction chance around the flow (%s)" % [offenders])
+## A pinned Dice gives the same draw every time, so the same odds give the same outcome; an unpinned one does not.
+func _dice_pin() -> void:
+	var dice := Dice.new(Rng.new(5))
+	dice.pinned = 0.5
+	_check(Odds.succeeds(dice, 0.6) and not Odds.succeeds(dice, 0.4), "a pinned dice draws 0.5 every time: 60% succeeds, 40% does not")
+	_check(Odds.pick_by_odds(dice, {"a": 0.5, "b": 0.5}) == Odds.pick_by_odds(dice, {"a": 0.5, "b": 0.5}), "a pinned dice picks the same key every time")
+	var varied := {}
+	dice.pinned = -1.0
+	for i in 32:
+		varied[Allies.start_loyalty(dice)] = true
+	_check(varied.size() > 1, "an unpinned dice follows the generator (loyalty varies)")
+	dice.pinned = 0.0
+	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MIN), "the lowest draw gives the lowest starting loyalty")
+	dice.pinned = 0.999
+	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "the highest draw gives the highest starting loyalty")
+
+
+## A seed derived from another wraps past the largest seed and stays one the flag takes back.
+func _seed_offset() -> void:
+	_check(Rng.offset(7, 1000) == 1007, "an offset of a small seed is plain addition")
+	var wrapped := Rng.offset(Rng.MAX_SEED, 1000)
+	_check(wrapped >= 0 and wrapped == 999, "an offset past the largest seed wraps to a non-negative seed (%d)" % wrapped)
+	_check(str(Rng.MAX_SEED) == Rng.INT64_MAX_TEXT, "the text the flag is compared with is the largest seed")

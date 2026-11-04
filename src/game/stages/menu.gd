@@ -44,7 +44,7 @@ func _spare(flow) -> void:
 	var s = flow.state
 	var m = s.foe
 	var odds: float = await flow.mind.mercy(m)
-	var accepted: bool = flow.succeeds(odds)
+	var accepted := Odds.succeeds(flow.dice, odds)
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": odds, "picked": accepted}]
 	if accepted:
 		flow.encounter.judge("spare")

@@ -6,12 +6,11 @@
 ## input is dropped while one is still working (`busy`).
 extends RefCounted
 
-const Allies = preload("res://src/rules/allies.gd")
+const Dice = preload("res://src/utils/dice.gd")
 const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const Flags = preload("res://src/utils/flags.gd")
-const Odds = preload("res://src/rules/odds.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
@@ -36,6 +35,8 @@ signal happened(name: String, data: Dictionary)
 
 var state # State
 var rng
+## Where the chances of an interaction are drawn (see dice.gd); the slice pins it.
+var dice: Dice
 var mind
 var encounter
 ## The game clock in ms, as last given to `tick`.
@@ -45,7 +46,11 @@ var busy := false
 ## the answer, a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds
 ## the monsters still to fight. `slice_floor` marks the floor the slice was made on, which is never autosaved; a new floor
 ## or a load clears it.
-var fixed_roll := -1.0
+var fixed_roll: float:
+	get:
+		return dice.pinned
+	set(value):
+		dice.pinned = value
 var slice_queue: Array = []
 var slice_floor := false
 
@@ -55,6 +60,7 @@ var _since := 0.0 # clock when the current stage began
 
 func _init(game_rng, game_mind) -> void:
 	rng = game_rng
+	dice = Dice.new(game_rng)
 	mind = game_mind
 	encounter = Encounter.new(self)
 	for name in STAGES:
@@ -105,25 +111,6 @@ func autosave_allowed() -> bool:
 func _forget_slice() -> void:
 	end_slice()
 	slice_floor = false
-
-
-## The chances of an interaction. Every one is drawn through these four, so the slice's fixed roll cannot be missed at a
-## call site (a test reads the sources for a draw that bypasses them).
-func succeeds(p: float) -> bool:
-	return Odds.succeeds(rng, p, fixed_roll)
-
-
-func pick_by_odds(probs: Dictionary) -> String:
-	return Odds.pick_by_odds(rng, probs, fixed_roll)
-
-
-func start_loyalty() -> float:
-	return Allies.start_loyalty(rng, fixed_roll)
-
-
-## One ally judging one deed (see Allies.judge).
-func judge_ally(ally, deed: String) -> Dictionary:
-	return Allies.judge(ally, deed, rng, fixed_roll)
 
 
 ## Back to ordinary rolls (and no queued fight).

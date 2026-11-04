@@ -1,5 +1,5 @@
 ## Checks the save slots with no window, in a folder of their own: the round trip, rename, copy and delete, and that the
-## `nosave` flag keeps all of it away from saved data (reading, writing, renaming, copying and deleting).
+## `nosave` flag keeping the slots in memory, off the disk and away from the player's saves.
 ##   godot --headless --path . -s res://tools/saves_test.gd
 extends "res://tools/test_base.gd"
 
@@ -17,7 +17,6 @@ func _run() -> void:
 	Saves = load("res://src/menu/saves.gd")
 	_dir = "user://saves_test_%d" % Time.get_ticks_usec()
 	Saves.dir_path = _dir
-	assert(Saves.dir_path != "user://saves", "saves_test: refusing to run on the player's saves")
 	if Saves.dir_path == "user://saves":
 		_check(false, "the test's folder replaced the player's save folder, so it did not run")
 		_finish()
@@ -39,6 +38,11 @@ func _round_trip() -> void:
 	Saves.delete("2")
 	_check(Saves.info("2").empty, "a slot can be deleted")
 	_check(Saves.latest().slot == "1", "Continue offers the newest save")
+	Saves.write(Saves.AUTO, {"hp": 9}, "HP 9/20")
+	Saves.write("5", {"hp": 8}, "HP 8/20") # the same second as the autosave, and later
+	_check(Saves.latest().slot == "5", "of two saves from the same second, Continue offers the later one")
+	Saves.write(Saves.AUTO, {"hp": 7}, "HP 7/20")
+	_check(Saves.latest().slot == Saves.AUTO, "and the autosave again once it is the later one")
 
 
 ## With the flag on, saving, listing, renaming, copying and deleting work in memory, and the player's saves are neither seen
@@ -52,6 +56,9 @@ func _nosave_in_memory() -> void:
 	_check(Saves.copy("3", "4") and Saves.read("4") == {"hp": 1} and not FileAccess.file_exists(Saves.path("4")), "nosave: a slot can be copied, in memory")
 	Saves.delete("3")
 	_check(Saves.info("3").empty and not Saves.info("4").empty, "nosave: a slot can be deleted")
+	Saves.write("6", {"hp": 2}, "HP 2/20")
+	Saves.write(Saves.AUTO, {"hp": 3}, "HP 3/20")
+	_check(Saves.latest().slot == Saves.AUTO, "nosave: of two saves from the same second, Continue offers the later one")
 	Saves.delete_all()
 	_check(Saves.list().all(func(i): return i.empty), "nosave: delete all clears the memory")
 	Flags.set_args(PackedStringArray([]))

@@ -61,7 +61,7 @@ func _say(flow, text: String) -> void:
 	if top == "gibberish":
 		lines.append(State.sys_line(Texts.NOT_UNDERSTOOD))
 	elif asked:
-		if flow.succeeds(Odds.reveal_odds(m)):
+		if Odds.succeeds(flow.dice, Odds.reveal_odds(m)):
 			var hint := Hints.answer(s.floor_map, s.cell, m, text).trim_prefix("...")
 			lines.append(State.speech(m.name, "%s: %s" % [Texts.reveal_reason(m), hint]))
 		else:

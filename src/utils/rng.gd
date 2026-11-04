@@ -4,7 +4,8 @@ extends RefCounted
 
 const Flags = preload("res://src/utils/flags.gd")
 
-const INT64_MAX_TEXT := "9223372036854775807"
+const MAX_SEED := 0x7FFFFFFFFFFFFFFF
+const INT64_MAX_TEXT := "9223372036854775807" # MAX_SEED as text, for comparing a flag without `int()` overflowing
 
 ## The seed this generator started from, so a run can print it and be repeated.
 var seed_value := 0
@@ -19,7 +20,7 @@ func _init(seed := -1) -> void:
 		seed = flag_seed()
 	if seed < 0:
 		_gen.randomize()
-		seed = _gen.seed & 0x7FFFFFFFFFFFFFFF # the engine's seed is unsigned; a negative one could not be passed back as `seed=N`
+		seed = _gen.seed & MAX_SEED # the engine's seed is unsigned; a negative one could not be passed back as `seed=N`
 	seed_value = seed
 	_gen.seed = seed
 	print_verbose("rng: seed %d" % seed)
@@ -31,9 +32,14 @@ func _init(seed := -1) -> void:
 static func flag_seed(fallback := "using a random one") -> int:
 	var text := Flags.value("seed", "")
 	var seed := _parse_seed(text)
-	if seed < 0 and text != "":
+	if seed < 0 and Flags.on("seed"): # a bare `seed` or `seed=` too
 		push_warning("rng: seed=%s is not a seed (a whole number from 0 to %s); %s" % [text, INT64_MAX_TEXT, fallback])
 	return seed
+
+
+## A seed for another generator derived from this one (`seed + n`), wrapped to stay a seed.
+static func offset(seed: int, n: int) -> int:
+	return (seed + n) & MAX_SEED
 
 
 ## -1 unless the text is a whole number that fits 0..INT64_MAX (`-0` is 0). Compared as text, because `int()` clamps or wraps

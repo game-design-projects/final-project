@@ -3,8 +3,8 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Dice = preload("res://src/utils/dice.gd")
 const Odds = preload("res://src/rules/odds.gd")
-const Rng = preload("res://src/utils/rng.gd")
 
 const SCORES := 5 # a judgement is 0 (hates it) .. 4 (loves it)
 const NEUTRAL := 2
@@ -14,11 +14,8 @@ const START_LOYALTY_MIN := 60
 const START_LOYALTY_MAX := 80
 
 
-## `roll` in [0, 1) fixes the draw for a repeatable run.
-static func start_loyalty(rng: Rng, roll := -1.0) -> float:
-	if roll >= 0.0:
-		return float(START_LOYALTY_MIN + int(roll * (START_LOYALTY_MAX - START_LOYALTY_MIN + 1)))
-	return float(rng.int_range(START_LOYALTY_MIN, START_LOYALTY_MAX))
+static func start_loyalty(dice: Dice) -> float:
+	return float(START_LOYALTY_MIN + int(dice.real() * (START_LOYALTY_MAX - START_LOYALTY_MIN + 1)))
 
 
 ## Does an ally of this species have an opinion on this deed? ("slay", "spare", "flee", or a kind of words)
@@ -46,16 +43,15 @@ static func leave_odds(loyalty: float) -> float:
 
 
 ## One ally judging one deed. Changes its loyalty and returns what happened: its score, the kind of reaction line
-## ("approve", "disapprove" or "" for a shrug), and whether it walked out. `roll` in [0, 1) fixes both draws (the
-## score and the leaving) for a repeatable run.
-static func judge(ally, deed: String, rng: Rng, roll := -1.0) -> Dictionary:
+## ("approve", "disapprove" or "" for a shrug), and whether it walked out. 
+static func judge(ally, deed: String, dice: Dice) -> Dictionary:
 	var odds := score_odds(ally.species, deed)
-	var score := int(Odds.pick_by_odds(rng, odds, roll))
+	var score := int(Odds.pick_by_odds(dice, odds))
 	ally.loyalty = clampf(ally.loyalty + (score - NEUTRAL) * LOYALTY_PER_POINT, 0.0, 100.0)
 	var reaction := "disapprove" if score <= 1 else ("approve" if score >= 3 else "")
 	var leaves := false
 	if ally.loyalty < LEAVE_BELOW:
-		leaves = Odds.succeeds(rng, leave_odds(ally.loyalty), roll)
+		leaves = Odds.succeeds(dice, leave_odds(ally.loyalty))
 	print_verbose("allies: %s judges '%s': score %d, loyalty %.0f%s" % [ally.name, deed, score, ally.loyalty, ", leaves" if leaves else ""])
 	return {"score": score, "reaction": reaction, "leaves": leaves, "odds": odds}
 

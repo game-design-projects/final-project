@@ -2,8 +2,8 @@
 ## roll, so what can happen never depends on who is answering.
 extends RefCounted
 
+const Dice = preload("res://src/utils/dice.gd")
 const Monster = preload("res://src/rules/monster.gd")
-const Rng = preload("res://src/utils/rng.gd")
 
 ## An answer less likely than this never happens (unless nothing is that likely).
 const POSSIBLE := 0.15
@@ -31,9 +31,8 @@ static func softmax(logits: Dictionary) -> Dictionary:
 	return out
 
 
-## Picks one key by its probability, among those at least POSSIBLE (or the likeliest, if none is). `roll` in [0, 1)
-## fixes the draw for a repeatable run.
-static func pick_by_odds(rng: Rng, probs: Dictionary, roll := -1.0) -> String:
+## Picks one key by its probability, among those at least POSSIBLE (or the likeliest, if none is).
+static func pick_by_odds(dice: Dice, probs: Dictionary) -> String:
 	var pool := []
 	for k in probs:
 		if probs[k] >= POSSIBLE:
@@ -47,7 +46,7 @@ static func pick_by_odds(rng: Rng, probs: Dictionary, roll := -1.0) -> String:
 	var total := 0.0
 	for entry in pool:
 		total += entry[1]
-	var r := (rng.real() if roll < 0.0 else roll) * total
+	var r := dice.real() * total
 	for entry in pool:
 		r -= entry[1]
 		if r <= 0.0:
@@ -93,6 +92,6 @@ static func cut_odds(m) -> float:
 	return clampf(sigmoid(willingness * 1.7), ODDS_MIN, ODDS_MAX)
 
 
-## One draw against the odds. `roll` in [0, 1) fixes the draw.
-static func succeeds(rng: Rng, odds: float, roll := -1.0) -> bool:
-	return (rng.real() if roll < 0.0 else roll) < odds
+## One draw against the odds.
+static func succeeds(dice: Dice, odds: float) -> bool:
+	return dice.real() < odds

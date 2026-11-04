@@ -3,6 +3,7 @@
 ##   godot --headless --path . -s res://tools/menu_test.gd
 extends "res://tools/test_base.gd"
 
+const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 
 # loaded when the test runs: the menus read the Store autoload, which a `-s` script is compiled before
@@ -21,6 +22,7 @@ func _run() -> void:
 	root.add_child(panel)
 	await _hints_fit(panel)
 	_credits_have_one_title()
+	_data_page_and_nosave(panel)
 	_finish()
 
 
@@ -64,3 +66,13 @@ func _credits_have_one_title() -> void:
 			first = line.strip_edges()
 			break
 	_check(page.title == "CREDITS" and first != "" and not first.to_upper().contains("CREDITS"), "the credits text does not start with the CREDITS heading again (starts: %s)" % first.left(30))
+
+
+## DATA offers OPEN SAVE FOLDER, except with `nosave`: the saves are then in memory, and the folder is the player's real one.
+func _data_page_and_nosave(panel) -> void:
+	var labels := func() -> Array: return Menus.data(panel).items.map(func(i): return i.label)
+	Flags.set_args(PackedStringArray([]))
+	_check(labels.call().has("OPEN SAVE FOLDER"), "the DATA page offers OPEN SAVE FOLDER")
+	Flags.set_args(PackedStringArray(["nosave"]))
+	_check(not labels.call().has("OPEN SAVE FOLDER"), "with nosave the DATA page does not open the player's real save folder")
+	Flags.set_args(PackedStringArray([]))
