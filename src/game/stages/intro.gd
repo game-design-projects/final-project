@@ -32,7 +32,7 @@ func enter(flow, args: Dictionary) -> void:
 	var before: Array = args.get("before", [])
 	var ended: Array = before.filter(func(l): return l.kind == "sys").slice(-1) # the verdict of the fight before (the last game line, after the foe's farewell), in the personality slice
 	var lines: Array = ended if not ended.is_empty() else before.slice(0, 1)
-	var greeting = flow.encounter.foe_line(m, "converse")
+	var greeting = flow.encounter.greeting(m)
 	if greeting != null:
 		lines.append(greeting)
 	lines.append(State.sys_line(rule))

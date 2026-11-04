@@ -98,6 +98,8 @@ func _feelings() -> Dictionary:
 
 func _state(m, extra: Dictionary) -> Dictionary:
 	var s := {"monster": {"species": m.species, "name": m.name, "boss": m.boss, "traits": m.traits, "meters": m.meters, "health": snappedf(m.hp_fraction(), 0.01)}}
+	if not m.heard.is_empty():
+		s["history"] = {"clan": m.heard.clan, "standing": m.heard.standing, "heard": m.heard.heard}
 	s.merge(extra)
 	return s
 

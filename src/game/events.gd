@@ -22,6 +22,7 @@ const FIELDS := {
 	"said": ["text"], # you sent a typed line
 	"mood": ["tone"], # how the last deed landed: good, bad or odd
 	"wants_join": [], # mercy just became likely
+	"word_spread": ["clan", "tone"], # a monster met you having heard what you did to its clan
 	"spared": ["boss"],
 	"slain": ["boss"],
 	"recruited": ["species"],

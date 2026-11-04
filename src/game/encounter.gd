@@ -4,6 +4,7 @@ extends RefCounted
 
 const Ally = preload("res://src/game/ally.gd")
 const Allies = preload("res://src/rules/allies.gd")
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
@@ -33,13 +34,34 @@ func foe_genre(m) -> String:
 
 ## A line of speech from the monster ({kind: "say", who, text}), or null if its species has none of that kind.
 ## Tells the sound to voice it.
-func foe_line(m, kind: String):
+func foe_line(m, kind: String, who := ""):
 	var pool: Array = Content.species(m.species).lines.get(kind, [])
 	if pool.is_empty():
 		return null
-	var text := Content.fill(flow.rng.pick(pool), {"name": m.name.left(1) + m.name.substr(1).to_lower(), "target": "you"})
+	var text := Content.fill(flow.rng.pick(pool), {"name": _spoken(m.name), "target": "you", "kin": _spoken(who)})
 	flow.event("shout", {"text": text, "species": m.species, "boss": m.boss})
 	return State.speech(m.name, text)
+
+
+## A NAME as it is said out loud: Name.
+static func _spoken(a_name: String) -> String:
+	return a_name.left(1) + a_name.substr(1).to_lower()
+
+
+## `m` meets you, having heard what you did to its clan. Its mood has moved by the time this returns. The line it says about
+## it, or its usual greeting when it has heard nothing new.
+func greeting(m):
+	if not flow.feature("clans"):
+		return foe_line(m, "converse")
+	var news: Dictionary = Clans.hear(m, flow.state)
+	if news.is_empty():
+		return foe_line(m, "converse")
+	flow.event("word_spread", {"clan": news.clan, "tone": news.tone})
+	if flow.feature("mood-cues"):
+		flow.event("mood", {"tone": news.tone})
+	if not flow.banner_up():
+		flow.announce("WORD HAS SPREAD", Clans.news(news))
+	return foe_line(m, news.kind, news.who)
 
 
 func spareable(m) -> bool:
@@ -166,6 +188,8 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	m.gone = how
 	s.tally[how] += 1
 	flow.event(how, {"boss": m.boss})
+	if flow.feature("clans"):
+		Clans.record(s, m, how)
 	if m.boss and flow.feature("boss-reward"):
 		_reward_for_champion(m)
 	if how == "spared" and allow_join and flow.feature("recruit-step"):
@@ -183,6 +207,8 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 			s.allies.append(Ally.make(m.species, m.name, Allies.start_loyalty(flow.dice)))
 			s.tally.recruited += 1
 			flow.event("recruited", {"species": m.species})
+			if flow.feature("clans"):
+				Clans.record(s, m, "recruited")
 		line = foe_line(m, "join_party" if joined else "leave_peacefully")
 	elif how == "spared":
 		line = foe_line(m, "leave_peacefully")
@@ -213,6 +239,8 @@ func take_along(m, wants: float) -> void:
 	s.allies.append(Ally.make(m.species, m.name, Allies.eager_loyalty(flow.dice, wants)))
 	s.tally.recruited += 1
 	flow.event("recruited", {"species": m.species})
+	if flow.feature("clans"):
+		Clans.record(s, m, "recruited")
 	var charm: Dictionary = Content.table("encounter").charms[m.species]
 	var healed := _heal(Allies.gift(m.species).heal)
 	flow.announce(Texts.joined_title(m), "%s: %s" % [charm.name, charm.text])

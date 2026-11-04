@@ -1,0 +1,13 @@
+{
+ "deeds": {"spared": 14, "recruited": 8, "slain": -18},
+ "champion_weight": 1.5,
+ "spill": 0.5,
+ "mood": {"friendliness": 0.5, "anger": -0.4},
+ "clans": {
+  "burrow": {"name": "The Burrow", "side": "under", "species": ["slime"]},
+  "old_stone": {"name": "The Old Stone", "side": "under", "species": ["rock"]},
+  "crew": {"name": "The Crew", "side": "takers", "species": ["bandit"]},
+  "coil": {"name": "The Coil", "side": "takers", "species": ["snake"]},
+  "hoard": {"name": "The Hoard", "side": "", "hears_all": 0.25, "species": ["dragon"]}
+ }
+}

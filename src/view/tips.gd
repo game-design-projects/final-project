@@ -8,6 +8,7 @@ extends Control
 
 const Automap = preload("res://src/view/automap.gd")
 const Allies = preload("res://src/rules/allies.gd")
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
@@ -206,6 +207,8 @@ static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gr
 		if not clues.is_empty():
 			text += "\nIt %s." % ". It ".join(clues)
 		out.append({"kind": "text", "text": text})
+	if not m.heard.is_empty():
+		out.append({"kind": "text", "text": "%s heard you %s %s." % [Clans.title(m.heard.clan), "killed" if m.heard.deed == "slain" else "spared", m.heard.who]})
 	out.append({"kind": "meters", "cells": [["FRIENDLY", roundi(m.meters.friendliness)], ["ANGER", roundi(m.meters.anger)], ["FEAR", roundi(m.meters.fear)]]})
 	for row in (rows if shown <= 0 else rows.slice(-shown)):
 		out.append(question(row))

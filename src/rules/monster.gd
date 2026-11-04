@@ -21,6 +21,8 @@ var traits: Array = []
 var checks := 0
 var tried := {}
 var known_traits: Array = []
+## What it has heard of you from its clan (rules/clans.gd): {clan, standing, deed, who, heard}, or empty.
+var heard := {}
 ## Per intent (kindness, joke, gold, ...) how much this one monster likes it, on top of its species' leaning.
 var taste := {}
 var last_intent := ""
@@ -147,7 +149,7 @@ func to_dict() -> Dictionary:
 		"species": species, "genre": genre, "boss": boss, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
 		"meters": meters.duplicate(), "traits": traits.duplicate(), "taste": taste.duplicate(), "lastIntent": last_intent,
 		"spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
-		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(),
+		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
 	}
 
 
@@ -174,4 +176,5 @@ static func from_dict(d: Dictionary):
 	m.checks = maxi(0, int(d.get("checks", 0)))
 	m.tried = d.get("tried", {}).duplicate()
 	m.known_traits = d.get("knownTraits", []).duplicate()
+	m.heard = d.get("heard", {}).duplicate()
 	return m

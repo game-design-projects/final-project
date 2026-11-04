@@ -1,9 +1,11 @@
 ## How long recruiting takes against killing, on the local rules: for each kind of monster, over many seeds, repeating the ACT
 ## that brings it round fastest (gold offers left out, as they end the fight with no recruit). It assumes the player already
 ## knows the best ACT, and measures turns, not how hard the dodging is.
+## `standing=N` measures monsters whose clan already thinks that of you (-100..100).
 ##   godot --headless --path . -s res://tools/sim_recruit.gd -- nosave nosound
 extends SceneTree
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dice = preload("res://src/utils/dice.gd")
@@ -39,6 +41,9 @@ func _measure(entry: Dictionary) -> void:
 		var rng := Rng.new(i + 1)
 		var mind = LocalMind.new()
 		var made = Monster.make(rng, entry, Vector2i.ONE)
+		var shift: Dictionary = Clans.mood(_standing())
+		for k in shift:
+			made.meters[k] = clampf(made.meters[k] + shift[k], 0.0, 100.0)
 		starts.append(mind.mercy(made))
 		var best := MAX_ACTS + 1
 		var best_join := 0.0
@@ -71,6 +76,13 @@ func _measure(entry: Dictionary) -> void:
 	print("%s | %.1f%% | %s (%.1f%%) | %.1f%% | %d" % [
 		entry.species, _mean(starts) * 100.0, str(acts[acts.size() / 2]) if not acts.is_empty() else "-",
 		reached * 100.0 / SEEDS, _mean(joins) * 100.0, ceili(float(entry.hp) / strike)])
+
+
+func _standing() -> float:
+	for word in OS.get_cmdline_user_args():
+		if word.begins_with("standing="):
+			return word.trim_prefix("standing=").to_float()
+	return 0.0
 
 
 func _mean(values: Array) -> float:

@@ -3,6 +3,7 @@
 ##   godot --headless --path . -s res://tools/features_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
@@ -17,6 +18,7 @@ const Monster = preload("res://src/rules/monster.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pace = preload("res://src/rules/pace.gd")
 const Hud = preload("res://src/view/hud.gd")
+const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -43,6 +45,7 @@ func _run() -> void:
 	await _chat()
 	await _gate()
 	await _branching()
+	await _clans()
 	_finish()
 
 
@@ -624,6 +627,122 @@ func _gate() -> void:
 	await flow.new_run()
 	_check(flow.state.floor_map.monsters.back().cell != flow.state.floor_map.stairs, "no-boss-at-exit: the champion keeps to its hall")
 	_use()
+
+
+func _clans() -> void:
+	_check(Clans.of("slime") != "" and Clans.of("bandit") != "" and Clans.of("slime") != Clans.of("bandit"), "the kinds of monster belong to different clans")
+	for species in Content.table("species"):
+		_check(Clans.of(species) != "", "%s has a clan" % species)
+		for kind in ["kin_spared", "kin_slain", "side_spared", "side_slain"]:
+			_check(not Content.species(species).lines.get(kind, []).is_empty(), "%s has %s lines" % [species, kind])
+
+	# the test the issue asks for: spare one, and a later one of the same group reacts and starts in another mood
+	var flow = _flow(31)
+	var goo = await _at_menu(flow)
+	var s = flow.state
+	var others: Array = s.floor_map.monsters.filter(func(x): return x.species == "slime" and x != goo)
+	var later = others[0] if not others.is_empty() else Monster.make(Rng.new(3), Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0], s.cell)
+	var calm: float = later.meters.friendliness
+	var cross: float = later.meters.anger
+	var calm_odds: float = LocalMind.new().mercy(later)
+	_check(s.reputation.is_empty() and s.deeds.is_empty(), "a run starts with nothing to answer for")
+	_won_over(goo)
+	s.selected = 2
+	await flow.encounter.defeat(goo, "spared")
+	var clan: String = Clans.of("slime")
+	_check(s.reputation.get(clan, 0.0) > 0.0, "sparing one raises its clan's opinion (%s)" % str(s.reputation))
+	_check(s.deeds.size() == 1 and s.deeds[0].deed == "spared" and s.deeds[0].who == goo.name, "the run records what was done to whom (%s)" % str(s.deeds))
+	await flow.go("explore", {"lines": []})
+	var seen := []
+	flow.happened.connect(func(n, d):
+		if n == "word_spread":
+			seen.append(d))
+	await flow.go("intro", {"foe": later})
+	_check(later.meters.friendliness > calm and later.meters.anger <= cross, "the later one starts friendlier (%.0f -> %.0f)" % [calm, later.meters.friendliness])
+	_check(LocalMind.new().mercy(later) > calm_odds, "and the local rules give better odds for it")
+	var name_said: String = goo.name.left(1) + goo.name.substr(1).to_lower()
+	_check(s.lines.any(func(l): return l.kind == "say" and l.text.contains(name_said)), "it says so, by name (%s)" % str(s.lines))
+	_check(seen.size() == 1 and seen[0].tone == "good", "the word going round is an event (%s)" % str(seen))
+	_check(s.banner != null and Overlay.banner_fits(s.banner.text), "and shows on the picture")
+	var card: String = str(Tips.foe_blocks(later, []))
+	_check(card.contains(Clans.title(clan)), "the card says what it heard (%s)" % card)
+
+	# heard once: meeting it again changes nothing, trying again after dying starts from the same place
+	var friendly: float = later.meters.friendliness
+	await flow.tick(flow.clock + 1000.0)
+	await flow.go("explore", {"lines": []})
+	await flow.go("intro", {"foe": later})
+	_check(s.stage == "intro" and s.foe == later and is_equal_approx(later.meters.friendliness, friendly), "a monster hears the same news once")
+	await flow.tick(flow.clock + 1000.0)
+	await flow.encounter.retry_fight()
+	var again = s.foe
+	_check(s.stage == "intro" and again != later, "the fight starts over (%s)" % s.stage)
+	_check(is_equal_approx(again.meters.friendliness, friendly), "a retried fight starts from the same mood (%.0f, %.0f)" % [again.meters.friendliness, friendly])
+
+	# what it heard goes to Jev, and survives a save
+	var jev = JevMind.new("https://example.invalid", LocalMind.new())
+	var told: Dictionary = jev._state(again, {})
+	_check(told.get("history", {}).get("clan", "") != "" and str(told.history.heard).contains(goo.name), "Jev is told the history (%s)" % str(told))
+	var back = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	_check(back != null and back.reputation.get(clan, 0.0) == s.reputation[clan] and back.deeds.size() == s.deeds.size(), "reputation and deeds are saved")
+	var kept = Monster.from_dict(JSON.parse_string(JSON.stringify(again.to_dict())))
+	_check(kept.heard.get("clan", "") == clan, "what a monster heard is saved")
+	var old: Dictionary = s.to_dict()
+	old.erase("reputation")
+	old.erase("deeds")
+	var loaded = State.from_dict(JSON.parse_string(JSON.stringify(old)))
+	_check(loaded != null and loaded.reputation.is_empty(), "a save from before clans still loads")
+	var bad: Dictionary = s.to_dict()
+	bad.reputation = {clan: "lots"}
+	_check(State.from_dict(JSON.parse_string(JSON.stringify(bad))) == null, "a save with a wrong reputation is refused")
+	var huge: Dictionary = s.to_dict()
+	huge.reputation = {clan: 1e9, "nobody": 5.0}
+	var clamped = State.from_dict(JSON.parse_string(JSON.stringify(huge)))
+	_check(clamped.reputation[clan] <= Clans.STANDING_MAX and not clamped.reputation.has("nobody"), "reputation out of range is brought back (%s)" % str(clamped.reputation))
+
+	# word spills to the clan's side, the dragon hears a little of everything, killing turns them the other way
+	var slain := State.new()
+	var victim := Monster.new()
+	victim.species = "slime"
+	victim.name = "OOZE"
+	Clans.record(slain, victim, "slain")
+	var side_clans: Array = Clans.side_of(clan)
+	_check(side_clans.size() >= 1, "a clan has others on its side")
+	_check(slain.reputation[clan] < 0.0 and slain.reputation[side_clans[0]] < 0.0 and slain.reputation[side_clans[0]] > slain.reputation[clan], "killing one hurts its clan most, its side less (%s)" % str(slain.reputation))
+	var rival: String = Clans.of("bandit")
+	_check(not side_clans.has(rival) and slain.reputation.get(rival, 0.0) == 0.0, "another side doesn't care (%s)" % str(slain.reputation))
+	_check(slain.reputation[Clans.of("dragon")] < 0.0, "the dragon hears of everything")
+	var grudge = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0], Vector2i.ONE)
+	var was_angry: float = grudge.meters.anger
+	var was_kind: float = grudge.meters.friendliness
+	var heard: Dictionary = Clans.hear(grudge, slain)
+	_check(heard.kind == "kin_slain" and heard.who == "OOZE" and heard.tone == "bad", "kin of the slain knows who did it (%s)" % str(heard))
+	_check(grudge.meters.anger > was_angry and grudge.meters.friendliness < was_kind, "and starts angrier")
+	var on_side = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(side_clans[0]))[0], Vector2i.ONE)
+	_check(Clans.hear(on_side, slain).kind == "side_slain", "its side has heard too")
+	var far = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "bandit")[0], Vector2i.ONE)
+	var far_mood: float = far.meters.friendliness
+	_check(Clans.hear(far, slain).is_empty() and far.meters.friendliness == far_mood and far.heard.is_empty(), "another side has nothing to say")
+
+	# every sentence fits the banner, and a hated monster can still be won over
+	for id in Content.table("clans").clans:
+		for tone in ["good", "bad"]:
+			for deed in ["spared", "slain"]:
+				var text: String = Clans.news({"clan": id, "deed": deed, "who": "WWWWWWWW", "tone": tone})
+				_check(Overlay.banner_fits(text), "the news fits the banner: %s" % text)
+	_check(Clans.mood(-1000.0).friendliness >= -Clans.MOOD_MAX and Clans.mood(1000.0).friendliness <= Clans.MOOD_MAX, "a clan's opinion only moves a mood so far")
+	var word_off = _flow(31, ["no-clans"])
+	var off_goo = await _at_menu(word_off)
+	await word_off.encounter.defeat(off_goo, "slain")
+	_check(word_off.state.reputation.is_empty() and word_off.state.deeds.is_empty(), "no-clans: nothing is recorded")
+	_use()
+
+
+func side_species(clan: String) -> String:
+	for species in Content.table("species"):
+		if Clans.of(species) == clan:
+			return species
+	return ""
 
 
 func _branching() -> void:

@@ -4,6 +4,7 @@ extends RefCounted
 
 const Ally = preload("res://src/game/ally.gd")
 const Combat = preload("res://src/rules/combat.gd")
+const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -41,6 +42,8 @@ var max_hp := Combat.START_HP
 var gold := Combat.START_GOLD
 var allies: Array = [] # Ally
 var tally := {"spared": 0, "slain": 0, "fled": 0, "recruited": 0, "left": 0}
+var reputation := {} # clan -> how it thinks of you, -100..100 (rules/clans.gd)
+var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest first
 
 # the fight
 var foe # Monster, or null when not in a fight
@@ -136,6 +139,7 @@ func to_dict() -> Dictionary:
 		"depth": depth, "runSeed": run_seed, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
+		"reputation": reputation.duplicate(), "deeds": deeds.duplicate(),
 	}
 
 
@@ -170,6 +174,12 @@ static func from_dict(d: Dictionary):
 	for c in d.get("chat", []) if d.get("chat") is Array else []:
 		if c is Dictionary:
 			s.add_chat(str(c.get("who", "")), str(c.get("text", "")))
+	for clan in d.get("reputation", {}):
+		if Clans.is_clan(str(clan)):
+			s.reputation[str(clan)] = clampf(float(d.reputation[clan]), -Clans.STANDING_MAX, Clans.STANDING_MAX)
+	for deed in d.get("deeds", []).slice(-Clans.DEEDS_MAX):
+		if Clans.is_clan(str(deed.get("clan", ""))):
+			s.deeds.append({"clan": str(deed.clan), "species": str(deed.get("species", "")), "who": str(deed.get("who", "")), "deed": str(deed.get("deed", ""))})
 	for a in d.allies.slice(0, Combat.PARTY_MAX):
 		var ally = Ally.from_dict(a)
 		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)
@@ -209,6 +219,10 @@ static func _problem(d: Dictionary) -> String:
 	for a in d.allies:
 		if not a is Dictionary or not Content.table("species").has(str(a.get("species", ""))) or not _is_num(a.get("loyalty", 60.0)):
 			return "an ally is not a known one"
+	if d.has("reputation") and (not d.reputation is Dictionary or d.reputation.values().any(func(v): return not _is_num(v))):
+		return "'reputation' is not a record of numbers"
+	if d.has("deeds") and (not d.deeds is Array or d.deeds.any(func(v): return not v is Dictionary)):
+		return "'deeds' is not a list of records"
 	var problem := _floor_problem(d.floor)
 	if problem != "":
 		return problem
@@ -261,6 +275,8 @@ static func _monster_problem(m, f: Dictionary) -> String:
 		return "a monster's 'tried' is not a record"
 	if m.has("knownTraits") and not m.knownTraits is Array:
 		return "a monster's 'knownTraits' is not a list"
+	if m.has("heard") and (not m.heard is Dictionary or (m.heard.has("standing") and not _is_num(m.heard.standing))):
+		return "what a monster heard is not a record"
 	if m.has("traits") and (not m.traits is Array or m.traits.any(func(t): return not t is String)):
 		return "a monster's traits are not a list of words"
 	if m.has("taste") and (not m.taste is Dictionary or m.taste.values().any(func(v): return not _is_num(v))):

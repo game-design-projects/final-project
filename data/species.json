@@ -101,6 +101,22 @@
     "*shrinks back* ...not nice.",
     "*goes very flat* ...blorp. Mean.",
     "*a sad, wet noise*"
+   ],
+   "kin_spared": [
+    "*wobbles* You... spared {kin}! {kin} is bro!",
+    "Ooh. {kin} said you were nice. Nice?"
+   ],
+   "kin_slain": [
+    "*shakes* {kin}... you hurt {kin}. {kin} was bro.",
+    "No more {kin}. Why? *quivers, hot*"
+   ],
+   "side_spared": [
+    "*blinks* The stones say you let {kin} go. Good?",
+    "Heard! Heard about {kin}! *bounces*"
+   ],
+   "side_slain": [
+    "*shrinks back* {kin} is gone. The floor told us.",
+    "*trembles* You hurt {kin}. The whole floor felt it."
    ]
   },
   "reactions": {
@@ -227,6 +243,22 @@
     "Oh, that's how it is. Noted.",
     "Say that again and I take your boots.",
     "You'll pay for that one. With interest."
+   ],
+   "kin_spared": [
+    "Ooh, you spared my bro {kin}! Maybe we can talk business.",
+    "{kin} says you play fair. That's rare down here."
+   ],
+   "kin_slain": [
+    "Hey! You killed {kin}! That's my dad, you know!",
+    "{kin} owed me money. Now you owe me."
+   ],
+   "side_spared": [
+    "The snakes talk. You let {kin} walk, they say. Good for trade.",
+    "Heard about {kin}. Sparing's good for business."
+   ],
+   "side_slain": [
+    "You did {kin} in, I hear. Bad for business. Very bad for yours.",
+    "{kin} had a deal with us. You broke it."
    ]
   },
   "reactions": {
@@ -354,6 +386,22 @@
     "Hsss. I will remember that.",
     "Careful, little one. Ssscales have long memories.",
     "You were doing ssso well."
+   ],
+   "kin_spared": [
+    "Sssister {kin} sssays you sspared her. I remember favorsss.",
+    "{kin} livesss. You may ssspeak, then."
+   ],
+   "kin_slain": [
+    "You ssslew {kin}. I have been waiting to meet you.",
+    "{kin}'sss nest is cold now. Whossse doing?"
+   ],
+   "side_spared": [
+    "The Crew whispersss you let {kin} go. Interesssting.",
+    "Mercy for {kin}? Ssso you can bargain."
+   ],
+   "side_slain": [
+    "{kin} was usssseful to usss. Was.",
+    "Word travelsss fassst. {kin} is dead, and here you are."
    ]
   },
   "reactions": {
@@ -480,6 +528,22 @@
     "...no.",
     "*gravel shifts, unhappily*",
     "...this will be remembered. For a very long time."
+   ],
+   "kin_spared": [
+    "...{kin} remembers you. So. I remember.",
+    "...you left {kin} standing. Good."
+   ],
+   "kin_slain": [
+    "...{kin} stood here an age. You ended that.",
+    "...{kin}. Broken. ...I will not forget."
+   ],
+   "side_spared": [
+    "...the small ones say you spared {kin}.",
+    "...{kin} lives. The floor hums with it."
+   ],
+   "side_slain": [
+    "...{kin} is gone. The floor told me.",
+    "...the small ones weep for {kin}. I hear them."
    ]
   },
   "reactions": {
@@ -607,6 +671,22 @@
     "You dare? In my own halls?",
     "That was unwise, and you know it.",
     "*smoke curls from its teeth* Try that again."
+   ],
+   "kin_spared": [
+    "{kin} tells me you showed mercy. How curious.",
+    "You spared {kin}, so I will hear you out."
+   ],
+   "kin_slain": [
+    "You slew {kin}. Do you know whose blood that was?",
+    "{kin} was mine. Kneel, or burn."
+   ],
+   "side_spared": [
+    "A little bird says you spared {kin}. Are you soft, or wise?",
+    "So you let {kin} live. Word reaches me in everything."
+   ],
+   "side_slain": [
+    "I hear {kin} fell by your hand. Bold.",
+    "{kin}'s end reached me before you did."
    ]
   },
   "reactions": {

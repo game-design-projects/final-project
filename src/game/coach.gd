@@ -53,6 +53,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 
 func _on_stage(to: String) -> void:
 	match to:
+		"explore":
+			if flow.feature("clans") and not flow.state.deeds.is_empty():
+				say("clans")
 		"menu":
 			say("menu")
 		"act":
