@@ -10,13 +10,13 @@ const KNOWN := {
 	"debug": "show the debug panel and log more",
 	"mock": "monsters think with the seeded mind instead of calling Jev (not in the personality slice, which always uses the local rules)",
 	"jev": "jev=<url>: ask Jev through the proxy at this address (without it the rule-based mind answers)",
-	"seed": "seed=N: fixed random seed for the floor and the monsters",
+	"seed": "seed=N: fixed random seed for the floor and the monsters (0 to 9223372036854775807, as the game prints it)",
 	"floor": "floor=N: start on floor N",
 	"meet": "meet=<species>: start in a fight with that monster",
 	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
 	"nosound": "no sound effects and no music",
-	"nosave": "never read or write saved data",
+	"nosave": "never read, write, rename, copy or delete saved data (the menus see no saves)",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 }
 

@@ -39,9 +39,10 @@ var encounter
 ## The game clock in ms, as last given to `tick`.
 var clock := 0.0
 var busy := false
-## The personality slice (personality_slice.gd): while `fixed_roll` is 0 or more, every chance of an interaction (the cut, the answer,
-## a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds the monsters still to fight. `slice_floor` marks the floor the slice was made on, which is
-## never autosaved; a new floor or a load clears it.
+## The personality slice (personality_slice.gd): while `fixed_roll` is 0 or more, every chance of an interaction (the cut,
+## the answer, a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds
+## the monsters still to fight. `slice_floor` marks the floor the slice was made on, which is never autosaved; a new floor
+## or a load clears it.
 var fixed_roll := -1.0
 var slice_queue: Array = []
 var slice_floor := false

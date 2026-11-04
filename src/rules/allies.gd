@@ -46,16 +46,16 @@ static func leave_odds(loyalty: float) -> float:
 
 
 ## One ally judging one deed. Changes its loyalty and returns what happened: its score, the kind of reaction line
-## ("approve", "disapprove" or "" for a shrug), and whether it walked out. `rolls` fixes the draws for a repeatable run
-## ({"score": 0..1, "leave": 0..1}).
-static func judge(ally, deed: String, rng: Rng, rolls := {}) -> Dictionary:
+## ("approve", "disapprove" or "" for a shrug), and whether it walked out. `roll` in [0, 1) fixes both draws (the
+## score and the leaving) for a repeatable run.
+static func judge(ally, deed: String, rng: Rng, roll := -1.0) -> Dictionary:
 	var odds := score_odds(ally.species, deed)
-	var score := int(Odds.pick_by_odds(rng, odds, rolls.get("score", -1.0)))
+	var score := int(Odds.pick_by_odds(rng, odds, roll))
 	ally.loyalty = clampf(ally.loyalty + (score - NEUTRAL) * LOYALTY_PER_POINT, 0.0, 100.0)
 	var reaction := "disapprove" if score <= 1 else ("approve" if score >= 3 else "")
 	var leaves := false
 	if ally.loyalty < LEAVE_BELOW:
-		leaves = Odds.succeeds(rng, leave_odds(ally.loyalty), rolls.get("leave", -1.0))
+		leaves = Odds.succeeds(rng, leave_odds(ally.loyalty), roll)
 	print_verbose("allies: %s judges '%s': score %d, loyalty %.0f%s" % [ally.name, deed, score, ally.loyalty, ", leaves" if leaves else ""])
 	return {"score": score, "reaction": reaction, "leaves": leaves, "odds": odds}
 

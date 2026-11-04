@@ -1,5 +1,3 @@
-DONJON: CREDITS
-
 Monster AI: Jev, the System One model by TypeSafe (https://typesafe.ai)
 
 Music (assets/audio/ambient.ogg, battle-*.ogg, fanfare.ogg, victory.ogg)

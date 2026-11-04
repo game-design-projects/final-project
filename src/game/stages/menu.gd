@@ -64,9 +64,9 @@ func _flee(flow) -> void:
 		await flow.go("menu")
 		return
 	s.tally.fled += 1
-	flow.end_slice()
 	flow.event("sound", {"name": "flee"})
-	flow.encounter.judge("flee")
+	flow.encounter.judge("flee") # before the slice ends, so an ally's verdict is drawn at the fixed roll too
+	flow.end_slice()
 	m.hp = m.max_hp
 	var lines := [State.sys_line(Texts.flee(m))]
 	for n in flow.encounter.pending_notes:

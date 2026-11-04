@@ -20,6 +20,7 @@ func _run() -> void:
 	var panel = MenuPanel.new()
 	root.add_child(panel)
 	await _hints_fit(panel)
+	_credits_have_one_title()
 	_finish()
 
 
@@ -51,3 +52,9 @@ func _hints_fit(panel) -> void:
 	for item in panel._page.items:
 		rows += MenuPanel.ROW_SUB if item.get("sub", "") != "" else MenuPanel.ROW
 	_check(frame_h >= MenuPanel.PAD * 2.0 + MenuPanel.TITLE_H + 24.0 + rows + panel.hint_height(), "the settings frame is as tall as its rows plus its whole hint")
+
+
+## The panel's title says CREDITS; the text under it must not say it again.
+func _credits_have_one_title() -> void:
+	var page: Dictionary = Menus.credits()
+	_check(page.title == "CREDITS" and not page.body.to_upper().contains("CREDITS\n"), "the credits text does not repeat the CREDITS heading")

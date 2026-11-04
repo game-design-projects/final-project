@@ -55,7 +55,12 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/menu_test.gd
-      # The gameplay scene: the views follow the state when a new floor replaces it.
+      # The save slots: write, read, rename, copy, delete, and `nosave` keeping all of it away from saved data.
+      - name: Check the saves
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/saves_test.gd
+      # The gameplay scene: the views follow the state when a new floor or a loaded save replaces it.
       - name: Check the gameplay scene
         run: |
           set -euo pipefail

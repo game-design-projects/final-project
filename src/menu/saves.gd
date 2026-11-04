@@ -101,6 +101,8 @@ static func copy(from: String, to: String) -> bool:
 
 
 static func delete(slot: String) -> void:
+	if Flags.on("nosave"):
+		return
 	if slots().has(slot) and FileAccess.file_exists(path(slot)):
 		DirAccess.remove_absolute(path(slot))
 		print("saves: deleted slot %s" % slot)
@@ -111,9 +113,9 @@ static func delete_all() -> void:
 		delete(s)
 
 
-## null when there is no file, {} when it is damaged, else the document.
+## null when there is no file (with `nosave` there never is), {} when it is damaged, else the document.
 static func _read_doc(slot: String):
-	if not FileAccess.file_exists(path(slot)):
+	if Flags.on("nosave") or not FileAccess.file_exists(path(slot)):
 		return null
 	var json := JSON.new()
 	if json.parse(FileAccess.get_file_as_string(path(slot))) != OK or not json.data is Dictionary or not json.data.has("state"):
@@ -122,6 +124,8 @@ static func _read_doc(slot: String):
 
 
 static func _store(doc: Dictionary, slot: String) -> bool:
+	if Flags.on("nosave"):
+		return true
 	DirAccess.make_dir_recursive_absolute(dir_path)
 	var tmp := path(slot) + ".tmp"
 	var f := FileAccess.open(tmp, FileAccess.WRITE)

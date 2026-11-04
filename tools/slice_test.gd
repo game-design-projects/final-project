@@ -29,6 +29,7 @@ func _run() -> void:
 	await _fair_cut_route()
 	await _names_do_not_matter()
 	await _allies_are_fixed()
+	await _flee_judges_before_it_ends()
 	await _retry_heals()
 	await _flee_ends_it()
 	_finish()
@@ -65,11 +66,13 @@ func _random_seed_repeats() -> void:
 	var repeats := true
 	for i in 64:
 		var first := Rng.new()
-		var again := Rng.new(first.seed_value)
-		printable = printable and first.seed_value >= 0
+		Flags.set_args(PackedStringArray(["seed=%d" % first.seed_value])) # what a player does with the printed seed
+		var again := Rng.new()
+		printable = printable and first.seed_value >= 0 and Rng.flag_seed() == first.seed_value
 		repeats = repeats and again.seed_value == first.seed_value and again.real() == first.real()
-	_check(printable, "a random run's seed is never negative, so the flag can take it back")
-	_check(repeats, "a random run's printed seed replays the same run")
+	Flags.set_args(PackedStringArray([]))
+	_check(printable, "every seed a random run prints is one the `seed=N` flag takes back (non-negative, any length)")
+	_check(repeats, "a random run's printed seed replays the same run through the flag")
 
 
 ## One rule for the seed flag in every place that reads it: a whole number of 0 or more, else the fallback.
@@ -86,8 +89,9 @@ func _bad_seed_everywhere() -> void:
 	for big in ["99999999999999999999", "9223372036854775808"]:
 		Flags.set_args(PackedStringArray(["seed=" + big]))
 		_check(Rng.flag_seed() == -1, "seed=%s is out of range, so it is ignored (not clamped or wrapped)" % big)
-	Flags.set_args(PackedStringArray(["seed=123456789012345678"]))
-	_check(Rng.flag_seed() == 123456789012345678, "the largest seed the flag takes is kept as it is")
+	for edge in [["9223372036854775807", 9223372036854775807], ["999999999999999999", 999999999999999999], ["0000000000000000000005", 5], ["0", 0]]:
+		Flags.set_args(PackedStringArray(["seed=" + edge[0]]))
+		_check(Rng.flag_seed() == edge[1], "seed=%s is a seed and is kept as it is" % edge[0])
 	Flags.set_args(PackedStringArray([]))
 
 
@@ -167,20 +171,51 @@ func _names_do_not_matter() -> void:
 	_check(s.stage == "intro" and s.foe == vex, "the second fight is the slice's VEX even if another monster is called VEX")
 
 
-## An ally's verdict on a deed and a recruit's starting loyalty are drawn at the fixed roll too, so ROOK's mood is the same
-## for every seed.
+## An ally's verdict on a deed, whether it leaves and a recruit's starting loyalty are drawn at the fixed roll too, so the
+## same actions leave the ally in the same mood for every seed: after sparing, after fleeing, and with loyalty low enough
+## for the leaving roll to be drawn.
 func _allies_are_fixed() -> void:
-	var seen := {}
-	for seed_value in [1, 2, 3, 4, 5, 6, 7, 8]:
+	var after_spare := {}
+	var after_flee := {}
+	var after_low := {}
+	for seed_value in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:
 		var flow = await _start(seed_value)
 		var s = flow.state
 		await _press(flow, [2, 2, 1]) # ROOK takes the cut and leaves; on to VEX
 		await _to_menu(flow)
 		await _press(flow, [3]) # VEX is spared and joins
 		var ally = s.allies[0]
+		after_spare[ally.loyalty] = true
+		flow.fixed_roll = 0.5 # a flee judged with the slice still on
+		flow.encounter.judge("flee")
+		after_flee["%s/%s" % [ally.loyalty, s.allies.size()]] = true
+		ally.loyalty = 35.0 # a verdict that lowers it goes under the line, so the leaving roll is drawn
 		flow.encounter.judge("spare")
-		seen["%s/%s" % [ally.loyalty, flow.encounter.pending_rows.size()]] = true
-	_check(seen.size() == 1, "a recruit's loyalty and what the ally thinks of a deed are the same for every seed (%s)" % [seen.keys()])
+		after_low["%s/%s" % [ally.loyalty, s.allies.size()]] = true
+	_check(after_spare.size() == 1, "a recruit's starting loyalty is the same for every seed (%s)" % [after_spare.keys()])
+	_check(after_low.size() == 1, "whether a low-loyalty ally leaves, and its loyalty after the verdict, are the same for every seed (%s)" % [after_low.keys()])
+	_check(after_flee.size() == 1, "an ally's verdict on fleeing is the same for every seed (%s)" % [after_flee.keys()])
+
+
+## Fleeing judges the deed while the roll is still fixed, and only then ends the slice.
+func _flee_judges_before_it_ends() -> void:
+	var seen := {}
+	for seed_value in [1, 2, 3, 4, 5, 6]:
+		var flow = await _start(seed_value)
+		var s = flow.state
+		await _press(flow, [2, 2, 1])
+		await _to_menu(flow)
+		await _press(flow, [3]) # VEX joins
+		await _press(flow, [1])
+		flow.fixed_roll = 0.5
+		var foe = s.floor_map.monsters[2]
+		await flow.go("intro", {"foe": foe})
+		await _to_menu(flow)
+		await _press(flow, [4]) # FLEE
+		if seed_value == 1:
+			_check(flow.fixed_roll < 0.0, "fleeing from the third fight ends the slice")
+		seen[s.allies[0].loyalty if not s.allies.is_empty() else -1.0] = true
+	_check(seen.size() == 1, "after a real flee from a fight the ally's loyalty is the same for every seed (%s)" % [seen.keys()])
 
 
 func _retry_heals() -> void:

@@ -1,6 +1,7 @@
-## Picks the mind a game uses. `mock` asks for the seeded random one (except for an offline game such as the personality slice, which always gets the rule-based one). `jev=<url>` (or `saved_url`, the address the player
-## saved, or else the one a build ships with) asks Jev through the proxy, with the rule-based mind answering whenever the network can't. Otherwise the
-## rule-based one.
+## Picks the mind a game uses. `mock` asks for the seeded random one (except for an offline game such as the personality
+## slice, which always gets the rule-based one). `jev=<url>` (or `saved_url`, the address the player saved, or else the one
+## a build ships with) asks Jev through the proxy, with the rule-based mind answering whenever the network can't.
+## Otherwise the rule-based one.
 extends RefCounted
 
 const Flags = preload("res://src/utils/flags.gd")

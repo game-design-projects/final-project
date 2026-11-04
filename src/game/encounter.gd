@@ -106,7 +106,7 @@ func judge(deed: String) -> void:
 	for a in s.allies.duplicate():
 		if deed == "" or not Allies.has_opinion(a.species, deed):
 			continue
-		var verdict := Allies.judge(a, deed, flow.rng, {"score": flow.fixed_roll, "leave": flow.fixed_roll})
+		var verdict := Allies.judge(a, deed, flow.rng, flow.fixed_roll)
 		pending_rows.append({"id": "judge-" + a.name, "label": "%s JUDGES IT (0 HATES - 4 LOVES)" % a.name, "answer": verdict.score, "odds": verdict.odds})
 		var reactions: Dictionary = Content.species(a.species).reactions
 		if verdict.reaction != "":

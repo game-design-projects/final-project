@@ -1,7 +1,8 @@
 ## A reproducible two-bandit encounter for the personality playtest (flag `personality-slice`, with `seed=N`). ROOK deals
 ## straight and VEX is jumpy, so the same fair-cut offer is taken by one and refused by the other at the fixed roll. While
-## it is on, the monsters think with the local rules, the flow draws every interaction chance (cut, answer, feeling, mercy, joining, ally verdicts) at `fixed_roll`, and the floor
-## is never autosaved. The slice ends after the second fight, on fleeing, on a new floor, on a load, or on leaving.
+## it is on, the monsters think with the local rules, the flow draws every interaction chance (cut, answer, feeling, mercy,
+## joining, ally verdicts) at `fixed_roll`, and the floor is never autosaved. The slice ends after the second fight, on
+## fleeing, on a new floor, on a load, or on leaving.
 extends RefCounted
 
 const Combat = preload("res://src/rules/combat.gd")
@@ -35,6 +36,8 @@ static func pending() -> bool:
 ## The seed of the slice: `seed=N` (0 or more), or the one the playtest document names.
 static func seed_value() -> int:
 	var seed := Rng.flag_seed()
+	if seed < 0 and Flags.value("seed", "") != "":
+		push_warning("slice: using the seed %d instead" % DEFAULT_SEED)
 	return seed if seed >= 0 else DEFAULT_SEED
 
 

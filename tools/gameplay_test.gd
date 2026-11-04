@@ -25,14 +25,16 @@ func _run() -> void:
 	game.flow.state.stage = "dead"
 	await game.flow.new_run()
 	_check(_bound(game), "the same after a death")
+	game.flow.state.gold = 8
 	var saved: Dictionary = game.flow.state.to_dict()
 	await game.flow.new_run()
 	var before = game.flow.state
-	game.flow.state.gold = 99 # so the loaded state is told apart from the one it replaces
+	before.gold = 99 # so the loaded state is told apart from the one it replaces
 	var loaded: bool = await game.flow.load_state(saved)
-	_check(loaded and game.flow.state != before, "loading a save makes a new state")
+	_check(loaded and game.flow.state != before and game.flow.state.gold == 8, "loading a save makes a new state with the saved gold (8, not the replaced state's 99)")
 	_check(_bound(game), "after loading a save the views read the loaded state (nothing else rebinds them)")
-	_check(not await game.flow.load_state({}) and _bound(game), "a save that cannot be loaded changes nothing")
+	var kept = game.flow.state
+	_check(not await game.flow.load_state({}) and game.flow.state == kept and kept.gold == 8 and _bound(game), "a save that cannot be loaded leaves the state, and the views on it, as they were")
 	_finish()
 
 

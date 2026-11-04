@@ -4,7 +4,7 @@ extends RefCounted
 
 const Flags = preload("res://src/utils/flags.gd")
 
-const MAX_SEED_CHARS := 18
+const INT64_MAX_TEXT := "9223372036854775807"
 
 ## The seed this generator started from, so a run can print it and be repeated.
 var seed_value := 0
@@ -12,7 +12,7 @@ var seed_value := 0
 var _gen := RandomNumberGenerator.new()
 
 
-## Without a seed it takes the `seed` flag (see `flag_seed`; anything else is warned about and ignored), and
+## Without a seed it takes the `seed` flag (see `flag_seed`), and
 ## without that a fresh random one.
 func _init(seed := -1) -> void:
 	if seed < 0:
@@ -25,16 +25,28 @@ func _init(seed := -1) -> void:
 	print_verbose("rng: seed %d" % seed)
 
 
-## The `seed` flag as a seed: 0 or more, or -1 when it is absent or not one (which is warned about). The one place the
-## rule lives; a tool that wants its own fallback uses this instead of parsing the flag again.
+## The `seed` flag as a seed: a whole number from 0 to 9223372036854775807, or -1 when it is absent or not one (which is
+## warned about). The one place the rule lives; a tool that wants its own fallback uses this instead of parsing the flag
+## again. Every seed the game prints is one this takes back.
 static func flag_seed() -> int:
 	var text := Flags.value("seed", "")
-	# 18 characters at most keeps it inside a 64-bit int, which `int()` would otherwise clamp or wrap
-	if text.is_valid_int() and text.length() <= MAX_SEED_CHARS and int(text) >= 0:
-		return int(text)
-	if text != "":
-		push_warning("rng: seed=%s is not a seed (a whole number, 0 or more, up to %d characters); ignoring it" % [text, MAX_SEED_CHARS])
-	return -1
+	var seed := _parse_seed(text)
+	if seed < 0 and text != "":
+		push_warning("rng: seed=%s is not a seed (a whole number from 0 to %s); ignoring it" % [text, INT64_MAX_TEXT])
+	return seed
+
+
+## -1 unless the text is a whole number that fits 0..INT64_MAX. Compared as text, because `int()` clamps or wraps a number
+## that is too big (and logs an engine error).
+static func _parse_seed(text: String) -> int:
+	if not text.is_valid_int() or text.begins_with("-"):
+		return -1
+	var digits := text.lstrip("+").lstrip("0")
+	if digits == "":
+		return 0
+	if digits.length() > INT64_MAX_TEXT.length() or (digits.length() == INT64_MAX_TEXT.length() and digits > INT64_MAX_TEXT):
+		return -1
+	return int(digits)
 
 
 ## An int from a to b, both included.

@@ -5,7 +5,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
-- `tools/menu_test.gd` checks the menu panel headless, and CI runs it.
+- `tools/menu_test.gd` checks the menu panel and the credits headless, and CI runs it.
+- `tools/saves_test.gd` checks the save slots in a folder of their own, including `nosave`, and CI runs it.
 - `tools/gameplay_test.gd` checks that the views follow the state after NEW FLOOR, a death and a load, and CI runs it.
 - `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
 
@@ -16,8 +17,12 @@ All notable changes to this project are documented here. The format follows [Kee
 - `seed=abc` and `seed=-5` are handled the same everywhere: a warning and a random seed, instead of a silent seed 0 outside the slice.
 - The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining), so the same actions give the same results.
 - The slice also fixes an ally's verdict, whether it leaves and a recruit's starting loyalty (they still varied by seed).
+- Fleeing judges the allies before it ends the slice, so their verdict is fixed too.
+- `nosave` now also stops the menus from seeing, renaming, copying or deleting real saves (only writing was blocked).
+- The credits no longer repeat the CREDITS heading.
 - `mock` no longer swaps the slice's local rules.
-- `seed=` takes only a whole number of 0 to 18 characters; an out-of-range one is ignored with a warning instead of clamped or wrapped.
+- `seed=` takes any whole number from 0 to 9223372036854775807, so every printed seed replays; a bigger one is ignored with a warning instead of clamped or wrapped.
+- `seed=abc` in the slice warns that it uses 7042 instead.
 - `tools/autoplay.gd` reads `seed=` through the same rule, so `seed=abc` plays the default seeds with a warning.
 - A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.
 - The slice's bandits are built from the roster's own bandit line, like the floor's.
