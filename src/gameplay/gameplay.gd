@@ -415,6 +415,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_postfx.flash(Palette.MERCY, 0.4 * _softness())
 		"slain":
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
+		"mood":
+			_overlay.emote(data.tone)
 		"coach":
 			Settings.set_value("seen_tips", flow.coach.seen.keys())
 		"mercy_changed":

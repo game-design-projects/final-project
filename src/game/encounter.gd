@@ -65,6 +65,10 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
 	var mercy: float = after.mercy
 	var pressure: float = after.pressure
+	if flow.feature("mood-cues"):
+		flow.event("mood", {"tone": str(feeling.get("tone", "odd"))})
+		if known_mercy >= 0.0 and known_mercy < Odds.LIKELY and mercy >= Odds.LIKELY:
+			flow.event("wants_join")
 	var note := _mercy_moved(mercy)
 	print_verbose("encounter: %s (%s) %s -> %s, mercy %d%%, pressure %.2f" % [m.name, ", ".join(m.traits), m.last_intent, id, roundi(mercy * 100.0), pressure])
 	var rows := []

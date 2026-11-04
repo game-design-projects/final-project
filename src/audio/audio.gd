@@ -13,7 +13,7 @@ const Voices = preload("res://src/audio/voices.gd")
 ## Event name -> the effect it sounds like. Events that need more than that are handled in `_on_event`.
 const SOUNDS := {
 	"step": "step", "bump": "bump", "miss": "miss", "player_hurt": "hurt", "shield": "shield",
-	"beat": "beat", "mercy_refused": "mercy_refused", "recruited": "recruited", "ally_left": "ally_left",
+	"beat": "beat", "mercy_refused": "mercy_refused", "recruited": "recruited", "wants_join": "chime", "ally_left": "ally_left",
 	"dead": "dead", "menu_move": "move", "menu_pick": "pick",
 }
 

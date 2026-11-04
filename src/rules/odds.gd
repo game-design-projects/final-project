@@ -2,6 +2,8 @@
 ## roll, so what can happen never depends on who is answering.
 extends RefCounted
 
+const LIKELY := 0.5 # odds this high read as likely: SPARE turns gold, the monster asks to join
+
 const Dice = preload("res://src/utils/dice.gd")
 const Monster = preload("res://src/rules/monster.gd")
 

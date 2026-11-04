@@ -10,6 +10,7 @@ const Automap = preload("res://src/view/automap.gd")
 const Allies = preload("res://src/rules/allies.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Flags = preload("res://src/utils/flags.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -166,11 +167,16 @@ func _allowed(key: String) -> bool:
 	return false
 
 
+## The mind's answers the card may show: none with no-show-mind, unless the debug panel asks for them.
+func _rows() -> Array:
+	return state.mind_rows if debug or not Flags.switched_off("show-mind") else []
+
+
 func _blocks_for(key: String) -> Array:
 	if key == "":
 		return []
 	if key == "foe":
-		return foe_blocks(state.foe, state.mind_rows, MIND_ROWS_SHOWN if not debug else 0, mind_label)
+		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label)
 	if key == "map":
 		return map_blocks()
 	if key.begins_with("ally"):

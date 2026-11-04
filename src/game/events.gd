@@ -19,6 +19,8 @@ const FIELDS := {
 	"menu_pick": [], # a choice was confirmed
 	"mercy_refused": [],
 	"mercy_changed": ["from", "to"], # a deed moved the mercy odds (0..1)
+	"mood": ["tone"], # how the last deed landed: good, bad or odd
+	"wants_join": [], # mercy just became likely
 	"spared": ["boss"],
 	"slain": ["boss"],
 	"recruited": ["species"],

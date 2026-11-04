@@ -34,6 +34,7 @@ func _run() -> void:
 	await _recruiting()
 	await _story()
 	await _tutorial()
+	await _mood_cues()
 	_finish()
 
 
@@ -347,6 +348,46 @@ func _tutorial() -> void:
 		s.turn(1)
 	await flow.press("up")
 	_check(s.hp == 6, "the sixth step brings a point of health back (%d)" % s.hp)
+	_use()
+
+
+func _mood_cues() -> void:
+	var flow = _flow(37)
+	var m = await _at_menu(flow)
+	var heard := []
+	flow.happened.connect(func(n, d): if n in ["mood", "wants_join"]: heard.append(n))
+	m.meters.friendliness = 100.0
+	m.meters.anger = 0.0
+	flow.encounter.known_mercy = 0.1
+	await flow.encounter.decide(m, [{"intent": "kindness", "w": 1.0}], "TEST")
+	_check(heard == ["mood", "wants_join"], "a deed shows a mood, and crossing into likely mercy calls out (%s)" % str(heard))
+	heard.clear()
+	await flow.encounter.decide(m, [{"intent": "kindness", "w": 1.0}], "TEST")
+	_check(heard == ["mood"], "only when it crosses (%s)" % str(heard))
+	var view = Overlay.new()
+	view.state = flow.state
+	view.clock_ms = 1000.0
+	flow.state.mind_rows = [{"id": "mercy", "answer": 0.9}]
+	_check(view.bubble().get("text", "") == "WANNA JOIN?", "the bubble asks when mercy is likely (%s)" % str(view.bubble()))
+	view.emote("good")
+	_check(view.bubble().get("tone", "") == "good", "a deed's mood shows first")
+	view.clock_ms = 3000.0
+	_check(view.bubble().has("text"), "and then the question comes back")
+	flow.state.mind_rows = [{"id": "mercy", "answer": 0.2}]
+	_check(view.bubble().is_empty(), "with mercy unlikely there is no bubble")
+	view.free()
+	flow = _flow(38, ["no-mood-cues"])
+	m = await _at_menu(flow)
+	var quiet := []
+	flow.happened.connect(func(n, _d): if n in ["mood", "wants_join"]: quiet.append(n))
+	await flow.encounter.decide(m, [{"intent": "kindness", "w": 1.0}], "TEST")
+	_check(quiet.is_empty(), "no-mood-cues: no cues")
+	_use()
+	_check(not Flags.switched_off("show-mind"), "the mind's rows show by default")
+	_use(["no-show-mind"])
+	_check(Flags.switched_off("show-mind"), "no-show-mind hides them")
+	_use(["classic"])
+	_check(not Flags.switched_off("show-mind"), "classic leaves them as they were")
 	_use()
 
 

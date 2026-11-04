@@ -7,7 +7,6 @@ extends Control
 const Art = preload("res://src/view/art.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
-const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 
@@ -29,6 +28,8 @@ const CHARM_USED := Color("#3a3a3a")
 const INTRO_FLASH_MS := 700.0
 const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pixels
 const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
+const EMOTE_MS := 1100.0
+const BUBBLE_STAGES := ["intro", "menu", "act", "talk"]
 const BANNER_FADE_MS := 220.0
 const BANNER := Rect2(64, 40, 320, 46)
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
@@ -51,6 +52,7 @@ var intro_strength := 0.5
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _popups: Array = [] # [{text, color, at, born}]
+var _emote := {} # {tone, born}: the last mood shown over the monster
 var _lantern_glow: GradientTexture2D
 
 
@@ -108,7 +110,7 @@ func charm_rows() -> Array:
 
 ## The mercy odds as the mind last answered (0..1), for the gauge; below 0 when there is no gauge to draw.
 func mercy_gauge() -> float:
-	if not Flags.enabled("mercy-link") or state.foe == null or state.foe.is_gone():
+	if not state.viewing("mercy-link") or state.foe == null or state.foe.is_gone():
 		return -1.0
 	for row in state.mind_rows:
 		if row.id == "mercy":
@@ -131,6 +133,23 @@ func shake_offset() -> Vector2:
 	if clock_ms >= shake_until:
 		return Vector2.ZERO
 	return Vector2(randf() - 0.5, randf() - 0.5) * 6.0
+
+
+## A bubble over the monster's head for a moment: how a deed landed ("good", "bad" or anything else).
+func emote(tone: String) -> void:
+	_emote = {"tone": tone, "born": clock_ms}
+
+
+## What the bubble over the monster says now: a mood for a moment after a deed, or the question when it would likely join;
+## {} when nothing. {tone} or {text}.
+func bubble() -> Dictionary:
+	if not state.viewing("mood-cues") or state.foe == null or state.foe.is_gone():
+		return {}
+	if not _emote.is_empty() and clock_ms - _emote.born < EMOTE_MS:
+		return {"tone": _emote.tone}
+	if can_spare() and state.stage in BUBBLE_STAGES:
+		return {"text": "WANNA JOIN?"}
+	return {}
 
 
 ## A number or word that floats up from `at` (picture pixels) and fades.
@@ -216,6 +235,7 @@ func _battle() -> void:
 	else:
 		Art.draw(self, m.species, clock_ms, color, W / 2.0, 270.0, 0.85, hurt)
 	_name_and_health(m)
+	_bubble(Vector2(W / 2.0 + 36.0, 28.0) if small else Vector2(W / 2.0 + 74.0, 72.0))
 	if state.dodge != null:
 		_dodge_box(color)
 		_flashes()
@@ -245,6 +265,41 @@ func _name_and_health(m) -> void:
 	if m.boss:
 		label = "TURN %d · %s" % [m.turn + 1, label]
 	_text(_title, label, Vector2(0, 21), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
+
+
+## The speech bubble, its tail at the monster's head, down to the left of `at`.
+func _bubble(at: Vector2) -> void:
+	var b := bubble()
+	if b.is_empty():
+		return
+	var w: float = 70.0 if b.has("text") else 26.0
+	var rect := Rect2(at - Vector2(0.0, 22.0), Vector2(w, 22.0))
+	var ink: Color = Palette.MERCY if b.has("text") else _tone_color(b.tone)
+	draw_rect(rect, Color.BLACK)
+	draw_rect(rect, ink, false, 1.0)
+	draw_colored_polygon(PackedVector2Array([at + Vector2(3, 0), at + Vector2(11, 0), at + Vector2(-3, 8)]), ink)
+	if b.has("text"):
+		_text(_title, b.text, rect.position + Vector2(0, 14), 6, ink, HORIZONTAL_ALIGNMENT_CENTER, w)
+	else:
+		_mood_glyph(b.tone, rect.get_center(), ink)
+
+
+static func _tone_color(tone: String) -> Color:
+	return Palette.MERCY if tone == "good" else (Palette.WARN if tone == "bad" else Palette.INK)
+
+
+## A heart, an angry mark or a question mark.
+func _mood_glyph(tone: String, c: Vector2, ink: Color) -> void:
+	match tone:
+		"good":
+			draw_circle(c + Vector2(-3, -2), 3.2, ink)
+			draw_circle(c + Vector2(3, -2), 3.2, ink)
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-6, -1), c + Vector2(6, -1), c + Vector2(0, 7)]), ink)
+		"bad":
+			for pair in [[Vector2(-5, -5), Vector2(-1, -1)], [Vector2(5, -5), Vector2(1, -1)], [Vector2(-5, 5), Vector2(-1, 1)], [Vector2(5, 5), Vector2(1, 1)]]:
+				draw_line(c + pair[0], c + pair[1], ink, 2.0)
+		_:
+			_text(_title, "?", c + Vector2(-13, 4), 9, ink, HORIZONTAL_ALIGNMENT_CENTER, 26.0)
 
 
 func _flashes() -> void:
@@ -312,7 +367,7 @@ func _hazard(h: Dictionary, col: Color) -> void:
 
 ## Whether chess attacks show a piece's shape (the feature piece-icons).
 func icons() -> bool:
-	return Flags.enabled("piece-icons")
+	return state != null and state.viewing("piece-icons")
 
 
 ## A chess piece as a shape, so it can't be taken for a key to press: a tower, a pointed hat, a horse's head.
@@ -396,7 +451,7 @@ func _charms() -> void:
 	_text(_title, "CHARMS", Vector2(12, BOX_Y + 8.0), 7, Palette.DIM)
 	for row in rows:
 		_text(_title, row.name, Vector2(12, row.y), 7, row.color)
-	if Flags.enabled("party-aid"):
+	if state.viewing("party-aid"):
 		_text(_title, "+%d STRIKE" % rows.size(), Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 4.0), 6, Palette.DIM)
 		if state.dodge.guard > 0:
 			_text(_title, "-%d HURT" % state.dodge.guard, Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 14.0), 6, Palette.DIM)

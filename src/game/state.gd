@@ -17,6 +17,7 @@ var stage := ""
 var depth := 1 # which floor, B1F is 1
 var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
 var steps := 0 # how far the party has walked this run
+var views := {} # the features the picture may show, as the flow worked them out (off on the personality slice)
 var floors_of := 0 # how many floors the run has, for the header (0: it doesn't say)
 var banner = null # a moment on the picture, {title, text, t0, ms} (see flow.announce)
 var run_over := false # the run ended at the stairs: there is no floor below (always so without the feature real-floors)
@@ -69,6 +70,11 @@ func charms() -> Dictionary:
 func genre_of(m) -> String:
 	var enc := Content.table("encounter")
 	return Dodge.genre_on_turn(m, enc.boss.genres, enc.mini_games if rotate_mini_games else [])
+
+
+## Whether the views should show this feature.
+func viewing(feature_name: String) -> bool:
+	return views.get(feature_name, false)
 
 
 func say(new_lines: Array) -> void:

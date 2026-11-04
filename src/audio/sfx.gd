@@ -41,7 +41,7 @@ const ALIASES := {
 ## Rendered ahead of time, in this order, a few milliseconds per frame (voices depend on the monster and render when first needed).
 const PREWARM := [
 	"hit", "miss", "crit", "hurt", "kill", "bump", "tick", "slash", "stairs", "good", "bad", "death", "holy", "buff", "sad", "odd",
-	"join", "encounter", "boss", "flee", "step", "beat", "move", "pick", "mercy_refused", "shout",
+	"join", "chime", "encounter", "boss", "flee", "step", "beat", "move", "pick", "mercy_refused", "shout",
 ]
 const PREWARM_MS := 4.0 # per frame for background rendering...
 const URGENT_MS := 10.0 # ...and per frame while a sound is waiting for its render
@@ -80,7 +80,7 @@ static func recipes() -> Dictionary:
 		_recipes = {
 			"hit": snd_hit, "crit": snd_crit, "miss": snd_miss, "hurt": snd_hurt, "kill": snd_kill, "death": snd_death,
 			"holy": snd_holy, "buff": snd_buff, "slash": snd_slash,
-			"good": snd_good, "bad": snd_bad, "sad": snd_sad, "odd": snd_odd, "join": snd_join,
+			"good": snd_good, "bad": snd_bad, "sad": snd_sad, "odd": snd_odd, "join": snd_join, "chime": snd_chime,
 			"encounter": snd_encounter, "boss": snd_boss, "flee": snd_flee, "bump": snd_bump, "stairs": snd_stairs,
 			"tick": snd_tick,
 			"voice_roar": snd_voice_roar, "voice_bark": snd_voice_bark, "voice_grunt": snd_voice_grunt,
@@ -360,6 +360,11 @@ static func snd_sad(s, t, _o = {}):
 static func snd_odd(s, t, _o = {}):
 	s.tone(t, {f0 = 300, f1 = 900, dur = 0.12, vol = 0.15, room = 0.3})
 	s.tone(t + 0.12, {f0 = 900, f1 = 220, dur = 0.3, vol = 0.13, room = 0.5, vibrato = {rate = 18, depth = 40}})
+
+
+static func snd_chime(s, t, _o = {}):
+	s.tone(t, {type = "sine", f0 = note(84), dur = 0.5, vol = 0.14, room = 0.7})
+	s.tone(t + 0.12, {type = "sine", f0 = note(91), dur = 0.7, vol = 0.12, room = 0.8})
 
 
 static func snd_join(s, t, _o = {}):

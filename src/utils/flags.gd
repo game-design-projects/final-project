@@ -37,6 +37,8 @@ const FEATURES := {
 	"story": "a run opens with why you are here, each floor says who holds it, and the header counts the floors left",
 	"tutorial": "short tips the first time something comes up (remembered, and the TIPS setting skips them), and the first fights of a run go slower",
 	"walk-heal": "walking the halls slowly brings health back",
+	"mood-cues": "a monster shows how a deed landed in a bubble over its head, and asks to join (with a chime) once mercy is likely",
+	"show-mind": "the foe's card shows the mind's answers; no-show-mind leaves its mood and clues only, for an A/B test",
 	"recruit-step": "a spared monster asks to come along and you answer, with no second roll; peace leaves a gift, a refused SPARE no longer angers, and champions are presented as winnable",
 	"mercy-link": "the mercy odds show as a gauge beside the monster's health, and each deed says how far it moved them",
 	"party-aid": "each ally adds to your strikes, and two or more take the edge off every hit",
@@ -80,6 +82,13 @@ static func enabled(name: String) -> bool:
 	if all.has(name):
 		return not str(all[name]) in OFF_WORDS
 	return not all.has("classic")
+
+
+## Whether a feature was switched off by name: `no-<name>` or `<name>=off`, not by `classic`. For what the game did before the
+## flag came, which `classic` must leave as it was.
+static func switched_off(name: String) -> bool:
+	var all := _all()
+	return all.has("no-" + name) or (all.has(name) and str(all[name]) in OFF_WORDS)
 
 
 ## The features that are on now, for the logs.

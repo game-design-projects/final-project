@@ -19,6 +19,8 @@ const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
+## The features the picture and the HUD show, which they read from the state (see State.views).
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0
@@ -120,6 +122,8 @@ func next_floor() -> void:
 func _apply_features() -> void:
 	state.rotate_mini_games = feature("mini-games")
 	state.floors_of = Floors.run_floors() if _telling_story() else 0
+	for name in VIEW_FEATURES:
+		state.views[name] = feature(name)
 
 
 ## The story needs a below to tell of.
