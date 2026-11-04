@@ -170,6 +170,24 @@ func _dock() -> void:
 	_keys(Rect2(0, LOG_H + SLOT_H + GAP * 2.0, size.x, KEYS_H))
 
 
+## How tall a log line is at this width: the speaker's name and the text, wrapped.
+static func _log_line_h(l: Dictionary, width: float) -> float:
+	var who: String = l.who if l.kind == "say" else ""
+	var head := "%s: " % who if who != "" else ""
+	return Fonts.body().get_multiline_string_size(head + l.text, HORIZONTAL_ALIGNMENT_LEFT, width, 20).y
+
+
+## How many of the first lines fit the log box, which cuts off at the first one that would run past its bottom.
+static func log_fits(lines: Array, width: float) -> int:
+	var y := 0.0
+	for i in lines.size():
+		var h := _log_line_h(lines[i], width)
+		if y + h > LOG_H + 4.0:
+			return i
+		y += h
+	return lines.size()
+
+
 ## The log: the lines the game last said, top down, a speaker's name in gold.
 func _log(area: Rect2) -> void:
 	var y := area.position.y
@@ -177,7 +195,7 @@ func _log(area: Rect2) -> void:
 		var who: String = l.who if l.kind == "say" else ""
 		var head := "%s: " % who if who != "" else ""
 		var text: String = l.text
-		var rich_h := _body.get_multiline_string_size(head + text, HORIZONTAL_ALIGNMENT_LEFT, area.size.x, 20).y
+		var rich_h := _log_line_h(l, area.size.x)
 		if y + rich_h > area.end.y + 4.0:
 			break
 		if head != "":

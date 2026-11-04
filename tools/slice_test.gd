@@ -16,6 +16,7 @@ const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
+const Hud = preload("res://src/view/hud.gd")
 
 
 var _clock := 0.0
@@ -64,6 +65,7 @@ func _slice_needs_its_roll() -> void:
 	print("slice_test: (the ERROR line that follows is the refusal under test)")
 	await PersonalitySlice.start(flow)
 	_check(not flow.slice_floor and flow.slice_queue.is_empty() and flow.state.stage == "explore", "a slice whose roll cannot be pinned does not start: the run stays an ordinary one")
+	_check(not PersonalitySlice.pending(), "and it is not tried again: MAIN MENU shows the menu instead of bouncing back into a new run")
 
 
 ## A slice on a fresh run: the flow, and ROOK's intro already over, at his menu.
@@ -183,7 +185,9 @@ func _fair_cut_route() -> void:
 	await _press(flow, [2, 2])
 	_check(s.gold == 6 and rook.gone == "spared", "ROOK takes the 6-gold cut and leaves")
 	_check(s.stage == "intro" and s.foe == vex, "VEX comes on at once: no CONTINUE screen between the fights")
-	_check(s.lines.any(func(l): return l.text == Texts.cut_accepted(rook)), "ROOK's goodbye is still in the log when VEX's fight starts")
+	_check(s.lines.any(func(l): return l.text == Texts.cut_accepted(rook)), "how ROOK's fight ended (the cut he took) is still in the log when VEX's fight starts")
+	var log_width: float = ProjectSettings.get_setting("display/window/size/viewport_width")
+	_check(Hud.log_fits(s.lines, log_width) == s.lines.size(), "VEX's greeting and fight rule both fit the three lines of the log after the goodbye (%d of %d lines)" % [Hud.log_fits(s.lines, log_width), s.lines.size()])
 	await _to_menu(flow)
 	await _press(flow, [2, 2])
 	_check(s.gold == 6 and vex.gone == "" and s.stage == "menu", "VEX refuses the cut: the gold stays, he stays, and the menu is back (no attack follows)")

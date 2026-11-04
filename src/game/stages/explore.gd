@@ -24,11 +24,9 @@ func handle(flow, key: String) -> void:
 		"down":
 			await _step(flow, true)
 		"left":
-			s.facing = (s.facing + 3) % 4
-			s.look()
+			s.turn(-1)
 		"right":
-			s.facing = (s.facing + 1) % 4
-			s.look()
+			s.turn(1)
 		"cancel":
 			flow.event("pause_requested")
 

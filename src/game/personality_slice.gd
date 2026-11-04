@@ -50,10 +50,10 @@ static func bandit() -> Dictionary:
 
 ## Turn the first two monsters of the fresh run into ROOK and VEX and start the fight with ROOK.
 static func start(flow) -> void:
+	_started = true # tried, so MAIN MENU shows the menu again even when the roll cannot be pinned
 	if not flow.dice.pin(ROLL): # without the fixed roll the slice would not repeat: leave the run as an ordinary one
 		push_error("slice: ROLL %s cannot be pinned, so the slice is not started" % ROLL)
 		return
-	_started = true
 	var s = flow.state
 	s.gold = GOLD
 	flow.slice_floor = true

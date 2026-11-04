@@ -66,11 +66,11 @@ func _flee(flow) -> void:
 	s.tally.fled += 1
 	flow.event("sound", {"name": "flee"})
 	flow.encounter.judge("flee") # before the slice ends, so an ally's verdict is drawn at the fixed roll too
-	flow.end_slice()
+	flow.end_slice() # a fled slice is over: no second bandit follows
 	m.hp = m.max_hp
 	var lines := [State.sys_line(Texts.flee(m))]
 	for n in flow.encounter.pending_notes:
 		lines.append(State.speech(n.who, n.text))
 	flow.encounter.pending_notes = []
 	flow.encounter.pending_rows = []
-	await flow.go("explore", {"lines": lines})
+	await flow.encounter.leave_fight(lines)

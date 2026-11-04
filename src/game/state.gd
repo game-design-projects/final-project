@@ -15,6 +15,7 @@ var depth := 1 # which floor, B1F is 1; it picks the colours
 var floor_map # FloorMap
 var cell := Vector2i(1, 1)
 var facing := 0
+var quarter_turns := 0 # every quarter turn made, right +1 and left -1, adding up: the camera follows this, not `facing`, which is mod 4
 var visited := {} # Vector2i -> true: cells you stood in
 var seen := {} # Vector2i -> true: cells you saw down a corridor, for the automap
 
@@ -63,10 +64,20 @@ static func speech(who: String, text: String) -> Dictionary:
 	return {"kind": "say", "who": who, "text": text}
 
 
-## Remember what you can see from here (after a step or a turn).
+## Turn on the spot: 1 a quarter to the right, -1 to the left.
+func turn(quarters: int) -> void:
+	facing = posmod(facing + quarters, 4)
+	quarter_turns += quarters
+	look()
+
+
+## Remember what you can see from here (after a step or a turn): the cells straight ahead, and where a monster stands that
+## you can see, so the automap shows what the 3D view shows.
 func look() -> void:
 	for c in Vision.ahead(floor_map, cell, facing):
 		seen[c] = true
+	for m in Vision.monsters(floor_map, cell, facing):
+		seen[m.cell] = true
 
 
 ## "spared 1 · slain 0 · 8 gold", for the log when you come back to a save.

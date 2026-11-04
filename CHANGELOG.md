@@ -7,23 +7,37 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - `tools/menu_test.gd`, `tools/saves_test.gd`, `tools/gameplay_test.gd` and `tools/view_test.gd` check the menus, the save slots (including `nosave`), the views after a new floor or a load, and the 3D view; CI runs them.
 - `tools/test_base.gd` holds what the test scripts share, including a timeout that stops a hung test with a failure.
-- `Dice` (`src/utils/dice.gd`) is the one source of interaction chances. The slice pins it, and `Odds` and `Allies` take a Dice and not a Rng, so a draw cannot go around the fixed roll. `pin` refuses a roll outside 0 up to below 1 (or NaN), reports it, and tells its caller; a slice whose roll cannot be pinned does not start. `Rng.real()` never returns 1.0.
+- `Dice` (`src/utils/dice.gd`) is the one source of interaction chances: the slice pins it, and `Odds` and `Allies` take a Dice, not a Rng, so a draw cannot go around the fixed roll.
+- `Dice.pin` refuses a roll outside 0 up to below 1 (or NaN), reports it and returns false; `Rng.real()` never returns 1.0.
 - A test scan of every script under `src` finds a Dice made outside the flow, a chance rolled from `flow.rng`, and a copy of the game's rng.
+- `State.turn` counts quarter turns, so the camera knows which way the player turned.
 
 ### Changed
-- A fight ends in the log and back to walking: the CONTINUE screen and its state machine step (`result`) are gone, and the personality slice goes straight from ROOK to VEX with ROOK's goodbye still in the log.
-- Saves are numbered (`seq`, one above the last) and Continue offers the highest; `saved_at` stays the real clock time, so a clock set forward cannot date new saves in the future.
-- A named save is labelled alike on the list, its page, COPY TO and the REPLACE question (the slot and its name in capitals); a long name is cut off before the date, and the page's title line is clipped to the panel.
+- A fight ends in the log and back to walking: the CONTINUE screen and its state machine step (`result`) are gone.
+- The personality slice goes straight from ROOK to VEX; the log keeps one line on how ROOK's fight ended, so VEX's greeting and fight rule still fit.
+- A slice whose fixed roll cannot be pinned does not start, and is not tried again.
+- Saves are numbered (`seq`, one above every save on disk, read at each write) and Continue offers the highest, so a second window cannot make it offer an older save.
+- `saved_at` stays the real clock time, so a clock set forward cannot date new saves in the future.
+- The saves log shows each save's number and what Continue chose among.
+- A named save is labelled alike on the list, its page, COPY TO and the REPLACE question (the slot and its name in capitals).
+- A long save name is cut off before the date whether or not its row is picked; save dates show no arrows, only settings do.
+- The automap also marks where a monster stands once you see it, so it agrees with the 3D view.
 
 ### Fixed
-- A monster is in view when it is in front of you with nothing in the way: down a corridor however far, across a hall, off to one side. Only the ones straight ahead within six cells were drawn, so the champion in its hall was missing from the view (the automap learns the whole corridor ahead too).
-- Holding LEFT or RIGHT keeps the camera turning that way; it used to shake left and right because each held key ran ahead of the camera and the shortest way to the heading flipped.
+- A monster is in view when it is in front of you with nothing in the way: down a corridor however far, across a hall, off to one side.
+- The champion in its hall was missing from the view because only monsters straight ahead within six cells were drawn.
+- The automap learns the whole corridor ahead, to the wall.
+- A turn no longer hides the monster in the picture while the camera swings, or shows one it has not reached yet.
+- Holding LEFT or RIGHT keeps the camera turning that way, instead of shaking left and right.
+- Several turns in one slow frame still turn the camera the way they went.
 - The snake's eyes, the slime's mouth and the rock's crack were buried inside their bodies and never showed.
 - The allies' names at the bottom of the view sit on a dark box, so a wall line no longer runs through them.
-- A random run's printed seed is never negative, and `seed=` takes any whole number from 0 to 9223372036854775807, so every printed seed replays; a bad, bare or oversized `seed=` gives one warning that names the fallback (autoplay too), and `seed=-0` is seed 0.
+- A random run's printed seed is never negative, and `seed=` takes any whole number from 0 to 9223372036854775807, so every printed seed replays.
+- A bad, bare or oversized `seed=` gives one warning that names the fallback (autoplay too), and `seed=-0` is seed 0.
 - A key hint longer than the menu panel wraps instead of being cut off; the settings hint is shorter too.
 - NEW FLOOR and a loaded save point the header, status row, dock and overlay at the new state (the same `state_replaced` event), instead of leaving them on the old one.
-- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining, an ally's verdict, whether it leaves, a recruit's starting loyalty), and fleeing judges the allies before it ends the slice, so the same actions give the same results; `mock` no longer swaps its local rules.
+- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining, an ally's verdict, whether it leaves, a recruit's starting loyalty).
+- Fleeing judges the allies before it ends the slice, and `mock` no longer swaps its local rules, so the same actions give the same results.
 - `nosave` keeps the save slots in memory (saving, loading, renaming, copying and deleting included), and DATA no longer offers OPEN SAVE FOLDER under it.
 - The credits no longer repeat the CREDITS heading.
 - The slice's bandits are built from the roster's own bandit line; a retry no longer saves a HP value it never used.

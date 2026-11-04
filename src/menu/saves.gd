@@ -17,10 +17,10 @@ static var dir_path := "user://saves"
 ## With the `nosave` flag the slots live here, in memory, and the player's saves are neither read nor changed: a scenario
 ## run can save, list and load as usual, and nothing reaches the disk. slot -> document.
 static var _memory := {}
-## The highest save number seen so far this run: each write takes the next one up. `saved_at` is the clock's time and
-## only for showing; the number is what says which save came last (two can share a second, and a clock can be set back).
+## The highest save number seen so far this run: each write takes the next one above every save there is. `saved_at` is the
+## clock's time and only for showing; the number is what says which save came last (two can share a second, and a clock
+## can be set back).
 static var _seq := 0
-static var _scanned := false # whether every slot has been read this run, so `_seq` is above all of them
 
 
 ## Whether the slots are kept in memory (the `nosave` flag).
@@ -85,19 +85,18 @@ static func read(slot: String) -> Dictionary:
 
 
 static func list() -> Array:
-	var out := slots().map(func(s): return info(s))
-	_scanned = true
-	return out
+	return slots().map(func(s): return info(s))
 
 
 ## The newest save that can be read, or {} (what Continue loads).
 static func latest() -> Dictionary:
 	var best := {}
-	for i in list():
+	var all := list()
+	for i in all:
 		if not i.empty and not i.corrupt and (best.is_empty() or i.seq > best.seq or (i.seq == best.seq and i.saved_at > best.saved_at)):
 			best = i
 	if not best.is_empty():
-		print_verbose("saves: latest is %s" % best.slot)
+		print_verbose("saves: latest is %s (seq %d) of %s" % [best.slot, best.seq, all.filter(func(i): return not i.empty).map(func(i): return "%s=%d" % [i.slot, i.seq])])
 	return best
 
 
@@ -144,11 +143,10 @@ static func _read_doc(slot: String):
 	return json.data
 
 
-## The number for the next save: one above every save there is. The first of a run reads the slots to find the highest
-## (the menu's Continue has usually done that already).
+## The number for the next save: one above every save there is. The slots are read each time (there are seven small
+## files), so a second window or tab that wrote since is counted too.
 static func _next_seq() -> int:
-	if not _scanned:
-		list()
+	list() # `info` raises `_seq` to the highest on disk
 	_seq += 1
 	return _seq
 

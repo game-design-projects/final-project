@@ -46,6 +46,7 @@ func _run() -> void:
 	_faces_are_not_buried()
 	await _camera_keeps_turning()
 	await _stage_shows_what_vision_says()
+	await _slow_frames_keep_the_direction()
 	_finish()
 
 
@@ -180,7 +181,7 @@ func _camera_keeps_turning() -> void:
 		var spun := 0.0
 		for frame in 120:
 			if frame % 2 == 0:
-				s.facing = (s.facing + side) % 4
+				s.turn(1 if side == 1 else -1)
 			stage.update(s, frame * FRAME, FRAME)
 			var step: float = stage._yaw - last
 			spun += step
@@ -202,9 +203,35 @@ func _stage_shows_what_vision_says() -> void:
 	var corner: Vector2i = boss.cell + Vector2i(-FloorGen.HALL_RADIUS, -FloorGen.HALL_RADIUS)
 	s.cell = corner
 	s.facing = EAST # the champion is two rows down and two cells along: not in the column ahead
+	s.seen = {}
+	s.look()
+	_check(s.seen.has(boss.cell), "the automap knows where the champion stands once you see it across the hall")
 	var stage = _stage_for(s)
 	_check(stage._models.has(boss) and stage._models[boss].visible, "the champion across the hall is drawn, though it is not straight ahead")
-	s.facing = 0 # north: it is behind you
+	s.turn(-1) # north: it is behind you
 	stage.update(s, 0.0, FRAME)
-	_check(not stage._models[boss].visible, "and is not drawn once you face away from it")
+	_check(stage._models[boss].visible, "a turn does not drop the champion while the camera is still swinging past it")
+	for frame in 60: # the camera swings round
+		stage.update(s, frame * FRAME, FRAME)
+	_check(not stage._models[boss].visible, "and it is not drawn once you face away from it and the camera is round")
+	stage.free()
+
+
+## Three turns that land in one frame (a slow frame, a key that repeats faster than the game draws) still turn the camera
+## the way they went: the heading alone, mod 4, would read three right turns as one to the left.
+func _slow_frames_keep_the_direction() -> void:
+	var flow = await _walk(3)
+	var s = flow.state
+	var stage = _stage_for(s)
+	var before: float = stage._yaw_goal
+	s.turn(1)
+	s.turn(1)
+	s.turn(1)
+	stage.update(s, 0.0, FRAME)
+	_check(stage._yaw_goal < before - PI, "three right turns in one frame move the goal on to the right (%.0f degrees)" % rad_to_deg(stage._yaw_goal - before))
+	before = stage._yaw_goal
+	s.turn(-1)
+	s.turn(-1)
+	stage.update(s, 0.0, FRAME)
+	_check(stage._yaw_goal > before, "and two left turns in one frame move it back to the left")
 	stage.free()

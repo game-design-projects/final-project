@@ -101,7 +101,8 @@ func _slot_page_shows_the_name(panel) -> void:
 	Flags.set_args(PackedStringArray([]))
 
 
-## A long name on a save list row is cut off before the date at the right edge, picked (with the arrows) or not.
+## A long name on a save list row is cut off before the date at the right edge, however the row is picked, and the row's
+## label does not change length as the pick moves.
 func _slot_rows_leave_room_for_the_date(panel) -> void:
 	Flags.set_args(PackedStringArray(["nosave"]))
 	var Saves = load("res://src/menu/saves.gd")
@@ -110,17 +111,24 @@ func _slot_rows_leave_room_for_the_date(panel) -> void:
 	Saves.write("1", {"hp": 1}, "HP 1/20")
 	Saves.rename("1", "W".repeat(Saves.NAME_MAX))
 	var ctx := {"load_slot": func(_s): pass, "save_slot": func(_s): pass}
-	var row_w: float = MenuPanel.WIDTH - MenuPanel.PAD * 2.0
 	var title: Font = Fonts.title()
 	for mode in ["load", "save", "manage"]:
-		var item: Dictionary = Menus.slot_list(panel, ctx, mode).items[1] # slot 1, after the autosave
+		panel.open(func(): return Menus.slot_list(panel, ctx, mode))
+		var item: Dictionary = panel._page.items[1] # slot 1, after the autosave
+		var row_w: float = panel._layout().rows[1].size.x # the row as it is drawn
+		var room: float = panel.label_room(item, row_w)
+		var shown_w: float = 0.0
 		for picked in [false, true]:
-			var room: float = panel.label_room(item, row_w, picked)
-			var value_w: float = title.get_string_size(panel._value_shown(item, picked), HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.VALUE_SIZE).x
-			var label_w: float = title.get_string_size("SLOT 1", HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.LABEL_SIZE).x
-			var ends: float = MenuPanel.LABEL_X + room # where the label is cut off
-			var value_starts: float = row_w - MenuPanel.VALUE_RIGHT - value_w
-			_check(ends <= value_starts and room > label_w, "%s list, %s row: the label is cut off before the date (ends at %d, the date starts at %d) and still shows the slot" % [mode, "picked" if picked else "plain", ends, value_starts])
+			shown_w = maxf(shown_w, title.get_string_size(panel._value_shown(item, picked), HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.VALUE_SIZE).x)
+		var label_w: float = title.get_string_size("SLOT 1", HORIZONTAL_ALIGNMENT_LEFT, -1, MenuPanel.LABEL_SIZE).x
+		var ends: float = MenuPanel.LABEL_X + room # where the label is cut off
+		var value_starts: float = row_w - MenuPanel.VALUE_RIGHT - shown_w
+		_check(ends <= value_starts and room > label_w, "%s list: the label is cut off before the date, picked or not (ends at %d, the date starts at %d) and still shows the slot" % [mode, ends, value_starts])
+		_check(not str(panel._value_shown(item, true)).contains("‹"), "%s list: a save slot's date has no arrows, since Left / Right do nothing there" % mode)
+	var plain := {"label": "A VERY LONG LABEL", "value": ""}
+	_check(is_equal_approx(panel.label_room(plain, 500.0), 500.0 - MenuPanel.LABEL_X * 2.0), "a row with nothing to show at the right keeps the whole width for its label")
+	var setting := {"label": "VOLUME", "value": "80", "adjust": func(_d): pass}
+	_check(panel._value_shown(setting, true) == "‹ 80 ›" and panel._value_shown(setting, false) == "80", "a setting shows arrows only while it is picked")
 	Saves.delete("1")
 	Flags.set_args(PackedStringArray([]))
 
