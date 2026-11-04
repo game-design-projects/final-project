@@ -15,7 +15,7 @@ const START_LOYALTY_MAX := 80
 
 
 static func start_loyalty(dice: Dice) -> float:
-	return float(dice.int_range(START_LOYALTY_MIN, START_LOYALTY_MAX))
+	return float(dice.int_between(START_LOYALTY_MIN, START_LOYALTY_MAX))
 
 
 ## Does an ally of this species have an opinion on this deed? ("slay", "spare", "flee", or a kind of words)

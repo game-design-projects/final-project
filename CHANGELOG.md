@@ -30,7 +30,11 @@ All notable changes to this project are documented here. The format follows [Kee
 - A bad `seed=` gives one warning that names the fallback; `seed=-0` is seed 0 again.
 - A bare `seed` or `seed=` is warned about instead of silently ignored, and autoplay's warning says it plays the default seeds.
 - Continue offers the later of two saves made in the same second (each save carries a microsecond stamp).
-- A recruit's starting loyalty can no longer step past its range on a draw of exactly 1.0.
+- `Rng.real()` never returns exactly 1.0 (Godot's `randf` can), so a range scaled from it cannot step out; a recruit's starting loyalty stays within its range.
+- `Dice.pin` refuses a roll outside 0 up to below 1 (or NaN) instead of pinning it, so the old -1 means unpinned idiom cannot make every chance succeed.
+- Two saves in the same tick of a coarse clock (a browser's) are still ordered: each save stamp is higher than the last of the run.
+- A renamed save's page is titled with its name, as the list shows it.
+- The slice test scans every script under `src` for a Dice made outside the flow or a copy of `flow.rng`, ignoring comments.
 - The random-seed test cleared no flag between rounds and so tested one seed (it passed about half the time with the bug); the credits test no longer matches any line ending in CREDITS.
 - A loaded save points the views at its state through the same `state_replaced` event as NEW FLOOR, so no caller has to rebind them by hand.
 - The slice's bandits are built from the roster's own bandit line, like the floor's.

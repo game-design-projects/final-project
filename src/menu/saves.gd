@@ -17,6 +17,7 @@ static var dir_path := "user://saves"
 ## With the `nosave` flag the slots live here, in memory, and the player's saves are neither read nor changed: a scenario
 ## run can save, list and load as usual, and nothing reaches the disk. slot -> document.
 static var _memory := {}
+static var _last_us := 0
 
 
 ## Whether the slots are kept in memory (the `nosave` flag).
@@ -50,14 +51,15 @@ static func write(slot: String, state: Dictionary, summary: String, name := "") 
 		return false
 	if name == "":
 		name = info(slot).name
-	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(Time.get_unix_time_from_system()), "saved_us": int(Time.get_unix_time_from_system() * 1000000.0), "state": var_to_str(state)}, slot)
+	var stamp := _stamp()
+	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(stamp / 1000000.0), "saved_us": stamp, "state": var_to_str(state)}, slot)
 
 
 ## What a slot list shows: {slot, empty, corrupt, name, summary, saved_at, saved_us}. `saved_us` is the finer stamp that
 ## orders two saves made in the same second.
 static func info(slot: String) -> Dictionary:
 	var doc = _read_doc(slot)
-	var none := {"slot": slot, "empty": true, "corrupt": false, "name": "", "summary": "", "saved_at": 0}
+	var none := {"slot": slot, "empty": true, "corrupt": false, "name": "", "summary": "", "saved_at": 0, "saved_us": 0}
 	if doc == null:
 		return none
 	if doc.is_empty():
@@ -89,8 +91,8 @@ static func latest() -> Dictionary:
 	for i in list():
 		if not i.empty and not i.corrupt and (best.is_empty() or i.saved_at > best.saved_at or (i.saved_at == best.saved_at and i.saved_us > best.saved_us)):
 			best = i
-	if not best.is_empty():
-		print_verbose("saves: latest is %s (%s)" % [best.slot, when(best.saved_at)])
+	if not best.is_empty() and OS.is_stdout_verbose():
+		print("saves: latest is %s (%s)" % [best.slot, when(best.saved_at)])
 	return best
 
 
@@ -135,6 +137,13 @@ static func _read_doc(slot: String):
 	if json.parse(FileAccess.get_file_as_string(path(slot))) != OK or not json.data is Dictionary or not json.data.has("state"):
 		return {}
 	return json.data
+
+
+## The time in microseconds, never the same or lower twice in one run, so two saves in the same tick of a coarse clock
+## (a browser's milliseconds) still say which came later.
+static func _stamp() -> int:
+	_last_us = maxi(int(Time.get_unix_time_from_system() * 1000000.0), _last_us + 1)
+	return _last_us
 
 
 static func _store(doc: Dictionary, slot: String) -> bool:

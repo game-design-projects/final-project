@@ -126,7 +126,10 @@ static func slot_actions(panel, ctx: Dictionary, slot: String) -> Dictionary:
 		{"label": "DELETE", "act": func(): panel.push(func(): return confirm(panel, "DELETE THIS SAVE?", "It can't be brought back.", "DELETE", _do_delete.bind(panel, slot)))},
 	]
 	var hint := ("%s  %s" % [info.summary, Saves.when(info.saved_at)]) if not info.empty else ""
-	return {"title": "AUTOSAVE" if not manual else "SLOT " + slot, "items": items, "hint": hint}
+	var title := "AUTOSAVE" if not manual else "SLOT " + slot
+	if info.name != "":
+		title += "  " + info.name # the list shows the name beside the slot, so the page does too
+	return {"title": title, "items": items, "hint": hint}
 
 
 static func rename_page(panel, slot: String, current: String) -> Dictionary:

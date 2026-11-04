@@ -5,9 +5,6 @@ extends RefCounted
 
 const Rng = preload("res://src/utils/rng.gd")
 
-## The largest draw: Godot's `randf` can give 1.0, which would step outside a range built from [0, 1).
-const BELOW_ONE := 0.999999
-
 var _rng: Rng
 var _pinned := -1.0 # the one number handed out while pinned; negative otherwise
 
@@ -16,10 +13,13 @@ func _init(rng: Rng) -> void:
 	_rng = rng
 
 
-## Hand out `roll` (0 to 1) every time until `unpin`.
+## Hand out `roll` (0 up to, not including, 1) every time until `unpin`. Anything else is refused and the dice is left as it was.
 func pin(roll: float) -> void:
-	_pinned = clampf(roll, 0.0, BELOW_ONE)
-	print_verbose("dice: pinned at %.2f" % _pinned)
+	if not (roll >= 0.0 and roll < 1.0): # also false for NaN
+		push_warning("dice: %s is not a roll (0 or more, below 1); not pinned" % roll)
+		return
+	_pinned = roll
+	print_verbose("dice: pinned at %.2f" % roll)
 
 
 func unpin() -> void:
@@ -34,11 +34,13 @@ func is_pinned() -> bool:
 
 ## A float in [0, 1).
 func real() -> float:
-	var roll := _pinned if is_pinned() else minf(_rng.real(), BELOW_ONE)
-	print_verbose("dice: %.3f%s" % [roll, " (pinned)" if is_pinned() else ""])
+	var roll := _pinned if is_pinned() else _rng.real()
+	if OS.is_stdout_verbose():
+		print("dice: %.3f%s" % [roll, " (pinned)" if is_pinned() else ""])
 	return roll
 
 
-## An int from a to b, both included.
-func int_range(a: int, b: int) -> int:
-	return a + mini(int(real() * (b - a + 1)), b - a)
+## A whole number from a to b, both included (drawn from `real`, so not the same numbers as `Rng.int_range`).
+func int_between(a: int, b: int) -> int:
+	assert(a <= b, "dice: int_between(%d, %d) has no numbers in it" % [a, b])
+	return a + int(real() * (b - a + 1))

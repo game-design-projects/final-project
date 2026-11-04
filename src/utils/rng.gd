@@ -5,6 +5,8 @@ extends RefCounted
 const Flags = preload("res://src/utils/flags.gd")
 
 const MAX_SEED := 0x7FFFFFFFFFFFFFFF
+## The largest number `real` gives: Godot's `randf` can return 1.0, which would step outside a range built from [0, 1).
+const BELOW_ONE := 0.999999
 const INT64_MAX_TEXT := "9223372036854775807" # MAX_SEED as text, for comparing a flag without `int()` overflowing
 
 ## The seed this generator started from, so a run can print it and be repeated.
@@ -63,7 +65,7 @@ func int_range(a: int, b: int) -> int:
 
 ## A float in [0, 1).
 func real() -> float:
-	return _gen.randf()
+	return minf(_gen.randf(), BELOW_ONE)
 
 
 ## True with probability p.

@@ -94,7 +94,9 @@ func _bad_seed_everywhere() -> void:
 	_check(Rng.new().seed_value >= 0, "seed=-5 gives a random, printable seed")
 	for bare in [["seed"], ["seed="]]:
 		Flags.set_args(PackedStringArray(bare))
-		_check(Rng.flag_seed() == -1 and PersonalitySlice.seed_value() == PersonalitySlice.DEFAULT_SEED and Rng.new().seed_value != Rng.new().seed_value, "%s with no number is not a seed: a random one for the game, the default for the slice" % bare[0])
+		_check(Rng.flag_seed() == -1, "%s with no number is not a seed" % bare[0])
+		_check(PersonalitySlice.seed_value() == PersonalitySlice.DEFAULT_SEED, "%s with no number gives the slice its default seed" % bare[0])
+		_check(Rng.new().seed_value != Rng.new().seed_value, "%s with no number gives the game a random seed" % bare[0])
 	for big in ["99999999999999999999", "9223372036854775808"]:
 		Flags.set_args(PackedStringArray(["seed=" + big]))
 		_check(Rng.flag_seed() == -1, "seed=%s is out of range, so it is ignored (not clamped or wrapped)" % big)
@@ -258,8 +260,12 @@ func _dice_pin() -> void:
 	_check(not dice.is_pinned() and varied.size() > 1, "an unpinned dice follows the generator (loyalty varies)")
 	dice.pin(0.0)
 	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MIN), "the lowest draw gives the lowest starting loyalty")
-	dice.pin(1.0) # a draw of 1.0 must not step out of the range
-	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "even a draw of 1.0 gives at most the highest starting loyalty")
+	dice.pin(Rng.BELOW_ONE)
+	_check(Allies.start_loyalty(dice) == float(Allies.START_LOYALTY_MAX), "the highest draw gives the highest starting loyalty")
+	dice.pin(0.25)
+	for refused in [1.0, 2.0, -1.0, NAN]: # not rolls: the dice stays as it was (the old -1 means unpinned idiom must not pin it at 0)
+		dice.pin(refused)
+	_check(dice.is_pinned() and dice.real() == 0.25, "a roll outside 0 to below 1 (or NaN) is refused and the pin stays")
 	var inside := true
 	dice.unpin()
 	for i in 2000:
@@ -268,25 +274,49 @@ func _dice_pin() -> void:
 	_check(inside, "a recruit's loyalty always lies inside its range")
 
 
-## Interaction chances may only be drawn through the Flow's dice. Reads the game's sources (comments left out) for a draw
-## around it: a Dice made from the rng, or a chance rolled straight from `flow.rng`.
+## Interaction chances may only be drawn through the Flow's dice. Reads every script under src (comments left out) for a Dice
+## made anywhere but the Flow, and for a chance rolled straight from `flow.rng` or from a copy of it.
 func _no_draw_around_the_dice() -> void:
 	var offenders := []
-	var stack := ["res://src/game"]
+	var bad := {
+		"a Dice made outside the flow": RegEx.create_from_string("Dice\\.new\\s*\\("),
+		"a chance from flow.rng": RegEx.create_from_string("flow\\.rng\\.(chance|real)\\s*\\("),
+		"a copy of flow.rng": RegEx.create_from_string("=\\s*(flow\\.)?rng\\s*$"),
+	}
+	var stack := ["res://src"]
 	while not stack.is_empty():
 		var dir: String = stack.pop_back()
 		for sub_dir in DirAccess.get_directories_at(dir):
 			stack.append("%s/%s" % [dir, sub_dir])
 		for file in DirAccess.get_files_at(dir):
-			if not file.ends_with(".gd") or (dir == "res://src/game" and file == "flow.gd"):
+			var path := "%s/%s" % [dir, file]
+			if not file.ends_with(".gd") or path in ["res://src/game/flow.gd", "res://src/utils/dice.gd"]:
 				continue
-			var code := ""
-			for line in FileAccess.get_file_as_string("%s/%s" % [dir, file]).split("\n"):
-				code += line.split("#")[0] + "\n"
-			for bad in [RegEx.create_from_string("Dice\\.new\\s*\\("), RegEx.create_from_string("flow\\.rng\\.(chance|real)\\s*\\(")]:
-				if bad.search(code) != null:
-					offenders.append("%s: %s" % [file, bad.get_pattern()])
-	_check(offenders.is_empty(), "no game script draws an interaction chance around the flow's dice (%s)" % [offenders])
+			var code := PackedStringArray()
+			for line in FileAccess.get_file_as_string(path).split("\n"):
+				code.append(_without_comment(line))
+			for what in bad:
+				for line in code:
+					if path.begins_with("res://src/game") or what != "a copy of flow.rng":
+						if bad[what].search(line) != null:
+							offenders.append("%s: %s" % [path, what])
+							break
+	_check(offenders.is_empty(), "no script under src draws an interaction chance around the flow's dice (%s)" % [offenders])
+
+
+## The line without a trailing `#` comment (a `#` inside a string stays).
+func _without_comment(line: String) -> String:
+	var quote := ""
+	for i in line.length():
+		var c := line[i]
+		if quote != "":
+			if c == quote and line[i - 1] != "\\":
+				quote = ""
+		elif c == "\"" or c == "'":
+			quote = c
+		elif c == "#":
+			return line.left(i)
+	return line
 
 
 ## A seed derived from another wraps past the largest seed and stays one the flag takes back.
