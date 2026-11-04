@@ -11,16 +11,26 @@ func handle(flow, key: String) -> void:
 	match key:
 		"up", "left":
 			s.selected = posmod(s.selected - 1, n)
+			_moved(flow, n)
 		"down", "right":
 			s.selected = posmod(s.selected + 1, n)
+			_moved(flow, n)
 		"confirm":
+			flow.event("menu_pick")
 			await pick(flow, s.selected)
 		"cancel":
 			await cancel(flow)
 		_:
 			if key.length() == 1 and key >= "1" and key <= "9" and int(key) - 1 < n:
 				s.selected = int(key) - 1
+				flow.event("menu_pick")
 				await pick(flow, s.selected)
+
+
+## The cursor moved (a list of one has nowhere to go).
+func _moved(flow, n: int) -> void:
+	if n > 1:
+		flow.event("menu_move")
 
 
 func pick(_flow, _index: int) -> void:

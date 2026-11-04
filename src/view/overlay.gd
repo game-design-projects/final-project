@@ -1,7 +1,7 @@
 ## The flat 2D layer over the 3D picture, in the picture's own 448x288 coordinates (scaled to fit). While walking it
-## holds the automap and the allies. In a fight it covers the dungeon with the flat battle screen: the monster as line art,
-## its name and health top left, the kind of fight top right, then the dodge box with its hazards and your soul, or the
-## strike bar. It only reads the game's state.
+## draws only the popups: the automap and the ally chips sit over the picture (automap.gd, tips.gd). In a fight it covers the dungeon with
+## the flat battle screen: the monster as line art, its name and health top left, the kind of fight top right, then the dodge box with
+## its hazards, your soul, your charms and the time left, or the strike bar; a white flash as the fight begins. It only reads the game's state.
 extends Control
 
 const Art = preload("res://src/view/art.gd")
@@ -14,33 +14,93 @@ const W := 448.0
 const H := 288.0
 
 # the dodge box, in picture pixels
-const BOX_CELL := 29.0
+const BOX_CELL := 28.0
 const BOX_X := (W - Dodge.COLS * BOX_CELL) / 2.0
-const BOX_Y := 79.0
+const BOX_Y := 82.0
 
 const FIGHT_STAGES := ["intro", "menu", "act", "talk", "fightbar", "wait", "dodge", "dead"]
 const HEALTH_OK := Color("#9ed36b")
-const LANTERN := Color("#fff2a0")
+const LANTERN := Color("#fff3b0")
+const GRID := Color("#1c1c20")
+const PILLAR := Color("#3a3a3a")
+const PILLAR_LINE := Color("#a7a39b")
+const CHARM_USED := Color("#3a3a3a")
+const INTRO_FLASH_MS := 700.0
+const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pixels
+const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
+const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
+# the receding corridor behind the title: how big each frame is against the picture
+const TITLE_FRAMES := [1.0, 0.556, 0.385, 0.294, 0.238]
+const TITLE_BLINK_MS := 600.0
 
 var state # State, set by the owner
 var clock_ms := 0.0
-var wall_color := Palette.INK
-var accent_color := Color("#ffb347")
 ## Until when the monster shakes (it was just hit), in clock ms.
 var hurt_until := 0.0
 ## Until when the battle screen shakes, in clock ms.
 var shake_until := 0.0
 ## True while the title card is up (before a run has started).
 var title_card := false
+## When the fight began in clock ms, and how strong its white flash starts.
+var intro_at := -1e9
+var intro_strength := 0.5
 
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _popups: Array = [] # [{text, color, at, born}]
+var _lantern_glow: GradientTexture2D
 
 
 ## True while the flat battle screen is showing (the 3D set is hidden behind it).
 func in_fight() -> bool:
 	return state != null and state.foe != null and state.stage in FIGHT_STAGES
+
+
+## How strong the white flash of a fight beginning is now (0 once it has faded).
+func intro_flash() -> float:
+	if state == null or state.stage != "intro":
+		return 0.0
+	return intro_strength * clampf(1.0 - (clock_ms - intro_at) / INTRO_FLASH_MS, 0.0, 1.0)
+
+
+## Whether the monster would take mercy, as the mind last answered: its name says so, in gold.
+func can_spare() -> bool:
+	for row in state.mind_rows:
+		if row.id == "mercy":
+			return not state.foe.is_gone() and float(row.answer) >= MERCY_AT
+	return false
+
+
+## The bar of the dodge's time left, whole (it is inside the picture, under the box).
+func time_bar() -> Rect2:
+	return Rect2(BOX_X - 3.0, BOX_Y + Dodge.ROWS * BOX_CELL + 5.0, Dodge.COLS * BOX_CELL + 6.0, 3.0)
+
+
+## How strongly a hazard's warning fills its squares: it ramps up until it lands.
+func warning_fill(h: Dictionary) -> float:
+	return 0.12 + 0.28 * clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)
+
+
+## Where a goo ball is now, falling onto the square it is aimed at.
+func goo_ball(h: Dictionary) -> Vector2:
+	var to := _cell_rect(h.at).get_center()
+	return to - Vector2(0.0, (1.0 - clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)) * GOO_DROP)
+
+
+## Where the lantern is now, in picture pixels: it orbits all through a shadow dodge.
+func lantern_spot() -> Vector2:
+	var run = state.dodge
+	return Vector2(BOX_X, BOX_Y) + Dodge.lantern_at(clock_ms - run.t0, run.intensity) * BOX_CELL
+
+
+## The charms beside the box, [{name, color, y}]; the slime's greys out once its shield is used.
+func charm_rows() -> Array:
+	var out := []
+	for i in state.allies.size():
+		var a = state.allies[i]
+		var used: bool = a.species == "slime" and not state.dodge.shield
+		out.append({"name": a.charm().name, "color": CHARM_USED if used else Color(Content.species(a.species).color), "y": BOX_Y + 22.0 + i * 12.0})
+	return out
 
 
 ## How far the battle screen is knocked off its place this frame (picture pixels); zero when it isn't shaking.
@@ -75,9 +135,6 @@ func _draw() -> void:
 			draw_set_transform(shake_offset() * k, 0.0, Vector2(k, k))
 		_battle()
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
-	elif state.stage in ["explore", "end"]:
-		_automap()
-	_allies()
 	for p in _popups:
 		var age: float = (clock_ms - p.born) / 900.0
 		var col: Color = p.color
@@ -91,38 +148,25 @@ func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := H
 
 # ---------------------------------------------------------------- the title card
 
-## Nested frames, the name, what the game is, and how to leave.
+## A receding corridor, the name in its box, what the game is, a blinking prompt, and how to leave.
 func _title_screen() -> void:
-	var pulse := 0.5 + 0.5 * sin(clock_ms / 500.0)
-	draw_rect(Rect2(3, 3, W - 6, H - 6), Palette.INK, false, 1.0)
-	draw_rect(Rect2(101, 66, 246, 158), Color(Palette.INK, 0.7), false, 1.0)
-	draw_rect(Rect2(52, 87, 344, 122), Palette.INK, false, 2.0)
-	draw_rect(Rect2(53, 88, 342, 120), Color.BLACK)
-	_text(_title, "DONJON", Vector2(0, 134), 32, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	_text(_title, "GENRE HALLS", Vector2(0, 160), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
-	_text(_title, "ESC: MENU", Vector2(0, 236), 8, Color(Palette.DIM, 0.6 + 0.4 * pulse), HORIZONTAL_ALIGNMENT_CENTER, W)
+	draw_rect(Rect2(0, 0, W, H), Color.BLACK)
+	for f in TITLE_FRAMES:
+		var size_at := (Vector2(W, H) - Vector2(8, 8)) * float(f)
+		draw_rect(Rect2((Vector2(W, H) - size_at) / 2.0, size_at).abs(), Palette.INK, false, 2.0)
+	var box := Rect2(W * 0.12, H * 0.3, W * 0.76, H * 0.42)
+	draw_rect(box, Color.BLACK)
+	draw_rect(box, Palette.INK, false, 2.0)
+	_text(_title, "DONJON", Vector2(0, H * 0.45), 28, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
+	_text(_title, "GENRE HALLS", Vector2(0, H * 0.55), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
+	if title_prompt_on():
+		_text(_title, "PRESS ANY KEY", Vector2(0, H * 0.65), 9, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
+	_text(_title, "ESC: MENU", Vector2(0, H * 0.82), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_CENTER, W)
 
 
-# ---------------------------------------------------------------- the automap
-
-func _automap() -> void:
-	var f = state.floor_map
-	var cell := 4.0
-	var span: float = f.size * cell
-	var origin := Vector2(W - span - 8.0, 8.0)
-	draw_rect(Rect2(origin - Vector2(3, 3), Vector2(span, span) + Vector2(6, 6)), Color.BLACK)
-	draw_rect(Rect2(origin - Vector2(3, 3), Vector2(span, span) + Vector2(6, 6)), Palette.FAINT, false, 1.0)
-	for c in state.seen:
-		var col := Color(wall_color, 0.55 if state.visited.has(c) else 0.28)
-		draw_rect(Rect2(origin + Vector2(c) * cell, Vector2(cell, cell)).grow(-0.5), col)
-	if state.seen.has(f.stairs):
-		draw_rect(Rect2(origin + Vector2(f.stairs) * cell, Vector2(cell, cell)).grow(-0.5), accent_color)
-	for m in f.monsters:
-		if not m.is_gone() and not m.boss and state.seen.has(m.cell):
-			draw_rect(Rect2(origin + Vector2(m.cell) * cell + Vector2(2, 2), Vector2(cell - 4, cell - 4)), Palette.monster(m))
-	var me := origin + (Vector2(state.cell) + Vector2(0.5, 0.5)) * cell
-	var d := Vector2(f.DIRS[state.facing])
-	draw_colored_polygon([me + d * cell * 0.55, me - d * cell * 0.3 + d.orthogonal() * cell * 0.35, me - d * cell * 0.3 - d.orthogonal() * cell * 0.35], Palette.INK)
+## Whether the blinking prompt shows this moment.
+func title_prompt_on() -> bool:
+	return floori(clock_ms / TITLE_BLINK_MS) % 2 == 0
 
 
 # ---------------------------------------------------------------- the battle screen
@@ -143,10 +187,14 @@ func _battle() -> void:
 		_flashes()
 	if state.bar != null:
 		_strike_bar()
+	var flash := intro_flash()
+	if flash > 0.0:
+		draw_rect(Rect2(0, 0, W, H), Color(1, 1, 1, flash))
 
 
 func _name_and_health(m) -> void:
-	_text(_title, m.name, Vector2(12, 21), 8, Palette.INK)
+	var spare := can_spare()
+	_text(_title, m.name + ("  (MERCY 50%+)" if spare else ""), Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
 	var bar := Rect2(12, 26, 120, 6)
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
@@ -180,34 +228,71 @@ func _flashes() -> void:
 func _dodge_box(accent: Color) -> void:
 	var run = state.dodge
 	var box := Rect2(BOX_X, BOX_Y, Dodge.COLS * BOX_CELL, Dodge.ROWS * BOX_CELL)
-	for i in range(Dodge.COLS + 1):
-		draw_line(Vector2(BOX_X + i * BOX_CELL, BOX_Y), Vector2(BOX_X + i * BOX_CELL, BOX_Y + box.size.y), Palette.FAINT)
-		draw_line(Vector2(BOX_X, BOX_Y + i * BOX_CELL), Vector2(BOX_X + box.size.x, BOX_Y + i * BOX_CELL), Palette.FAINT)
-	for k in run.blocked:
-		draw_rect(_cell_rect(k).grow(-3), Color(Palette.INK, 0.5))
+	for k in Dodge.COLS * Dodge.ROWS:
+		if run.blocked.has(k):
+			draw_rect(_cell_rect(k).grow(-2), PILLAR)
+			draw_rect(_cell_rect(k).grow(-2.5), PILLAR_LINE, false, 1.0)
+		else:
+			draw_rect(_cell_rect(k), GRID, false, 1.0)
 	for h in run.hazards:
-		var col: Color = LANTERN if h.kind == "light" else accent
-		var lit: bool = clock_ms >= h.hit
-		for k in h.cells:
-			var r := _cell_rect(k).grow(-2)
-			if lit:
-				draw_rect(r, Color(col, 0.85))
-			else:
-				draw_rect(r, Color(col, 0.16 + 0.1 * sin(clock_ms * 0.02)))
-				draw_rect(r, Color(col, 0.8), false, 1.0)
-		if h.has("glyph"):
-			var at := _cell_rect(h.at).get_center()
-			draw_rect(_cell_rect(h.at).grow(-3), Color.BLACK)
-			draw_rect(_cell_rect(h.at).grow(-3), Palette.INK, false, 1.0)
-			_text(_title, h.glyph, at + Vector2(-4, 4), 10, Palette.INK)
-		if h.has("lantern"):
-			var l: Vector2 = h.lantern
-			draw_circle(Vector2(BOX_X, BOX_Y) + l * BOX_CELL, 6.0, Color(LANTERN, 0.9))
+		_hazard(h, LANTERN if h.kind == "light" else accent)
+	if run.genre == "shadow":
+		_lantern()
 	var pulse: float = maxf(0.0, 1.0 - (clock_ms - run.pulse) / 180.0) if run.pulse > 0.0 else 0.0
 	draw_rect(box.grow(3), Palette.INK, false, 2.0 + pulse * 3.0)
-	var left := clampf((run.end_t - clock_ms) / maxf(1.0, run.end_t - run.t0), 0.0, 1.0)
-	draw_rect(Rect2(BOX_X, BOX_Y + box.size.y + 8.0, box.size.x * left, 2.0), Color(Palette.MERCY, 0.6))
 	_soul(run)
+	_charms()
+	var bar := time_bar()
+	var left := clampf((run.end_t - clock_ms) / maxf(1.0, run.end_t - run.t0), 0.0, 1.0)
+	draw_rect(bar, Palette.FAINT)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * left, bar.size.y)), Palette.DIM)
+
+
+## A hazard: its squares fill slowly with a flickering outline until it lands, then light up. A chess piece shows on its
+## square; goo falls toward where it will land.
+func _hazard(h: Dictionary, col: Color) -> void:
+	var live: bool = clock_ms >= h.hit
+	for k in h.cells:
+		var cell := _cell_rect(k)
+		if live:
+			draw_rect(cell.grow(-1), Color(col, 0.85))
+		else:
+			draw_rect(cell.grow(-1), Color(col, warning_fill(h)))
+			draw_rect(cell.grow(-3.5), Color(col, 0.5 + 0.5 * absf(sin(clock_ms / 90.0))), false, 1.0)
+	if h.has("glyph"):
+		var at := _cell_rect(h.at).get_center()
+		draw_rect(Rect2(at - Vector2(11, 11), Vector2(22, 22)), Color.BLACK)
+		_text(_title, h.glyph, at + Vector2(-6, 6), 12, Color.WHITE)
+	if h.kind == "goo" and not live:
+		draw_circle(goo_ball(h), 5.0, col)
+
+
+## The lantern, all through a shadow dodge: a soft glow and the small flame in it.
+func _lantern() -> void:
+	if _lantern_glow == null:
+		var gradient := Gradient.new()
+		gradient.set_color(0, Color(LANTERN, 0.9))
+		gradient.set_color(1, Color(LANTERN, 0.0))
+		_lantern_glow = GradientTexture2D.new()
+		_lantern_glow.gradient = gradient
+		_lantern_glow.fill = GradientTexture2D.FILL_RADIAL
+		_lantern_glow.fill_from = Vector2(0.5, 0.5)
+		_lantern_glow.fill_to = Vector2(1.0, 0.5)
+		_lantern_glow.width = 64
+		_lantern_glow.height = 64
+	var at := lantern_spot()
+	draw_texture_rect(_lantern_glow, Rect2(at - Vector2.ONE * LANTERN_GLOW_R, Vector2.ONE * LANTERN_GLOW_R * 2.0), false)
+	draw_rect(Rect2(at - Vector2(3, 5), Vector2(6, 10)), LANTERN)
+
+
+## Your charms beside the box.
+func _charms() -> void:
+	var rows := charm_rows()
+	if rows.is_empty():
+		return
+	_text(_title, "CHARMS", Vector2(12, BOX_Y + 8.0), 7, Palette.DIM)
+	for row in rows:
+		_text(_title, row.name, Vector2(12, row.y), 7, row.color)
 
 
 func _cell_rect(k: int) -> Rect2:
@@ -236,16 +321,3 @@ func _strike_bar() -> void:
 	var x := rect.position.x + rect.size.x * p
 	draw_line(Vector2(x, rect.position.y - 3), Vector2(x, rect.end.y + 3), Palette.INK, 3.0)
 	draw_rect(rect, Palette.INK, false, 2.0)
-
-
-# ---------------------------------------------------------------- the allies
-
-func _allies() -> void:
-	var y := H - 10.0
-	for a in state.allies:
-		var name: String = a.charm().name
-		var width := _title.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x
-		draw_rect(Rect2(9.0, y - 9.0, width + 18.0, 12.0), Color(0.0, 0.0, 0.0, 0.85)) # a wall line crossing the name would hide it
-		draw_circle(Vector2(14.0, y - 3.0), 3.5, Color(Content.species(a.species).color))
-		_text(_title, name, Vector2(22.0, y), 7, Palette.WARN if a.loyalty < 30.0 else Palette.DIM)
-		y -= 12.0

@@ -1,5 +1,6 @@
-## Takes pictures of the game in its typical moments, to look at: the main menu, walking, the pause menu, a monster ahead, the fight menu, the strike
-## bar, each kind of dodge, the champion, the result, the stairs. It needs a real window (it opens one briefly):
+## Takes pictures of the game in its typical moments, to look at: the main menu, walking, the pause menu, a monster ahead, each species close up, a
+## monster far away, the stairs, the fight menu, the strike bar, each kind of dodge, the champion, the result, the tooltips (the map's legend, the foe's
+## mind, a command, an ally) and the touch pad. It needs a real window (it opens one briefly):
 ##   godot --path . -s res://tools/screenshots.gd -- out=/some/dir seed=7
 ## Without `out` the pictures go to user://shots. It prints where. Nothing reaches the player's saves (the `nosave` flag is always on, so a save stays in memory).
 extends SceneTree
@@ -31,6 +32,11 @@ func _initialize() -> void:
 	_game = scene
 	await _wait(0.6)
 	await _shot("00b_title_card")
+	for i in 20: # the prompt blinks: catch it lit
+		if _game._overlay.title_prompt_on() and _game._overlay.clock_ms > 1000.0:
+			break
+		await _wait(0.1)
+	await _shot("00c_title_card_prompt")
 	await _game._begin()
 	await _wait(0.4)
 	await _walk_and_fight()
@@ -73,6 +79,65 @@ func _stand_before(m, steps: int) -> bool:
 	return false
 
 
+## Each species close up and far away, whatever stands where: `m` wears the species for the picture. Close up shows the model's
+## detail, two cells out and from afar its readable lines and tag.
+func _species() -> void:
+	var s = _game.flow.state
+	var m = s.floor_map.monsters[0]
+	var worn: String = m.species
+	var far := -1
+	for steps in [8, 7, 6, 5, 4]:
+		if _stand_before(m, steps):
+			far = steps
+			break
+	for species in ["slime", "bandit", "snake", "rock", "dragon"]:
+		_forget(m)
+		m.species = species
+		_stand_before(m, 1)
+		await _wait(0.5)
+		await _shot("02s_%s_close" % species)
+		_stand_before(m, 2)
+		await _wait(0.5)
+		await _shot("02s_%s_two_cells" % species)
+		if far > 0:
+			_stand_before(m, far)
+			await _wait(0.5)
+			await _shot("02s_%s_far_%d_cells" % [species, far])
+	_forget(m)
+	m.species = worn
+
+
+## The set builds a monster's model once; drop it, so a changed species shows.
+func _forget(m) -> void:
+	var stage = _game._stage
+	if stage._models.has(m):
+		stage._models[m].queue_free()
+		stage._tags[m].queue_free()
+		stage._models.erase(m)
+		stage._tags.erase(m)
+		stage._tag_light.erase(m)
+
+
+## The stairs from two cells off and from one, straight on.
+func _stairs() -> void:
+	var s = _game.flow.state
+	var f = s.floor_map
+	for steps in [2, 1]:
+		for i in 4:
+			var c: Vector2i = f.stairs
+			var n := 0
+			while n < steps and f.is_open(c - FloorMap.DIRS[i]):
+				c -= FloorMap.DIRS[i]
+				n += 1
+			if n == steps:
+				s.cell = c
+				s.facing = i
+				s.look()
+				await _wait(0.5)
+				await _shot("02t_stairs_%d_cells" % steps)
+				break
+
+
 ## Stand close to one wall of each kind of decoration, looking at it.
 func _decorations() -> void:
 	var s = _game.flow.state
@@ -110,12 +175,19 @@ func _walk_and_fight() -> void:
 			break
 	await _wait(1.0)
 	await _shot("02_monster_ahead")
+	_game._tips.pinned = "map"
+	await _wait(0.3)
+	await _shot("02b_map_tooltip")
+	_game._tips.pinned = ""
+	await _species()
+	await _stairs()
 	_stand_before(m, 1) # in a fight the monster is right in front of you
 	await flow.go("intro", {"foe": m})
 	await _wait(0.4)
 	await _shot("03_intro")
 	await _wait(0.9)
 	await _shot("04_menu")
+	await _tooltips()
 	await flow.press("2")
 	await _wait(0.3)
 	await _shot("05_act")
@@ -136,6 +208,8 @@ func _walk_and_fight() -> void:
 	s.hp = 9999
 	for genre in ["bullet", "chess", "shadow", "rhythm"]:
 		m.genre = genre
+		if genre == "rhythm": # the last one shows the charms
+			s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]
 		await _until("menu", 40.0)
 		if s.stage == "menu":
 			await flow.go("wait", {"pressure": 1.5})
@@ -165,10 +239,38 @@ func _walk_and_fight() -> void:
 	await _wait(0.5)
 	await _shot("12_dead")
 	await flow.go("explore")
-	s.allies.append(Ally.make("slime", "GLOP", 60.0))
 	s.max_hp = real_max
 	s.hp = real_max
 	s.cell = s.floor_map.stairs
 	await flow.go("end")
 	await _wait(0.3)
 	await _shot("11_end")
+
+
+## The cards over the picture and the touch pad, in the fight menu: the foe's mind (after a kind word, so it has something to say),
+## what SPARE does, two allies (one about to leave), and the pad.
+func _tooltips() -> void:
+	var s = _game.flow.state
+	var tips = _game._tips
+	await _game.flow.encounter.decide(s.foe, [{"intent": "kindness", "w": 1.0}], "KIND")
+	tips.pinned = "foe"
+	await _wait(0.3)
+	await _shot("04b_foe_tooltip")
+	tips.pinned = ""
+	tips.hover_command(2, _game._dock.command_screen_rect(2))
+	await _wait(0.3)
+	await _shot("04c_command_tooltip")
+	tips.hover_command(-1)
+	s.allies.append(Ally.make("slime", "GLOP", 80.0))
+	s.allies.append(Ally.make("rock", "STONE", 20.0))
+	await _wait(0.3)
+	tips.pinned = "ally1"
+	await _wait(0.3)
+	await _shot("04d_ally_tooltip")
+	tips.pinned = ""
+	_game._pad.visible = true
+	await _wait(0.3)
+	await _shot("04e_touch_pad")
+	_game._pad.visible = false
+	s.allies = []
+	await _wait(0.2)

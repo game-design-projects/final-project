@@ -20,16 +20,49 @@ const OPTIONS := {
 	"fps_cap": [0, 30, 60, 120, 144],
 }
 const VOLUME_MAX := 10
+## Where the game before the rewrite kept every setting, as one JSON string. Read once, moved to the keys below, and removed.
+const OLD_KEY := "donjon.settings"
 const LABELS := {
 	"window_mode": {"windowed": "WINDOWED", "maximized": "MAXIMIZED", "fullscreen": "FULLSCREEN"},
 	"fps_cap": {0: "NO CAP", 30: "30", 60: "60", 120: "120", 144: "144"},
 }
 
 
+static var _migrated := false
+
+
 ## The saved value if it is valid, else the default.
 static func get_value(key: String):
+	_migrate_old()
 	var v = Store.get_value(key, DEFAULTS[key])
 	return v if valid(key, v) else DEFAULTS[key]
+
+
+## The first read of the settings takes in what the old game left under `donjon.settings`: each valid value whose key is not
+## set yet moves to its own key, and the old string is removed (or a Reset would bring its values back).
+static func _migrate_old() -> void:
+	if _migrated:
+		return
+	_migrated = true
+	var text = Store.get_value(OLD_KEY)
+	if text == null:
+		return
+	var json := JSON.new()
+	if json.parse(str(text)) == OK and json.data is Dictionary:
+		var moved := 0
+		for key in DEFAULTS:
+			if json.data.has(key) and Store.get_value(key) == null and valid(key, json.data[key]):
+				Store.set_value(key, int(json.data[key]) if DEFAULTS[key] is int else json.data[key])
+				moved += 1
+		print("settings: took %d values over from the old '%s'" % [moved, OLD_KEY])
+	else:
+		push_warning("settings: the old '%s' is not a JSON object, dropped" % OLD_KEY)
+	Store.remove(OLD_KEY)
+
+
+## Read the old string again on the next read (a test puts one in the Store).
+static func forget_migration() -> void:
+	_migrated = false
 
 
 static func valid(key: String, v) -> bool:

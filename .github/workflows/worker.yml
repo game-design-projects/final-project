@@ -38,6 +38,9 @@ jobs:
           package-manager-cache: false
       - run: npm ci --ignore-scripts
         working-directory: proxy
+      - name: Worker tests and scope guard
+        working-directory: proxy
+        run: node --test worker.test.js
       - name: Worker config is one workers.dev Worker with no routes, builds or extra bindings
         run: |
           set -euo pipefail

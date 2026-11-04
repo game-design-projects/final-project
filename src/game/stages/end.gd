@@ -15,7 +15,7 @@ func enter(flow, _args: Dictionary) -> void:
 	var ending := Texts.ending(s.tally, s.allies)
 	s.say([State.speech(ending.route, ending.text), State.sys_line(ending.tail)])
 	s.menu = [{"label": "NEW FLOOR", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
-	s.hint = "ENTER PICK"
+	s.hint = "ENTER PICK · ESC MAIN MENU"
 	print("end: %s" % ending.route)
 
 
@@ -25,3 +25,8 @@ func pick(flow, index: int) -> void:
 			await flow.new_run()
 		MAIN_MENU:
 			flow.event("leave", {"to": "menu"})
+
+
+## Esc is the way out: the main menu, as the route screen's Esc always was.
+func cancel(flow) -> void:
+	flow.event("leave", {"to": "menu"})

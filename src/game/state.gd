@@ -4,12 +4,17 @@ extends RefCounted
 
 const Ally = preload("res://src/game/ally.gd")
 const Combat = preload("res://src/rules/combat.gd")
+const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
+const DEPTH_MAX := 99
+const GRID_MAX := 64 # the biggest floor a save may describe (the game's own is 13)
+
 var stage := ""
-var depth := 1 # which floor, B1F is 1; it picks the colours
+var depth := 1 # which floor, B1F is 1
+var palette_id := 0 # which colours this run wears (Palette.for_run), picked from the seed and saved with the run
 
 # the walk
 var floor_map # FloorMap
@@ -17,7 +22,7 @@ var cell := Vector2i(1, 1)
 var facing := 0
 var quarter_turns := 0 # every quarter turn made, right +1 and left -1, adding up: the camera follows this, not `facing`, which is mod 4
 var visited := {} # Vector2i -> true: cells you stood in
-var seen := {} # Vector2i -> true: cells you saw down a corridor, for the automap
+var seen := {} # Vector2i -> true: cells you saw from where you stood (rules/vision.gd), for the automap
 
 # the party
 var hp := Combat.START_HP
@@ -76,8 +81,8 @@ func turn(quarters: int) -> void:
 func look() -> void:
 	for c in Vision.ahead(floor_map, cell, facing):
 		seen[c] = true
-	for m in Vision.monsters(floor_map, cell, facing):
-		seen[m.cell] = true
+	for c in Vision.sight(floor_map, cell, facing):
+		seen[c] = true
 
 
 ## "spared 1 · slain 0 · 8 gold", for the log when you come back to a save.
@@ -93,32 +98,141 @@ func to_dict() -> Dictionary:
 	for c in seen:
 		seen_cells.append([c.x, c.y])
 	return {
-		"depth": depth, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
+		"depth": depth, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()),
 	}
 
 
-## A saved state, or null when `d` isn't one of ours (nothing is changed then).
+## A saved state, or null when `d` isn't one of ours or can't be played (nothing is changed then). A save is data from outside
+## (a file, a copied slot), so every value is checked before it is used: a wrong kind of value refuses the save, a value out of
+## range is brought back into it (the cell must be open, health stays within 1..max, loyalty within 0..100).
 static func from_dict(d: Dictionary):
+	var problem := _problem(d)
+	if problem != "":
+		push_warning("state: saved state refused, %s" % problem)
+		return null
+	var s = new()
+	s.depth = clampi(_int(d.get("depth", 1)), 1, DEPTH_MAX)
+	s.floor_map = FloorMap.from_dict(d.floor, Monster)
+	# a save from before palettes were saved wears the colours its floor's seed would pick
+	s.palette_id = int(d.palette) if d.get("palette") is float or d.get("palette") is int else s.floor_map.seed_value
+	s.cell = _cell(d.cell)
+	s.facing = posmod(_int(d.facing), 4)
+	for c in d.get("visited", []) if d.get("visited") is Array else []:
+		if _is_cell(c) and s.floor_map.is_open(_cell(c)):
+			s.visited[_cell(c)] = true
+	for c in d.get("seen", []) if d.get("seen") is Array else []:
+		if _is_cell(c) and s.floor_map.is_open(_cell(c)):
+			s.seen[_cell(c)] = true
+	s.look()
+	s.max_hp = maxi(1, _int(d.maxHp))
+	s.hp = clampi(_int(d.hp), 1, s.max_hp)
+	s.gold = maxi(0, _int(d.gold))
+	for k in s.tally:
+		s.tally[k] = maxi(0, _int(d.tally.get(k, 0)))
+	for a in d.allies.slice(0, Combat.PARTY_MAX):
+		var ally = Ally.from_dict(a)
+		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)
+		s.allies.append(ally)
+	return s
+
+
+## Whether `d` is a state `from_dict` would read (the menu asks before it leaves for the game).
+static func is_playable(d: Dictionary) -> bool:
+	var problem := _problem(d)
+	if problem != "":
+		push_warning("state: not playable, %s" % problem)
+	return problem == ""
+
+
+## What is wrong with this saved state, or "" when it can be read.
+static func _problem(d: Dictionary) -> String:
 	for key in ["floor", "cell", "facing", "hp", "maxHp", "gold", "tally", "allies"]:
 		if not d.has(key):
-			push_warning("state: saved state lacks '%s'" % key)
-			return null
-	var s = new()
-	s.depth = maxi(1, int(d.get("depth", 1)))
-	s.floor_map = FloorMap.from_dict(d.floor, Monster)
-	s.cell = Vector2i(int(d.cell[0]), int(d.cell[1]))
-	s.facing = posmod(int(d.facing), 4)
-	for c in d.get("visited", []):
-		s.visited[Vector2i(int(c[0]), int(c[1]))] = true
-	for c in d.get("seen", []):
-		s.seen[Vector2i(int(c[0]), int(c[1]))] = true
-	s.look()
-	s.hp = int(d.hp)
-	s.max_hp = int(d.maxHp)
-	s.gold = int(d.gold)
-	for k in s.tally:
-		s.tally[k] = int(d.tally.get(k, 0))
-	s.allies = d.allies.map(func(a): return Ally.from_dict(a))
-	return s
+			return "it lacks '%s'" % key
+	for key in ["facing", "hp", "maxHp", "gold"]:
+		if not _is_num(d[key]):
+			return "'%s' is not a number" % key
+	if d.has("depth") and not _is_num(d.depth):
+		return "'depth' is not a number"
+	if not d.tally is Dictionary or d.tally.values().any(func(v): return not _is_num(v)):
+		return "'tally' is not a record of numbers"
+	if not d.allies is Array:
+		return "'allies' is not a list"
+	for a in d.allies:
+		if not a is Dictionary or not Content.table("species").has(str(a.get("species", ""))) or not _is_num(a.get("loyalty", 60.0)):
+			return "an ally is not a known one"
+	var problem := _floor_problem(d.floor)
+	if problem != "":
+		return problem
+	if not _is_cell(d.cell) or not _open(d.floor, _cell(d.cell)):
+		return "the party's cell is not an open cell of the floor"
+	return ""
+
+
+static func _floor_problem(f) -> String:
+	if not f is Dictionary:
+		return "'floor' is not a record"
+	var size = f.get("size")
+	if not _is_num(size) or _int(size) < 3 or _int(size) > GRID_MAX:
+		return "the floor's size is not between 3 and %d" % GRID_MAX
+	var grid = f.get("grid")
+	if not grid is Array or grid.size() != _int(size):
+		return "the floor's grid is not as tall as its size"
+	for row in grid:
+		if not row is Array or row.size() != _int(size) or row.any(func(v): return not _is_num(v)):
+			return "a row of the floor's grid is not a row of numbers as wide as its size"
+	for key in ["stairs", "start"]:
+		if not _is_cell(f.get(key)) or not _open(f, _cell(f[key])):
+			return "the floor's %s is not an open cell" % key
+	if not f.get("monsters") is Array:
+		return "the floor's monsters are not a list"
+	for m in f.monsters:
+		var problem := _monster_problem(m, f)
+		if problem != "":
+			return problem
+	return ""
+
+
+static func _monster_problem(m, f: Dictionary) -> String:
+	if not m is Dictionary:
+		return "a monster is not a record"
+	if not Content.table("species").has(str(m.get("species", ""))):
+		return "a monster is of no known species"
+	if not Content.table("encounter").genres.has(str(m.get("genre", ""))):
+		return "a monster fights in no known genre"
+	if not _is_cell(m.get("cell")) or not _open(f, _cell(m.cell)):
+		return "a monster is not on an open cell"
+	for key in ["hp", "maxHp", "threshold", "turn"]:
+		if m.has(key) and not _is_num(m[key]):
+			return "a monster's '%s' is not a number" % key
+	if m.has("meters") and (not m.meters is Dictionary or m.meters.values().any(func(v): return not _is_num(v))):
+		return "a monster's meters are not a record of numbers"
+	if m.has("traits") and (not m.traits is Array or m.traits.any(func(t): return not t is String)):
+		return "a monster's traits are not a list of words"
+	if m.has("taste") and (not m.taste is Dictionary or m.taste.values().any(func(v): return not _is_num(v))):
+		return "a monster's taste is not a record of numbers"
+	return ""
+
+
+static func _is_num(v) -> bool:
+	return (v is int or v is float) and is_finite(float(v))
+
+
+static func _is_cell(v) -> bool:
+	return v is Array and v.size() == 2 and _is_num(v[0]) and _is_num(v[1])
+
+
+static func _cell(v) -> Vector2i:
+	return Vector2i(_int(v[0]), _int(v[1]))
+
+
+## An int from a number a save held (as a float it may be far larger than an int holds).
+static func _int(v) -> int:
+	return clampi(int(clampf(float(v), -1e15, 1e15)), -1000000000000000, 1000000000000000)
+
+
+static func _open(f: Dictionary, c: Vector2i) -> bool:
+	var grid: Array = f.grid
+	return c.y >= 0 and c.y < grid.size() and c.x >= 0 and c.x < grid[c.y].size() and _int(grid[c.y][c.x]) == 1

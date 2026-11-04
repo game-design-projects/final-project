@@ -1,7 +1,8 @@
 ## The one place the game talks to the internet. Callers get a plain answer, never a hang: every request has the same
 ## timeout, a failed one is retried a couple of times with a growing wait, and after several failures in a row the
 ## network is treated as down for a while, so the game falls back to its local rules at once instead of making the
-## player wait for every question.
+## player wait for every question. A proxy that says it has no key ("Server not configured", a 503) is not retried and
+## counts as down at once: waiting won't change that answer. `waiting_ms` tells the screen how long a question has been out.
 ##   var r = await Network.post_json("https://…/api/jev", {"state": …})
 ##   if r.ok: use(r.json) else: fall_back(r.error)
 extends RefCounted
@@ -12,14 +13,21 @@ const BACKOFF_S := 0.4 # doubles each retry
 const GIVE_UP_AFTER := 3 # failures in a row before the network is called down...
 const DOWN_FOR_S := 30.0 # ...for this long
 
+const NOT_CONFIGURED := "not configured" # what the proxy's 503 says when it has no key
+
 const RESULT_NAMES := {
 	1: "chunked body size mismatch", 2: "can't connect", 3: "can't resolve the host", 4: "connection error",
 	5: "TLS handshake failed", 6: "no response", 7: "body too large", 8: "can't decompress the body", 9: "request failed",
 	12: "too many redirects",
 }
 
+## Tests set this to stand in for the internet: (url, payload, headers, timeout_s) -> what `_send` returns, awaited.
+static var transport := Callable()
+
 static var _failures := 0
 static var _down_until := 0.0 # seconds on the engine clock
+static var _flights := {} # id -> the engine's msec when that question went out, for the ones still waiting
+static var _next_flight := 0
 
 
 ## True while the network is considered down (callers can skip straight to their fallback).
@@ -33,15 +41,39 @@ static func reset() -> void:
 	_down_until = 0.0
 
 
+## How long the longest-waiting question has been out, in ms; 0 when nothing is waiting (the screen shows "thinking").
+static func waiting_ms() -> int:
+	if _flights.is_empty():
+		return 0
+	return Time.get_ticks_msec() - int(_flights.values().min())
+
+
 ## POST `body` as JSON. Returns {"ok": bool, "status": int, "json": Variant, "text": String, "error": String, "ms": int}.
 static func post_json(url: String, body: Dictionary, headers := {}, timeout_s := TIMEOUT_S) -> Dictionary:
-	var t0 := Time.get_ticks_msec()
 	if is_down():
-		return _fail("network is down, skipping %s" % url, 0, t0)
+		return _fail("network is down, skipping %s" % url, 0, Time.get_ticks_msec())
+	_next_flight += 1
+	var id := _next_flight
+	_flights[id] = Time.get_ticks_msec()
+	var result := await _post(url, body, headers, timeout_s)
+	_flights.erase(id)
+	return result
+
+
+static func _post(url: String, body: Dictionary, headers: Dictionary, timeout_s: float) -> Dictionary:
+	var t0 := Time.get_ticks_msec()
 	var payload := JSON.stringify(body, "", false, true) # insertion order: the order of the questions is part of what is asked
 	var attempt := 0
 	while true:
-		var res := await _send(url, payload, headers, timeout_s)
+		var res: Dictionary
+		if transport.is_valid():
+			res = await transport.call(url, payload, headers, timeout_s)
+		else:
+			res = await _send(url, payload, headers, timeout_s)
+		if res.get("status", 0) == 503 and str(res.get("text", "")).to_lower().contains(NOT_CONFIGURED):
+			push_warning("network: %s has no key (503 %s), not retrying" % [url, NOT_CONFIGURED])
+			_failures = GIVE_UP_AFTER - 1 # the answer will not change in a few seconds: this one takes it over the line
+			return _failed_for_good("status 503: %s" % str(res.text).left(200), 503, t0)
 		var why: String = res.error if res.has("error") else ("status %d" % res.status if res.status == 429 or res.status >= 500 else "")
 		if why != "" and attempt < RETRIES:
 			var wait := BACKOFF_S * (1 << attempt)

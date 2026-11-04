@@ -22,7 +22,7 @@ func enter(flow, _args: Dictionary) -> void:
 	else:
 		items.append({"label": "SAY SOMETHING", "sub": "Ask about stairs, the champion or another monster; one line per fight"})
 	s.menu = items
-	s.hint = "ENTER PICK · ESC BACK"
+	s.hint = "ENTER PICK · ESC BACK · I INFO"
 
 
 func pick(flow, index: int) -> void:

@@ -1,18 +1,21 @@
 ## The gameplay scene: one run of the game on screen. It builds the game (Flow with a mind), the picture (a 3D set in a small
-## viewport, a flat layer over it, a post-processing pass) and the text around it, turns key presses into the game's keys,
-## runs the clock, and turns the game's events into flashes and floating numbers. It also holds the pause menu and the
-## autosave, and goes back to the main menu when the player leaves. The rules are not here: it only reads `flow.state`
-## and listens to `flow.happened`.
+## viewport, a flat layer over it, a post-processing pass) and the text around it, turns key presses, clicks and the touch pad
+## into the game's keys, runs the clock, and turns the game's events into flashes and floating numbers. It also holds the
+## tooltips over the picture, the pause menu and the autosave, and goes back to the main menu when the player leaves. The rules
+## are not here: it only reads `flow.state` and listens to `flow.happened`.
 extends Control
 
 const Audio = preload("res://src/audio/audio.gd")
+const Automap = preload("res://src/view/automap.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Hud = preload("res://src/view/hud.gd")
 const Menus = preload("res://src/menu/menus.gd")
 const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const Minds = preload("res://src/mind/minds.gd")
+const Network = preload("res://src/network/network.gd")
 const Overlay = preload("res://src/view/overlay.gd")
+const Pad = preload("res://src/view/pad.gd")
 const Palette = preload("res://src/view/palette.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const PostFx = preload("res://src/view/postfx.gd")
@@ -22,6 +25,7 @@ const Saves = preload("res://src/menu/saves.gd")
 const Session = preload("res://src/menu/session.gd")
 const Settings = preload("res://src/menu/settings.gd")
 const StageScript = preload("res://src/view/stage.gd")
+const Tips = preload("res://src/view/tips.gd")
 
 const MENU_SCENE := "res://src/menu/main_menu.tscn"
 const VIEW_W := 448
@@ -39,6 +43,7 @@ const KEYS := {
 	KEY_UP: "up", KEY_W: "up", KEY_DOWN: "down", KEY_S: "down", KEY_LEFT: "left", KEY_A: "left", KEY_RIGHT: "right", KEY_D: "right",
 	KEY_ENTER: "confirm", KEY_KP_ENTER: "confirm", KEY_SPACE: "confirm", KEY_Z: "confirm", KEY_ESCAPE: "cancel", KEY_X: "cancel",
 }
+const INFO_KEY := KEY_I # shows the foe's card, then each ally's, then the map's legend (tips.gd); also the pad's INFO
 const REPEATING := ["explore", "dodge"] # stages where holding a key keeps acting
 
 ## What to start with: {"kind": "new"} or {"kind": "load", "state": Dictionary}, set by the menu through session.gd. With
@@ -53,12 +58,17 @@ var _viewport: SubViewport
 var _stage
 var _frame: Control
 var _overlay
+var _automap
 var _postfx
 var _picture: TextureRect
 var _header
 var _status
 var _dock
 var _pause: MenuPanel
+var _tips
+var _pad
+var _debug := false # the flag `debug`
+var _fresh_floor := false # a new floor has begun and its start is not autosaved yet
 var _on_title := false # the title card is up, waiting for a key
 
 
@@ -75,10 +85,16 @@ func _ready() -> void:
 	add_child(audio)
 	audio.bind(flow)
 	flow.happened.connect(_on_event)
+	_debug = Flags.on("debug")
+	_tips.debug = _debug
+	_tips.mind_label = flow.mind.label()
 	_bind_views()
+	if _debug:
+		print("gameplay: debug on, the foe's mind panel stays open and every game event is logged")
 	if request.is_empty() and Flags.value("meet") == "" and not slice:
 		_on_title = true
 		_overlay.title_card = true
+		_tips.visible = false
 		flow.state.say([State.sys_line("Press any key to start.")])
 		flow.state.hint = "ANY KEY START"
 		return
@@ -89,16 +105,22 @@ func _ready() -> void:
 func _begin() -> void:
 	_on_title = false
 	_overlay.title_card = false
+	_tips.visible = true
+	await flow.exclusive(_start_request)
+	await flow.exclusive(_after_start)
+
+
+func _start_request() -> void:
 	if request.get("kind", "new") == "load":
 		if not await flow.load_state(request.state):
 			push_warning("gameplay: that save can't be loaded, starting a new run")
 			await flow.new_run()
 	else:
 		await flow.new_run()
-	_after_start()
 
 
-## Handle the testing flags `meet=<species>` and `personality-slice`.
+## Handle the testing flags `meet=<species>` and `personality-slice`. It runs as an exclusive action: a tick must not run a
+## stage's own tick while the mind is still answering the stage's `enter`.
 func _after_start() -> void:
 	if PersonalitySlice.pending() and request.get("kind", "new") == "new":
 		await PersonalitySlice.start(flow)
@@ -120,6 +142,7 @@ func _build_screen() -> void:
 	_viewport = SubViewport.new()
 	_viewport.size = Vector2i(VIEW_W, VIEW_H)
 	_viewport.own_world_3d = true
+	_viewport.msaa_3d = Viewport.MSAA_4X # the lines are thin: without this they shimmer as the camera moves
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(_viewport)
 	_viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -176,8 +199,18 @@ func _build_screen() -> void:
 	picture.stretch_mode = TextureRect.STRETCH_SCALE
 	picture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	picture.mouse_filter = Control.MOUSE_FILTER_STOP # a click on it is OK in the strike bar and on the title card; hovering shows tooltips
+	picture.gui_input.connect(_on_picture_input)
+	picture.mouse_exited.connect(func(): _tips.hover(Vector2(-1, -1)))
 	_frame.add_child(picture)
 	_postfx = PostFx.new()
+	_automap = Automap.new() # over the picture, not in it: the post-processing doesn't touch it
+	_automap.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 10)
+	_automap.custom_minimum_size = Vector2(Automap.PANEL, Automap.PANEL)
+	_automap.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_frame.add_child(_automap)
+	_tips = Tips.new() # the ally chips and the tooltips, over the picture
+	_frame.add_child(_tips)
 
 	_status = Hud.new()
 	_status.part = Hud.Part.STATUS
@@ -187,10 +220,16 @@ func _build_screen() -> void:
 	_dock.part = Hud.Part.DOCK
 	_dock.custom_minimum_size = Vector2(0, Hud.DOCK_H)
 	_dock.mouse_filter = Control.MOUSE_FILTER_STOP
-	_dock.picked.connect(func(i): flow.press(str(i + 1)))
+	_dock.picked.connect(func(i): _press(str(i + 1)))
 	_dock.said.connect(func(text): flow.submit_text(text))
-	_dock.cancelled.connect(func(): flow.press("cancel"))
+	_dock.cancelled.connect(func(): _press("cancel"))
+	_dock.hovered.connect(_on_dock_hover)
 	column.add_child(_dock)
+	_pad = Pad.new()
+	_pad.visible = DisplayServer.is_touchscreen_available() or Flags.on("pad")
+	_pad.pressed.connect(_on_pad)
+	_pad.repeated.connect(_on_pad_repeat)
+	column.add_child(_pad)
 
 	_pause = MenuPanel.new()
 	_pause.visible = false
@@ -202,16 +241,16 @@ func _build_screen() -> void:
 func _process(dt: float) -> void:
 	if flow == null or _pause.visible:
 		return
+	_dock.thinking_ms = Network.waiting_ms()
 	_clock_ms += dt * 1000.0
 	flow.tick(_clock_ms)
 	var s = flow.state
-	_stage.update(s, _clock_ms / 1000.0, dt)
-	if _stage.palette.has("wall"):
-		_overlay.wall_color = _stage.palette.wall
-		_overlay.accent_color = _stage.palette.accent
-	_overlay.clock_ms = _clock_ms
 	_stage.visible = not _overlay.in_fight()
-	_picture.material = _postfx.material if _fx_on() else null
+	_stage.calm = Settings.get_value("calm")
+	_stage.update(s, _clock_ms / 1000.0, dt)
+	_overlay.clock_ms = _clock_ms
+	_automap.visible = s.floor_map != null and s.stage in ["explore", "end"]
+	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
 	_postfx.update(dt)
 
@@ -222,36 +261,134 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _on_title:
 		if event.keycode == KEY_ESCAPE:
 			_leave() # the card's own hint: ESC goes to the menu
-		else:
+		elif starts_run(event):
 			_begin()
+		else:
+			return # Shift, Cmd, a function key: not "any key"
 		get_viewport().set_input_as_handled()
 		return
 	if event.echo and not flow.state.stage in REPEATING:
 		return
+	if event.echo and flow.state.stage == "explore" and _stage.moving():
+		return # a held arrow repeats once the camera has arrived; acting on every repeat would run ahead of it
 	if event.meta_pressed or event.ctrl_pressed or event.alt_pressed:
 		return
-	var key := ""
-	if KEYS.has(event.keycode):
-		key = KEYS[event.keycode]
-	elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
-		key = str(event.keycode - KEY_0)
-	if key != "":
-		flow.press(key)
+	if event.keycode == INFO_KEY:
+		if not event.echo:
+			_tips.cycle()
 		get_viewport().set_input_as_handled()
+		return
+	var key := key_name(event)
+	if key != "":
+		_press(key)
+		get_viewport().set_input_as_handled()
+
+
+## Whether this key press starts a run from the title card: a letter, a number, an arrow, Enter or Space, and not a modifier
+## on its own, a function key, or a shortcut such as Cmd+Tab.
+static func starts_run(event: InputEventKey) -> bool:
+	if event.meta_pressed or event.ctrl_pressed or event.alt_pressed:
+		return false
+	return event.keycode in [KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE] or event.unicode > 31
+
+
+## The game's key for this key press ("up", "confirm", "3"...), or "" when it is not one of the game's keys.
+static func key_name(event: InputEventKey) -> String:
+	if KEYS.has(event.keycode):
+		return KEYS[event.keycode]
+	if event.keycode >= KEY_1 and event.keycode <= KEY_9:
+		return str(event.keycode - KEY_0)
+	if event.keycode >= KEY_KP_1 and event.keycode <= KEY_KP_9:
+		return str(event.keycode - KEY_KP_0)
+	return ""
+
+
+## A key of the game, from the keyboard, the pad or a click: it closes a card that was kept open, then acts.
+func _press(key: String) -> void:
+	_tips.unpin()
+	flow.press(key)
+
+
+## The pointer over the picture, and a click or tap on it. Where the strike bar sweeps (and on the title card) the picture is
+## the big OK button; on the foe or the automap, a click keeps its card open (touch has no hover).
+func _on_picture_input(event: InputEvent) -> void:
+	if flow == null or _pause.visible:
+		return
+	if event is InputEventMouseMotion:
+		_tips.hover(_in_picture(event.position))
+		return
+	var tapped := false
+	if event is InputEventMouseButton:
+		tapped = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	elif event is InputEventScreenTouch: # with the mouse emulated from touch the same tap has already arrived as a click
+		tapped = event.pressed and not Input.is_emulating_mouse_from_touch()
+	if not tapped:
+		return
+	if _on_title:
+		_begin()
+	elif flow.state.stage == "fightbar":
+		_press("confirm")
+	else:
+		_tips.tap(_in_picture(event.position))
+
+
+## A point of the picture control as a point of the 448 x 288 picture.
+func _in_picture(at: Vector2) -> Vector2:
+	if _picture.size.x <= 0.0 or _picture.size.y <= 0.0:
+		return Vector2(-1, -1)
+	return at / _picture.size * Vector2(VIEW_W, VIEW_H)
+
+
+## The pointer is over command `index` of the dock (-1: it left them): it becomes the picked one, and its help shows.
+func _on_dock_hover(index: int) -> void:
+	if index >= 0:
+		flow.select(index)
+	_tips.hover_command(index, _dock.command_screen_rect(index))
+
+
+func _on_pad(key: String) -> void:
+	if _pause.visible:
+		return
+	if _on_title:
+		if key == "cancel":
+			_leave()
+		else:
+			_begin()
+		return
+	if key == "info":
+		_tips.cycle()
+	else:
+		_press(key)
+
+
+## A held arrow of the pad: it keeps walking and dodging the way a held key does.
+func _on_pad_repeat(key: String) -> void:
+	if not _pause.visible and not _on_title and flow.state.stage in REPEATING:
+		flow.press(key)
 
 
 func _on_event(name: String, data: Dictionary) -> void:
 	var now := _clock_ms / 1000.0
 	var s = flow.state
+	if _debug:
+		print("gameplay: event %s %s (stage %s, hp %d/%d)" % [name, data, s.stage, s.hp, s.max_hp])
 	match name:
 		"state_replaced":
 			_bind_views()
+			_fresh_floor = data.how == "new" and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
 		"stage":
-			if data.to == "explore" and data.from != "":
+			if data.to == "explore":
+				_postfx.set_accent(Palette.for_run(s.palette_id).accent) # back from a fight, the monster's colour goes
+			if data.to == "explore" and (data.from != "" or _fresh_floor):
+				_fresh_floor = false
 				_autosave()
 			_dock.set_talking(data.to == "talk")
+		"bump":
+			_stage.bump(now)
 		"encounter":
 			_postfx.set_accent(Palette.monster(s.foe))
+			_overlay.intro_at = _clock_ms
+			_overlay.intro_strength = 0.5 * _softness()
 		"strike":
 			_stage.flash_foe(s.foe, now)
 			_overlay.hurt_until = _clock_ms + 300.0
@@ -262,8 +399,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_overlay.popup("MISS", Palette.DIM, Vector2(224, 96))
 		"player_hurt":
 			_shake()
-			if not Settings.get_value("calm"):
-				_postfx.hurt()
+			_postfx.hurt()
 			_overlay.popup("-%d" % data.damage, Palette.WARN, Vector2(224, 200))
 		"shield":
 			_overlay.popup("BLOCKED", Palette.MERCY, Vector2(224, 200))
@@ -288,6 +424,16 @@ func _fx_on() -> bool:
 	return not Flags.on("nofx") and Settings.get_value("crt")
 
 
+## The settings can change at any pause, so each frame the last pass is put on or taken off to match them.
+func _apply_fx() -> void:
+	_postfx.calm = Settings.get_value("calm")
+	if _fx_on() != _postfx.attached():
+		if _fx_on():
+			_postfx.attach(_picture)
+		else:
+			_postfx.detach()
+
+
 ## Calm hits: flashes only a little as bright.
 func _softness() -> float:
 	return 0.35 if Settings.get_value("calm") else 1.0
@@ -300,9 +446,10 @@ func _shake() -> void:
 
 func _open_pause() -> void:
 	_dock.set_talking(false)
+	_tips.visible = false
 	var ctx := {"resume": _resume, "to_main_menu": _leave, "load_slot": _load_slot}
 	if flow.state.stage == "explore": # a fight can't be saved (it would come back as a walk)
-		ctx["save_slot"] = func(slot): Saves.write(slot, flow.state.to_dict(), flow.state.summary())
+		ctx["save_slot"] = _save_slot
 	if not OS.has_feature("web"):
 		ctx["quit"] = func(): get_tree().quit()
 	_pause.open(func(): return Menus.pause(_pause, ctx))
@@ -312,17 +459,32 @@ func _open_pause() -> void:
 
 func _resume() -> void:
 	_pause.visible = false
+	_tips.visible = true
 	_dock.set_talking(flow.state.stage == "talk")
 	print("gameplay: resumed")
 
 
+## Save into a slot from the pause menu; the log says whether it worked.
+func _save_slot(slot: String) -> bool:
+	var wrote := Saves.write(slot, flow.state.to_dict(), flow.state.summary())
+	flow.state.say([State.sys_line("Saved to slot %s." % slot if wrote else "Couldn't save to slot %s." % slot)])
+	print("gameplay: %s slot %s" % ["saved" if wrote else "could not save", slot])
+	return wrote
+
+
+## Load a slot from the pause menu. A slot that can't be read, or isn't a state the game can play, leaves the run and the menu
+## as they were and says so on a page of its own.
 func _load_slot(slot: String) -> void:
 	var saved := Saves.read(slot)
+	var result := {"ok": false}
 	if saved.is_empty():
 		push_warning("gameplay: slot '%s' can't be read" % slot)
+	else:
+		await flow.exclusive(func(): result.ok = await flow.load_state(saved))
+	if not result.ok:
+		_pause.push(func(): return Menus.notice(_pause, "CAN'T LOAD", "That save can't be read, or isn't one this version can play. Your run is as it was."))
 		return
-	_pause.visible = false
-	await flow.load_state(saved)
+	_resume()
 
 
 ## The views read the flow's current state; a new floor or a loaded save replaces it (`state_replaced`), so they are pointed at it again.
@@ -331,6 +493,8 @@ func _bind_views() -> void:
 	_status.state = flow.state
 	_dock.state = flow.state
 	_overlay.state = flow.state
+	_automap.state = flow.state
+	_tips.state = flow.state
 
 
 func _autosave() -> void:

@@ -1,12 +1,15 @@
-## What the party can see from where it stands. The automap learns the cells straight ahead, as far as the corridor runs
-## (the side openings show as gaps in the walls, not as cells you can see into). A monster is in view when it is in front
-## of you and nothing stands between: down the corridor, but also across a hall, off to one side. This is what the 3D set
-## draws (its walls go as far as the camera does), so a monster in the picture is never left out of it.
+## What the party can see from where it stands, for the automap: every cell the camera has in its field of view with a clear
+## line over the floor, and always the cells straight ahead, as far as the corridor runs. This is worked out on the floor
+## plan, so it is the same with no window. The 3D set shows every monster and lets the walls hide them; it only asks here
+## whether a monster's name tag has a line to it.
 extends RefCounted
 
 const FloorMap = preload("res://src/rules/floor_map.gd")
 
 const STEP := 0.1 # how finely a line of sight is walked, in cells
+const BACK := 0.38 # how far behind the middle of your cell the camera stands, in cells (stage.gd stands it there)
+const VIEW_TAN := 1.0493 # the camera's field of view: tan of half its width, for FOV 68 at 448:288 (tools/view_test.gd checks it)
+const SAMPLES := [Vector2(0, 0), Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)] # where in a cell a line may end, from its middle
 
 
 ## The cells straight ahead, nearest first, starting with your own, until a wall.
@@ -21,26 +24,43 @@ static func ahead(floor_map, from: Vector2i, facing: int) -> Array:
 	return out
 
 
-## Whether `target` is in front of you (not beside or behind) with open ground all the way between the two cell centres.
-static func sees(floor_map, from: Vector2i, facing: int, target: Vector2i) -> bool:
-	var d := target - from
-	if d == Vector2i.ZERO or d.x * FloorMap.DIRS[facing].x + d.y * FloorMap.DIRS[facing].y <= 0:
-		return false
-	var a := Vector2(from) + Vector2(0.5, 0.5)
-	var b := Vector2(target) + Vector2(0.5, 0.5)
-	var n := ceili(a.distance_to(b) / STEP)
+## The cells the camera sees from `from`, your own among them: some sample point of the cell is inside its field of view, and
+## a straight line from the middle of your cell reaches that point over open floor only.
+static func sight(floor_map, from: Vector2i, facing: int) -> Array:
+	var fwd := Vector2(FloorMap.DIRS[facing])
+	var side := fwd.orthogonal()
+	var mid := Vector2(from) + Vector2(0.5, 0.5)
+	var eye := mid - fwd * BACK
+	var out := [from]
+	for y in floor_map.size:
+		for x in floor_map.size:
+			var c := Vector2i(x, y)
+			if c == from or not floor_map.is_open(c):
+				continue
+			var centre := Vector2(c) + Vector2(0.5, 0.5)
+			for o in SAMPLES:
+				var p: Vector2 = centre + o
+				var z := (p - eye).dot(fwd)
+				if z > 0.0 and absf((p - eye).dot(side)) <= z * VIEW_TAN and clear_line(floor_map, mid, p):
+					out.append(c)
+					break
+	return out
+
+
+## Whether a straight line from a point of the floor plan (a cell spans x..x+1, y..y+1) reaches any sample point of `cell`.
+static func reaches(floor_map, from: Vector2, cell: Vector2i) -> bool:
+	var centre := Vector2(cell) + Vector2(0.5, 0.5)
+	for o in SAMPLES:
+		if clear_line(floor_map, from, centre + o):
+			return true
+	return false
+
+
+## Whether open floor lies all the way between two points of the floor plan.
+static func clear_line(floor_map, a: Vector2, b: Vector2) -> bool:
+	var n := maxi(1, ceili(a.distance_to(b) / STEP))
 	for i in range(1, n):
 		var p := a.lerp(b, float(i) / n)
 		if not floor_map.is_open(Vector2i(floori(p.x), floori(p.y))):
 			return false
 	return true
-
-
-## The monsters still around that you can see from here, nearest first.
-static func monsters(floor_map, from: Vector2i, facing: int) -> Array:
-	var out := []
-	for m in floor_map.monsters:
-		if not m.is_gone() and sees(floor_map, from, facing, m.cell):
-			out.append(m)
-	out.sort_custom(func(x, y): return (x.cell - from).length_squared() < (y.cell - from).length_squared())
-	return out

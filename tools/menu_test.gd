@@ -16,6 +16,7 @@ func _name() -> String:
 
 
 func _run() -> void:
+	root.get_node("Store")._persist = false # the settings checks change settings: keep them off the player's disk
 	MenuPanel = load("res://src/menu/menu_panel.gd")
 	Menus = load("res://src/menu/menus.gd")
 	var panel = MenuPanel.new()
@@ -26,6 +27,9 @@ func _run() -> void:
 	_slot_page_shows_the_name(panel)
 	_slot_rows_leave_room_for_the_date(panel)
 	_copy_page_names_the_slots(panel)
+	_settings_fall_back_to_the_old_blob()
+	await _digits_wheel_and_clicks(panel)
+	await _main_menu_refuses_a_bad_save()
 	_finish()
 
 
@@ -154,4 +158,140 @@ func _copy_page_names_the_slots(panel) -> void:
 	_check(replace_page.get("hint", "").contains("BOSS RUN"), "and the question before replacing it names it too (%s)" % replace_page.get("hint", ""))
 	Saves.delete("1")
 	Saves.delete("3")
+	Flags.set_args(PackedStringArray([]))
+
+
+## Settings kept by the game before the rewrite sit in one JSON string under `donjon.settings`; on the first read they move to the
+## one-key-each form, a bad value is dropped, a key already set is not overwritten, and the old string is gone after.
+func _settings_fall_back_to_the_old_blob() -> void:
+	var Settings = load("res://src/menu/settings.gd")
+	var store = root.get_node("Store")
+	var keys: Array = Settings.DEFAULTS.keys()
+	var saved := {}
+	for k in keys + [Settings.OLD_KEY]:
+		saved[k] = store.get_value(k)
+		store.remove(k)
+	store.set_value(Settings.OLD_KEY, JSON.stringify({"window_mode": "fullscreen", "fps_cap": 120, "crt": false, "calm": true, "sfx_volume": 99, "bogus": 1, "vsync": "yes"}))
+	store.set_value("shake", false) # already set the new way: the old blob does not overwrite it
+	Settings.forget_migration()
+	_check(Settings.get_value("window_mode") == "fullscreen" and Settings.get_value("fps_cap") == 120, "settings the old game kept (fullscreen, 120 fps) are read on the first read")
+	_check(Settings.get_value("crt") == false and Settings.get_value("calm") == true, "and its switches")
+	_check(Settings.get_value("sfx_volume") == Settings.DEFAULTS.sfx_volume and Settings.get_value("vsync") == Settings.DEFAULTS.vsync, "a bad value in it is dropped for the default (a volume of 99, 'yes' for a switch)")
+	_check(Settings.get_value("shake") == false and store.get_value("shake") == false, "a setting already made the new way stays")
+	_check(store.get_value(Settings.OLD_KEY) == null and store.get_value("window_mode") == "fullscreen", "the old string is gone and its values are kept under their own keys")
+	Settings.reset()
+	Settings.forget_migration()
+	_check(Settings.get_value("window_mode") == "windowed", "RESET SETTINGS is not undone by the old values coming back")
+	store.set_value(Settings.OLD_KEY, "not json {")
+	Settings.forget_migration()
+	_check(Settings.get_value("fps_cap") == 0 and store.get_value(Settings.OLD_KEY) == null, "an old string that is not JSON is dropped and the defaults stay")
+	for k in saved:
+		if saved[k] == null:
+			store.remove(k)
+		else:
+			store.set_value(k, saved[k])
+	Settings.forget_migration()
+
+
+func _key(code: int) -> InputEventKey:
+	var e := InputEventKey.new()
+	e.keycode = code as Key
+	e.pressed = true
+	return e
+
+
+func _click(at: Vector2, button := MOUSE_BUTTON_LEFT) -> InputEventMouseButton:
+	var e := InputEventMouseButton.new()
+	e.position = at
+	e.button_index = button as MouseButton
+	e.pressed = true
+	return e
+
+
+## The keys and the mouse of the menu pages, as the game before the rewrite had them: the digits 1-9 (the numpad too) pick that
+## row, a right click steps a setting back, Page Up and Page Down scroll a text page, Esc leaves the rename box, and a click or tap
+## beside the frame goes back (a touch screen has no Esc).
+func _digits_wheel_and_clicks(panel) -> void:
+	var log := []
+	var page := func(): return {"title": "T", "hint": "", "items": [
+		{"label": "ONE", "act": func(): log.append("one")},
+		{"label": "TWO", "disabled": true, "act": func(): log.append("two")},
+		{"label": "THREE", "act": func(): log.append("three")},
+	]}
+	panel.open(page)
+	panel._gui_input(_key(KEY_3))
+	_check(log == ["three"] and panel._selected == 2, "3 picks the third row")
+	panel._gui_input(_key(KEY_KP_1))
+	_check(log == ["three", "one"], "numpad 1 picks the first")
+	panel._gui_input(_key(KEY_2))
+	_check(log == ["three", "one"], "a digit on a row that is off does nothing")
+	panel._gui_input(_key(KEY_9))
+	_check(log == ["three", "one"] and panel._pages.size() == 1, "a digit past the last row does nothing")
+	# a right click steps a setting back
+	var Settings = load("res://src/menu/settings.gd")
+	Settings.set_value("fps_cap", 60)
+	panel.open(func(): return Menus.display())
+	await process_frame
+	var rows: Array = panel._layout().rows
+	var fps_row := 2 # WINDOW, VSYNC, FRAME RATE
+	panel._gui_input(_click(rows[fps_row].get_center(), MOUSE_BUTTON_RIGHT))
+	_check(Settings.get_value("fps_cap") == 30, "a right click on FRAME RATE steps it back (60 to 30)")
+	panel._gui_input(_click(rows[fps_row].get_center()))
+	_check(Settings.get_value("fps_cap") == 60, "and a left click steps it on")
+	Settings.reset()
+	# Page Up and Page Down scroll a text page
+	panel.open(func(): return {"title": "T", "body": "a line\n".repeat(80), "items": [], "hint": ""})
+	await process_frame
+	await process_frame
+	var bar = panel._body.get_v_scroll_bar()
+	_check(bar.max_value > bar.page, "the text page has something to scroll")
+	panel._gui_input(_key(KEY_PAGEDOWN))
+	var down: float = bar.value
+	_check(down > 0.0, "Page Down scrolls it (%d)" % down)
+	panel._gui_input(_key(KEY_PAGEUP))
+	_check(bar.value < down, "Page Up scrolls back")
+	# Esc in the rename box
+	Flags.set_args(PackedStringArray(["nosave"]))
+	var Saves = load("res://src/menu/saves.gd")
+	Saves.write("4", {"hp": 1}, "HP 1/20")
+	panel.open(func(): return Menus.slot_actions(panel, {"load_slot": func(_s): pass}, "4"))
+	panel.push(func(): return Menus.rename_page(panel, "4", ""))
+	_check(panel._pages.size() == 2 and panel._line.visible, "the rename page is open with its box")
+	var esc := _key(KEY_ESCAPE)
+	panel._line.gui_input.emit(esc)
+	_check(panel._pages.size() == 1 and Saves.info("4").name == "", "Esc in the box cancels: back on the slot's page, the name unchanged")
+	Saves.delete("4")
+	Flags.set_args(PackedStringArray([]))
+	# a click beside the frame goes back
+	var closed := {"v": false}
+	panel.closed.connect(func(): closed.v = true)
+	panel.open(func(): return Menus.display())
+	panel.push(func(): return Menus.effects())
+	var frame: Rect2 = panel._layout().frame
+	panel._gui_input(_click(frame.position + Vector2(frame.size.x * 0.5, frame.size.y * 0.5)))
+	_check(panel._pages.size() == 2, "a click inside the frame (on no row) goes nowhere")
+	panel._gui_input(_click(Vector2(frame.position.x - 30.0, frame.position.y + 30.0)))
+	_check(panel._pages.size() == 1, "a click beside the frame goes back a page")
+	panel._gui_input(_click(Vector2(frame.position.x - 30.0, frame.position.y + 30.0)))
+	_check(closed.v, "and from the first page it closes the menu")
+
+
+## CONTINUE or LOAD on a slot that can't be played stays on the menu and says so, instead of starting a different run.
+func _main_menu_refuses_a_bad_save() -> void:
+	Flags.set_args(PackedStringArray(["nosave"]))
+	var Saves = load("res://src/menu/saves.gd")
+	var Session = load("res://src/menu/session.gd")
+	Session.take()
+	Saves.write("5", {"cell": "nowhere", "floor": 5}, "a bad one")
+	var menu = load("res://src/menu/main_menu.tscn").instantiate()
+	root.add_child(menu)
+	await process_frame
+	var pages_before: int = menu.panel._pages.size()
+	menu._load_slot("5")
+	_check(Session.pending.is_empty() and menu.panel._pages.size() == pages_before + 1 and menu.panel._page.title == "CAN'T LOAD", "a slot that can't be played is not started; the menu says so on a page of its own")
+	menu.panel._gui_input(_key(KEY_ESCAPE))
+	_check(menu.panel._pages.size() == pages_before, "and Esc is back on the menu")
+	Saves.delete("5")
+	menu.queue_free()
+	await process_frame
 	Flags.set_args(PackedStringArray([]))

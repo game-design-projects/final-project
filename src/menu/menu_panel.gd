@@ -6,7 +6,8 @@
 ## An item is {"label", "sub"?, "value"?, "disabled"?, "act"?: Callable, "adjust"?: Callable(dir)}. `act` runs on Enter or a
 ## click; `adjust(dir)` on Left / Right (and on Enter when there is no `act`). `body` is a page of text that scrolls, `input` a
 ## one-line text box {"text", "submit": Callable(text)}. Esc goes back one page (or runs the page's `back`); going back from
-## the first page emits `closed`.
+## the first page emits `closed`. Beyond the keys: the digits 1-9 pick that row, Page Up / Page Down scroll a text page, a left
+## click picks a row, a right click steps its setting back, and a click beside the frame is Esc (a touch screen has no Esc).
 extends Control
 
 const Fonts = preload("res://src/view/fonts.gd")
@@ -27,6 +28,7 @@ const SELECTED_FILL := Color("#313135")
 const LABEL_X := 16.0 # where a row's label starts, and the margin it keeps from the left edge
 const VALUE_RIGHT := 14.0 # how far in from the right edge an item's value ends
 const VALUE_GAP := 12.0 # the least space between a label and the value beside it
+const PAGE_SCROLL := 240.0 # what Page Up and Page Down scroll a text page by
 const LABEL_SIZE := 13
 const VALUE_SIZE := 12
 
@@ -60,6 +62,7 @@ func _init() -> void:
 	_line.add_theme_stylebox_override("normal", _box(Palette.INK))
 	_line.add_theme_stylebox_override("focus", _box(Palette.MERCY))
 	_line.text_submitted.connect(_on_line_submitted)
+	_line.gui_input.connect(_on_line_input)
 	_line.visible = false
 	add_child(_line)
 
@@ -132,6 +135,14 @@ func _on_line_submitted(text: String) -> void:
 	pop()
 
 
+## The box keeps the keyboard, so Esc (which the hint promises cancels) has to be heard here.
+func _on_line_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		_line.accept_event()
+		print_verbose("menu panel: Esc in the box, back")
+		pop()
+
+
 # ---------------------------------------------------------------- input
 
 ## The value as drawn: with arrows when its row is picked and Left / Right change it.
@@ -161,6 +172,13 @@ func _gui_input(event: InputEvent) -> void:
 		if i >= 0:
 			_selected = i
 			_activate()
+		elif not _page.is_empty() and not _layout().frame.has_point(event.position):
+			_cancel()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		var i := _item_at(event.position)
+		if i >= 0 and not _page.items[i].get("disabled", false):
+			_selected = i
+			_adjust(-1)
 	elif event is InputEventKey and event.pressed:
 		if not _handle_key(event.keycode):
 			return
@@ -181,9 +199,34 @@ func _handle_key(code: int) -> bool:
 			_activate()
 		KEY_ESCAPE, KEY_X:
 			_cancel()
+		KEY_PAGEDOWN, KEY_PAGEUP:
+			if not _page.has("body"):
+				return false
+			_body.get_v_scroll_bar().value += (1.0 if code == KEY_PAGEDOWN else -1.0) * PAGE_SCROLL
 		_:
-			return false
+			var n := _digit(code)
+			if n == 0 or _page.has("body") or _page.items.is_empty():
+				return false
+			_pick_number(n)
 	return true
+
+
+## 1..9 for the digit keys (the numpad's too), else 0.
+static func _digit(code: int) -> int:
+	if code >= KEY_1 and code <= KEY_9:
+		return code - KEY_0
+	if code >= KEY_KP_1 and code <= KEY_KP_9:
+		return code - KEY_KP_0
+	return 0
+
+
+## A digit picks that row, as Enter would on it; a row that is off, or that isn't there, does nothing.
+func _pick_number(n: int) -> void:
+	if n > _page.items.size() or _page.items[n - 1].get("disabled", false):
+		return
+	_selected = n - 1
+	queue_redraw()
+	_activate()
 
 
 ## Esc: the page's own way back if it has one, else the page before.

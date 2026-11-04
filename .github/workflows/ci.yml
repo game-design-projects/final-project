@@ -50,26 +50,42 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/slice_test.gd
-      # The menu panel: a long key hint wraps instead of being cut off at the edge.
+      # The menu panel: hints wrap, digits and the mouse work, settings are taken over from the old game, a bad save is refused.
       - name: Check the menus
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/menu_test.gd
-      # The save slots: write, read, rename, copy, delete, and `nosave` keeping them in memory, off the disk.
+      # The save slots: write, read, rename, copy, delete, `nosave` keeping them in memory; a saved state that is wrong is refused or clamped.
       - name: Check the saves
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/saves_test.gd
-      # The gameplay scene: the views follow the state when a new floor or a loaded save replaces it.
+      # The gameplay scene: the views follow the state; keys, clicks and the touch pad; tooltips; the autosave and the pause menu.
       - name: Check the gameplay scene
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/gameplay_test.gd
+      # The numbers of the rules (strike, odds, dodge cells, words, hints) against the values the game had before the rewrite.
+      - name: Check the rules
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/rules_test.gd
+      # The talk with Jev against a stand-in transport: a proxy with no key is not retried, mercy and pressure are one request.
+      - name: Check the network
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/network_test.gd
       # The 3D view: which monsters are in sight (down a corridor, across a hall), the camera turning one way while a key is held, faces on the models.
       - name: Check the 3D view
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/view_test.gd
+      # The sound: every name the game plays has a recipe, the right events call for crit, victory, fanfare and the menu ticks,
+      # Master has its limiter, the music paces itself without an old fade stopping a new loop, and lines find their recordings.
+      - name: Check the sound
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/audio_test.gd -- nosave
 
   build:
     needs: check
@@ -96,6 +112,8 @@ jobs:
           for f in index.html index.js index.wasm index.pck; do
             test -s "build/web/$f" || { echo "::error::build/web/$f is missing or empty"; exit 1; }
           done
+          # CREDITS.txt is not a resource: only the export's include_filter ships it, and the Credits page is empty without it
+          grep -aq 'assets/CREDITS.txt' build/web/index.pck || { echo '::error::assets/CREDITS.txt is not in the web build'; exit 1; }
       # The zip, not the folder: an artifact folder loses the executable bits of the Linux and macOS builds
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

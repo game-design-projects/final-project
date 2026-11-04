@@ -1,4 +1,5 @@
-## The colours of the picture: each floor has a wall colour and an accent, every monster its own colour, the champion red.
+## The colours of the picture: each run has a named palette (a wall colour and an accent), every monster its own colour, the
+## champion red.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -11,19 +12,22 @@ const DIM := Color("#8a8a8a") # quiet text
 const WARN := Color("#ff5a4a")
 const FAINT := Color("#2e2e33") # borders of things that are not picked
 
-const FLOORS := [
-	{"wall": "#e8e3d1", "accent": "#ffb347"},
-	{"wall": "#9fd8ff", "accent": "#ff7aa8"},
-	{"wall": "#a8f0a0", "accent": "#ffd966"},
-	{"wall": "#f5a3d0", "accent": "#7fe0ff"},
-	{"wall": "#ffd27f", "accent": "#a78bff"},
+const RUNS := [
+	{"name": "BONE CRYPT", "wall": "#e8e2d0", "accent": "#ffb347"},
+	{"name": "DROWNED HALLS", "wall": "#8fd3e8", "accent": "#7fffd4"},
+	{"name": "BLOOD VAULT", "wall": "#e07a7a", "accent": "#ffcf5a"},
+	{"name": "MOSS DEEP", "wall": "#9ed36b", "accent": "#ffe14a"},
+	{"name": "ASH CHAMBERS", "wall": "#b9b0a4", "accent": "#ff6b3d"},
+	{"name": "VIOLET CATACOMB", "wall": "#b79cf0", "accent": "#ff9de2"},
+	{"name": "RUST TUNNELS", "wall": "#d39a6a", "accent": "#ffd27a"},
+	{"name": "FROST WARRENS", "wall": "#cfe8ff", "accent": "#9ad0ff"},
 ]
 
 
-## The wall and accent colours of a floor (0 is B1F); they cycle after the last.
-static func for_floor(index: int) -> Dictionary:
-	var p: Dictionary = FLOORS[posmod(index, FLOORS.size())]
-	return {"wall": Color(p.wall), "accent": Color(p.accent)}
+## The colours of a run, from its `palette_id` (any whole number: it wraps round the list).
+static func for_run(id: int) -> Dictionary:
+	var p: Dictionary = RUNS[posmod(id, RUNS.size())]
+	return {"name": p.name, "wall": Color(p.wall), "accent": Color(p.accent)}
 
 
 static func monster(m) -> Color:

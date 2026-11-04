@@ -1,49 +1,20 @@
-## Things hung on the walls: torches (with a glow), chains, banners, cracks, barred windows, skull niches. Which wall gets which is
-## decided by a hash of its place and the floor's seed, so a wall is always decorated the same way. They are drawn as thin
-## lines on the wall faces, in the wall colour (torch flames in the accent colour), plus a soft glow sprite for each torch.
+## Things hung on the walls: torches, chains, banners, cracks, barred windows, skull niches. Which wall gets which is decided
+## by a hash of its place and the floor's seed, so a wall is always decorated the same way. They are real shapes standing off
+## the wall (mesh_kit.gd), black and outlined in the wall colour, dimming with distance like the walls' lines; a crack or an
+## arch's edge is a strip drawn solid on the wall. Torch flames are a shader (shaders/flame.gdshader) in the accent colour, and
+## each torch lights the wall round it (shaders/wire.gdshader).
 extends RefCounted
 
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Materials = preload("res://src/view/materials.gd")
+const MeshKit = preload("res://src/view/mesh_kit.gd")
 
 const KINDS := ["torch", "torch", "chains", "banner", "crack", "window", "niche"]
-const SHARE := 0.22 # about this share of wall faces carry something
-const LIFT := 0.012 # lines sit this far off the wall so they don't flicker into it
+const SHARE := 0.32 # about this share of wall faces carry something
+const LIFT := 0.006 # flat strips sit this far off the wall so they don't flicker into it
 
-## Each kind is a list of strokes; a stroke is [closed?, "accent"|"wall", u, v, u, v, ...] in the face's own coordinates:
-## u across the face (0..1), v from the top (0) to the floor (1).
-const STROKES := {
-	"torch": [
-		[false, "wall", 0.44, 0.58, 0.56, 0.58], # bracket
-		[false, "wall", 0.5, 0.58, 0.5, 0.44], # handle
-		[true, "accent", 0.45, 0.44, 0.47, 0.36, 0.5, 0.26, 0.53, 0.36, 0.55, 0.44], # flame
-		[false, "accent", 0.49, 0.42, 0.5, 0.35, 0.51, 0.42],
-	],
-	"banner": [
-		[false, "wall", 0.3, 0.06, 0.7, 0.06],
-		[false, "wall", 0.34, 0.06, 0.34, 0.56, 0.42, 0.5, 0.5, 0.58, 0.58, 0.5, 0.66, 0.56, 0.66, 0.06],
-		[false, "wall", 0.5, 0.18, 0.5, 0.34],
-	],
-	"crack": [
-		[false, "wall", 0.3, 0.18, 0.38, 0.34, 0.34, 0.46, 0.46, 0.6, 0.42, 0.72, 0.52, 0.86],
-		[false, "wall", 0.38, 0.34, 0.48, 0.38],
-		[false, "wall", 0.46, 0.6, 0.58, 0.62],
-	],
-	"window": [
-		[true, "wall", 0.36, 0.24, 0.64, 0.24, 0.64, 0.46, 0.36, 0.46],
-		[false, "wall", 0.43, 0.24, 0.43, 0.46],
-		[false, "wall", 0.5, 0.24, 0.5, 0.46],
-		[false, "wall", 0.57, 0.24, 0.57, 0.46],
-	],
-	"niche": [
-		[true, "wall", 0.36, 0.78, 0.36, 0.58, 0.42, 0.5, 0.5, 0.47, 0.58, 0.5, 0.64, 0.58, 0.64, 0.78],
-		[false, "wall", 0.47, 0.71, 0.53, 0.71],
-	],
-}
-
-
-## Which walls carry what: [{"cell": Vector2i, "side": int, "kind": String}], the same every time for a floor.
+## Which walls carry what: [{"cell": Vector2i, "side": int, "kind": String, "roll": float}], the same every time for a floor.
 static func placements(floor_map) -> Array:
 	var out := []
 	for y in floor_map.size:
@@ -56,114 +27,160 @@ static func placements(floor_map) -> Array:
 					continue
 				var roll := _hash(x, y, side, floor_map.seed_value)
 				if roll[0] <= SHARE:
-					out.append({"cell": c, "side": side, "kind": KINDS[int(roll[1] * KINDS.size()) % KINDS.size()]})
+					out.append({"cell": c, "side": side, "kind": KINDS[int(roll[1] * KINDS.size()) % KINDS.size()], "roll": roll[0]})
 	return out
 
 
-## A node holding the decorations of `floor_map`. `torch_glows` (an Array) gets one MeshInstance3D per torch for the caller to
-## flicker.
-static func build(floor_map, wall_color: Color, accent: Color, torch_glows: Array) -> Node3D:
+## A node holding the decorations of `floor_map`: one mesh of shapes, one of flames. `torches` (an Array) gets
+## {"pos": Vector3, "seed": float} per torch, for the caller to light the walls with.
+static func build(floor_map, wall_color: Color, accent: Color, torches: Array) -> Node3D:
 	var root := Node3D.new()
-	var verts := PackedVector3Array()
-	var colors := PackedColorArray()
+	var props := MeshKit.Builder.new()
+	var flames := MeshKit.Builder.new()
 	var half := Materials.CELL / 2.0
 	for p in placements(floor_map):
-		var kind: String = p.kind
 		var face := _Face.new(DungeonMesh.center(p.cell), p.side, half)
-		if kind == "niche":
-			_skull(face, verts, colors, wall_color)
-		if kind == "chains":
-			_chains(face, verts, colors, wall_color)
-		else:
-			for stroke in STROKES[kind]:
-				_stroke(face, stroke, verts, colors, accent if stroke[1] == "accent" else wall_color)
-		if kind == "torch":
-			torch_glows.append(_glow(root, face, accent))
-	if not verts.is_empty():
-		var arrays := []
-		arrays.resize(Mesh.ARRAY_MAX)
-		arrays[Mesh.ARRAY_VERTEX] = verts
-		arrays[Mesh.ARRAY_COLOR] = colors
-		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_LINES, arrays)
-		var lines := MeshInstance3D.new()
-		lines.mesh = mesh
-		lines.material_override = _line_material()
-		root.add_child(lines)
+		match p.kind:
+			"torch":
+				_torch(props, flames, torches, face, p.roll, wall_color)
+			"chains":
+				_chains(props, face, wall_color)
+			"banner":
+				_banner(props, face, wall_color)
+			"crack":
+				_crack(props, face, wall_color)
+			"window":
+				_window(props, face, wall_color)
+			"niche":
+				_niche(props, face, wall_color)
+	if not props.is_empty():
+		var shapes := MeshInstance3D.new()
+		shapes.name = "Props"
+		shapes.mesh = props.commit()
+		shapes.material_override = Materials.prop()
+		shapes.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(shapes)
+	if not flames.is_empty():
+		var fire := MeshInstance3D.new()
+		fire.name = "Flames"
+		fire.mesh = flames.commit()
+		fire.material_override = Materials.flame(accent)
+		fire.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		fire.extra_cull_margin = 1.0 # the shader raises the quads off the point their vertices sit at
+		root.add_child(fire)
+	print_verbose("decor: %d triangles, %d torches" % [props.triangles(), torches.size()])
 	return root
 
 
-## The skull in a niche: a ring for the head, two eyes.
-static func _skull(face, verts: PackedVector3Array, colors: PackedColorArray, color: Color) -> void:
-	var ring := [true, "wall"]
-	for i in 8:
-		ring.append_array([0.5 + 0.06 * cos(TAU * i / 8.0), 0.64 + 0.06 * sin(TAU * i / 8.0)])
-	_stroke(face, ring, verts, colors, color)
-	for u in [0.48, 0.52]:
-		_stroke(face, [false, "wall", u, 0.625, u, 0.64], verts, colors, color)
+static func _torch(props: MeshKit.Builder, flames: MeshKit.Builder, torches: Array, face: _Face, roll: float, color: Color) -> void:
+	var ink := MeshKit.color(color)
+	var f := face.frame(0.5, 0.58)
+	props.box(f * Transform3D(Basis(), Vector3(0, 0.02, 0.01)), Vector3(0.12, 0.16, 0.03), ink) # plate
+	props.limb(f * Vector3(0, 0, 0.02), f * Vector3(0, 0.27, 0.15), 0.028, 0.038, ink, 8) # handle
+	props.cylinder(f * Transform3D(Basis(), Vector3(0, 0.26, 0.15)), 0.05, 0.075, 0.07, ink, 10) # cup
+	# the flame's quad: every corner at its foot, the UVs say which corner it is (shaders/flame.gdshader)
+	var foot := f * Vector3(0, 0.32, 0.15)
+	var seed_uv := Vector2(roll, 0)
+	var i0 := flames.vertex(foot, Vector3.UP, Color.WHITE, Vector2(-1, 0), seed_uv)
+	var i1 := flames.vertex(foot, Vector3.UP, Color.WHITE, Vector2(-1, 1), seed_uv)
+	var i2 := flames.vertex(foot, Vector3.UP, Color.WHITE, Vector2(1, 1), seed_uv)
+	var i3 := flames.vertex(foot, Vector3.UP, Color.WHITE, Vector2(1, 0), seed_uv)
+	flames.tri_idx(i0, i1, i2)
+	flames.tri_idx(i0, i2, i3)
+	torches.append({"pos": f * Vector3(0, 0.45, 0.3), "seed": roll})
 
 
-## Two chains hanging from the top, ring by ring, each ending in a hook.
-static func _chains(face, verts: PackedVector3Array, colors: PackedColorArray, color: Color) -> void:
+## Two chains hanging from the top, link by link (one seen face on, the next edge on), each ending in a hook.
+static func _chains(props: MeshKit.Builder, face: _Face, color: Color) -> void:
+	var ink := MeshKit.color(color)
 	for pair in [[0.38, 0.5], [0.6, 0.36]]:
 		var u: float = pair[0]
 		var length: float = pair[1]
-		_stroke(face, [false, "wall", u, 0.0, u, length], verts, colors, color)
-		var v := 0.06
+		var v := 0.0
+		var i := 0
 		while v < length:
-			var ring := [true, "wall"]
-			for i in 6:
-				ring.append_array([u + 0.025 * cos(TAU * i / 6.0), v + 0.03 * sin(TAU * i / 6.0)])
-			_stroke(face, ring, verts, colors, color)
-			v += 0.08
-		_stroke(face, [false, "wall", u - 0.04, length, u, length + 0.06, u + 0.04, length], verts, colors, color)
+			var f := face.frame(u, v + 0.04, 0.05)
+			var b := Basis(Vector3.RIGHT, PI / 2.0) * Basis.from_scale(Vector3(1, 1, 1.5)) if i % 2 == 0 else Basis(Vector3.FORWARD, PI / 2.0) * Basis.from_scale(Vector3(1.5, 1, 1))
+			props.torus(f * Transform3D(b, Vector3.ZERO), 0.03, 0.055, ink, 8, 4)
+			v += 0.06
+			i += 1
+		var hook := face.frame(u, length + 0.04, 0.05)
+		props.limb(hook * Vector3(0, 0.02, 0), hook * Vector3(0.05, -0.1, 0.02), 0.014, 0.01, ink, 6)
+		props.limb(hook * Vector3(0, 0.02, 0), hook * Vector3(-0.05, -0.1, 0.02), 0.014, 0.01, ink, 6)
 
 
-static func _stroke(face, stroke: Array, verts: PackedVector3Array, colors: PackedColorArray, color: Color) -> void:
-	var pts: Array[Vector3] = []
-	for i in range(2, stroke.size(), 2):
-		pts.append(face.at(stroke[i], stroke[i + 1]))
-	if stroke[0]:
-		pts.append(pts[0])
+## A cloth on a rod, with a notched hem and a mark on it.
+static func _banner(props: MeshKit.Builder, face: _Face, color: Color) -> void:
+	var ink := MeshKit.color(color)
+	var rod := face.frame(0.5, 0.06, 0.08)
+	props.limb(rod * Vector3(-0.42, 0, 0), rod * Vector3(0.42, 0, 0), 0.022, 0.022, ink, 8)
+	for e in [-0.44, 0.44]:
+		props.sphere(rod * Transform3D(Basis(), Vector3(e, 0, 0)), Vector3.ONE * 0.04, ink, 8, 4)
+	var top := face.frame(0.5, 0.06, 0.06)
+	var h := 0.5 * DungeonMesh.WALL_H
+	props.box(top * Transform3D(Basis(), Vector3(0, -h / 2.0, 0)), Vector3(0.64, h, 0.025), ink)
+	for e in [-0.24, 0.0, 0.24]:
+		var tip := top * Vector3(e, -h - 0.12, 0.0)
+		props.limb(top * Vector3(e - 0.08, -h, 0.0), tip, 0.012, 0.012, ink, 4)
+		props.limb(tip, top * Vector3(e + 0.08, -h, 0.0), 0.012, 0.012, ink, 4)
+	var mark := face.frame(0.5, 0.26, 0.085)
+	props.torus(mark * Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3.ZERO), 0.1, 0.14, ink)
+	props.box(mark, Vector3(0.03, 0.34, 0.02), ink)
+
+
+## Strokes flat on the wall, drawn solid.
+static func _crack(props: MeshKit.Builder, face: _Face, color: Color) -> void:
+	var solid := MeshKit.color(color, true)
+	_strip(props, face, [[0.3, 0.18], [0.38, 0.34], [0.34, 0.46], [0.46, 0.6], [0.42, 0.72], [0.52, 0.86]], 0.035, solid)
+	_strip(props, face, [[0.38, 0.34], [0.48, 0.38]], 0.025, solid)
+	_strip(props, face, [[0.46, 0.6], [0.58, 0.62]], 0.025, solid)
+
+
+## A dark hole in a frame, with a sill and three bars.
+static func _window(props: MeshKit.Builder, face: _Face, color: Color) -> void:
+	var ink := MeshKit.color(color)
+	_patch(props, face, [[0.36, 0.24], [0.64, 0.24], [0.64, 0.46], [0.36, 0.46]])
+	var mid := face.frame(0.5, 0.35, 0.03)
+	var w := 0.28 * Materials.CELL
+	var hh := 0.11 * DungeonMesh.WALL_H
+	props.box(mid * Transform3D(Basis(), Vector3(0, hh + 0.035, 0)), Vector3(w * 2.0 + 0.14, 0.07, 0.07), ink)
+	props.box(mid * Transform3D(Basis(), Vector3(0, -hh - 0.04, 0.02)), Vector3(w * 2.0 + 0.2, 0.08, 0.11), ink) # sill
+	props.box(mid * Transform3D(Basis(), Vector3(-w - 0.035, 0, 0)), Vector3(0.07, hh * 2.0, 0.07), ink)
+	props.box(mid * Transform3D(Basis(), Vector3(w + 0.035, 0, 0)), Vector3(0.07, hh * 2.0, 0.07), ink)
+	for u in [0.43, 0.5, 0.57]:
+		props.cylinder(face.frame(u, 0.46, 0.02), 0.016, 0.016, hh * 2.0, ink, 6)
+
+
+## A dark arch with a ledge, and a skull on the ledge.
+static func _niche(props: MeshKit.Builder, face: _Face, color: Color) -> void:
+	var ink := MeshKit.color(color)
+	var solid := MeshKit.color(color, true)
+	var arch := [[0.36, 0.78], [0.36, 0.58], [0.42, 0.5], [0.5, 0.47], [0.58, 0.5], [0.64, 0.58], [0.64, 0.78]]
+	_patch(props, face, [[0.5, 0.64]] + arch + [[0.36, 0.78]])
+	_strip(props, face, arch, 0.035, solid, 0.008)
+	props.box(face.frame(0.5, 0.78, 0.06), Vector3(0.62, 0.05, 0.14), ink)
+	var skull := face.frame(0.5, 0.66, 0.1)
+	props.sphere(skull, Vector3(0.1, 0.095, 0.1), ink, 12, 6)
+	props.box(skull * Transform3D(Basis(), Vector3(0, -0.085, 0.02)), Vector3(0.1, 0.05, 0.08), ink) # jaw
+	for e in [-0.04, 0.04]:
+		props.sphere(skull * Transform3D(Basis(), Vector3(e, 0.0, 0.082)), Vector3(0.026, 0.03, 0.02), solid, 8, 4)
+	props.sphere(skull * Transform3D(Basis(), Vector3(0, -0.04, 0.092)), Vector3(0.012, 0.016, 0.01), solid, 6, 3)
+
+
+# A strip along a polyline given in face coordinates, flat on the wall.
+static func _strip(props: MeshKit.Builder, face: _Face, pts: Array, width: float, col: Color, out := LIFT) -> void:
 	for i in range(pts.size() - 1):
-		verts.append_array([pts[i], pts[i + 1]])
-		colors.append_array([color, color])
+		var a := face.frame(pts[i][0], pts[i][1], out).origin
+		var b := face.frame(pts[i + 1][0], pts[i + 1][1], out).origin
+		var side := face.inward.cross((b - a).normalized()) * (width / 2.0)
+		props.quad(a + side, b + side, b - side, a - side, col)
 
 
-static func _glow(root: Node3D, face, accent: Color) -> MeshInstance3D:
-	var quad := QuadMesh.new()
-	quad.size = Vector2(1.5, 1.5)
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color(accent, 0.45))
-	gradient.set_color(1, Color(accent, 0.0))
-	var tex := GradientTexture2D.new()
-	tex.gradient = gradient
-	tex.fill = GradientTexture2D.FILL_RADIAL
-	tex.fill_from = Vector2(0.5, 0.5)
-	tex.fill_to = Vector2(1.0, 0.5)
-	tex.width = 64
-	tex.height = 64
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	mat.albedo_texture = tex
-	mat.no_depth_test = false
-	mat.disable_receive_shadows = true
-	var glow := MeshInstance3D.new()
-	glow.mesh = quad
-	glow.material_override = mat
-	glow.position = face.at(0.5, 0.36) + face.inward * 0.15
-	root.add_child(glow)
-	return glow
-
-
-static func _line_material() -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.vertex_color_use_as_albedo = true
-	return m
+# A flat black polygon on the wall (a fan from its first point), the dark inside of a window or a niche.
+static func _patch(props: MeshKit.Builder, face: _Face, pts: Array, out := LIFT * 0.75) -> void:
+	var p := pts.map(func(q): return face.frame(q[0], q[1], out).origin)
+	for i in range(1, p.size() - 1):
+		props.tri(p[0], p[i], p[i + 1], Color.BLACK)
 
 
 ## Two numbers in 0..1 from a wall's place: whether it is decorated, and with what.
@@ -193,5 +210,7 @@ class _Face:
 		across = b - a
 		inward = -Vector3(FloorMap.DIRS[side].x, 0, FloorMap.DIRS[side].y)
 
-	func at(u: float, v: float) -> Vector3:
-		return a + across * u + Vector3(0, DungeonMesh.WALL_H * (1.0 - v), 0) + inward * 0.012
+	## A frame on the face at (u, v), `out` off the wall: +X along the wall as you face it, +Y up, +Z out into the cell.
+	func frame(u: float, v: float, out := 0.0) -> Transform3D:
+		var at := a + across * u + Vector3(0, DungeonMesh.WALL_H * (1.0 - v), 0) + inward * out
+		return Transform3D(Basis(across.normalized(), Vector3.UP, inward), at)

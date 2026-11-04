@@ -154,16 +154,16 @@ static func from_dict(d: Dictionary):
 	m.name = str(d.get("name", ""))
 	var c: Array = d.get("cell", [0, 0])
 	m.cell = Vector2i(int(c[0]), int(c[1]))
-	m.max_hp = int(d.get("maxHp", 0))
-	m.hp = int(d.get("hp", m.max_hp))
+	m.max_hp = maxi(0, int(d.get("maxHp", 0)))
+	m.hp = clampi(int(d.get("hp", m.max_hp)), 0, m.max_hp)
 	m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
 	for k in m.meters:
-		m.meters[k] = float(d.get("meters", {}).get(k, 0.0))
+		m.meters[k] = clampf(float(d.get("meters", {}).get(k, 0.0)), 0.0, METER_MAX)
 	m.traits = d.get("traits", []).duplicate()
 	m.taste = d.get("taste", {}).duplicate()
 	m.last_intent = str(d.get("lastIntent", ""))
 	m.spoke = bool(d.get("spoke", false))
 	m.threshold = float(d.get("threshold", 0.0))
-	m.turn = int(d.get("turn", 0))
-	m.gone = str(d.get("gone", ""))
+	m.turn = maxi(0, int(d.get("turn", 0)))
+	m.gone = str(d.get("gone", "")) if str(d.get("gone", "")) in ["spared", "slain"] else ""
 	return m

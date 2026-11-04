@@ -10,6 +10,13 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Dice` (`src/utils/dice.gd`) is the one source of interaction chances: the slice pins it, and `Odds` and `Allies` take a Dice, not a Rng, so a draw cannot go around the fixed roll.
 - `Dice.pin` refuses a roll outside 0 up to below 1 (or NaN), reports it and returns false; `Rng.real()` never returns 1.0.
 - A test scan of every script under `src` finds a Dice made outside the flow, a chance rolled from `flow.rng`, and a copy of the game's rng.
+- Hover or tap the foe, an ally or the automap for details (key `I` cycles them): the foe's feelings and the last two questions its mind answered, an ally's charm, mood, loyalty and what it cares about, and the map's legend. These were lost in the rewrite.
+- A touch pad (arrows, INFO, BACK, OK) on touch devices or with the `pad` flag; clicking the picture strikes and starts the run; hovering a command picks it and shows its help.
+- An autosave when a floor starts, and "Saved to slot N" and "CAN'T LOAD" lines.
+- Eight named palettes, picked per run from the seed and saved with it (older saves still load).
+- The `nomusic` and `nosfx` flags, a Master limiter, a room reverb and music ducking under recorded voices.
+- `tools/rules_test.gd`, `tools/network_test.gd` and `tools/audio_test.gd`, plus the Worker tests in `proxy/worker.test.js`; CI runs them and checks that CREDITS ships.
+- `README.md`, `AGENTS.md`, `docs/GAME.md`, `docs/DEVELOPMENT.md`, `docs/AUDIO.md` and `docs/ARCHITECTURE.md` again, rewritten for the 3D game alone, with new pictures.
 - `State.turn` counts quarter turns, so the camera knows which way the player turned.
 
 ### Changed
@@ -22,6 +29,12 @@ All notable changes to this project are documented here. The format follows [Kee
 - A named save is labelled alike on the list, its page, COPY TO and the REPLACE question (the slot and its name in capitals).
 - A long save name is cut off before the date whether or not its row is picked; save dates show no arrows, only settings do.
 - The automap also marks where a monster stands once you see it, so it agrees with the 3D view.
+- Sound effects are rendered at 44.1 kHz from the 3D scene's recipes again, with per-play variation, a polyphony cap and a prewarm spread over frames.
+- The battle theme is random and never the last one, and the exploring music rests between stretches, with the fades and track levels it had before the rewrite.
+- A monster's line with no recording uses the synth voice for its species, and a stage direction stays silent.
+- The champion stands at scale 0.92 again, so it no longer pokes through the ceiling.
+- Builds use the custom web page again, and settings saved under the old `donjon.settings` key are taken over on first read.
+- `debug` keeps the mind panel open, and `floor=` is described as what it does (the label and the colours).
 
 ### Fixed
 - A monster is in view when it is in front of you with nothing in the way: down a corridor however far, across a hall, off to one side.
@@ -42,6 +55,21 @@ All notable changes to this project are documented here. The format follows [Kee
 - `nosave` keeps the save slots in memory (saving, loading, renaming, copying and deleting included), and DATA no longer offers OPEN SAVE FOLDER under it.
 - The credits no longer repeat the CREDITS heading.
 - The slice's bandits are built from the roster's own bandit line; a retry no longer saves a HP value it never used.
+- Monster models are back at full detail (slime 1308, bandit 1572, snake 2384, rock 762, dragon 2356 triangles) with each species' own movement; far monsters stay readable and name tags stay sharp above each model.
+- The camera glides in fixed time (step 150 ms, turn 170 ms), lunges on a wall bump, and held-key repeats wait for it (#20).
+- Every monster stands on the set and walls hide it, so nothing pops in or out; the map learns cells from the camera's field of view (#20).
+- The automap is crisp, outside the post-processing, with wall lines, monster dots (they had zero size), the champion in red from the start and a ring on the stairs (#20).
+- The stairs are a pit with funnel rings and an accent rim, decor is real 3D at 32% density, torches flicker in a flame shader, and the background is black.
+- Post-processing is restored: 4x MSAA, sharp scaling, thresholded bloom under the `crt` setting, radial colour split, a red hurt edge, danger desaturation, a pulse that decays with the beat and additive flashes; the floor's accent returns after a fight.
+- Fights have their staging back: the encounter flash, the gold "(MERCY 50%+)" by the name, a visible time bar, the lantern's orbit and glow, falling goo, warnings that ramp up and the CHARMS list.
+- The HP bar has its border and turns red under 40%, and the title card has its blinking prompt and receding frames.
+- ACT results, a refused cut and FLEE make their sounds (they were silent and logged an error), a critical strike sounds like one, and the fight menu's cursor ticks.
+- Victory plays on every win, and the fanfare at the stairs and not on a champion kill; the sting fades the loops, and an old fade can no longer stop a reused music player.
+- Recorded monster lines match the voice bank (560 of 590 spoken roster lines; stage directions and braces had broken the lookup).
+- Digits, the numpad, right-click, PgUp/PgDn and Esc in RENAME work in the menu pages; Esc leaves the route screen; the title card ignores modifier-only keys; long command help wraps.
+- A bad save is refused with a message, never a script error, and its values are clamped; a failed load from the pause menu keeps the menu open.
+- A proxy with no key is not retried and counts as down at once, a THINKING mark shows while a mind call runs, Jev gets mercy and pressure in one request, and starting a run can no longer race the mind.
+- `!!!!!!` counts as one noise cue again, and `assets/CREDITS.txt` ships in every build, so the Credits page is no longer empty.
 
 ## [0.6.0] - 2026-11-03
 

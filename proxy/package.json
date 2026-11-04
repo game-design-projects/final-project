@@ -5,6 +5,7 @@
   "description": "The Jev API Worker: holds the Jev key and forwards the game's Jev requests (worker.js).",
   "type": "module",
   "scripts": {
+    "test": "node --test worker.test.js",
     "dev": "node dev.js"
   },
   "engines": {

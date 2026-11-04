@@ -1,6 +1,11 @@
-## The 3D set: the floor's walls, the stairs, the monsters, and a camera that follows the party. It only reads the game's
-## state; it never changes it. Everything is black surfaces with lines (see view/shaders), drawn into a small
-## SubViewport and shown through the post-processing pass.
+## The 3D set: the floor's walls, the stairs, every monster still on the floor, and a camera that follows the party. It only
+## reads the game's state; it never changes it. Everything is black surfaces with lines (see view/shaders), drawn into a
+## small SubViewport and shown through the post-processing pass. Walls hide what stands behind them: the depth buffer decides
+## what shows, so nothing pops in or out as you turn. Fights are the flat battle screen, with the set hidden behind it.
+##
+## Moving eases: when the party's cell or facing changes, the camera glides (a step) or swings (a turn) to its new spot in a
+## fixed time, and `bump` lunges it at a wall and back. A new floor, or a change made while the set is hidden, puts it there
+## at once.
 extends Node3D
 
 const Decor = preload("res://src/view/decor.gd")
@@ -15,36 +20,61 @@ const Vision = preload("res://src/rules/vision.gd")
 
 const CELL := Materials.CELL
 const FOV := 68.0
-const EYE := 0.85 # camera height while walking
-const EYE_FIGHT := 1.1
-const BACK_WALK := 0.38 # how far behind the middle of your cell the camera stands, in cells
-const BACK_FIGHT := 0.85
-const FIGHT_PITCH := -7.0 # degrees: look slightly down at the monster
-const CAMERA_RATE := 9.0 # how fast the camera eases to where it should be (per second)
+const EYE := 0.85 # camera height
+const BACK := Vision.BACK # how far behind the middle of your cell the camera stands, in cells
+const STEP_MS := 150.0 # how long the camera takes over a step, a turn, and a lunge at a wall and back
+const TURN_MS := 170.0
+const BUMP_MS := 140.0
+const LUNGE := 0.28 # how far the lunge goes, in world units
+const CALM_LUNGE := 0.35 # the share of it left with the `calm` setting
 const FLASH_S := 0.25
-
-const FIGHT_STAGES := ["intro", "menu", "act", "talk", "fightbar", "wait", "dodge", "dead"]
+# the name tags: real 3D text the same size on screen near or far, over the model's real top
+const VIEW_SIZE := Vector2(448.0, 288.0)
+const TAG_FONT_PX := 16
+const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels come out 8 view pixels tall: whole, so nearest stays sharp
+const TAG_GAP := 0.12 # above the head
+const TAG_FADE_S := 0.12 # how long a tag takes to come and go
+# the torches nearest the camera glow on the walls; each flickers on its own, in steps like the flames drawn on them
+const MAX_TORCHES := 10 # as in shaders/wire.gdshader
+const TORCH_REACH2 := 100.0 # world units, squared
+const FLICKER_FPS := 12.0
 
 var palette := {}
+var calm := false # the `calm` setting: a softer lunge
 var _decor: Node3D
-var _glows: Array = [] # a MeshInstance3D per torch, flickering
+var _torches: Array = [] # {"pos": Vector3, "seed": float}, the floor's
+var _wall_mat: ShaderMaterial
+var _flicker_key := []
 
 var _camera: Camera3D
 var _dungeon: MeshInstance3D
-var _stairs: Node3D
+var _stairs: MeshInstance3D
 var _models := {} # Monster -> Node3D
+var _tags := {} # Monster -> Label3D
+var _tag_light := {} # Monster -> 0..1, how far its tag has come in
+var _tag_key := []
 var _floor_map = null
 var _pos := Vector3.ZERO
 var _yaw := 0.0
 var _yaw_goal := 0.0 # where the camera is turning to, counted past a full circle so a held key keeps it turning one way
 var _facing := 0 # the heading the goal was last set for
+var _cell := Vector2i.ZERO # the cell the goal was last set for
 var _turns := 0 # the game's count of quarter turns the goal has been moved for
 var _spin := -1 # which way the last quarter turn went (-1 right, 1 left), for a half turn that could go either
-var _pitch := 0.0
+var _glide = null # {from_pos, from_yaw, t0, ms}: the move under way, or null
+var _now := 0.0
+var _bump_at := -1000.0
 var _hit_at := {} # Monster -> seconds when it was last hit
 
 
 func _ready() -> void:
+	var world := WorldEnvironment.new()
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color.BLACK
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	world.environment = env
+	add_child(world)
 	_camera = Camera3D.new()
 	_camera.fov = FOV
 	_camera.near = 0.05
@@ -58,122 +88,130 @@ func flash_foe(monster, now: float) -> void:
 	_hit_at[monster] = now
 
 
+## You walked into a wall: the camera lunges at it and springs back.
+func bump(now: float) -> void:
+	_bump_at = now
+
+
+## Whether the camera is still on its way somewhere (a step, a turn, a lunge); a held key waits for it.
+func moving() -> bool:
+	return _glide != null or (_now - _bump_at) * 1000.0 < BUMP_MS
+
+
 ## Where a world point lands in the view, in view pixels (for 2D drawn over the 3D, like name tags).
 func project(world_pos: Vector3, view_size: Vector2) -> Vector2:
 	var p := _camera.unproject_position(world_pos)
 	return p * view_size / Vector2(get_viewport().size)
 
 
-## Bring the set in line with the game: the floor, the camera, the monsters in view. `now` is seconds.
+## Bring the set in line with the game: the floor, the camera, the monsters. `now` is seconds.
 func update(state, now: float, dt: float) -> void:
 	if state.floor_map == null:
 		return
 	if state.floor_map != _floor_map:
 		_load_floor(state)
-	_move_camera(state, dt)
-	_flicker(now)
-	_show_monsters(state, now)
+	_now = now
+	_move_camera(state, now)
+	if is_visible_in_tree():
+		_flicker(now)
+		_show_monsters(state, now, dt)
 
 
-## The name of the kind of fight, floating over a monster so you know what you are walking into.
-func _genre_label(m) -> Label3D:
-	var label := Label3D.new()
-	label.text = "CHAMPION" if m.boss else Content.table("encounter").genres[m.genre].name
-	label.font = Fonts.title()
-	label.font_size = 24
-	label.pixel_size = 0.0075
-	label.modulate = Palette.monster(m)
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = false
-	label.position = Vector3(0.0, 1.55, 0.0)
-	return label
-
-
-## The torch glows breathe, each on its own beat.
+## The torches nearest the camera glow on the walls this frame; worked out again only when one could have changed.
 func _flicker(now: float) -> void:
-	for i in _glows.size():
-		var s := 1.0 + sin(now * 9.0 + i * 1.7) * 0.06 + sin(now * 23.0 + i * 4.1) * 0.04
-		_glows[i].scale = Vector3(s, s, s)
+	var step := floorf(now * FLICKER_FPS)
+	var key := [step, _pos]
+	if key == _flicker_key:
+		return
+	_flicker_key = key
+	var near := []
+	for t in _torches:
+		var d: float = t.pos.distance_squared_to(_pos)
+		if d < TORCH_REACH2:
+			near.append([d, t])
+	near.sort_custom(func(a, b): return a[0] < b[0])
+	var lit := PackedVector4Array()
+	for i in MAX_TORCHES:
+		if i < near.size():
+			var t: Dictionary = near[i][1]
+			var f: float = 0.88 + 0.12 * sin(step * 1.7 + t.seed * 40.0) * sin(step * 0.9 + t.seed * 17.0)
+			lit.append(Vector4(t.pos.x, t.pos.y, t.pos.z, f))
+		else:
+			lit.append(Vector4.ZERO)
+	_wall_mat.set_shader_parameter("torches", lit)
 
 
 func _load_floor(state) -> void:
+	var t0 := Time.get_ticks_usec()
 	_floor_map = state.floor_map
-	palette = Palette.for_floor(state.depth - 1)
+	palette = Palette.for_run(state.palette_id)
 	if _dungeon != null:
 		_dungeon.queue_free()
 		_stairs.queue_free()
 		_decor.queue_free()
-	for m in _models.values():
-		m.queue_free()
+	for m in _models:
+		_models[m].queue_free()
+		_tags[m].queue_free()
 	_models = {}
+	_tags = {}
+	_tag_light = {}
+	_tag_key = []
+	_flicker_key = []
 	_dungeon = MeshInstance3D.new()
-	_dungeon.mesh = DungeonMesh.build(_floor_map, Materials.wire(0, palette.wall), Materials.wire(1, palette.wall))
+	_wall_mat = Materials.wire(0, palette.wall, palette.accent)
+	_dungeon.mesh = DungeonMesh.build(_floor_map, _wall_mat, Materials.wire(1, palette.wall, palette.accent))
 	add_child(_dungeon)
-	_glows = []
-	_decor = Decor.build(_floor_map, palette.wall, palette.accent, _glows)
+	_torches = []
+	_decor = Decor.build(_floor_map, palette.wall, palette.accent, _torches)
 	add_child(_decor)
-	_stairs = _build_stairs(palette.accent)
+	_stairs = MeshInstance3D.new()
+	_stairs.mesh = DungeonMesh.stairwell(palette.accent)
+	_stairs.material_override = Materials.prop()
 	_stairs.position = DungeonMesh.center(_floor_map.stairs)
 	add_child(_stairs)
-	var target := _camera_target(state)
+	var target := _camera_target(state.cell, state.facing)
 	_pos = target.pos
 	_yaw = target.yaw
 	_yaw_goal = target.yaw
-	_facing = target.facing
+	_facing = state.facing
 	_turns = state.quarter_turns
-	_pitch = target.pitch
+	_cell = state.cell
+	_glide = null
 	_apply_camera()
+	print_verbose("stage: built the floor, %d torches, in %d ms" % [_torches.size(), (Time.get_ticks_usec() - t0) / 1000])
 
 
-## Three shrinking slabs: a stepped marker where the stairs are.
-func _build_stairs(accent: Color) -> Node3D:
-	var root := Node3D.new()
-	var mat := Materials.model(accent)
-	for i in 3:
-		var size := 1.6 - i * 0.4
-		var slab := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(size, 0.07, size)
-		slab.mesh = box
-		slab.material_override = mat
-		slab.position = Vector3(0, 0.04 + i * 0.07, 0)
-		root.add_child(slab)
-	return root
-
-
-func _in_fight(state) -> bool:
-	return state.foe != null and state.stage in FIGHT_STAGES
-
-
-## Where the camera should stand and look: behind the middle of your cell while walking; pulled back, lower and
-## looking down at the monster in a fight.
-func _camera_target(state) -> Dictionary:
-	var facing: int = state.facing
-	var fight := _in_fight(state)
-	if fight:
-		for i in 4:
-			if state.cell + FloorMap.DIRS[i] == state.foe.cell:
-				facing = i
+## Where the camera stands and looks from a cell.
+func _camera_target(cell: Vector2i, facing: int) -> Dictionary:
 	var fwd := Vector3(FloorMap.DIRS[facing].x, 0.0, FloorMap.DIRS[facing].y)
-	var back := BACK_WALK
-	if fight:
-		back = BACK_FIGHT if state.floor_map.is_open(state.cell - FloorMap.DIRS[facing]) else BACK_WALK
-	var eye := EYE_FIGHT if fight else EYE
 	return {
-		"pos": DungeonMesh.center(state.cell) - fwd * CELL * back + Vector3(0.0, eye, 0.0),
-		"facing": facing,
+		"pos": DungeonMesh.center(cell) - fwd * CELL * BACK + Vector3(0.0, EYE, 0.0),
 		"yaw": -facing * PI / 2.0,
-		"pitch": deg_to_rad(FIGHT_PITCH) if fight else 0.0,
 	}
 
 
-func _move_camera(state, dt: float) -> void:
-	var target := _camera_target(state)
-	var k := 1.0 - exp(-CAMERA_RATE * dt)
-	_pos = _pos.lerp(target.pos, k)
-	_turn_goal(target.facing, state.quarter_turns)
-	_yaw = lerpf(_yaw, _yaw_goal, k)
-	_pitch = lerpf(_pitch, target.pitch, k)
+func _move_camera(state, now: float) -> void:
+	var target := _camera_target(state.cell, state.facing)
+	var stepped: bool = state.cell != _cell
+	var turned: bool = state.quarter_turns != _turns or state.facing != _facing
+	if stepped or turned:
+		_turn_goal(state.facing, state.quarter_turns)
+		_cell = state.cell
+		if is_visible_in_tree():
+			_glide = {"from_pos": _pos, "from_yaw": _yaw, "t0": now, "ms": STEP_MS if stepped else TURN_MS}
+		else:
+			_glide = null
+	if _glide != null:
+		var p: float = (now - _glide.t0) * 1000.0 / _glide.ms
+		if p >= 1.0 or p < 0.0:
+			_glide = null
+		else:
+			var e := 1.0 - pow(1.0 - p, 3.0)
+			_pos = _glide.from_pos.lerp(target.pos, e)
+			_yaw = lerpf(_glide.from_yaw, _yaw_goal, e)
+	if _glide == null:
+		_pos = target.pos
+		_yaw = _yaw_goal
 	_apply_camera()
 
 
@@ -207,38 +245,92 @@ func _turn_goal(facing: int, turns: int) -> void:
 
 
 func _apply_camera() -> void:
-	_camera.position = _pos
-	_camera.rotation = Vector3(_pitch, _yaw, 0.0)
+	var lunge := 0.0
+	var p := (_now - _bump_at) * 1000.0 / BUMP_MS
+	if p >= 0.0 and p < 1.0:
+		lunge = sin(PI * p) * LUNGE * (CALM_LUNGE if calm else 1.0)
+	_camera.position = _pos + Vector3(-sin(_yaw), 0.0, -cos(_yaw)) * lunge
+	_camera.rotation = Vector3(0.0, _yaw, 0.0)
 
 
-func _show_monsters(state, now: float) -> void:
-	var visible := {}
-	if _in_fight(state):
-		visible[state.foe] = true
-	else:
-		# from where you face and from where the camera still faces, so a turn does not drop what is in the picture
-		# while the camera swings (what lies the new way is drawn at once, but is out of the picture until the camera gets there)
-		var seen_from := [state.facing]
-		var camera_facing := posmod(roundi(-_yaw / (PI / 2.0)), 4)
-		if camera_facing != state.facing:
-			seen_from.append(camera_facing)
-		for facing in seen_from:
-			for m in Vision.monsters(state.floor_map, state.cell, facing):
-				visible[m] = true
-	for m in visible:
+## Every monster still on the floor stands in its cell, turned toward the camera, with a name tag; walls hide them. Not
+## while you stand in its cell too (a test put you there): it would be in the camera's face.
+func _show_monsters(state, now: float, dt: float) -> void:
+	for m in state.floor_map.monsters:
+		var here: bool = not m.is_gone() and m.cell != state.cell
+		if not here:
+			if _models.has(m):
+				_models[m].visible = false
+				_tags[m].visible = false
+				_tag_light[m] = 0.0
+			continue
 		if not _models.has(m):
-			var model := MonsterModel.build(m.species, Palette.monster(m), m.boss)
-			model.add_child(_genre_label(m))
-			add_child(model)
-			_models[m] = model
+			_add_monster(m)
 		var model: Node3D = _models[m]
 		model.visible = true
-		model.position = DungeonMesh.center(m.cell)
 		var to_camera := _camera.position - model.position
 		model.rotation.y = atan2(to_camera.x, to_camera.z)
 		var since: float = now - _hit_at.get(m, -10.0)
 		MonsterModel.flash(model, clampf(1.0 - since / FLASH_S, 0.0, 1.0))
 		MonsterModel.pose(model, now, clampf(1.0 - since / 0.4, 0.0, 1.0))
-	for m in _models:
-		if not visible.has(m):
-			_models[m].visible = false
+	_show_tags(state, dt)
+
+
+func _add_monster(m) -> void:
+	var model := MonsterModel.build(m.species, Palette.monster(m))
+	model.position = DungeonMesh.center(m.cell)
+	add_child(model)
+	_models[m] = model
+	var tag := Label3D.new()
+	tag.text = "CHAMPION" if m.boss else Content.table("encounter").genres[m.genre].name
+	tag.font = Fonts.title()
+	tag.font_size = TAG_FONT_PX
+	tag.pixel_size = TAG_PIXEL_SIZE
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.fixed_size = true
+	tag.shaded = false
+	tag.double_sided = true
+	tag.no_depth_test = true # a wall's edge must not slice the name in two; it is hidden when no line reaches its monster
+	tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	tag.outline_size = 0
+	tag.modulate = Palette.monster(m)
+	tag.position = model.position + Vector3(0.0, MonsterModel.top_of(model) + TAG_GAP, 0.0)
+	add_child(tag)
+	_tags[m] = tag
+	_tag_light[m] = 0.0
+	tag.set_meta("wanted", false)
+
+
+## Which tags show: its monster is in a straight line of open floor from the camera, and it doesn't overlap a nearer tag. The
+## tags then ease in and out and fade with distance, like the lines.
+func _show_tags(state, dt: float) -> void:
+	var key := [_pos, _yaw, state.floor_map.monsters_left()]
+	if key != _tag_key:
+		_tag_key = key
+		_pick_tags(state)
+	for m in _tags:
+		var tag: Label3D = _tags[m]
+		if m.is_gone() or m.cell == state.cell:
+			continue
+		var light: float = move_toward(_tag_light[m], 1.0 if tag.get_meta("wanted") else 0.0, dt / TAG_FADE_S)
+		_tag_light[m] = light
+		var d: float = _pos.distance_to(_models[m].position) / CELL
+		tag.modulate.a = clampf(1.15 - maxf(0.0, d - 0.43) * 0.16, 0.35, 1.0) * light
+		tag.visible = light > 0.0
+
+
+func _pick_tags(state) -> void:
+	var from := Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5) # the camera on the floor plan
+	var order := _tags.keys()
+	order.sort_custom(func(a, b): return _tags[a].position.distance_squared_to(_pos) < _tags[b].position.distance_squared_to(_pos))
+	var placed := []
+	for m in order:
+		var tag: Label3D = _tags[m]
+		tag.set_meta("wanted", false)
+		if m.is_gone() or m.cell == state.cell or _camera.is_position_behind(tag.position) or not Vision.reaches(state.floor_map, from, m.cell):
+			continue
+		var at := project(tag.position, VIEW_SIZE)
+		var rect := Rect2(at.x - tag.text.length() * 4.0, at.y - 8.0, tag.text.length() * 8.0, 8.0).grow(5.0)
+		if not placed.any(func(r): return r.intersects(rect)):
+			placed.append(rect)
+			tag.set_meta("wanted", true)

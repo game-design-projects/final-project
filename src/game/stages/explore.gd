@@ -4,7 +4,7 @@ extends "res://src/game/stages/stage.gd"
 
 const FloorMap = preload("res://src/rules/floor_map.gd")
 
-const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · ESC MENU"
+const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · I INFO · ESC MENU"
 
 
 func enter(flow, args: Dictionary) -> void:

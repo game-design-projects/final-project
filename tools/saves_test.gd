@@ -4,6 +4,10 @@
 extends "res://tools/test_base.gd"
 
 const Flags = preload("res://src/utils/flags.gd")
+const Flow = preload("res://src/game/flow.gd")
+const LocalMind = preload("res://src/mind/local_mind.gd")
+const Rng = preload("res://src/utils/rng.gd")
+const State = preload("res://src/game/state.gd")
 
 var Saves = null # loaded when the test runs, like the other scripts that reach the Store autoload
 var _dir := ""
@@ -27,6 +31,7 @@ func _run() -> void:
 	_round_trip()
 	_numbers_rise()
 	_nosave_in_memory()
+	await _state_is_checked()
 	_cleanup()
 	_finish()
 
@@ -68,6 +73,81 @@ func _nosave_in_memory() -> void:
 	_check(Saves.list().all(func(i): return i.empty), "nosave: delete all clears the memory")
 	Flags.set_args(PackedStringArray([]))
 	_check(FileAccess.file_exists(Saves.path("1")) and Saves.info("1").name == "my run" and Saves.info("3").empty, "nosave: the save on disk was not renamed or deleted, and the memory is not on the disk")
+
+
+## A saved state is data from outside: one that is not ours is refused, a wrong value (a cell in a wall, health past the maximum)
+## is brought back in range, and neither reaches a script error.
+func _state_is_checked() -> void:
+	var flow := Flow.new(Rng.new(5), LocalMind.new())
+	await flow.new_run()
+	flow.state.allies.append(load("res://src/game/ally.gd").make("slime", "GLOP", 70.0))
+	var good: Dictionary = flow.state.to_dict()
+	var back = State.from_dict(good.duplicate(true))
+	_check(back != null and back.cell == flow.state.cell and back.hp == 20 and back.allies.size() == 1 and back.floor_map.monsters.size() == flow.state.floor_map.monsters.size(), "a state written by the game is read back")
+	# each change makes the state refused (null), whatever the wrong value is
+	var refused := {
+		"a cell that is not a pair": func(d): d.cell = "here",
+		"a cell with a word in it": func(d): d.cell = [1, "x"],
+		"a cell outside the floor": func(d): d.cell = [99, 99],
+		"a cell in a wall": func(d): d.cell = [0, 0],
+		"no floor": func(d): d.floor = 5,
+		"a floor with no rows": func(d): d.floor.grid = "x",
+		"a row that is not a row": func(d): d.floor.grid[3] = 7,
+		"a row of the wrong length": func(d): d.floor.grid[3] = [1, 1],
+		"a floor with no size": func(d): d.floor.size = 0,
+		"a floor far too big": func(d): d.floor.size = 5000,
+		"a stairs cell in a wall": func(d): d.floor.stairs = [0, 0],
+		"monsters that are not a list": func(d): d.floor.monsters = "many",
+		"a monster that is not a record": func(d): d.floor.monsters[0] = 3,
+		"a monster of no species": func(d): d.floor.monsters[0].species = "dragonfly",
+		"a monster outside the floor": func(d): d.floor.monsters[0].cell = [-4, 2],
+		"a monster whose traits are a word": func(d): d.floor.monsters[0].traits = "shy",
+		"a monster whose meters are a list": func(d): d.floor.monsters[0].meters = [1, 2],
+		"health that is a word": func(d): d.hp = "full",
+		"health that is a list": func(d): d.hp = [20],
+		"health that is not a number": func(d): d.hp = NAN,
+		"a maximum that is nothing": func(d): d.maxHp = null,
+		"gold that is a record": func(d): d.gold = {},
+		"a tally that is a number": func(d): d.tally = 5,
+		"a tally of words": func(d): d.tally = {"spared": "lots"},
+		"allies that are a word": func(d): d.allies = "GLOP",
+		"an ally that is not a record": func(d): d.allies = [3],
+		"an ally of no species": func(d): d.allies[0].species = "ghost",
+		"an ally whose loyalty is a word": func(d): d.allies[0].loyalty = "high",
+		"a facing that is a word": func(d): d.facing = "north",
+		"no hp": func(d): d.erase("hp"),
+		"no floor key": func(d): d.erase("floor"),
+		"no allies key": func(d): d.erase("allies"),
+	}
+	for what in refused:
+		var d: Dictionary = good.duplicate(true)
+		refused[what].call(d)
+		_check(State.from_dict(d) == null, "a save with %s is refused" % what)
+	# each change is kept but brought back in range
+	var clamped := {
+		"health past the maximum": [func(d): d.hp = 9999, func(s): return s.hp == s.max_hp],
+		"no health left": [func(d): d.hp = 0, func(s): return s.hp == 1],
+		"negative health": [func(d): d.hp = -40, func(s): return s.hp == 1],
+		"a maximum of nothing": [func(d): d.maxHp = 0; d.hp = 5, func(s): return s.max_hp == 1 and s.hp == 1],
+		"negative gold": [func(d): d.gold = -3, func(s): return s.gold == 0],
+		"a floor far down": [func(d): d.depth = 1000000, func(s): return s.depth >= 1 and s.depth <= State.DEPTH_MAX],
+		"a floor above the first": [func(d): d.depth = -2, func(s): return s.depth == 1],
+		"a facing past the compass": [func(d): d.facing = 7, func(s): return s.facing == 3],
+		"a negative tally": [func(d): d.tally.spared = -4, func(s): return s.tally.spared == 0],
+		"a cell given as floats": [func(d): d.cell = [d.cell[0] + 0.0, d.cell[1] + 0.0], func(s): return s.cell == flow.state.cell],
+		"loyalty far over": [func(d): d.allies[0].loyalty = 500.0, func(s): return s.allies[0].loyalty == 100.0],
+		"loyalty below nothing": [func(d): d.allies[0].loyalty = -9.0, func(s): return s.allies[0].loyalty == 0.0],
+		"a party of five": [func(d): d.allies = [d.allies[0], d.allies[0], d.allies[0], d.allies[0], d.allies[0]], func(s): return s.allies.size() == 3],
+		"a monster with more health than its maximum": [func(d): d.floor.monsters[0].hp = 9999, func(s): return s.floor_map.monsters[0].hp == s.floor_map.monsters[0].max_hp],
+		"a monster meter out of range": [func(d): d.floor.monsters[0].meters.anger = 900.0, func(s): return s.floor_map.monsters[0].meters.anger == 100.0],
+		"a monster that is gone for no reason": [func(d): d.floor.monsters[0].gone = "vanished", func(s): return s.floor_map.monsters[0].gone == ""],
+		"cells that are not cells in what was seen": [func(d): d.seen = [[1, 1], "x", [2], [999, 999], [1.0, 3.0]]; d.visited = 4, func(s): return s.seen.has(Vector2i(1, 1)) and s.visited.is_empty() or s.visited.has(s.cell)],
+	}
+	for what in clamped:
+		var d: Dictionary = good.duplicate(true)
+		clamped[what][0].call(d)
+		var got = State.from_dict(d)
+		_check(got != null and clamped[what][1].call(got), "a save with %s is read, brought back in range" % what)
 
 
 func _cleanup() -> void:

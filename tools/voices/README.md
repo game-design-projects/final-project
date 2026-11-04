@@ -1,8 +1,8 @@
 # Voice banks
 
 Every line a monster can say, spoken ahead of time in that monster's voice: `assets/voices/<bank>/` (Ogg files and a
-`manifest.json`, read by `src/audio/tts_engines.gd`'s `Bank`). One bank per model, so the playtest can compare them
-with **L**:
+`manifest.json`, read by `src/audio/voices.gd`, which plays the `cosyvoice3` bank). One bank per model, so two models can be
+compared:
 
 | Bank | Model | Licence |
 | --- | --- | --- |
@@ -38,11 +38,11 @@ What the game's speech recognizer heard back from every line (`check.py`):
 ## Rendering
 
 ```bash
-godot --headless --path . -s res://cli/voice_lines.gd -- --out=build/voice-lines.json   # the 322 lines (render.py does it if missing)
+# render.py lists the lines itself (data/species.json: every name for {name}, "you" for {target}, stage directions left out)
 python3 tools/voices/render.py qwen3 --python <qwen venv>/bin/python --model <Qwen3-TTS-12Hz-0.6B-Base>
 python3 tools/voices/render.py cosyvoice3 --python <cosy venv>/bin/python --model <Fun-CosyVoice3-0.5B-2512> --src <CosyVoice checkout>
 godot --headless --path . --import                                                       # before running the game
-python3 tools/voices/check.py qwen3                                                      # hear it back (below)
+python3 tools/voices/check.py qwen3                                                      # hear it back (below; needs the removed native/asr)
 ```
 
 `render.py` renders what's missing (`build/voices/<bank>/raw/` keeps the raw takes; `--force` redoes them,

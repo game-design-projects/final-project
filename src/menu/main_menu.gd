@@ -11,6 +11,7 @@ const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Saves = preload("res://src/menu/saves.gd")
 const Session = preload("res://src/menu/session.gd")
 const Settings = preload("res://src/menu/settings.gd")
+const State = preload("res://src/game/state.gd")
 
 const GAMEPLAY := "res://src/gameplay/gameplay.tscn"
 
@@ -60,9 +61,9 @@ func _new_game() -> void:
 
 func _load_slot(slot: String) -> void:
 	var state := Saves.read(slot)
-	if state.is_empty():
-		push_warning("menu: slot '%s' can't be read" % slot)
-		panel.refresh()
+	if state.is_empty() or not State.is_playable(state):
+		push_warning("menu: slot '%s' can't be read or played" % slot)
+		panel.push(func(): return Menus.notice(panel, "CAN'T LOAD", "That save can't be read, or isn't one this version can play."))
 		return
 	print("menu: load slot %s" % slot)
 	_start(Session.start_load.bind(state))

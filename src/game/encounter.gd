@@ -61,8 +61,9 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 		feelings = await flow.mind.feeling_when_told(m, act)
 	var id := Odds.pick_by_odds(flow.dice, feelings)
 	var feeling := Feelings.apply(m, id)
-	var mercy: float = await flow.mind.mercy(m)
-	var pressure: float = await flow.mind.pressure(m)
+	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
+	var mercy: float = after.mercy
+	var pressure: float = after.pressure
 	print_verbose("encounter: %s (%s) %s -> %s, mercy %d%%, pressure %.2f" % [m.name, ", ".join(m.traits), m.last_intent, id, roundi(mercy * 100.0), pressure])
 	var rows := []
 	if words != null:

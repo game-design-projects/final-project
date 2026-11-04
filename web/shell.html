@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>$GODOT_PROJECT_NAME</title>
+		<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='black'/><path d='M2 2h12v12H2zM5 5h6v6H5z' fill='none' stroke='white'/></svg>">
+		<style>
+/* Donjon's web shell: no loading screen and no engine logo. A black page, the game's canvas filling it, and while
+   the engine loads only a thin line in the game's ink colour; if it can't start, a plain message says why. */
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+html, body {
+	width: 100%;
+	height: 100%;
+	background: #000;
+	overflow: hidden;
+}
+
+body {
+	color: #e8e8e8;
+	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+#canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+/* The loading line: 2px, centred, the ink on a faint track. Indeterminate until the download reports a size. */
+#load {
+	position: fixed;
+	left: 50%;
+	top: 50%;
+	width: min(240px, 50vw);
+	height: 2px;
+	transform: translate(-50%, -50%);
+	background: #1a1a1a;
+	overflow: hidden;
+	transition: opacity 0.2s;
+}
+
+#load i {
+	display: block;
+	height: 100%;
+	width: 0;
+	background: #e8e8e8;
+	box-shadow: 0 0 6px rgba(232, 232, 232, 0.6);
+}
+
+#load.wait i {
+	width: 30%;
+	animation: sweep 1.1s steps(12) infinite;
+}
+
+@keyframes sweep {
+	from { transform: translateX(-100%); }
+	to { transform: translateX(340%); }
+}
+
+#load.gone {
+	opacity: 0;
+}
+
+#notice {
+	display: none;
+	position: fixed;
+	inset: 0;
+	padding: 24px;
+	place-items: center;
+	text-align: center;
+	white-space: pre-wrap;
+	font: 18px/1.5 ui-monospace, Menlo, Consolas, monospace;
+	color: #e8e8e8;
+	background: #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#load.wait i { animation: none; width: 100%; opacity: 0.5; }
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas" tabindex="0">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			<div style="padding:24px;font:18px/1.5 monospace;color:#e8e8e8">Donjon needs JavaScript to run.</div>
+		</noscript>
+
+		<div id="load" class="wait" aria-label="Loading"><i></i></div>
+		<div id="notice" role="alert"></div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const load = document.getElementById('load');
+	const bar = load.firstElementChild;
+	const notice = document.getElementById('notice');
+
+	function done() {
+		load.classList.add('gone');
+		setTimeout(() => load.remove(), 250);
+	}
+
+	function fail(err) {
+		console.error(err);
+		const text = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Something went wrong while starting the game.';
+		load.remove();
+		notice.textContent = text;
+		notice.style.display = 'grid';
+	}
+
+	// Opened as a file (double-click / Finder)? Browsers won't load the game's files then.
+	if (!/^https?:$/.test(location.protocol)) {
+		fail('This page has to be opened through a web server, not as a file.\n\nFor example, in this folder run:  python3 -m http.server\nthen open http://localhost:8000/' + location.pathname.split('/').pop());
+		return;
+	}
+
+	const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let registration;
+			try {
+				registration = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				registration = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			// Installing the service worker may be all it takes
+			Promise.race([
+				registration.then((r) => (r != null ? Promise.reject(new Error('Service worker already exists.')) : r)).then(() => engine.installServiceWorker()),
+				// getRegistration() can stall
+				new Promise((resolve) => setTimeout(resolve, 2000)),
+			]).then(() => window.location.reload()).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			fail('This browser is missing what the game needs to run:\n' + missing.join('\n'));
+		}
+		return;
+	}
+
+	engine.startGame({
+		onProgress: function (current, total) {
+			if (current > 0 && total > 0) {
+				load.classList.remove('wait');
+				bar.style.width = Math.min(100, (100 * current) / total) + '%';
+			} else {
+				load.classList.add('wait');
+			}
+		},
+	}).then(done, fail);
+}());
+		</script>
+	</body>
+</html>

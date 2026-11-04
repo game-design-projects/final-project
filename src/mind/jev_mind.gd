@@ -7,8 +7,13 @@ const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Network = preload("res://src/network/network.gd")
 
+const MERCY_Q := {"type": "noul", "instructions": "Would this monster accept mercy and stop fighting right now?"}
+const PRESSURE_Q := {"type": "score", "instructions": "How hard will this monster press the player with its next attack? 0 gentle, 3 relentless.", "criteria": ["gentle", "firm", "fierce", "relentless"]}
+const KNOWN_MAX := 64
+
 var _url: String
 var _fallback # a Mind
+var _known := {} # a question and the monster's state when it was asked -> the answer, so the same question about the same monster is asked once
 
 ## `api_base` is where the proxy lives (https://…); `fallback` answers when Jev can't.
 func _init(api_base: String, fallback) -> void:
@@ -42,8 +47,13 @@ func feeling_when_told(m, intents: Array) -> Dictionary:
 
 
 func mercy(m) -> float:
-	var a = await _noul(_state(m, {}), "Would this monster accept mercy and stop fighting right now?")
-	return a if a >= 0.0 else await _fallback.mercy(m)
+	var key := _key("mercy", m)
+	if not _known.has(key):
+		var odds := _odds(_answer(await Network.post_json(_url, {"state": _state(m, {}), "questions": {"q": MERCY_Q}}), "q"))
+		if odds < 0.0:
+			return await _fallback.mercy(m)
+		_remember(key, odds)
+	return _known[key]
 
 
 func join(m) -> float:
@@ -52,12 +62,31 @@ func join(m) -> float:
 
 
 func pressure(m) -> float:
-	var q := {"type": "score", "instructions": "How hard will this monster press the player with its next attack? 0 gentle, 3 relentless.", "criteria": ["gentle", "firm", "fierce", "relentless"]}
-	var r := await Network.post_json(_url, {"state": _state(m, {}), "questions": {"q": q}})
-	var answer = _answer(r)
-	if answer is Dictionary and answer.has("score"):
-		return clampf(float(answer.score), 0.0, 3.0)
-	return await _fallback.pressure(m)
+	var key := _key("pressure", m)
+	if not _known.has(key):
+		var press := _score(_answer(await Network.post_json(_url, {"state": _state(m, {}), "questions": {"q": PRESSURE_Q}}), "q"))
+		if press < 0.0:
+			return await _fallback.pressure(m)
+		_remember(key, press)
+	return _known[key]
+
+
+## Mercy and pressure after a feeling, in one request (the Worker takes up to 120 questions at once). The feeling stays its own
+## request: its answer changes the monster, and these two are about the monster after that. An answer that is missing comes
+## from the local rules, and what Jev did answer is kept, so the menu opening on the same monster asks nothing more.
+func mercy_and_pressure(m) -> Dictionary:
+	var mercy_key := _key("mercy", m)
+	var pressure_key := _key("pressure", m)
+	if not (_known.has(mercy_key) and _known.has(pressure_key)):
+		var r := await Network.post_json(_url, {"state": _state(m, {}), "questions": {"mercy": MERCY_Q, "pressure": PRESSURE_Q}})
+		var odds := _odds(_answer(r, "mercy"))
+		var press := _score(_answer(r, "pressure"))
+		print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
+		if odds < 0.0 or press < 0.0:
+			return {"mercy": odds if odds >= 0.0 else await _fallback.mercy(m), "pressure": press if press >= 0.0 else await _fallback.pressure(m)}
+		_remember(mercy_key, odds)
+		_remember(pressure_key, press)
+	return {"mercy": _known[mercy_key], "pressure": _known[pressure_key]}
 
 
 func _feelings() -> Dictionary:
@@ -100,8 +129,29 @@ func _noul(state: Dictionary, question: String) -> float:
 	return -1.0
 
 
-static func _answer(r: Dictionary):
+## The answer to the question named `id`, or null.
+static func _answer(r: Dictionary, id := "q"):
 	if not r.ok or not r.json is Dictionary:
 		return null
 	var answers = r.json.get("answers")
-	return answers.get("q") if answers is Dictionary else null
+	return answers.get(id) if answers is Dictionary else null
+
+
+## Yes/no as 0..1, or -1 when the answer is not one.
+static func _odds(answer) -> float:
+	return clampf(float(answer.noul), 0.0, 1.0) if answer is Dictionary and answer.has("noul") else -1.0
+
+
+## A 0..3 score, or -1 when the answer is not one.
+static func _score(answer) -> float:
+	return clampf(float(answer.score), 0.0, 3.0) if answer is Dictionary and answer.has("score") else -1.0
+
+
+func _key(kind: String, m) -> String:
+	return kind + JSON.stringify(_state(m, {}))
+
+
+func _remember(key: String, answer: float) -> void:
+	if _known.size() >= KNOWN_MAX:
+		_known.clear()
+	_known[key] = answer

@@ -1,6 +1,7 @@
 ## Everything you hear in a run. It listens to the game's events (`flow.happened`) and plays what they call for, and
 ## follows the player's health with the music's filter. The game never plays a sound itself; this is the only place
-## that knows which event sounds like what. With the `nosound` flag it does nothing.
+## that knows which event sounds like what. With the `nosound` flag it does nothing; `nosfx` and `nomusic` turn off
+## the effects (and the monsters' voices) or the music alone.
 extends Node
 
 const Flags = preload("res://src/utils/flags.gd")
@@ -11,9 +12,9 @@ const Voices = preload("res://src/audio/voices.gd")
 
 ## Event name -> the effect it sounds like. Events that need more than that are handled in `_on_event`.
 const SOUNDS := {
-	"step": "step", "bump": "bump", "strike": "strike", "miss": "miss", "player_hurt": "hurt", "shield": "shield",
+	"step": "step", "bump": "bump", "miss": "miss", "player_hurt": "hurt", "shield": "shield",
 	"beat": "beat", "mercy_refused": "mercy_refused", "recruited": "recruited", "ally_left": "ally_left",
-	"dead": "dead", "stairs": "stairs",
+	"dead": "dead", "menu_move": "move", "menu_pick": "pick",
 }
 
 var _flow
@@ -29,11 +30,14 @@ func _ready() -> void:
 		return
 	Mix.build_buses()
 	_sfx = Sfx.new()
+	_sfx.enabled = not Flags.on("nosfx")
 	add_child(_sfx)
 	_music = Music.new()
+	_music.enabled = not Flags.on("nomusic")
 	add_child(_music)
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = Mix.SFX
+	_voice.finished.connect(_on_voice_done)
 	add_child(_voice)
 
 
@@ -60,12 +64,16 @@ func _on_event(name: String, data: Dictionary) -> void:
 			if data.to == "explore" or data.to == "end":
 				_music.set_mode("explore")
 		"encounter":
-			var foe = _flow.state.foe
 			_sfx.play("boss" if data.boss else "encounter")
-			_music.set_mode("battle", hash(foe.species) if foe != null else 0)
+			_music.set_mode("battle")
+		"strike":
+			_sfx.play("crit" if data.crit else "strike")
 		"spared", "slain":
 			_sfx.play(name)
-			_music.sting("fanfare" if data.boss else "victory")
+			_music.sting("victory")
+		"stairs":
+			_sfx.play("stairs")
+			_music.sting("fanfare")
 		"sound":
 			_sfx.play(data.name)
 		"shout":
@@ -75,10 +83,22 @@ func _on_event(name: String, data: Dictionary) -> void:
 				_sfx.play(SOUNDS[name])
 
 
+## A monster says a line: its recording if it has one (the music ducks under it, and a newer line cuts an older one off,
+## as the text on screen replaces the old line), otherwise the synthesised voice the line's wording asks for, which is
+## silent for a line that is only a stage direction.
 func _speak(data: Dictionary) -> void:
 	var line = Voices.find(data.species, data.text)
 	if line == null:
-		_sfx.play("shout", -6.0)
+		print_verbose("audio: no recording for %s: %s" % [data.species, data.text])
+		_sfx.shout(data.text, data.species, {"boss": data.boss})
+		return
+	if not _sfx.enabled:
 		return
 	_voice.stream = line
+	_voice.volume_db = 0.0
 	_voice.play()
+	_music.duck(true)
+
+
+func _on_voice_done() -> void:
+	_music.duck(false)

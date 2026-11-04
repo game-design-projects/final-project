@@ -21,7 +21,7 @@ func enter(flow, _args: Dictionary) -> void:
 		{"label": "SPARE", "sub": "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else "Back away"},
 	]
-	s.hint = "UP / DOWN CHOOSE · ENTER PICK · 1-4"
+	s.hint = "UP / DOWN CHOOSE · ENTER PICK · 1-4 · I INFO"
 
 
 func pick(flow, index: int) -> void:

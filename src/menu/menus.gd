@@ -59,6 +59,11 @@ static func pause(panel, ctx: Dictionary) -> Dictionary:
 	return {"title": "PAUSED", "items": items, "hint": "UP / DOWN CHOOSE · ENTER PICK · ESC RESUME", "back": func(): ctx.resume.call()}
 
 
+## Something the player has to be told: a page with the text where the hint goes, and OK back.
+static func notice(panel, title: String, text: String) -> Dictionary:
+	return {"title": title, "hint": text, "items": [{"label": "OK", "act": func(): panel.pop()}]}
+
+
 ## NO comes first, so it is the one highlighted.
 static func confirm(panel, title: String, text: String, yes_label: String, on_yes: Callable) -> Dictionary:
 	return {"title": title, "hint": text, "items": [
@@ -217,8 +222,10 @@ static func sound() -> Dictionary:
 static func controls() -> Dictionary:
 	var gold := "[color=#ffd27a]"
 	var body := gold + "Walking[/color]\nUp / W  forward      Down / S  back\nLeft / A  turn left      Right / D  turn right\n\n"
-	body += gold + "Menus[/color]\nUp / Down  choose      Enter / Space / Z  pick\nEsc / X  back      1-9  pick that one\n\n"
-	body += gold + "In a fight[/color]\nFight: Enter when the line crosses the middle\nDodge: arrows or WASD move your heart\nEsc  pause menu (walking and the fight menu)"
+	body += gold + "Menus[/color]\nUp / Down  choose      Enter / Space / Z  pick\nEsc / X  back      1-9  pick that one (numpad too)\nPage Up / Page Down  scroll a text page\n\n"
+	body += gold + "In a fight[/color]\nFight: Enter when the line crosses the middle\nDodge: arrows or WASD move your heart\nEsc  pause menu (walking and the fight menu)\n\n"
+	body += gold + "Info[/color]\nI  the foe's mood and what it answered, then each ally, then the map's legend; I again moves on, any other key closes it\n\n"
+	body += gold + "Mouse and touch[/color]\nHover a command to pick it and read what it does; click it to use it\nClick the picture to strike when the line crosses the middle; on the title card it starts the run\nHover or tap the foe, an ally or the map for details\nRight click  step a setting back      Click beside a menu  back\nOn a touch screen (or with the flag pad) a pad shows arrows, INFO, BACK and OK"
 	return {"title": "CONTROLS", "body": body, "items": [], "hint": "UP / DOWN SCROLL · ESC BACK"}
 
 

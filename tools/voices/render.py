@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Renders a voice bank: every line a monster can say (cli/voice_lines.gd), spoken in that monster's voice, as Ogg
-files in assets/voices/<bank>/ with the manifest.json src/audio/tts_engines.gd's Bank reads.
+"""Renders a voice bank: every line a monster can say (data/species.json), spoken in that monster's voice, as Ogg
+files in assets/voices/<bank>/ with the manifest.json src/audio/voices.gd reads.
 
 Each monster's voice is cloned from a Creative Commons recording (voices.json "refs", credited in
 assets/CREDITS.txt), then shaped a little (voices.json "shape": semitones and tempo, so a dragon rumbles and a slime
@@ -22,13 +22,13 @@ engine another spelling of a line it can't say as written (CosyVoice3 gives "Hmp
 Other options: --only slime,goblin  --limit N (lines per monster, to try things out)  --force (render again)
 --threads N (default 4)  --seed N (default 1986). A take that comes out much too short (a clipped grunt) or too long
 (a runaway) for its words is rendered again with the next seeds, up to RETAKES times.
---lines FILE (default build/voice-lines.json; made with Godot if missing: GODOT=godot)
 Raw renders are kept in build/voices/<bank>/raw/ so a second run only renders what's new. Needs ffmpeg (libvorbis).
 """
 import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -54,13 +54,44 @@ def line_file(species, key):
     return f"{species}/{hashlib.sha1(key.encode()).hexdigest()[:12]}.ogg"
 
 
-def load_lines(path):
-    if not os.path.exists(path):
-        godot = os.environ.get("GODOT", "godot")
-        log(f"{path} is missing: listing the lines with {godot}")
-        subprocess.run([godot, "--headless", "--path", ROOT, "-s", "res://cli/voice_lines.gd", "--", "--out=" + path],
-                       check=True)
-    return json.load(open(path))
+# What src/audio/voices.gd does to a line before it looks it up: only the words said count, so a *stage direction* and a
+# {placeholder} are dropped, "..." is a pause (a comma), and the key is lower case with single spaces.
+STAGE = re.compile(r"\*[^*]*\*")
+BRACES = re.compile(r"\{[^}]*\}")
+DOTS = re.compile(r"\.{2,}|…")
+SPACE_BEFORE = re.compile(r"\s+([,.!?])")
+EDGES = re.compile(r"^[\s,]+|[\s,]+$")
+SPACES = re.compile(r"\s+")
+
+
+def speakable(line):
+    for pattern, repl in ((STAGE, " "), (BRACES, " "), (DOTS, ", "), (SPACE_BEFORE, r"\1"), (EDGES, ""), (SPACES, " ")):
+        line = pattern.sub(repl, line)
+    return line.strip()
+
+
+def line_key(line):
+    return SPACES.sub(" ", speakable(line).lower()).strip()
+
+
+def roster_lines():
+    """{"species": {species: [{key, text}]}}: every line a monster says (data/species.json "lines"), as the game fills it
+    in: each of the species' names (first letter capital) for {name}, "you" for {target}. A line that is only a stage
+    direction has no words to record and is left out; the game voices it with the synthesiser (src/audio/shout.gd)."""
+    species = json.load(open(os.path.join(ROOT, "data", "species.json")))
+    out = {}
+    for sid, spec in species.items():
+        seen = {}
+        for pool in spec["lines"].values():
+            for line in pool:
+                for name in spec["names"]:
+                    fill = {"name": name[:1].upper() + name[1:].lower(), "target": "you"}
+                    filled = re.sub(r"\{(\w+)\}", lambda m: fill.get(m.group(1), m.group(0)), line)
+                    text = speakable(filled)
+                    if text:
+                        seen.setdefault(line_key(filled), text)
+        out[sid] = [{"key": k, "text": t} for k, t in sorted(seen.items())]
+    return {"species": out}
 
 
 def has_rubberband():
@@ -167,7 +198,6 @@ def main():
     ap.add_argument("--voice", default="", help="feiyu: the voice package (not the Feiyu library)")
     ap.add_argument("--style", default="gentle")
     ap.add_argument("--speaker", default="Ryan", help="qwen service: the speaker")
-    ap.add_argument("--lines", default=os.path.join(ROOT, "build", "voice-lines.json"))
     ap.add_argument("--only", default="")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--force", action="store_true")
@@ -184,7 +214,7 @@ def main():
         sys.exit("needs ffmpeg (with libvorbis)")
 
     voices = json.load(open(os.path.join(HERE, "voices.json")))
-    data = load_lines(args.lines)
+    data = roster_lines()
     only = [s for s in args.only.split(",") if s]
     bank_dir = os.path.join(ROOT, "assets", "voices", args.bank)
     raw_dir = os.path.join(ROOT, "build", "voices", args.bank, "raw")

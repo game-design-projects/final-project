@@ -7,15 +7,18 @@ extends RefCounted
 
 ## name -> what it does. Add a line here when a feature gets a switch.
 const KNOWN := {
-	"debug": "show the debug panel and log more",
+	"debug": "keep the foe's mind panel open (every row of the mind's last answers) in a fight, and log every game event",
 	"mock": "monsters think with the seeded mind instead of calling Jev (not in the personality slice, which always uses the local rules)",
 	"jev": "jev=<url>: ask Jev through the proxy at this address (without it the rule-based mind answers)",
 	"seed": "seed=N: fixed random seed for the floor and the monsters (0 to 9223372036854775807, as the game prints it)",
-	"floor": "floor=N: start on floor N",
+	"floor": "floor=N: call the floor B<N>F and give it floor N's colours (nothing else about the floor changes)",
 	"meet": "meet=<species>: start in a fight with that monster",
 	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
+	"pad": "show the touch pad (arrows, INFO, BACK, OK) without a touch screen",
 	"nosound": "no sound effects and no music",
+	"nosfx": "no sound effects and no monster voices (the music still plays)",
+	"nomusic": "no music (the effects and voices still play)",
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 }

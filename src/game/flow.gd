@@ -69,6 +69,7 @@ func new_run() -> void:
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.floor_map = FloorGen.generate(rng)
+	state.palette_id = state.floor_map.seed_value
 	state.cell = state.floor_map.start
 	state.facing = state.floor_map.start_facing()
 	state.visited = {state.cell: true}
@@ -76,7 +77,7 @@ func new_run() -> void:
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: new run, seed %d" % rng.seed_value)
-	event("state_replaced")
+	event("state_replaced", {"how": "new"})
 	await go("explore", {"lines": [State.sys_line(Texts.new_floor())]})
 
 
@@ -91,7 +92,7 @@ func load_state(saved: Dictionary) -> bool:
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())
-	event("state_replaced")
+	event("state_replaced", {"how": "load"})
 	await go("explore", {"lines": [State.sys_line(Texts.welcome_back(state.summary()))]})
 	return true
 
@@ -142,6 +143,27 @@ func press(key: String) -> void:
 	busy = true
 	await _stages[state.stage].handle(self, key)
 	busy = false
+
+
+## Run `action` (a Callable that may await stage changes) the way a key press runs: once any press or tick still working has
+## finished, and with input held off until it is done. For callers that move the game from outside a press (the first fight a
+## testing flag asks for, a loaded save): a tick arriving while a mind is still answering would otherwise run the stage's own
+## tick in the middle of its `enter`.
+func exclusive(action: Callable) -> void:
+	while busy:
+		await Engine.get_main_loop().process_frame
+	busy = true
+	await action.call()
+	busy = false
+
+
+## The pointer is over command `index` of the menu: it becomes the picked one, as if the arrows had moved there. Nothing
+## else happens, so hovering never does anything the player didn't ask for.
+func select(index: int) -> void:
+	if state.stage in ["", "talk"] or index < 0 or index >= state.menu.size() or index == state.selected:
+		return
+	state.selected = index
+	print_verbose("flow: %s -> command %d picked by the pointer" % [state.stage, index])
 
 
 ## The player sent a line of text in the talk stage.

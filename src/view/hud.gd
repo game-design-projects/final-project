@@ -1,6 +1,7 @@
 ## The text around the picture, in three parts of one script (set `part`): the HEADER (where you are, how the route reads),
 ## the STATUS row (health, gold, the health bar) and the DOCK (the log, the commands or the talk box, the key hints).
-## It only reads the game's state. Clicking a command in the dock says so with `picked`.
+## It only reads the game's state. Clicking a command in the dock says so with `picked`, resting the pointer on one with
+## `hovered` (the scene makes it the picked one, and the tooltip shows its help).
 extends Control
 
 const Fonts = preload("res://src/view/fonts.gd")
@@ -10,6 +11,7 @@ const Palette = preload("res://src/view/palette.gd")
 enum Part { HEADER, STATUS, DOCK }
 
 signal picked(index: int) ## a command was clicked
+signal hovered(index: int) ## the pointer is over this command (-1: it left the commands)
 signal said(text: String) ## a line was typed (Enter or the SAY IT button)
 signal cancelled ## Esc in the talk box
 
@@ -17,20 +19,25 @@ signal cancelled ## Esc in the talk box
 const LOG_H := 66.0
 const SLOT_H := 74.0
 const KEYS_H := 26.0
+const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
+const THINKING_AFTER_MS := 250 # a question out this long shows as "thinking"; a quick answer doesn't flicker it
+const SAY_BUTTON := -2 # what `_hover_at` says over the talk box's button
 const BUTTON_H := 34.0
 const GAP := 6.0
 const DOCK_H := LOG_H + SLOT_H + KEYS_H + GAP * 2.0
 
-const KEY_NAMES := {"UP / DOWN": "ud", "LEFT / RIGHT": "lr", "ARROWS": "all", "ENTER": "ENTER", "ESC": "ESC", "ANY KEY": "ANY KEY", "1-4": "1 - 4"}
+const KEY_NAMES := {"UP / DOWN": "ud", "LEFT / RIGHT": "lr", "ARROWS": "all", "ENTER": "ENTER", "ESC": "ESC", "I": "I", "ANY KEY": "ANY KEY", "1-4": "1 - 4"}
 
 var part := Part.HEADER
 var state # State, set by the owner
+## How long the oldest question to Jev has been out (Network.waiting_ms), set by the owner every frame.
+var thinking_ms := 0
 
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
-var _buttons: Array[Rect2] = []
 var _talk: LineEdit
 var _say_button := Rect2()
+var _hover := -1 # the command under the pointer (or SAY_BUTTON)
 
 
 func _ready() -> void:
@@ -50,6 +57,7 @@ func _ready() -> void:
 	_talk.text_submitted.connect(_submit)
 	_talk.gui_input.connect(_on_talk_input)
 	add_child(_talk)
+	mouse_exited.connect(func(): _set_hover(-1))
 
 
 ## Show or hide the talk box (and take the keyboard when it opens).
@@ -65,7 +73,16 @@ func set_talking(on: bool) -> void:
 
 
 func _process(_dt: float) -> void:
+	if part == Part.DOCK and state != null and size.x > 0.0:
+		var want := DOCK_H + (SUB_LINE_H if _sub_wraps() else 0.0) # the picture gives way for a second line of help, only when one is needed
+		if absf(custom_minimum_size.y - want) > 0.5:
+			custom_minimum_size.y = want
 	queue_redraw()
+
+
+## Whether the dock has been asked to wait for Jev long enough to say so.
+func is_thinking() -> bool:
+	return thinking_ms >= THINKING_AFTER_MS
 
 
 func _draw() -> void:
@@ -81,16 +98,68 @@ func _draw() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if part != Part.DOCK or not event is InputEventMouseButton or not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+	if part != Part.DOCK or state == null:
+		return
+	if event is InputEventMouseMotion:
+		_set_hover(_hover_at(event.position))
+		return
+	if not event is InputEventMouseButton or not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if state.stage == "talk":
 		if _say_button.has_point(event.position):
 			_submit(_talk.text)
 		return
-	for i in _buttons.size():
-		if _buttons[i].has_point(event.position):
-			picked.emit(i)
-			return
+	var i := _command_at(event.position)
+	if i >= 0:
+		picked.emit(i)
+
+
+## The pointer is over `at` (a command, the talk box's button, or -1 for neither): a hand over what can be pressed, and the
+## scene hears which command it is.
+func _set_hover(at: int) -> void:
+	if at == _hover:
+		return
+	var was := _hover
+	_hover = at
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if at != -1 else Control.CURSOR_ARROW
+	if at >= 0 or was >= 0:
+		hovered.emit(at)
+
+
+func _hover_at(at: Vector2) -> int:
+	if state.stage == "talk":
+		return SAY_BUTTON if _say_button.has_point(at) else -1
+	return _command_at(at)
+
+
+func _command_at(at: Vector2) -> int:
+	var rects := command_rects()
+	for i in rects.size():
+		if rects[i].has_point(at):
+			return i
+	return -1
+
+
+## Where each command of the menu is, in the dock's own pixels: up to four across, a second row after that. Only the ones that fit.
+func command_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if state == null or state.stage == "talk" or state.menu.is_empty():
+		return out
+	var slot := Rect2(0, LOG_H + GAP, size.x, SLOT_H)
+	var cols := clampi(state.menu.size(), 1, 4)
+	var w := (slot.size.x - GAP * (cols - 1)) / cols
+	for i in state.menu.size():
+		var r := Rect2(slot.position + Vector2((i % cols) * (w + GAP), floori(float(i) / cols) * (BUTTON_H + GAP)), Vector2(w, BUTTON_H))
+		if r.end.y > slot.end.y + 1.0:
+			break
+		out.append(r)
+	return out
+
+
+## Command `i`'s place on the screen, for a tooltip to sit above it.
+func command_screen_rect(i: int) -> Rect2:
+	var rects := command_rects()
+	return Rect2(get_global_rect().position + rects[i].position, rects[i].size) if i >= 0 and i < rects.size() else Rect2()
 
 
 func _submit(text: String) -> void:
@@ -154,8 +223,14 @@ func _status() -> void:
 	var bar := Rect2(maxf(x, 150.0) + 12.0, size.y * 0.5 - 6.0, 0.0, 12.0)
 	bar.size.x = size.x - bar.position.x
 	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)
-	draw_rect(bar, Color(Palette.YOU, 0.12))
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.YOU if frac > 0.3 else Palette.WARN)
+	draw_rect(bar, Palette.FAINT)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), hp_color(frac))
+	draw_rect(bar.grow(-0.5), Palette.DIM, false, 1.0)
+
+
+## The health bar's colour at this share of your health: red once it is under 40%.
+static func hp_color(frac: float) -> Color:
+	return Palette.WARN if frac < 0.4 else Palette.YOU
 
 
 # ---------------------------------------------------------------- the dock
@@ -205,25 +280,21 @@ func _log(area: Rect2) -> void:
 		var indent := _body.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 		draw_multiline_string(_body, Vector2(indent, y + 17.0), l.text, HORIZONTAL_ALIGNMENT_LEFT, area.size.x - indent, 20, -1, Palette.INK if l.kind == "say" else Palette.DIM)
 		y += rich_h
+	if is_thinking():
+		var dots := ".".repeat(1 + int(Time.get_ticks_msec() / 300.0) % 3)
+		_text(_title, "THINKING" + dots, Vector2(0, area.end.y - 4.0), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_RIGHT, area.size.x)
 
 
 ## The commands: up to four across, a second row after that. The picked one has a bright border.
-func _commands(slot: Rect2) -> void:
-	_buttons.clear()
+func _commands(_slot: Rect2) -> void:
 	var items: Array = state.menu
-	if items.is_empty():
-		return
-	var cols := clampi(items.size(), 1, 4)
-	var w := (slot.size.x - GAP * (cols - 1)) / cols
-	for i in items.size():
-		var r := Rect2(slot.position + Vector2((i % cols) * (w + GAP), floori(float(i) / cols) * (BUTTON_H + GAP)), Vector2(w, BUTTON_H))
-		if r.end.y > slot.end.y + 1.0:
-			break
-		_buttons.append(r)
+	var rects := command_rects()
+	for i in rects.size():
+		var r: Rect2 = rects[i]
 		var picked_one: bool = i == state.selected
 		var gold: bool = items[i].get("gold", false)
 		draw_rect(r, Color.BLACK)
-		draw_rect(r.grow(-1.0), Palette.INK if picked_one else Palette.FAINT, false, 2.0)
+		draw_rect(r.grow(-1.0), Palette.INK if picked_one or i == _hover else Palette.FAINT, false, 2.0)
 		var base := r.position + Vector2(12.0, BUTTON_H * 0.5 + 4.0)
 		if picked_one:
 			draw_colored_polygon([base + Vector2(0, -8), base + Vector2(8, -4), base + Vector2(0, 0)], Palette.YOU)
@@ -239,7 +310,7 @@ func _talk_row(slot: Rect2) -> void:
 	_talk.size = Vector2(slot.size.x - left - say_w - 8.0, 34.0)
 	_say_button = Rect2(slot.size.x - say_w, slot.position.y + 2.0, say_w, 34.0)
 	draw_rect(_say_button, Color.BLACK)
-	draw_rect(_say_button.grow(-1.0), Palette.FAINT, false, 2.0)
+	draw_rect(_say_button.grow(-1.0), Palette.INK if _hover == SAY_BUTTON else Palette.FAINT, false, 2.0)
 	_text(_title, "SAY IT", _say_button.position + Vector2(14.0, 22.0), 9, Palette.INK)
 
 
@@ -259,10 +330,26 @@ func _keys(area: Rect2) -> void:
 			_text(_title, segment, Vector2(x, y), 8, Palette.DIM)
 			x += _title.get_string_size(segment, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
 		x += 22.0
-	if state.stage == "menu" or state.stage == "act":
-		var sub: String = state.menu[state.selected].get("sub", "") if not state.menu.is_empty() else ""
-		if sub != "":
-			_text(_body, sub, Vector2(0, y + 18.0), 17, Palette.DIM)
+	var sub := sub_text()
+	if sub != "":
+		draw_multiline_string(_body, Vector2(0, y + 18.0), sub, HORIZONTAL_ALIGNMENT_LEFT, size.x, 17, 2, Palette.DIM)
+
+
+## What the picked command does, for the line under the key hints ("" when there is nothing to say).
+func sub_text() -> String:
+	if state == null or not state.stage in ["menu", "act"] or state.menu.is_empty():
+		return ""
+	return str(state.menu[clampi(state.selected, 0, state.menu.size() - 1)].get("sub", ""))
+
+
+## Does any command's help in this menu run past the dock's width (a narrow window)? Then the dock has room for a second line.
+func _sub_wraps() -> bool:
+	if not state.stage in ["menu", "act"]:
+		return false
+	for item in state.menu:
+		if _body.get_string_size(str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x > size.x:
+			return true
+	return false
 
 
 ## A small dark key with its name or arrows on it; returns its width.

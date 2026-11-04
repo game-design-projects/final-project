@@ -14,6 +14,8 @@ const FIELDS := {
 	"shield": [], # the slime's charm absorbed a hit
 	"sound": ["name"], # a hazard landed (hit, slash, holy)
 	"beat": [], # the rhythm beat
+	"menu_move": [], # the cursor moved in a list of choices
+	"menu_pick": [], # a choice was confirmed
 	"mercy_refused": [],
 	"spared": ["boss"],
 	"slain": ["boss"],
@@ -22,7 +24,7 @@ const FIELDS := {
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"dead": [],
 	"stairs": [], # reached the stairs
-	"state_replaced": [], # a new floor or a loaded save replaced the game state; whoever holds the old one must let go
+	"state_replaced": ["how"], # a new floor ("new") or a loaded save ("load") replaced the game state; whoever holds the old one must let go
 	"pause_requested": [],
 	"leave": ["to"], # the player chose to go back to the main menu
 }

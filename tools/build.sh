@@ -34,14 +34,15 @@ else
   rm -f "$proxy_file"
 fi
 
-# One preset per platform: everything in the project except the tools and the unused voice bank, plus config/.
+# One preset per platform: everything in the project except the tools and the unused voice bank, plus config/ and the text
+# files of assets/ (CREDITS.txt: Godot ships only resources unless an include filter names the rest). The web build has its own page.
 cat > export_presets.cfg <<'PRESETS'
 [preset.0]
 name="Web"
 platform="Web"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*"
+include_filter="config/*, assets/*.txt"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*"
 export_path=""
 
@@ -49,6 +50,7 @@ export_path=""
 variant/thread_support=false
 variant/extensions_support=false
 html/export_icon=true
+html/custom_html_shell="res://web/shell.html"
 html/canvas_resize_policy=2
 html/focus_canvas_on_start=true
 
@@ -57,7 +59,7 @@ name="Windows"
 platform="Windows Desktop"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*"
+include_filter="config/*, assets/*.txt"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*"
 export_path=""
 
@@ -72,7 +74,7 @@ name="macOS"
 platform="macOS"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*"
+include_filter="config/*, assets/*.txt"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*"
 export_path=""
 
@@ -89,7 +91,7 @@ name="Linux"
 platform="Linux"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*"
+include_filter="config/*, assets/*.txt"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*"
 export_path=""
 

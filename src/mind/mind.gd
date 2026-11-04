@@ -43,6 +43,15 @@ func pressure(_m) -> float:
 	return _unanswered("pressure")
 
 
+## Mercy and pressure together: what the game asks right after a feeling has changed the monster. The answers are the two
+## questions' own, in this order (a seeded mind draws from one generator, so the order is part of its seed). A mind that has to
+## pay for each question (Jev) can answer both at once.
+func mercy_and_pressure(m) -> Dictionary:
+	var odds: float = await mercy(m)
+	var press: float = await pressure(m)
+	return {"mercy": odds, "pressure": press}
+
+
 func _unanswered(question: String):
 	push_error("mind: %s doesn't answer %s" % [label(), question])
 	return {} if question in ["read_words", "feeling_when_hit", "feeling_when_told"] else 0.0
