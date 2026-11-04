@@ -15,7 +15,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.bar = null
 	flow.event("dead")
 	s.say([State.sys_line(Texts.you_fall(s.foe))])
-	s.menu = [{"label": "TRY THIS FIGHT AGAIN", "sub": ""}, {"label": "NEW FLOOR", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
+	s.menu = [{"label": "TRY THIS FIGHT AGAIN", "sub": ""}, {"label": "NEW RUN" if flow.feature("real-floors") else "NEW FLOOR", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
 	s.hint = "ENTER PICK"
 
 

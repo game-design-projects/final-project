@@ -14,6 +14,8 @@ const GRID_MAX := 64 # the biggest floor a save may describe (the game's own is 
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
+var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
+var run_over := false # the run ended at the stairs: there is no floor below (always so without the feature real-floors)
 var palette_id := 0 # which colours this run wears (Palette.for_run), picked from the seed and saved with the run
 
 # the walk
@@ -98,7 +100,7 @@ func to_dict() -> Dictionary:
 	for c in seen:
 		seen_cells.append([c.x, c.y])
 	return {
-		"depth": depth, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
+		"depth": depth, "runSeed": run_seed, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()),
 	}
@@ -114,6 +116,7 @@ static func from_dict(d: Dictionary):
 		return null
 	var s = new()
 	s.depth = clampi(_int(d.get("depth", 1)), 1, DEPTH_MAX)
+	s.run_seed = maxi(0, _int(d.runSeed)) if _is_num(d.get("runSeed")) else s.floor_map_seed(d)
 	s.floor_map = FloorMap.from_dict(d.floor, Monster)
 	# a save from before palettes were saved wears the colours its floor's seed would pick
 	s.palette_id = int(d.palette) if d.get("palette") is float or d.get("palette") is int else s.floor_map.seed_value
@@ -138,6 +141,11 @@ static func from_dict(d: Dictionary):
 	return s
 
 
+## What a save from before `runSeed` was saved goes on from: its floor's own seed.
+func floor_map_seed(d: Dictionary) -> int:
+	return maxi(0, _int(d.floor.get("seed", 0))) if _is_num(d.floor.get("seed")) else 0
+
+
 ## Whether `d` is a state `from_dict` would read (the menu asks before it leaves for the game).
 static func is_playable(d: Dictionary) -> bool:
 	var problem := _problem(d)
@@ -156,6 +164,8 @@ static func _problem(d: Dictionary) -> String:
 			return "'%s' is not a number" % key
 	if d.has("depth") and not _is_num(d.depth):
 		return "'depth' is not a number"
+	if d.has("runSeed") and not _is_num(d.runSeed):
+		return "'runSeed' is not a number"
 	if not d.tally is Dictionary or d.tally.values().any(func(v): return not _is_num(v)):
 		return "'tally' is not a record of numbers"
 	if not d.allies is Array:

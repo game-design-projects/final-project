@@ -11,6 +11,9 @@ const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const Flags = preload("res://src/utils/flags.gd")
+const Floors = preload("res://src/rules/floors.gd")
+const PersonalitySlice = preload("res://src/game/personality_slice.gd")
+const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
@@ -62,23 +65,56 @@ func _init(game_rng, game_mind) -> void:
 	state = State.new()
 
 
+## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice, whose routes stay fixed so
+## its sessions can be compared.
+func feature(name: String) -> bool:
+	return Flags.enabled(name) and not slice_floor and not PersonalitySlice.pending()
+
+
 ## A fresh run: a new floor, standing at its start.
 func new_run() -> void:
 	await _leave_current()
 	_forget_slice()
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
-	state.floor_map = FloorGen.generate(rng)
-	state.palette_id = state.floor_map.seed_value
-	state.cell = state.floor_map.start
-	state.facing = state.floor_map.start_facing()
-	state.visited = {state.cell: true}
-	state.look()
+	state.run_seed = rng.seed_value
+	_make_floor()
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: new run, seed %d" % rng.seed_value)
 	event("state_replaced", {"how": "new"})
-	await go("explore", {"lines": [State.sys_line(Texts.new_floor())]})
+	await go("explore", {"lines": [State.sys_line(Texts.new_floor(state.depth))]})
+
+
+## Take the stairs: the next floor of this run, keeping health, gold, allies and the tally, with a rest on the way down.
+func next_floor() -> void:
+	await _leave_current()
+	state.depth = mini(state.depth + 1, State.DEPTH_MAX)
+	state.foe = null
+	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal())
+	_make_floor()
+	encounter.pending_notes = []
+	encounter.pending_rows = []
+	print("flow: down to B%dF (%s)" % [state.depth, state.summary()])
+	event("state_replaced", {"how": "floor"})
+	await go("explore", {"lines": [State.sys_line(Texts.new_floor(state.depth))]})
+
+
+## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
+## generator as it always was, so old seeds make the same floor.
+func _make_floor() -> void:
+	if feature("real-floors"):
+		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth))
+		state.floor_map = FloorGen.generate(floor_rng, Floors.plan(state.depth))
+	else:
+		state.floor_map = FloorGen.generate(rng)
+	state.palette_id = state.floor_map.seed_value
+	state.cell = state.floor_map.start
+	state.facing = state.floor_map.start_facing()
+	state.quarter_turns = 0
+	state.visited = {state.cell: true}
+	state.seen = {}
+	state.look()
 
 
 ## Continue a saved state (from State.to_dict). False, and nothing changes, if it isn't one of ours.

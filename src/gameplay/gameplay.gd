@@ -375,7 +375,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 	match name:
 		"state_replaced":
 			_bind_views()
-			_fresh_floor = data.how == "new" and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
+			_fresh_floor = data.how in ["new", "floor"] and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
 		"stage":
 			if data.to == "explore":
 				_postfx.set_accent(Palette.for_run(s.palette_id).accent) # back from a fight, the monster's colour goes

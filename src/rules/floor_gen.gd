@@ -14,7 +14,8 @@ const MIN_MONSTER_DISTANCE := 3 # steps from the start before the first monster 
 const MONSTER_SPACING := 2 # no two monsters within this many cells of each other (Manhattan)
 
 
-static func generate(rng: Rng):
+## `plan` (rules/floors.gd) says how deep the floor is and who guards it; without one it is the classic first floor.
+static func generate(rng: Rng, plan := {}):
 	var f := FloorMap.new()
 	f.size = SIZE
 	f.seed_value = rng.seed_value
@@ -24,7 +25,7 @@ static func generate(rng: Rng):
 	_open_hall(f.grid, hall)
 	var walk := _walk_from(f, f.start, hall)
 	f.stairs = walk.farthest
-	f.monsters = _place_monsters(rng, walk, hall)
+	f.monsters = _place_monsters(rng, walk, hall, plan)
 	print("floor: seed %d, stairs at %s, %d monsters" % [rng.seed_value, f.stairs, f.monsters.size()])
 	return f
 
@@ -95,7 +96,7 @@ static func _walk_from(f, from: Vector2i, hall: Vector2i) -> Dictionary:
 
 
 ## Roster monsters spread out nearest first, evenly through the candidate cells; the champion stands in the hall.
-static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i) -> Array:
+static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Dictionary) -> Array:
 	var enc := Content.table("encounter")
 	var candidates := []
 	for i in walk.order.size():
@@ -116,7 +117,15 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i) -> Array
 				spot = c
 				break
 		used.append(spot)
-		monsters.append(Monster.make(rng, roster[i], spot))
+		monsters.append(Monster.make(rng, _at_depth(roster[i], plan), spot))
 	var boss: Dictionary = enc.boss
-	monsters.append(Monster.make(rng, {"species": boss.species, "genre": boss.genres[0], "hp": boss.hp, "name": boss.name, "boss": true}, hall))
+	var champion: Dictionary = plan.get("champion", boss)
+	monsters.append(Monster.make(rng, {"species": boss.species, "genre": boss.genres[0], "hp": champion.hp, "name": champion.name, "boss": true}, hall))
 	return monsters
+
+
+## A roster line with the floor's toughness.
+static func _at_depth(entry: Dictionary, plan: Dictionary) -> Dictionary:
+	var out := entry.duplicate()
+	out.hp = roundi(float(entry.hp) * float(plan.get("hp_scale", 1.0)))
+	return out

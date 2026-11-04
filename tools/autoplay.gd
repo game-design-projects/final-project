@@ -23,6 +23,8 @@ var _autopilot: Rng
 var _stage_counts := {}
 var _event_counts := {}
 var _retries := 0
+var _met_floor := 1 # the floor the two fights are counted on
+var _met_before := 0 # how many it had met before that floor
 
 
 func _init() -> void:
@@ -46,21 +48,23 @@ func _play(seed_value: int) -> bool:
 	_stage_counts = {}
 	_event_counts = {}
 	_retries = 0
+	_met_floor = 1
+	_met_before = 0
 	flow.happened.connect(func(name, _data): _event_counts[name] = _event_counts.get(name, 0) + 1)
 	await flow.new_run()
 	var t := 0.0
 	var frames := 0
 	var left := false
 	flow.happened.connect(func(name, _data): if name == "leave": left = true)
-	while frames < MAX_FRAMES and flow.state.stage != "end" and not left:
+	while frames < MAX_FRAMES and not (flow.state.stage == "end" and flow.state.run_over) and not left:
 		t += FRAME_MS
 		frames += 1
 		await flow.tick(t)
 		await _press_something(flow)
 		_stage_counts[flow.state.stage] = _stage_counts.get(flow.state.stage, 0) + 1
-	var done: bool = flow.state.stage == "end"
+	var done: bool = flow.state.stage == "end" and flow.state.run_over
 	print("autoplay: seed %d %s after %.0f s of game time · spared %d slain %d fled %d recruited %d · HP %d/%d · retries %d" % [
-		seed_value, "reached the stairs" if done else "DID NOT FINISH (stage %s)" % flow.state.stage, t / 1000.0,
+		seed_value, "reached the last stairs on B%dF" % flow.state.depth if done else "DID NOT FINISH (stage %s)" % flow.state.stage, t / 1000.0,
 		flow.state.tally.spared, flow.state.tally.slain, flow.state.tally.fled, flow.state.tally.recruited,
 		flow.state.hp, flow.state.max_hp, _retries])
 	print_verbose("autoplay: stages %s" % [_stage_counts])
@@ -81,6 +85,8 @@ func _press_something(flow) -> void:
 				if s.stage == "menu" and s.foe.boss:
 					pool = [1, 1, 2, 2, 3]
 				await flow.press(str(_autopilot.pick(pool)))
+		"end":
+			await flow.press("1") # go on down
 		"talk":
 			await flow.submit_text(_autopilot.pick(PHRASES))
 		"fightbar":
@@ -93,7 +99,7 @@ func _press_something(flow) -> void:
 				await flow.press(key)
 		"dead":
 			_retries += 1
-			await flow.press("1" if _retries <= 4 else "2")
+			await flow.press("1") # a new run would lose the floors already walked
 
 
 ## Step to the neighbouring cell (or stay) that the fewest hazards light now or soon. Returns "" to stay put.
@@ -121,7 +127,11 @@ func _dodge_key(s, t: float) -> String:
 func _explore_key(s) -> String:
 	var goal: Vector2i = s.floor_map.stairs
 	var best := 1 << 30
-	var met: int = s.tally.spared + s.tally.slain + s.tally.fled
+	var all_met: int = s.tally.spared + s.tally.slain + s.tally.fled
+	if _met_floor != s.depth:
+		_met_floor = s.depth
+		_met_before = all_met
+	var met: int = all_met - _met_before
 	for m in s.floor_map.monsters:
 		if met < 2 and not m.is_gone() and not m.boss:
 			var d := absi(m.cell.x - s.cell.x) + absi(m.cell.y - s.cell.y)

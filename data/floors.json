@@ -1,0 +1,27 @@
+{
+ "run_floors": 5,
+ "hp_per_floor": 0.12,
+ "rest_heal": 8,
+ "champions": [
+  {
+   "name": "EMBERLING",
+   "hp": 28
+  },
+  {
+   "name": "CINDERA",
+   "hp": 36
+  },
+  {
+   "name": "ASHKA",
+   "hp": 44
+  },
+  {
+   "name": "SCORIA",
+   "hp": 50
+  },
+  {
+   "name": "VEXALITH",
+   "hp": 56
+  }
+ ]
+}

@@ -6,6 +6,7 @@
 ## `save_slot` and `resume` exist only while a run is on screen, and `save_slot` only while walking, so the pages show what fits.
 extends RefCounted
 
+const Flags = preload("res://src/utils/flags.gd")
 const Saves = preload("res://src/menu/saves.gd")
 const Settings = preload("res://src/menu/settings.gd")
 
@@ -28,7 +29,7 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 			"sub": ("%s  %s" % [latest.summary, Saves.when(latest.saved_at)]) if not latest.is_empty() else "No save yet",
 			"act": func(): ctx.load_slot.call(latest.slot),
 		},
-		{"label": "NEW GAME", "sub": "One floor, one run", "act": func(): ctx.new_game.call()},
+		{"label": "NEW GAME", "sub": "Five floors down to the Last Door" if Flags.enabled("real-floors") else "One floor, one run", "act": func(): ctx.new_game.call()},
 		{"label": "LOAD GAME", "disabled": not any_save, "act": _go(panel, func(): return slot_list(panel, ctx, "load"))},
 		{"label": "SAVE MANAGER", "sub": "Copy, rename, delete", "act": _go(panel, func(): return slot_list(panel, ctx, "manage"))},
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},

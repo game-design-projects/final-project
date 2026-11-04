@@ -3,6 +3,9 @@
 ## from the address (?nofx&seed=7). A flag is `name` (on) or `name=value`.
 ## Every flag is declared in KNOWN. Asking for one that isn't is a bug in the caller and is reported at once,
 ## and an unknown word on the command line is warned about, so a typo never silently does nothing.
+##
+## The game's features are declared in FEATURES and are on unless switched off: `no-<name>` or `<name>=off` turns one off,
+## `classic` turns them all off (`classic <name>` then brings that one back), which is the game as it was before they came.
 extends RefCounted
 
 ## name -> what it does. Add a line here when a feature gets a switch.
@@ -21,14 +24,27 @@ const KNOWN := {
 	"nomusic": "no music (the effects and voices still play)",
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
+	"classic": "every feature in FEATURES off (name one after it to bring it back)",
 }
+
+## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.
+const FEATURES := {
+	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",
+}
+
+const OFF_WORDS := ["off", "0", "false", "no"]
 
 static var _flags = null # Dictionary name -> value ("" for a bare flag); null until first use
 
 
 ## Replace the flags with these words (for tools and scenario scripts that pretend a different command line).
+## What the real command line says about features stays, so a test suite can run with `classic` however it sets its other flags.
 static func set_args(words: PackedStringArray) -> void:
 	_flags = _parse(words)
+	var real := _parse(OS.get_cmdline_user_args())
+	for name in real:
+		if not _flags.has(name) and _is_feature_word(name):
+			_flags[name] = real[name]
 
 
 ## True when the flag is present.
@@ -40,6 +56,28 @@ static func on(name: String) -> bool:
 static func value(name: String, default := "") -> String:
 	var v: String = _all().get(_declared(name), "")
 	return v if v != "" else default
+
+
+## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>`, `<name>=off` or `classic`.
+static func enabled(name: String) -> bool:
+	if not FEATURES.has(name):
+		push_error("flags: '%s' is not a declared feature (see Flags.FEATURES)" % name)
+		return false
+	var all := _all()
+	if all.has("no-" + name):
+		return false
+	if all.has(name):
+		return not str(all[name]) in OFF_WORDS
+	return not all.has("classic")
+
+
+## The features that are on now, for the logs.
+static func enabled_features() -> Array:
+	return FEATURES.keys().filter(func(f): return enabled(f))
+
+
+static func _is_feature_word(name: String) -> bool:
+	return name == "classic" or FEATURES.has(name) or (name.begins_with("no-") and FEATURES.has(name.substr(3)))
 
 
 static func _declared(name: String) -> String:
@@ -69,7 +107,7 @@ static func _parse(words: PackedStringArray) -> Dictionary:
 			var name := t if eq < 0 else t.substr(0, eq)
 			if name == "":
 				continue
-			if not KNOWN.has(name):
+			if not KNOWN.has(name) and not _is_feature_word(name):
 				push_warning("flags: unknown flag '%s' ignored" % name)
 				continue
 			out[name] = "" if eq < 0 else t.substr(eq + 1)

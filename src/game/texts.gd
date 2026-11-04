@@ -10,8 +10,8 @@ const BOSS_RULE := "The champion shifts its rules every turn: chess, shadow, rhy
 const GOLD_ACT_TIP := "Costs 6 gold if accepted; ends the fight"
 
 
-static func new_floor() -> String:
-	return "B1F. Find the stairs."
+static func new_floor(depth: int) -> String:
+	return "B%dF. Find the stairs." % depth
 
 
 static func welcome_back(summary: String) -> String:
@@ -157,6 +157,10 @@ static func you_fall(foe) -> String:
 
 
 # ---- the end of a floor
+
+static func floor_done(depth: int) -> String:
+	return "B%dF behind you. The stairs go on down, and you catch your breath on the way." % depth
+
 
 ## {route, text, tail} for the summary at the stairs.
 static func ending(tally: Dictionary, allies: Array) -> Dictionary:

@@ -24,7 +24,7 @@ const FIELDS := {
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"dead": [],
 	"stairs": [], # reached the stairs
-	"state_replaced": ["how"], # a new floor ("new") or a loaded save ("load") replaced the game state; whoever holds the old one must let go
+	"state_replaced": ["how"], # a new run ("new"), the next floor ("floor") or a loaded save ("load") replaced the game state; whoever holds the old one must let go
 	"pause_requested": [],
 	"leave": ["to"], # the player chose to go back to the main menu
 }
