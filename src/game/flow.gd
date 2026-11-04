@@ -19,6 +19,7 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 const BANNER_MS := 3000.0
+const STORY_BANNER_MS := 6000.0
 
 const STAGES := {
 	"explore": preload("res://src/game/stages/explore.gd"),
@@ -89,7 +90,12 @@ func new_run() -> void:
 	encounter.pending_rows = []
 	print("flow: new run, seed %d" % rng.seed_value)
 	event("state_replaced", {"how": "new"})
-	await go("explore", {"lines": [State.sys_line(Texts.new_floor(state.depth))]})
+	var lines := _arrival()
+	if _telling_story():
+		var premise: Dictionary = Floors.premise()
+		lines.push_front(State.sys_line(premise.line))
+		announce(premise.title, premise.door if feature("last-door") else premise.banner, STORY_BANNER_MS)
+	await go("explore", {"lines": lines})
 
 
 ## Take the stairs: the next floor of this run, keeping health, gold, allies and the tally, with a rest on the way down.
@@ -103,12 +109,25 @@ func next_floor() -> void:
 	encounter.pending_rows = []
 	print("flow: down to B%dF (%s)" % [state.depth, state.summary()])
 	event("state_replaced", {"how": "floor"})
-	await go("explore", {"lines": [State.sys_line(Texts.new_floor(state.depth))]})
+	await go("explore", {"lines": _arrival()})
 
 
 ## What the views read from the state rather than ask the flags, because the personality slice has them off.
 func _apply_features() -> void:
 	state.rotate_mini_games = feature("mini-games")
+	state.floors_of = Floors.run_floors() if _telling_story() else 0
+
+
+## The story needs a below to tell of.
+func _telling_story() -> bool:
+	return feature("story") and feature("real-floors")
+
+
+## What the log says on arriving on this floor.
+func _arrival() -> Array:
+	if _telling_story():
+		return [State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion))]
+	return [State.sys_line(Texts.new_floor(state.depth))]
 
 
 ## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's

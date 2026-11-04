@@ -34,6 +34,11 @@ static func floor_seed(run_seed: int, depth: int, path := 0) -> int:
 	return Rng.offset(run_seed, depth * FLOOR_SEED_STEP + path)
 
 
+## Why you are here, {title, banner, door, line}.
+static func premise() -> Dictionary:
+	return Content.table("floors").premise
+
+
 ## What a rest at the stairs gives back.
 static func rest_heal() -> int:
 	return int(Content.table("floors").rest_heal)

@@ -5,23 +5,34 @@
  "champions": [
   {
    "name": "EMBERLING",
-   "hp": 28
+   "hp": 28,
+   "lore": "The youngest of Vexalith's brood. Nobody has ever talked back to it."
   },
   {
    "name": "CINDERA",
-   "hp": 36
+   "hp": 36,
+   "lore": "The walls here are scratched with tally marks: everyone who came down before you."
   },
   {
    "name": "ASHKA",
-   "hp": 44
+   "hp": 44,
+   "lore": "It has counted every one of those marks, and it can tell you whose they were."
   },
   {
    "name": "SCORIA",
-   "hp": 50
+   "hp": 50,
+   "lore": "You can hear the Last Door now, breathing somewhere under the floor."
   },
   {
    "name": "VEXALITH",
-   "hp": 56
+   "hp": 56,
+   "lore": "It has waited at the Last Door a long time for someone who wasn't alone."
   }
- ]
+ ],
+ "premise": {
+  "title": "THE LAST DOOR",
+  "banner": "Five floors down, and the only way out.",
+  "door": "It only opens for someone who is not alone.",
+  "line": "Thrown down here. The only way out is the Last Door, five floors below."
+ }
 }

@@ -15,6 +15,7 @@ const Gates = preload("res://src/rules/minigames/gates.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pace = preload("res://src/rules/pace.gd")
+const Hud = preload("res://src/view/hud.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
@@ -31,6 +32,7 @@ func _run() -> void:
 	await _real_floors()
 	await _dodges()
 	await _recruiting()
+	await _story()
 	_finish()
 
 
@@ -266,6 +268,29 @@ func _recruiting() -> void:
 	flow.state.depth = Floors.run_floors()
 	await _reach_stairs(flow)
 	_check(flow.state.run_over, "no-last-door: the last stairs end the run alone")
+	_use()
+
+
+func _story() -> void:
+	var flow = _flow(31)
+	await flow.new_run()
+	var s = flow.state
+	_check(s.lines[0].text.contains("Last Door") and s.lines[1].text.contains(Floors.plan(1).champion.name), "a run says why you are here and who holds the floor (%s)" % s.lines[0].text)
+	_check(s.banner != null and s.banner.title == "THE LAST DOOR", "and puts it on the picture")
+	_check(s.floors_of == Floors.run_floors(), "the header can count the floors")
+	_check(Hud.log_fits(s.lines, 1100.0) == s.lines.size(), "and the log has room for it at the window's width")
+	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and at a narrow one")
+	await _reach_stairs(flow)
+	await flow.press("1")
+	_check(s.lines[0].text.contains(Floors.plan(2).champion.name), "each floor says who holds it (%s)" % s.lines[0].text)
+	for depth in range(1, Floors.run_floors() + 1):
+		var line: String = flow._arrival()[0].text
+		s.depth = depth
+		line = flow._arrival()[0].text
+		_check(Hud.log_fits([State.sys_line(line)], 760.0) == 1, "B%dF's line fits the log" % depth)
+	flow = _flow(32, ["no-story"])
+	await flow.new_run()
+	_check(flow.state.lines[0].text == "B1F. Find the stairs." and flow.state.floors_of == 0, "no-story: the old opening line")
 	_use()
 
 

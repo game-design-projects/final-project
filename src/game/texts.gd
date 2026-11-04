@@ -14,6 +14,11 @@ static func new_floor(depth: int) -> String:
 	return "B%dF. Find the stairs." % depth
 
 
+## What the log says on arriving on a floor, with the story: who holds it and what is known of them.
+static func floor_story(depth: int, of: int, champion: Dictionary) -> String:
+	return "B%dF of %d. %s holds the stairs. %s" % [depth, of, champion.name, champion.lore]
+
+
 static func welcome_back(summary: String) -> String:
 	return "Welcome back. %s." % summary
 
