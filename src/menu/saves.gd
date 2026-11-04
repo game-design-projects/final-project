@@ -17,10 +17,6 @@ static var dir_path := "user://saves"
 ## With the `nosave` flag the slots live here, in memory, and the player's saves are neither read nor changed: a scenario
 ## run can save, list and load as usual, and nothing reaches the disk. slot -> document.
 static var _memory := {}
-## The highest save number seen so far this run: each write takes the next one above every save there is. `saved_at` is the
-## clock's time and only for showing; the number is what says which save came last (two can share a second, and a clock
-## can be set back).
-static var _seq := 0
 
 
 ## Whether the slots are kept in memory (the `nosave` flag).
@@ -71,7 +67,6 @@ static func info(slot: String) -> Dictionary:
 		none.merge({"empty": false, "corrupt": true, "summary": "OLD SAVE, NOT COMPATIBLE"}, true)
 		return none
 	none.merge({"empty": false, "name": str(doc.get("name", "")), "summary": str(doc.get("summary", "")), "saved_at": int(doc.get("saved_at", 0)), "seq": int(doc.get("seq", 0))}, true)
-	_seq = maxi(_seq, none.seq)
 	return none
 
 
@@ -91,12 +86,11 @@ static func list() -> Array:
 ## The newest save that can be read, or {} (what Continue loads).
 static func latest() -> Dictionary:
 	var best := {}
-	var all := list()
-	for i in all:
+	for i in list():
 		if not i.empty and not i.corrupt and (best.is_empty() or i.seq > best.seq or (i.seq == best.seq and i.saved_at > best.saved_at)):
 			best = i
 	if not best.is_empty():
-		print_verbose("saves: latest is %s (seq %d) of %s" % [best.slot, best.seq, all.filter(func(i): return not i.empty).map(func(i): return "%s=%d" % [i.slot, i.seq])])
+		print_verbose("saves: latest is %s (seq %d)" % [best.slot, best.seq])
 	return best
 
 
@@ -143,12 +137,14 @@ static func _read_doc(slot: String):
 	return json.data
 
 
-## The number for the next save: one above every save there is. The slots are read each time (there are seven small
-## files), so a second window or tab that wrote since is counted too.
+## The number for the next save: one above every save there is. `saved_at` is the clock's time and only for showing; the
+## number is what says which save came last (two can share a second, and a clock can be set back). The slots are read each
+## time (seven small files), so a second window on the same saves that wrote since is counted too.
 static func _next_seq() -> int:
-	list() # `info` raises `_seq` to the highest on disk
-	_seq += 1
-	return _seq
+	var highest := 0
+	for i in list():
+		highest = maxi(highest, i.seq)
+	return highest + 1
 
 
 static func _store(doc: Dictionary, slot: String) -> bool:

@@ -27,6 +27,13 @@ const MENU_SCENE := "res://src/menu/main_menu.tscn"
 const VIEW_W := 448
 const VIEW_H := 288
 const FRAME_MARGIN := 8
+const FRAME_PAD_X := 14 # between the white frame and what is inside it, left and right
+
+
+## How wide the dock (the log, the commands) is in a window this wide.
+static func dock_width(window_w: float) -> float:
+	return window_w - FRAME_MARGIN * 2.0 - FRAME_PAD_X * 2.0
+
 
 const KEYS := {
 	KEY_UP: "up", KEY_W: "up", KEY_DOWN: "down", KEY_S: "down", KEY_LEFT: "left", KEY_A: "left", KEY_RIGHT: "right", KEY_D: "right",
@@ -132,8 +139,8 @@ func _build_screen() -> void:
 	box.bg_color = Color.BLACK
 	box.border_color = Palette.INK
 	box.set_border_width_all(2)
-	box.content_margin_left = 14
-	box.content_margin_right = 14
+	box.content_margin_left = FRAME_PAD_X
+	box.content_margin_right = FRAME_PAD_X
 	box.content_margin_top = 10
 	box.content_margin_bottom = 10
 	crt.add_theme_stylebox_override("panel", box)

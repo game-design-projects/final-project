@@ -14,11 +14,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 - A fight ends in the log and back to walking: the CONTINUE screen and its state machine step (`result`) are gone.
-- The personality slice goes straight from ROOK to VEX; the log keeps one line on how ROOK's fight ended, so VEX's greeting and fight rule still fit.
+- The personality slice goes straight from ROOK to VEX; the log keeps one line, the verdict on ROOK's fight, so VEX's greeting and fight rule still fit.
 - A slice whose fixed roll cannot be pinned does not start, and is not tried again.
 - Saves are numbered (`seq`, one above every save on disk, read at each write) and Continue offers the highest, so a second window cannot make it offer an older save.
 - `saved_at` stays the real clock time, so a clock set forward cannot date new saves in the future.
-- The saves log shows each save's number and what Continue chose among.
+- The saves log shows each save's number and which slot Continue chose; the number is one above the highest on disk, so there is no counter to keep in step.
 - A named save is labelled alike on the list, its page, COPY TO and the REPLACE question (the slot and its name in capitals).
 - A long save name is cut off before the date whether or not its row is picked; save dates show no arrows, only settings do.
 - The automap also marks where a monster stands once you see it, so it agrees with the 3D view.
@@ -27,7 +27,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - A monster is in view when it is in front of you with nothing in the way: down a corridor however far, across a hall, off to one side.
 - The champion in its hall was missing from the view because only monsters straight ahead within six cells were drawn.
 - The automap learns the whole corridor ahead, to the wall.
-- A turn no longer hides the monster in the picture while the camera swings, or shows one it has not reached yet.
+- The log measures a speaker's line the way it draws it (wrapped after the name), so a line is no longer cut off that was counted as fitting.
+- A turn no longer hides a monster that is still in the picture while the camera swings.
 - Holding LEFT or RIGHT keeps the camera turning that way, instead of shaking left and right.
 - Several turns in one slow frame still turn the camera the way they went.
 - The snake's eyes, the slime's mouth and the rock's crack were buried inside their bodies and never showed.

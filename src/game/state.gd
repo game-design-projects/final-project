@@ -71,8 +71,8 @@ func turn(quarters: int) -> void:
 	look()
 
 
-## Remember what you can see from here (after a step or a turn): the cells straight ahead, and where a monster stands that
-## you can see, so the automap shows what the 3D view shows.
+## Remember what you know from here (after a step or a turn): the cells straight ahead, and where a monster stands that is
+## in front of you with nothing between (a little wider than the picture, which has its own field of view).
 func look() -> void:
 	for c in Vision.ahead(floor_map, cell, facing):
 		seen[c] = true

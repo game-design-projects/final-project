@@ -76,11 +76,6 @@ func _cleanup() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(_dir))
 
 
-## A new run of the game: nothing is known of the slots yet.
-func _new_run() -> void:
-	Saves._seq = 0
-
-
 ## Saves are numbered one above the last, whatever the clock says: the newest save is the one written last, a run carries
 ## on from the highest number on disk, and `saved_at` stays the real time.
 func _numbers_rise() -> void:
@@ -92,14 +87,12 @@ func _numbers_rise() -> void:
 	var numbers: Array = Saves.list().filter(func(x): return not x.empty).map(func(x): return x.seq)
 	_check(not numbers.is_empty() and numbers.all(func(n): return n > 0), "every save has a number")
 	var before: int = Saves.info("1").seq
-	_new_run() # the game starts again: the numbers come from what is on disk
 	Saves.write("4", {"hp": 1}, "HP 1/20")
 	_check(Saves.info("4").seq > maxi(before, maxi(Saves.info("2").seq, Saves.info("3").seq)), "a new run numbers its first save above every save on disk")
 	_check(Saves.latest().slot == "4", "so it is the newest")
 	var now := int(Time.get_unix_time_from_system())
 	var future := now + 3600 * 24 * 365
 	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from the future", "saved_at": future, "state": var_to_str({})}, "5") # saved when the clock was wrong, before saves were numbered
-	_new_run()
 	Saves.write("6", {"hp": 1}, "HP 1/20")
 	_check(Saves.latest().slot == "6", "a save made after a clock that was set forward is still the newest")
 	_check(absi(Saves.info("6").saved_at - now) < 60, "and says the real time, not the future one")

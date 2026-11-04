@@ -38,6 +38,8 @@ func _run() -> void:
 	await _flee_judges_before_it_ends()
 	_dice_pin()
 	await _slice_needs_its_roll()
+	await _intro_keeps_the_verdict()
+	_log_measures_speakers()
 	_comment_stripper()
 	_scan_patterns()
 	_no_draw_around_the_dice()
@@ -58,6 +60,8 @@ class RefusingDice:
 ## If the fixed roll cannot be pinned the slice does not start, rather than running with random chances.
 func _slice_needs_its_roll() -> void:
 	Flags.set_args(PackedStringArray(["personality-slice", "seed=7042"]))
+	PersonalitySlice.reset() # an earlier test used the flag up
+	_check(PersonalitySlice.pending(), "the flag is pending before the refused start")
 	var rng := Rng.new(7042)
 	var flow = Flow.new(rng, Minds.create(rng, "", true))
 	await flow.new_run()
@@ -186,7 +190,8 @@ func _fair_cut_route() -> void:
 	_check(s.gold == 6 and rook.gone == "spared", "ROOK takes the 6-gold cut and leaves")
 	_check(s.stage == "intro" and s.foe == vex, "VEX comes on at once: no CONTINUE screen between the fights")
 	_check(s.lines.any(func(l): return l.text == Texts.cut_accepted(rook)), "how ROOK's fight ended (the cut he took) is still in the log when VEX's fight starts")
-	var log_width: float = ProjectSettings.get_setting("display/window/size/viewport_width")
+	var Gameplay = load("res://src/gameplay/gameplay.gd") # at run time: it reads the Store autoload
+	var log_width: float = Gameplay.dock_width(ProjectSettings.get_setting("display/window/size/viewport_width"))
 	_check(Hud.log_fits(s.lines, log_width) == s.lines.size(), "VEX's greeting and fight rule both fit the three lines of the log after the goodbye (%d of %d lines)" % [Hud.log_fits(s.lines, log_width), s.lines.size()])
 	await _to_menu(flow)
 	await _press(flow, [2, 2])
@@ -198,6 +203,26 @@ func _fair_cut_route() -> void:
 	_check(flow.slice_floor and not flow.autosave_allowed(), "the floor stays marked as the playtest floor, so it is never autosaved")
 	await flow.new_run()
 	_check(not flow.slice_floor and flow.autosave_allowed(), "a new floor is an ordinary one and may be autosaved")
+
+
+## Of the last fight's lines the intro keeps the verdict, the game line that says how it ended, not the one before it.
+func _intro_keeps_the_verdict() -> void:
+	var flow = await _start()
+	var vex = flow.state.floor_map.monsters[1]
+	var State = load("res://src/game/state.gd")
+	await flow.go("intro", {"foe": vex, "before": [State.sys_line("ROOK falls."), State.sys_line("SLAIN.")]})
+	_check(flow.state.lines[0].text == "SLAIN." and flow.state.lines.size() <= 3, "the intro after a fight keeps its verdict (%s), and no more than fits" % flow.state.lines[0].text)
+
+
+## The log measures a speaker's line the way it draws it: the text wraps after the name, so it is the narrower line.
+func _log_measures_speakers() -> void:
+	var text := "Not today, friend."
+	var body: Font = load("res://src/view/fonts.gd").body()
+	var width := body.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 5.0 # fits as a game line, not after "VEX: "
+	var game := {"kind": "sys", "who": "", "text": text}
+	var speech := {"kind": "say", "who": "VEX", "text": text}
+	_check(Hud.log_fits([game, game, game], width) == 3, "three one-row game lines fit the log")
+	_check(Hud.log_fits([speech, speech, speech], width) < 3, "the same words after a speaker's name wrap, so fewer fit")
 
 
 ## A monster of the floor that happens to share the next bandit's name must not be taken for him.

@@ -217,8 +217,11 @@ func _show_monsters(state, now: float) -> void:
 		visible[state.foe] = true
 	else:
 		# from where you face and from where the camera still faces, so a turn does not drop what is in the picture
-		# while the camera swings, or bring in what it has not reached yet
-		var seen_from := [state.facing, posmod(roundi(-_yaw / (PI / 2.0)), 4)]
+		# while the camera swings (what lies the new way is drawn at once, but is out of the picture until the camera gets there)
+		var seen_from := [state.facing]
+		var camera_facing := posmod(roundi(-_yaw / (PI / 2.0)), 4)
+		if camera_facing != state.facing:
+			seen_from.append(camera_facing)
 		for facing in seen_from:
 			for m in Vision.monsters(state.floor_map, state.cell, facing):
 				visible[m] = true

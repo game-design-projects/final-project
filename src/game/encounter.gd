@@ -152,7 +152,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 
 
 ## The fight is over: the log says how, and the party is back to walking, or in the personality slice on to its second
-## bandit (the log keeps what was said). There is no screen to confirm in between.
+## bandit (the intro keeps the line that says how this fight ended). There is no screen to confirm in between.
 func leave_fight(lines: Array) -> void:
 	if not flow.slice_queue.is_empty():
 		await flow.go("intro", {"foe": flow.slice_queue.pop_front(), "before": lines})
