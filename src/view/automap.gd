@@ -35,6 +35,8 @@ func monster_marks() -> Array:
 	for m in state.floor_map.monsters:
 		if m.is_gone():
 			continue
+		if m.boss and state.viewing("boss-at-exit") and not state.seen.has(m.cell):
+			continue
 		if m.boss:
 			out.append({"rect": Rect2(Vector2(m.cell) * s, Vector2(s, s)), "color": Palette.BOSS})
 		elif state.seen.has(m.cell):

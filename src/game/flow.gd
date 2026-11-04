@@ -20,7 +20,7 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0
@@ -143,7 +143,9 @@ func _arrival() -> Array:
 func _make_floor() -> void:
 	if feature("real-floors"):
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth))
-		state.floor_map = FloorGen.generate(floor_rng, Floors.plan(state.depth))
+		var plan: Dictionary = Floors.plan(state.depth)
+		plan.boss_at_exit = feature("boss-at-exit")
+		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:
 		state.floor_map = FloorGen.generate(rng)
 	state.palette_id = state.floor_map.seed_value

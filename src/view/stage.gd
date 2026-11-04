@@ -19,6 +19,7 @@ const Palette = preload("res://src/view/palette.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const CELL := Materials.CELL
+const SLAB_H := 0.03
 const FOV := 68.0
 const EYE := 0.85 # camera height
 const BACK := Vision.BACK # how far behind the middle of your cell the camera stands, in cells
@@ -49,6 +50,7 @@ var _flicker_key := []
 var _camera: Camera3D
 var _dungeon: MeshInstance3D
 var _stairs: MeshInstance3D
+var _stairs_slab: MeshInstance3D
 var _models := {} # Monster -> Node3D
 var _tags := {} # Monster -> Label3D
 var _tag_light := {} # Monster -> 0..1, how far its tag has come in
@@ -169,6 +171,11 @@ func _load_floor(state) -> void:
 	_stairs.material_override = Materials.prop()
 	_stairs.position = DungeonMesh.center(_floor_map.stairs)
 	add_child(_stairs)
+	if _stairs_slab != null:
+		_stairs_slab.queue_free()
+	_stairs_slab = _slab(palette.accent)
+	_stairs_slab.position = DungeonMesh.center(_floor_map.stairs) + Vector3(0.0, SLAB_H / 2.0, 0.0)
+	add_child(_stairs_slab)
 	var target := _camera_target(state.cell, state.facing)
 	_pos = target.pos
 	_yaw = target.yaw
@@ -255,7 +262,22 @@ func _apply_camera() -> void:
 
 ## Every monster still on the floor stands in its cell, turned toward the camera, with a name tag; walls hide them. Not
 ## while you stand in its cell too (a test put you there): it would be in the camera's face.
+## What a monster standing on the stairs stands on: a slab over the pit, gone once the way is clear (the feature boss-at-exit).
+static func _slab(color: Color) -> MeshInstance3D:
+	var box := BoxMesh.new()
+	box.size = Vector3(DungeonMesh.CELL, SLAB_H, DungeonMesh.CELL)
+	var look := StandardMaterial3D.new()
+	look.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	look.albedo_color = color.darkened(0.82)
+	box.material = look
+	var out := MeshInstance3D.new()
+	out.mesh = box
+	out.visible = false
+	return out
+
+
 func _show_monsters(state, now: float, dt: float) -> void:
+	_stairs_slab.visible = state.floor_map.monster_at(state.floor_map.stairs) != null
 	for m in state.floor_map.monsters:
 		var here: bool = not m.is_gone() and m.cell != state.cell
 		if not here:

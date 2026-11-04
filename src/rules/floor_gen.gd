@@ -120,7 +120,8 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 		monsters.append(Monster.make(rng, _at_depth(roster[i], plan), spot))
 	var boss: Dictionary = enc.boss
 	var champion: Dictionary = plan.get("champion", boss)
-	monsters.append(Monster.make(rng, {"species": boss.species, "genre": boss.genres[0], "hp": champion.hp, "name": champion.name, "boss": true}, hall))
+	var post: Vector2i = walk.farthest if plan.get("boss_at_exit", false) else hall
+	monsters.append(Monster.make(rng, {"species": boss.species, "genre": boss.genres[0], "hp": champion.hp, "name": champion.name, "boss": true}, post))
 	return monsters
 
 

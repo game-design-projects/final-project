@@ -96,6 +96,19 @@ static func parted(gold: int, healed: int) -> String:
 	return "SPARED. It leaves you %d gold%s." % [gold, " and %d HP" % healed if healed > 0 else ""]
 
 
+static func champion_down(foe) -> String:
+	return "%s IS OUT OF YOUR WAY" % foe.name
+
+
+static func stronger(max_hp: int, healed: int) -> String:
+	return "You feel stronger: +%d max HP, +%d HP." % [max_hp, healed]
+
+
+## What backing away cost.
+static func flee_cost(foe, gold: int) -> String:
+	return "You back away%s. %s won't forget it." % [", dropping %d gold" % gold if gold > 0 else "", foe.name]
+
+
 const BOSS_WINNABLE := "It can be won over too."
 
 

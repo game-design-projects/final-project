@@ -10,6 +10,7 @@ const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
+const FloorGen = preload("res://src/rules/floor_gen.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Gates = preload("res://src/rules/minigames/gates.gd")
 const Monster = preload("res://src/rules/monster.gd")
@@ -40,6 +41,7 @@ func _run() -> void:
 	await _clear_hp()
 	await _reveal()
 	await _chat()
+	await _gate()
 	_finish()
 
 
@@ -554,6 +556,85 @@ func _chat() -> void:
 	_check(tips.targets().has("chat"), "the info key can open the talk so far")
 	tips.free()
 	_use()
+
+
+func _gate() -> void:
+	var spread := {}
+	var blocked := 0
+	for i in 200:
+		var f = FloorGen.generate(Rng.new(i + 1), Floors.plan(1).merged({"boss_at_exit": true}))
+		var champion = f.monsters.back()
+		if champion.cell == f.stairs and Floors.fights_required(f) >= 1:
+			blocked += 1
+	_check(blocked == 200, "boss-at-exit: the champion blocks the stairs on every floor (%d of 200)" % blocked)
+	for i in 200:
+		var f = FloorGen.generate(Rng.new(i + 1), Floors.plan(1))
+		var n: int = Floors.fights_required(f)
+		spread[n] = spread.get(n, 0) + 1
+	print("features_test: fights required with the champion in its hall: %s" % str(spread))
+	_check(spread.get(0, 0) > 100, "without it most floors can still be walked with no fight, as they always could")
+	var a = FloorGen.generate(Rng.new(5), Floors.plan(1).merged({"boss_at_exit": true}))
+	var b = FloorGen.generate(Rng.new(5), Floors.plan(1))
+	_check(a.grid == b.grid, "the flag only moves the champion: same seed, same maze")
+
+	var flow = _flow(45)
+	await flow.new_run()
+	var s = flow.state
+	var boss = s.floor_map.monsters.back()
+	_check(boss.cell == s.floor_map.stairs, "a run's champion stands on the stairs")
+	_check(s.floor_map.is_open(boss.cell), "on an open cell")
+	await _step_onto(flow, boss.cell)
+	_check(s.stage == "intro" and s.foe == boss and s.cell != s.floor_map.stairs, "walking at the stairs meets it first (%s)" % s.stage)
+	var map = load("res://src/view/automap.gd").new()
+	map.state = s
+	s.seen = {}
+	_check(map.monster_marks().is_empty(), "the map keeps it hidden until seen")
+	s.seen[boss.cell] = true
+	_check(map.monster_marks().size() == 1, "and shows it after")
+	map.free()
+
+	var hp: int = s.max_hp
+	s.hp = 5
+	await flow.tick(flow.clock + 1000.0)
+	await flow.encounter.defeat(boss, "slain")
+	_check(s.max_hp == hp + Floors.boss_reward().max_hp and s.hp == 5 + Floors.boss_reward().heal, "beating a champion leaves you stronger (%d/%d)" % [s.hp, s.max_hp])
+	_check(s.banner != null and s.banner.text.contains("stronger"), "and says so")
+	await _step_onto(flow, s.floor_map.stairs)
+	_check(s.stage == "end", "with it gone the stairs are open (%s)" % s.stage)
+
+	flow = _flow(46)
+	var m = await _at_menu(flow)
+	s = flow.state
+	m.hp -= 5
+	var was_anger: float = m.meters.anger
+	var was_hp: int = m.hp
+	var gold: int = s.gold
+	await flow.press("4")
+	_check(s.gold == gold - Floors.flee_cost().gold, "backing away costs gold (%d)" % s.gold)
+	_check(m.hp == was_hp and m.meters.anger > was_anger, "the monster keeps its wounds and holds a grudge")
+	flow = _flow(47, ["no-flee-cost"])
+	m = await _at_menu(flow)
+	s = flow.state
+	m.hp -= 5
+	gold = s.gold
+	await flow.press("4")
+	_check(s.gold == gold and m.hp == m.max_hp, "no-flee-cost: it costs nothing and heals it, as before")
+	flow = _flow(48, ["no-boss-at-exit"])
+	await flow.new_run()
+	_check(flow.state.floor_map.monsters.back().cell != flow.state.floor_map.stairs, "no-boss-at-exit: the champion keeps to its hall")
+	_use()
+
+
+## Stand next to `cell`, facing it, and step.
+func _step_onto(flow, cell: Vector2i) -> void:
+	var s = flow.state
+	for i in 4:
+		var from: Vector2i = cell - s.floor_map.DIRS[i]
+		if s.floor_map.is_open(from) and s.floor_map.monster_at(from) == null:
+			s.cell = from
+			s.facing = i
+			break
+	await flow.press("up")
 
 
 func _dodges() -> void:

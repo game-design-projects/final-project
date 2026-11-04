@@ -39,6 +39,42 @@ static func premise() -> Dictionary:
 	return Content.table("floors").premise
 
 
+## What beating or winning over a champion gives, {max_hp, heal}.
+static func boss_reward() -> Dictionary:
+	return Content.table("floors").boss_reward
+
+
+## What backing away costs, {gold, anger}.
+static func flee_cost() -> Dictionary:
+	return Content.table("floors").flee_cost
+
+
+## The fewest monsters a walk from the start to the stairs must go through, for measuring how much of a floor can be skipped.
+static func fights_required(f) -> int:
+	var blocked := {}
+	for m in f.monsters:
+		if not m.is_gone():
+			blocked[m.cell] = true
+	var cost := {f.start: 0}
+	var queue: Array = [f.start]
+	var head := 0
+	while head < queue.size():
+		var at: Vector2i = queue[head]
+		head += 1
+		for dir in f.DIRS:
+			var next: Vector2i = at + dir
+			if not f.is_open(next):
+				continue
+			var step: int = cost[at] + (1 if blocked.has(next) else 0)
+			if not cost.has(next) or step < cost[next]:
+				cost[next] = step
+				if blocked.has(next):
+					queue.append(next)
+				else:
+					queue.insert(head, next) # a free step goes to the front, so the walk stays cheapest first
+	return cost.get(f.stairs, -1)
+
+
 ## What a rest at the stairs gives back.
 static func rest_heal() -> int:
 	return int(Content.table("floors").rest_heal)

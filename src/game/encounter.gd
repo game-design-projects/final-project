@@ -7,6 +7,7 @@ const Allies = preload("res://src/rules/allies.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
+const Floors = preload("res://src/rules/floors.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -165,6 +166,8 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	m.gone = how
 	s.tally[how] += 1
 	flow.event(how, {"boss": m.boss})
+	if m.boss and flow.feature("boss-reward"):
+		_reward_for_champion(m)
 	if how == "spared" and allow_join and flow.feature("recruit-step"):
 		await flow.go("ask")
 		return
@@ -192,6 +195,16 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	s.mind_rows = rows + pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## A champion beaten or won over leaves you stronger, however it ended.
+func _reward_for_champion(m) -> void:
+	var s = flow.state
+	var reward: Dictionary = Floors.boss_reward()
+	s.max_hp += int(reward.max_hp)
+	var healed := _heal(reward.heal)
+	flow.announce(Texts.champion_down(m), Texts.stronger(int(reward.max_hp), healed))
+	print("encounter: %s is out of the way: max HP %d, healed %d" % [m.name, s.max_hp, healed])
 
 
 ## The answer at the ask stage: it comes along. Nothing is rolled: it asked and you said yes.

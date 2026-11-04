@@ -2,6 +2,7 @@
 extends "res://src/game/stages/list_stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
+const Floors = preload("res://src/rules/floors.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
@@ -19,7 +20,7 @@ func enter(flow, _args: Dictionary) -> void:
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
 		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss) if flow.feature("recruit-step") else "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
-		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else "Back away"},
+		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
 	s.hint = "UP / DOWN CHOOSE · ENTER PICK · 1-4 · I INFO"
 
@@ -68,10 +69,19 @@ func _flee(flow) -> void:
 		return
 	s.tally.fled += 1
 	flow.event("sound", {"name": "flee"})
+	var costly: bool = flow.feature("flee-cost")
+	var dropped := 0
+	if costly:
+		var cost: Dictionary = Floors.flee_cost()
+		dropped = mini(s.gold, int(cost.gold))
+		s.gold -= dropped
+		m.meters.anger = clampf(m.meters.anger + float(cost.anger), 0.0, 100.0)
+		print("menu: backing away from %s cost %d gold; anger now %.0f" % [m.name, dropped, m.meters.anger])
 	flow.encounter.judge("flee") # before the slice ends, so an ally's verdict is drawn at the fixed roll too
 	flow.end_slice() # a fled slice is over: no second bandit follows
-	m.hp = m.max_hp
-	var lines := [State.sys_line(Texts.flee(m))]
+	if not costly:
+		m.hp = m.max_hp
+	var lines := [State.sys_line(Texts.flee_cost(m, dropped) if costly else Texts.flee(m))]
 	for n in flow.encounter.pending_notes:
 		lines.append(State.speech(n.who, n.text))
 	flow.encounter.pending_notes = []

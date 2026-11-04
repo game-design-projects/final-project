@@ -34,5 +34,13 @@
   "banner": "Five floors down, and the only way out.",
   "door": "It only opens for someone who is not alone.",
   "line": "Thrown down here. The only way out is the Last Door, five floors below."
+ },
+ "boss_reward": {
+  "max_hp": 4,
+  "heal": 6
+ },
+ "flee_cost": {
+  "gold": 2,
+  "anger": 12
  }
 }
