@@ -205,6 +205,7 @@ func _walk_and_fight() -> void:
 	# each kind of dodge, whatever the monster really fights in
 	var real_max: int = s.max_hp
 	s.max_hp = 9999 # the camera isn't here to survive, only to look
+	s.rotate_mini_games = false # each picture shows the attack it names
 	s.hp = 9999
 	for genre in ["bullet", "chess", "shadow", "gates", "stars", "rhythm"]:
 		m.genre = genre
