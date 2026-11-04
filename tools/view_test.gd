@@ -557,6 +557,8 @@ func _automap_marks() -> void:
 	if s.viewing("boss-at-exit"):
 		s.seen[boss.cell] = true # the map keeps it hidden until seen (features_test)
 	var marks: Array = map.monster_marks()
+	if s.viewing("boss-at-exit"):
+		s.seen.erase(boss.cell)
 	_check(marks.any(func(k): return k.color == Palette.BOSS and k.rect.size == Vector2(8, 8)), "the champion is on the map, in red, from the start")
 	_check(not s.seen.has(boss.cell), "though you have not seen its cell")
 	var m = s.floor_map.monsters[0]
