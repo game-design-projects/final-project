@@ -6,7 +6,7 @@ Read this first. It is the short version of what the code alone won't tell you.
 
 The game is the 3D line only: today's `src/`. The 2D Donjon was abandoned because it couldn't be made smooth. It lives on in git history before `0acd6ef` (`src/ui/`, `src/game/game.gd`, `src/jev/` and others). Never add features to it or port code from it. To check what the rewrite lost, compare against the 3D line at `017b551`: `src/genre/`, `src/menu/` and what they load.
 
-Keep the corridor perspective (FOV 68, eye 0.85, wall height 1.7): it is the correct one. A fight ends in the log with no CONTINUE screen, on purpose.
+Keep the corridor perspective (FOV 68, eye 0.85, wall height 1.7): it is the correct one, because the old build's walls weren't square (2.0 wide, 2.2 tall; now 2.0 wide, 1.7 tall). A fight ends in the log with no CONTINUE screen, on purpose.
 
 ## Commands
 
