@@ -18,10 +18,11 @@ static func shipped_url() -> String:
 	return FileAccess.get_file_as_string(SHIPPED_URL).strip_edges() if FileAccess.file_exists(SHIPPED_URL) else ""
 
 
-## `offline` never asks Jev, whatever address is saved, given or shipped (the playtest slice, which must repeat exactly).
+## `offline` is the playtest slice, which must repeat exactly: it always thinks with the local rules, never asks Jev
+## (whatever address is saved, given or shipped) and ignores `mock`.
 static func create(rng: Rng, saved_url := "", offline := false):
 	var mind
-	if Flags.on("mock"):
+	if Flags.on("mock") and not offline:
 		mind = SeededMind.new(rng)
 	else:
 		mind = LocalMind.new()

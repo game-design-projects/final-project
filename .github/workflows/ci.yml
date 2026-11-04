@@ -55,6 +55,11 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/menu_test.gd
+      # The gameplay scene: the views follow the state when a new floor replaces it.
+      - name: Check the gameplay scene
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/gameplay_test.gd
 
   build:
     needs: check

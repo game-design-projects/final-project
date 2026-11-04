@@ -16,7 +16,7 @@ func enter(flow, args: Dictionary) -> void:
 	s.menu = []
 	s.hint = ""
 	s.encounter_start = {
-		"foe": m.to_dict(), "hp": s.hp, "gold": s.gold, "tally": s.tally.duplicate(),
+		"foe": m.to_dict(), "gold": s.gold, "tally": s.tally.duplicate(),
 		"allies": s.allies.map(func(a): return a.to_dict()),
 	}
 	flow.event("encounter", {"boss": m.boss})

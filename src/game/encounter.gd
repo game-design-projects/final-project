@@ -59,7 +59,7 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 		feelings = await flow.mind.feeling_when_hit(m)
 	else:
 		feelings = await flow.mind.feeling_when_told(m, act)
-	var id := Odds.pick_by_odds(flow.rng, feelings)
+	var id := Odds.pick_by_odds(flow.rng, feelings, flow.fixed_roll)
 	var feeling := Feelings.apply(m, id)
 	var mercy: float = await flow.mind.mercy(m)
 	var pressure: float = await flow.mind.pressure(m)
@@ -131,7 +131,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	if how == "spared" and allow_join:
 		var room: bool = s.allies.size() < Combat.PARTY_MAX
 		var wants: float = await flow.mind.join(m) if room else 0.0
-		joined = flow.rng.chance(wants)
+		joined = Odds.succeeds(flow.rng, wants, flow.fixed_roll)
 		rows.append({"id": "join", "label": "DOES IT WANT TO COME ALONG?" if room else "DOES IT WANT TO COME ALONG? (PARTY FULL)", "answer": wants, "picked": joined})
 		if joined:
 			s.allies.append(Ally.make(m.species, m.name, Allies.start_loyalty(flow.rng)))

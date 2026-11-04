@@ -3,6 +3,7 @@
 ##   godot --headless --path . -s res://tools/slice_test.gd
 extends SceneTree
 
+const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
@@ -11,17 +12,24 @@ const Monster = preload("res://src/rules/monster.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
+const WATCHDOG_S := 90
+
 var _failed := 0
 var _clock := 0.0
 
 
 func _initialize() -> void:
+	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
+	create_timer(WATCHDOG_S).timeout.connect(func():
+		print("slice_test: FAIL did not finish in %d s (a script error stopped it?)" % WATCHDOG_S)
+		quit(1))
 	_run.call_deferred()
 
 
 func _run() -> void:
 	await _random_seed_repeats()
 	await _seed_flag()
+	await _bad_seed_everywhere()
 	await _pending_flag()
 	await _mind_is_pinned()
 	await _fair_cut_route()
@@ -76,6 +84,20 @@ func _random_seed_repeats() -> void:
 	_check(repeats, "a random run's printed seed replays the same run")
 
 
+## One rule for the seed flag in every place that reads it: a whole number of 0 or more, else the fallback.
+func _bad_seed_everywhere() -> void:
+	Flags.set_args(PackedStringArray(["seed=9"]))
+	_check(Rng.new().seed_value == 9, "the Rng takes seed=9")
+	Flags.set_args(PackedStringArray(["seed=abc"]))
+	_check(Rng.new().seed_value >= 0, "the Rng does not turn seed=abc into a made-up seed 0 silently")
+	var a := Rng.new()
+	var b := Rng.new()
+	_check(a.seed_value != b.seed_value, "seed=abc gives a random seed (two runs differ), as the warning says")
+	Flags.set_args(PackedStringArray(["seed=-5"]))
+	_check(Rng.new().seed_value >= 0, "seed=-5 gives a random, printable seed")
+	Flags.set_args(PackedStringArray([]))
+
+
 func _seed_flag() -> void:
 	Flags.set_args(PackedStringArray([]))
 	_check(PersonalitySlice.seed_value() == PersonalitySlice.DEFAULT_SEED, "no seed flag gives the documented seed")
@@ -88,6 +110,7 @@ func _seed_flag() -> void:
 
 
 func _pending_flag() -> void:
+	PersonalitySlice.reset() # whatever ran before, the flag has not been used yet
 	Flags.set_args(PackedStringArray(["personality-slice"]))
 	_check(PersonalitySlice.pending(), "the flag is pending before the slice starts")
 	var flow = await _start()
@@ -96,7 +119,12 @@ func _pending_flag() -> void:
 	_check(not PersonalitySlice.pending(), "no flag, nothing pending")
 	_check(flow.state.floor_map.monsters[0].name == "ROOK" and flow.state.floor_map.monsters[1].name == "VEX", "ROOK and VEX are the first two monsters")
 	var vex = flow.state.floor_map.monsters[1]
-	var taste_vex = Monster.given({"species": "bandit", "genre": "chess", "hp": 24}, Vector2i.ZERO, "VEX", ["jumpy"], vex.meters)
+	for foe in PersonalitySlice.FOES:
+		_check(Content.table("taste").motives.has(foe.trait), "%s's trait is one the game knows a motive for" % foe.name)
+	_check(not vex.clues().is_empty(), "VEX shows at least one clue for his trait")
+	var floor_bandit = Monster.make(Rng.new(3), PersonalitySlice.bandit(), Vector2i.ZERO)
+	_check(vex.species == floor_bandit.species and vex.genre == floor_bandit.genre and vex.max_hp == floor_bandit.max_hp and vex.threshold == floor_bandit.threshold, "a slice bandit is built like a floor bandit (same roster line)")
+	var taste_vex = Monster.given(PersonalitySlice.bandit(), Vector2i.ZERO, "VEX", ["jumpy"], vex.meters)
 	_check(taste_vex.taste == vex.taste, "a monster given its traits gets the taste those traits shift, no random part")
 
 
@@ -105,6 +133,10 @@ func _mind_is_pinned() -> void:
 	Flags.set_args(PackedStringArray([]))
 	var mind = Minds.create(rng, "https://example.invalid", true)
 	_check(mind.get_script() == LocalMind, "the slice thinks with the local rules even when a Jev address is saved")
+	Flags.set_args(PackedStringArray(["mock"]))
+	_check(Minds.create(rng, "", true).get_script() == LocalMind, "the slice thinks with the local rules even with the mock flag")
+	_check(Minds.create(rng, "", false).get_script() != LocalMind, "an ordinary game still takes the mock mind")
+	Flags.set_args(PackedStringArray([]))
 
 
 func _fair_cut_route() -> void:
@@ -112,21 +144,21 @@ func _fair_cut_route() -> void:
 	var s = flow.state
 	var vex = s.floor_map.monsters[1]
 	_check(s.gold == 12 and s.foe.name == "ROOK", "starts with 12 gold against ROOK")
+	_check(not flow.autosave_allowed(), "the slice floor may not be autosaved from the first fight on")
 	await _press(flow, [2, 2])
 	_check(s.stage == "result" and s.gold == 6 and s.foe.gone == "spared", "ROOK takes the 6-gold cut and leaves")
 	await _press(flow, [1])
 	_check(s.stage == "intro" and s.foe == vex, "CONTINUE goes on to VEX")
 	await _to_menu(flow)
-	var hp: int = s.hp
 	await _press(flow, [2, 2])
-	_check(s.gold == 6 and vex.gone == "" and s.hp == hp, "VEX refuses the cut: the gold stays, he stays, and he does not attack on that turn")
+	_check(s.gold == 6 and vex.gone == "" and s.stage == "menu", "VEX refuses the cut: the gold stays, he stays, and the menu is back (no attack follows)")
 	await _press(flow, [3])
 	_check(s.stage == "result" and vex.gone == "spared" and s.allies.size() == 1, "sparing VEX recruits him")
 	await _press(flow, [1])
 	_check(s.stage == "explore" and flow.fixed_roll < 0.0 and flow.slice_queue.is_empty(), "the slice is over and the floor is ordinary again")
-	_check(flow.slice_floor, "the floor stays marked as the playtest floor, so it is never autosaved")
+	_check(flow.slice_floor and not flow.autosave_allowed(), "the floor stays marked as the playtest floor, so it is never autosaved")
 	await flow.new_run()
-	_check(not flow.slice_floor, "a new floor is an ordinary one")
+	_check(not flow.slice_floor and flow.autosave_allowed(), "a new floor is an ordinary one and may be autosaved")
 
 
 ## A monster of the floor that happens to share the next bandit's name must not be taken for him.
@@ -145,10 +177,10 @@ func _names_do_not_matter() -> void:
 func _retry_heals() -> void:
 	var flow = await _start()
 	var s = flow.state
-	s.encounter_start.hp = 3 # the fight began at 3 HP
+	s.hp = 0 # the fight was lost
 	s.stage = "dead"
 	await flow.encounter.retry_fight()
-	_check(s.hp == s.max_hp, "trying a fight again starts at full health, so a low-HP retry cannot loop")
+	_check(s.hp == s.max_hp, "trying a fight again starts at full health, so a lost fight cannot loop")
 	_check(flow.slice_queue.size() == 1 and flow.fixed_roll >= 0.0, "a retry keeps the slice going")
 
 

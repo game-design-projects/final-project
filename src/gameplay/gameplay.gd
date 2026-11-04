@@ -68,10 +68,7 @@ func _ready() -> void:
 	add_child(audio)
 	audio.bind(flow)
 	flow.happened.connect(_on_event)
-	_overlay.state = flow.state
-	_header.state = flow.state
-	_status.state = flow.state
-	_dock.state = flow.state
+	_bind_views()
 	if request.is_empty() and Flags.value("meet") == "" and not slice:
 		_on_title = true
 		_overlay.title_card = true
@@ -96,10 +93,7 @@ func _begin() -> void:
 
 ## Wire the views to the state the flow now holds, and handle the testing flags `meet=<species>` and `personality-slice`.
 func _after_start() -> void:
-	_overlay.state = flow.state
-	_header.state = flow.state
-	_status.state = flow.state
-	_dock.state = flow.state
+	_bind_views()
 	if PersonalitySlice.pending() and request.get("kind", "new") == "new":
 		await PersonalitySlice.start(flow)
 		return
@@ -244,6 +238,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 	var now := _clock_ms / 1000.0
 	var s = flow.state
 	match name:
+		"new_floor":
+			_bind_views()
 		"stage":
 			if data.to == "explore" and data.from != "":
 				_autosave()
@@ -321,6 +317,11 @@ func _load_slot(slot: String) -> void:
 		return
 	_pause.visible = false
 	await flow.load_state(saved)
+	_bind_views()
+
+
+## The views read the flow's current state; a new floor or a loaded save replaces it, so they are pointed at it again.
+func _bind_views() -> void:
 	_header.state = flow.state
 	_status.state = flow.state
 	_dock.state = flow.state
@@ -328,7 +329,7 @@ func _load_slot(slot: String) -> void:
 
 
 func _autosave() -> void:
-	if flow.slice_floor: # the playtest slice's floor leaves no save behind
+	if not flow.autosave_allowed():
 		return
 	Saves.write(Saves.AUTO, flow.state.to_dict(), flow.state.summary())
 

@@ -5,11 +5,16 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
-- `tools/menu_test.gd` checks the menu panel headless, and CI runs it.
+- `tools/menu_test.gd` and `tools/gameplay_test.gd` check the menu panel and the NEW FLOOR rebinding headless, and CI runs them; the test scripts stop with a failure after a timeout instead of hanging.
 
 ### Fixed
 - A random run's printed seed is never negative, so `seed=N` can replay it (about half of them printed a seed the flag rejected).
 - A key hint longer than the menu panel wraps instead of being cut off ("Changes apply at once and are kep"); the settings hint is shorter too.
+- NEW FLOOR (from the stairs or after dying) points the header, status row, dock and overlay at the new floor's state instead of leaving them on the old one.
+- `seed=abc` and `seed=-5` are handled the same everywhere: a warning and a random seed, instead of a silent seed 0 outside the slice.
+- The slice fixes every outcome roll (the feeling a hit or question stirs, mercy, joining), so the same actions give the same results; `mock` no longer swaps its local rules.
+- The slice's bandits are built from the roster's own bandit line, like the floor's.
+- A retry no longer saves a HP value it never used.
 
 ## [0.6.0] - 2026-11-03
 
@@ -199,9 +204,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - Music cues for good news, both quoting the same melody: a bright 8-bit fanfare when you go down the stairs, and a short victory jingle when you win a fight.
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.6.0...HEAD
-[0.6.0]: https://github.com/game-design-projects/final-project/compare/v0.5.3...v0.6.0
-[0.5.3]: https://github.com/game-design-projects/final-project/compare/v0.5.2...v0.5.3
+<!-- No v0.5.3 or v0.6.0 tag exists yet, so those two versions have no compare link; add them when the tags are cut. -->
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.5.2...main
 [0.5.2]: https://github.com/game-design-projects/final-project/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/game-design-projects/final-project/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/game-design-projects/final-project/compare/v0.4.0...v0.5.0

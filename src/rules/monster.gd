@@ -28,40 +28,40 @@ var gone := "" # "", "spared" or "slain"
 
 ## `entry` is one line of the roster (species, genre, hp), or the boss. `cell` is where it stands.
 static func make(rng: Rng, entry: Dictionary, cell: Vector2i):
-	var m = new()
+	var m = _from_entry(entry, cell)
 	var sp := Content.species(entry.species)
 	var start: Dictionary = sp.start
-	m.species = entry.species
-	m.genre = entry.genre
-	m.boss = entry.get("boss", false)
-	m.cell = cell
-	m.max_hp = int(entry.hp)
-	m.hp = m.max_hp
 	m.meters = {
 		"friendliness": clampf(start.friendliness + rng.int_range(-10, 10), 0.0, METER_MAX),
 		"anger": clampf(start.anger + rng.int_range(-5, 10), 0.0, METER_MAX),
 		"fear": float(start.fear),
 	}
 	m.name = str(entry.get("name", "")) if m.boss else str(rng.pick(sp.names)).to_upper()
-	m.threshold = float(sp.joinThreshold) + (5.0 if m.boss else 0.0)
 	m.traits = _pick_traits(rng, m.species, sp)
 	m._roll_taste(rng)
 	print_verbose("monster: %s the %s %s, traits %s" % [m.name, m.species, "boss" if m.boss else "", m.traits])
 	return m
 
 
-## A monster whose personality is given instead of rolled (the playtest slice): the same species, genre and hp fields as
-## `make`, and the taste its traits shift, without the random part. `entry` is a roster line, `meters` its starting feelings.
-static func given(entry: Dictionary, cell: Vector2i, given_name: String, given_traits: Array, meters: Dictionary):
+## The fields every monster takes from its roster line, however its personality is made.
+static func _from_entry(entry: Dictionary, cell: Vector2i):
 	var m = new()
 	m.species = entry.species
 	m.genre = entry.genre
+	m.boss = entry.get("boss", false)
 	m.cell = cell
 	m.max_hp = int(entry.hp)
 	m.hp = m.max_hp
+	m.threshold = float(Content.species(m.species).joinThreshold) + (5.0 if m.boss else 0.0)
+	return m
+
+
+## A monster whose personality is given instead of rolled (the playtest slice): the same species, genre and hp fields as
+## `make`, and the taste its traits shift, without the random part. `entry` is a roster line, `meters` its starting feelings.
+static func given(entry: Dictionary, cell: Vector2i, given_name: String, given_traits: Array, meters: Dictionary):
+	var m = _from_entry(entry, cell)
 	m.meters = meters.duplicate()
 	m.name = given_name
-	m.threshold = float(Content.species(m.species).joinThreshold)
 	m.traits = given_traits.duplicate()
 	m._add_trait_shifts()
 	return m

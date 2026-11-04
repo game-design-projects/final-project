@@ -8,10 +8,16 @@ const Fonts = preload("res://src/view/fonts.gd")
 # loaded when the test runs: the menus read the Store autoload, which a `-s` script is compiled before
 var MenuPanel = null
 var Menus = null
+const WATCHDOG_S := 60
+
 var _failed := 0
 
 
 func _initialize() -> void:
+	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
+	create_timer(WATCHDOG_S).timeout.connect(func():
+		print("menu_test: FAIL did not finish in %d s (a script error stopped it?)" % WATCHDOG_S)
+		quit(1))
 	_run.call_deferred()
 
 

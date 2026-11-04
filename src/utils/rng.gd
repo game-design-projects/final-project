@@ -10,16 +10,26 @@ var seed_value := 0
 var _gen := RandomNumberGenerator.new()
 
 
-## Without a seed it takes the `seed` flag, and without that a fresh random one.
+## Without a seed it takes the `seed` flag (a whole number, 0 or more; anything else is warned about and ignored), and
+## without that a fresh random one.
 func _init(seed := -1) -> void:
 	if seed < 0:
-		seed = int(Flags.value("seed", "-1"))
+		seed = _flag_seed()
 	if seed < 0:
 		_gen.randomize()
 		seed = _gen.seed & 0x7FFFFFFFFFFFFFFF # the engine's seed is unsigned; a negative one could not be passed back as `seed=N`
 	seed_value = seed
 	_gen.seed = seed
 	print_verbose("rng: seed %d" % seed)
+
+
+static func _flag_seed() -> int:
+	var text := Flags.value("seed", "")
+	if text.is_valid_int() and int(text) >= 0:
+		return int(text)
+	if text != "":
+		push_warning("rng: seed=%s is not a seed (a whole number, 0 or more); using a random one" % text)
+	return -1
 
 
 ## An int from a to b, both included.

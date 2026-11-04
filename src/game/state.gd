@@ -29,7 +29,7 @@ var tally := {"spared": 0, "slain": 0, "fled": 0, "recruited": 0, "left": 0}
 var foe # Monster, or null when not in a fight
 var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
-var encounter_start := {} # snapshot taken when a fight begins, to try it again after dying
+var encounter_start := {} # snapshot (foe, purse, tally, party) taken when a fight begins, to try it again after dying; a retry starts at full HP
 
 # what the screen shows
 var lines: Array = [] # [{kind: "sys" | "say", who, text}]

@@ -62,8 +62,7 @@ func _init(game_rng, game_mind) -> void:
 ## A fresh run: a new floor, standing at its start.
 func new_run() -> void:
 	await _leave_current()
-	end_slice()
-	slice_floor = false
+	_forget_slice()
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.floor_map = FloorGen.generate(rng)
@@ -84,14 +83,24 @@ func load_state(saved: Dictionary) -> bool:
 	if loaded == null:
 		return false
 	await _leave_current()
-	end_slice()
-	slice_floor = false
+	_forget_slice()
 	state = loaded
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())
 	await go("explore", {"lines": [State.sys_line(Texts.welcome_back(state.summary()))]})
 	return true
+
+
+## Whether the scene may write the AUTO save when the walk resumes: not on the slice's floor.
+func autosave_allowed() -> bool:
+	return not slice_floor
+
+
+## A floor that replaces the current one (new run, loaded save) is an ordinary floor: no slice, no mark.
+func _forget_slice() -> void:
+	end_slice()
+	slice_floor = false
 
 
 ## Back to ordinary rolls (and no queued fight).
