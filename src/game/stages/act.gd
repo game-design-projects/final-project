@@ -14,7 +14,7 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
 	var items := [{"label": "CHECK", "sub": "Free: read it"}]
-	for a in _acts(m):
+	for a in _acts(m, flow):
 		var pays: bool = m.species in CASHES_IN and a.intent == "gold"
 		items.append({"label": a.label, "sub": Texts.GOLD_ACT_TIP if pays else ""})
 	if m.spoke:
@@ -28,7 +28,7 @@ func enter(flow, _args: Dictionary) -> void:
 func pick(flow, index: int) -> void:
 	var s = flow.state
 	var m = s.foe
-	var acts := _acts(m)
+	var acts := _acts(m, flow)
 	if index == CHECK:
 		s.say([State.sys_line(Texts.check(m, m.clues()))])
 		await flow.go("menu")
@@ -45,8 +45,14 @@ func cancel(flow) -> void:
 	await flow.go("menu")
 
 
-func _acts(m) -> Array:
-	return Content.table("encounter").acts[m.species]
+## This species' ACTs; `flow` is asked whether every monster gets a way to be befriended (some species' only friendly act
+## otherwise is one a good share of them dislike).
+func _acts(m, flow = null) -> Array:
+	var enc: Dictionary = Content.table("encounter")
+	var acts: Array = enc.acts[m.species]
+	if flow != null and flow.feature("recruit-step"):
+		return acts + enc.kind_acts.get(m.species, [])
+	return acts
 
 
 func _do_act(flow, act: Dictionary) -> void:

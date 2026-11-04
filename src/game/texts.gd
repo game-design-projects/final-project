@@ -49,6 +49,51 @@ static func check(foe, individual_clues: Array) -> String:
 	return "%s seems %s. Its kind likes %s and hates %s. %s" % [foe.name, " and ".join(foe.traits), ", ".join(likes), sp.dislikes[0], individual]
 
 
+## "Mercy 13% -> 34%.": how far a deed moved the odds.
+static func mercy_moved(from: float, to: float) -> String:
+	return "Mercy %s -> %s." % [Combat.chance_label(from), Combat.chance_label(to)]
+
+
+# ---- making friends
+
+static func spare_tip(mercy: float, boss: bool) -> String:
+	var opening := "Even a champion can be won over: ACTs" if boss else "ACTs"
+	return "%s chance to accept. %s it likes raise the odds, and at 50%%+ its name turns gold. Spared, it may ask to join you as a passive charm." % [Combat.chance_label(mercy), opening]
+
+
+static func not_ready(foe, odds: float) -> String:
+	return "%s isn't ready (%s chance). Do what it likes, then ask again." % [foe.name, Combat.chance_label(odds)]
+
+
+static func asks_along(foe, charm: Dictionary, room: bool) -> String:
+	if room:
+		return "%s wants to come with you. It would bring %s: %s." % [foe.name, charm.name, charm.text]
+	return "%s would come with you, but your party is full." % foe.name
+
+
+static func gift_tip(gift: Dictionary) -> String:
+	return "It leaves a gift: %d gold and %d HP" % [gift.gold, gift.heal]
+
+
+static func party_tip(allies: int) -> String:
+	return "Party %d/%d. Each friend makes every fight easier." % [allies + 1, Combat.PARTY_MAX]
+
+
+static func joined_title(foe) -> String:
+	return "%s JOINS YOU" % foe.name
+
+
+static func joined(foe, charm: Dictionary, healed: int) -> String:
+	return "%s joins you: %s, %s.%s" % [foe.name, charm.name, charm.text, " +%d HP." % healed if healed > 0 else ""]
+
+
+static func parted(gold: int, healed: int) -> String:
+	return "SPARED. It leaves you %d gold%s." % [gold, " and %d HP" % healed if healed > 0 else ""]
+
+
+const BOSS_WINNABLE := "It can be won over too."
+
+
 # ---- a fair cut of gold
 
 static func cut_too_poor(gold: int, typed: bool) -> String:
@@ -160,6 +205,19 @@ static func you_fall(foe) -> String:
 
 static func floor_done(depth: int) -> String:
 	return "B%dF behind you. The stairs go on down, and you catch your breath on the way." % depth
+
+
+const DOOR_SHUT := "The Last Door stays shut. It only opens for someone who is not alone."
+const DOOR_HINT := "Turn back and find a friend, or leave by the side way, alone."
+
+
+## {route, text, tail} for leaving the last floor with nobody.
+static func lonely_ending() -> Dictionary:
+	return {
+		"route": "THE LONELY WAY OUT",
+		"text": "You squeeze out through the drain. Nobody sees you go, and the Last Door stays shut.",
+		"tail": "Not cleared. The door is still waiting for you and a friend.",
+	}
 
 
 ## {route, text, tail} for the summary at the stairs.

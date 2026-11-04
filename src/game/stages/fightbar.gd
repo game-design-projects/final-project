@@ -11,6 +11,8 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.menu = []
 	s.hint = "ENTER STRIKE WHEN THE LINE CROSSES THE MIDDLE"
+	if flow.feature("party-aid") and not s.allies.is_empty():
+		s.hint += " · PARTY +%d" % Combat.party_aid(s.allies.size())
 	s.bar = {"t0": flow.clock, "dur": Combat.bar_ms(s.has_ally("rock"))}
 
 
@@ -30,7 +32,8 @@ func _strike(flow, t: float) -> void:
 	var m = s.foe
 	var x := clampf((t - s.bar.t0) / s.bar.dur, 0.0, 1.0)
 	s.bar = null
-	var result := Combat.strike(x, m.boss, s.has_ally("dragon"))
+	var aid: int = Combat.party_aid(s.allies.size()) if flow.feature("party-aid") else 0
+	var result := Combat.strike(x, m.boss, s.has_ally("dragon"), aid)
 	if result.miss:
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")

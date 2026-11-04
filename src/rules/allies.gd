@@ -12,10 +12,21 @@ const LOYALTY_PER_POINT := 10.0
 const LEAVE_BELOW := 30.0
 const START_LOYALTY_MIN := 60
 const START_LOYALTY_MAX := 80
+const EAGER_LOYALTY := 30.0 # the most wanting to come (or not) moves its starting loyalty, from one end to the other
 
 
 static func start_loyalty(dice: Dice) -> float:
 	return float(dice.int_between(START_LOYALTY_MIN, START_LOYALTY_MAX))
+
+
+## How loyal one starts that chose to come: the usual start, and more or less by how much it wanted to (0..1).
+static func eager_loyalty(dice: Dice, wants: float) -> float:
+	return clampf(start_loyalty(dice) + (wants - 0.5) * EAGER_LOYALTY, LEAVE_BELOW + 1.0, 100.0)
+
+
+## What a monster you made peace with leaves you, {gold, heal}. Gold only comes from one that goes its own way.
+static func gift(species: String) -> Dictionary:
+	return Content.table("encounter").gifts[species]
 
 
 ## Does an ally of this species have an opinion on this deed? ("slay", "spare", "flee", or a kind of words)

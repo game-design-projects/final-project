@@ -25,6 +25,10 @@ var _event_counts := {}
 var _retries := 0
 var _met_floor := 1 # the floor the two fights are counted on
 var _met_before := 0 # how many it had met before that floor
+var _tried := {} # pacifist: ACT -> how far it moved the odds, for this foe
+var _tried_foe = null
+var _last_try := -1
+var _mercy_before := 0.0
 
 
 func _init() -> void:
@@ -80,13 +84,20 @@ func _press_something(flow) -> void:
 		"explore":
 			await flow.press(_explore_key(s))
 		"menu", "act":
-			if _autopilot.chance(0.08):
+			if _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
+				await flow.press(str(_kindest_act(flow)))
+			elif _autopilot.chance(0.08):
 				var pool := [1, 2, 3, 4] if s.stage == "menu" else range(1, s.menu.size() + 1)
 				if s.stage == "menu" and s.foe.boss:
 					pool = [1, 1, 2, 2, 3]
+				if s.stage == "menu" and Flags.on("pacifist"):
+					pool = [3] if s.menu[2].get("gold", false) else [2]
 				await flow.press(str(_autopilot.pick(pool)))
+		"ask":
+			await flow.press("1") # COME ALONG, or GO IN PEACE with a full party
 		"end":
-			await flow.press("1") # go on down
+			# the shut door's first answer is TURN BACK: with nobody left to befriend that would go round for ever
+			await flow.press("2" if s.menu[0].label == "TURN BACK" else "1")
 		"talk":
 			await flow.submit_text(_autopilot.pick(PHRASES))
 		"fightbar":
@@ -100,6 +111,30 @@ func _press_something(flow) -> void:
 		"dead":
 			_retries += 1
 			await flow.press("1") # a new run would lose the floors already walked
+
+
+## What a player learns from the mercy gauge: try each ACT once, then keep to the one that moved the odds most (a key to press).
+func _kindest_act(flow) -> int:
+	var s = flow.state
+	if _last_try >= 0:
+		_tried[_last_try] = flow.encounter.known_mercy - _mercy_before
+	if _tried_foe != s.foe:
+		_tried_foe = s.foe
+		_tried = {}
+	_mercy_before = flow.encounter.known_mercy
+	var options := []
+	for i in range(1, s.menu.size() - 1): # past CHECK, and short of SAY SOMETHING
+		if s.menu[i].sub == "": # a gold offer has a tip, and ends the fight with no friend
+			options.append(i)
+	var best: int = options[0]
+	for i in options:
+		if not _tried.has(i):
+			_last_try = i
+			return i + 1
+		if _tried[i] > _tried[best]:
+			best = i
+	_last_try = best
+	return best + 1
 
 
 ## Step to the neighbouring cell (or stay) that the fewest hazards light now or soon. Returns "" to stay put.

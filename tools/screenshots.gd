@@ -232,6 +232,8 @@ func _walk_and_fight() -> void:
 		await _wait(0.4)
 		await _shot("10_result")
 		await flow.press("confirm")
+		await _wait(0.5)
+		await _shot("10b_joined")
 	# the death screen: put the game in a dodge with no health left and let the stage notice
 	s.stage = "dodge"
 	s.foe = monsters[1]

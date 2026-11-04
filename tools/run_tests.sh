@@ -34,10 +34,13 @@ run_mode() {
 	local log="$OUT/$mode-autoplay.log"
 	local code=0
 	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
+	if ! grep -qE '^autoplay: [0-9]+ of' "$log"; then
+		code=1 # as above: a script that doesn't parse exits with 0
+	fi
 	echo "$mode autoplay: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo 'no verdict')"
 	if [ "$code" != 0 ]; then
 		failed=1
-		grep -E 'DID NOT FINISH|SCRIPT ERROR' "$log" | cut -c1-220 | head -10 || true
+		grep -E 'DID NOT FINISH|SCRIPT ERROR|Parse Error' "$log" | cut -c1-220 | head -10 || true
 	fi
 }
 

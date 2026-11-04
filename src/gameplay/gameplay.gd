@@ -410,6 +410,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_postfx.flash(Palette.MERCY, 0.4 * _softness())
 		"slain":
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
+		"mercy_changed":
+			var up: bool = data.to > data.from
+			_overlay.popup("%+d%% MERCY" % (roundi(data.to * 100.0) - roundi(data.from * 100.0)), Palette.MERCY if up else Palette.DIM, Vector2(150, 62))
 		"mercy_refused":
 			_overlay.popup("REFUSED", Palette.DIM, Vector2(224, 96))
 		"pause_requested":

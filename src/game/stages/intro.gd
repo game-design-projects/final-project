@@ -25,6 +25,8 @@ func enter(flow, args: Dictionary) -> void:
 	var rule: String
 	if m.boss:
 		rule = Texts.BOSS_RULE
+		if flow.feature("recruit-step"):
+			rule += " " + Texts.BOSS_WINNABLE
 	else:
 		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre], flow.feature("piece-icons"))
 	var before: Array = args.get("before", [])
@@ -36,6 +38,7 @@ func enter(flow, args: Dictionary) -> void:
 	lines.append(State.sys_line(rule))
 	s.say(lines)
 	var mercy: float = await flow.mind.mercy(m)
+	flow.encounter.known_mercy = mercy
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
 	print("intro: %s (%s) %s" % [m.name, m.species, "BOSS" if m.boss else ""])
 

@@ -3,6 +3,9 @@
 ##   godot --headless --path . -s res://tools/features_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
+const Combat = preload("res://src/rules/combat.gd")
+const Content = preload("res://src/rules/content.gd")
+const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
@@ -27,6 +30,7 @@ func _run() -> void:
 	_flags()
 	await _real_floors()
 	await _dodges()
+	await _recruiting()
 	_finish()
 
 
@@ -114,8 +118,9 @@ func _real_floors() -> void:
 
 	s = again.state
 	s.depth = Floors.run_floors()
+	s.allies.append(load("res://src/game/ally.gd").make("slime", "GLOB", 70.0))
 	await _reach_stairs(again)
-	_check(s.stage == "end" and s.run_over, "the last floor's stairs end the run")
+	_check(s.stage == "end" and s.run_over, "with a friend, the last floor's stairs end the run")
 	var ended = s
 	await again.press("1")
 	_check(again.state != ended and again.state.depth == 1, "and NEW RUN starts over on B1F")
@@ -127,6 +132,140 @@ func _real_floors() -> void:
 	var kept = classic.state
 	await classic.press("1")
 	_check(classic.state != kept and classic.state.depth == 1, "classic: NEW FLOOR starts over")
+	_use()
+
+
+## A fight with a monster that is already won over, at its menu.
+func _at_menu(flow, species := "slime") -> Variant:
+	await flow.new_run()
+	var s = flow.state
+	var m = s.floor_map.monsters.filter(func(x): return x.species == species and not x.boss).front()
+	if m == null:
+		m = s.floor_map.monsters[0]
+	await flow.go("intro", {"foe": m})
+	await flow.tick(flow.clock + 1000.0)
+	return m
+
+
+func _won_over(m) -> void:
+	m.meters.friendliness = 100.0
+	m.meters.anger = 0.0
+
+
+func _recruiting() -> void:
+	var flow = _flow(21)
+	var m = await _at_menu(flow)
+	var s = flow.state
+	_check(s.stage == "menu", "a fight reaches its menu (%s)" % s.stage)
+	_check(s.menu[2].sub.contains("raise the odds"), "SPARE says that ACTs move the odds (%s)" % s.menu[2].sub)
+	_won_over(m)
+	s.hp = 5
+	s.gold = 3
+	await flow.press("3")
+	_check(s.stage == "ask" and m.gone == "spared", "a SPARE that lands asks you, not a second roll (%s)" % s.stage)
+	_check(s.menu[0].label == "COME ALONG" and s.menu[0].sub.contains(Content.table("encounter").charms[m.species].name), "the question says what it brings (%s)" % s.menu[0].sub)
+	await flow.press("1")
+	_check(s.stage == "explore" and s.allies.size() == 1 and s.tally.recruited == 1, "COME ALONG: it joins, always")
+	_check(s.banner != null and s.banner.title.contains("JOINS"), "joining puts a banner up (%s)" % str(s.banner))
+	_check(s.hp > 5, "peace heals you a little (%d)" % s.hp)
+	_check(s.allies[0].loyalty >= 31.0 and s.allies[0].loyalty <= 100.0, "an ally starts loyal (%.0f)" % s.allies[0].loyalty)
+
+	flow = _flow(22)
+	m = await _at_menu(flow)
+	s = flow.state
+	_won_over(m)
+	s.hp = 5
+	var gold: int = s.gold
+	await flow.press("3")
+	await flow.press("2")
+	_check(s.stage == "explore" and s.allies.is_empty(), "GO IN PEACE: it does not join")
+	_check(s.gold > gold and s.hp > 5, "and leaves a gift (%d gold, %d HP)" % [s.gold - gold, s.hp - 5])
+
+	flow = _flow(23)
+	m = await _at_menu(flow)
+	s = flow.state
+	var Ally = load("res://src/game/ally.gd")
+	for i in 3:
+		s.allies.append(Ally.make("rock", "R%d" % i, 70.0))
+	_won_over(m)
+	await flow.press("3")
+	_check(s.stage == "ask" and s.menu.size() == 1 and s.menu[0].label == "GO IN PEACE", "a full party can only say goodbye")
+	await flow.press("1")
+	_check(s.allies.size() == 3, "and stays at three")
+
+	flow = _flow(24)
+	m = await _at_menu(flow)
+	s = flow.state
+	m.meters.friendliness = 0.0
+	m.meters.anger = 20.0
+	await flow.press("3")
+	_check(m.gone == "" and s.stage == "wait", "a refused SPARE goes on with the fight (%s, %s)" % [m.gone, s.stage])
+	_check(m.meters.anger == 20.0, "and doesn't anger it (%.0f)" % m.meters.anger)
+	_check(s.lines[0].text.contains("isn't ready"), "and says what to do (%s)" % s.lines[0].text)
+
+	# patience pays, and every kind of monster has a way to be befriended
+	flow = _flow(30)
+	m = await _at_menu(flow)
+	var warm: float = m.meters.friendliness
+	Feelings.warm_up(m, {"tone": "good"})
+	_check(m.meters.friendliness > warm, "a monster you keep talking to warms up")
+	warm = m.meters.friendliness
+	Feelings.warm_up(m, {"tone": "bad"})
+	_check(m.meters.friendliness == warm, "unless the words landed badly")
+	m = await _at_menu(flow, "bandit")
+	await flow.press("2")
+	_check(flow.state.menu.any(func(i): return i.label == "TREAT IT AS AN EQUAL") or m.species != "bandit", "a bandit can be befriended without paying")
+	flow = _flow(30, ["no-recruit-step"])
+	m = await _at_menu(flow, "bandit")
+	await flow.press("2")
+	_check(not flow.state.menu.any(func(i): return i.label == "TREAT IT AS AN EQUAL"), "no-recruit-step: the ACTs are the old three")
+
+	# the mercy link
+	flow = _flow(25)
+	m = await _at_menu(flow)
+	s = flow.state
+	var moved := []
+	flow.happened.connect(func(n, d): if n == "mercy_changed": moved.append(d))
+	await flow.encounter.after_player([State.sys_line("x")], await flow.encounter.decide(m, [{"intent": "kindness", "w": 1.0}], "TEST"))
+	_check(moved.size() == 1 and moved[0].to != moved[0].from, "a deed that moves mercy says so (%s)" % str(moved))
+	_check(s.lines[0].text.contains("Mercy ") and s.lines[0].text.contains("->"), "in the log too (%s)" % s.lines[0].text)
+
+	# party aid
+	_check(Combat.strike(0.75, false, false, 2).damage == Combat.strike(0.75, false, false).damage + 2, "allies add to a strike")
+	_check(Combat.party_guard(1) == 0 and Combat.party_guard(2) == 1, "two allies take the edge off a hit")
+	flow = _flow(26)
+	m = await _at_menu(flow)
+	s = flow.state
+	s.allies = [Ally.make("rock", "A", 70.0), Ally.make("rock", "B", 70.0)]
+	await flow.press("1")
+	_check(s.hint.contains("PARTY +2"), "the strike bar names the party's help (%s)" % s.hint)
+
+	# the last door
+	flow = _flow(27)
+	await flow.new_run()
+	s = flow.state
+	s.depth = Floors.run_floors()
+	await _reach_stairs(flow)
+	_check(s.stage == "end" and not s.run_over and s.menu[0].label == "TURN BACK", "alone, the last door stays shut")
+	await flow.press("1")
+	_check(s.stage == "explore" and s.cell == s.floor_map.stairs, "TURN BACK: back to the floor")
+	s.cell = s.floor_map.start
+	await _reach_stairs(flow)
+	await flow.press("2")
+	_check(s.stage == "end" and s.run_over and s.lines[0].who == "THE LONELY WAY OUT", "LEAVE ALONE ends the run, not cleared (%s)" % s.lines[0].who)
+	_check(s.menu[0].label == "NEW RUN", "and offers a new run")
+
+	# switched off, the old way
+	flow = _flow(28, ["no-recruit-step"])
+	m = await _at_menu(flow)
+	_won_over(m)
+	await flow.press("3")
+	_check(flow.state.stage == "explore" and m.gone == "spared", "no-recruit-step: a spare goes back to rolling by itself")
+	flow = _flow(29, ["no-last-door"])
+	await flow.new_run()
+	flow.state.depth = Floors.run_floors()
+	await _reach_stairs(flow)
+	_check(flow.state.run_over, "no-last-door: the last stairs end the run alone")
 	_use()
 
 

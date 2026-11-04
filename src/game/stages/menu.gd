@@ -18,7 +18,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
-		{"label": "SPARE", "sub": "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
+		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss) if flow.feature("recruit-step") else "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else "Back away"},
 	]
 	s.hint = "UP / DOWN CHOOSE · ENTER PICK · 1-4 · I INFO"
@@ -51,9 +51,12 @@ func _spare(flow) -> void:
 		await flow.encounter.defeat(m, "spared")
 		return
 	flow.event("mercy_refused")
-	m.meters.anger = clampf(m.meters.anger + Combat.REFUSED_MERCY_ANGER, 0.0, 100.0)
+	var gentle: bool = flow.feature("recruit-step")
+	if not gentle:
+		m.meters.anger = clampf(m.meters.anger + Combat.REFUSED_MERCY_ANGER, 0.0, 100.0)
 	var pressure: float = await flow.mind.pressure(m)
-	await flow.encounter.after_player([State.sys_line(Texts.mercy_refused(m, odds))], {"pressure": pressure, "pacified": false})
+	var line: String = Texts.not_ready(m, odds) if gentle else Texts.mercy_refused(m, odds)
+	await flow.encounter.after_player([State.sys_line(line)], {"pressure": pressure, "pacified": false})
 
 
 func _flee(flow) -> void:

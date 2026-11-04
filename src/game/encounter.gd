@@ -16,6 +16,8 @@ var flow
 ## Allies' reactions to the last deed, said with the next message.
 var pending_notes: Array = []
 var pending_rows: Array = []
+## The mercy odds as the player last saw them, so a deed can say how far it moved them. Below 0 when not known yet.
+var known_mercy := -1.0
 
 
 func _init(owner) -> void:
@@ -58,9 +60,12 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 		feelings = await flow.mind.feeling_when_told(m, act)
 	var id := Odds.pick_by_odds(flow.dice, feelings)
 	var feeling := Feelings.apply(m, id)
+	if not act is String and flow.feature("recruit-step"):
+		Feelings.warm_up(m, feeling)
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
 	var mercy: float = after.mercy
 	var pressure: float = after.pressure
+	var note := _mercy_moved(mercy)
 	print_verbose("encounter: %s (%s) %s -> %s, mercy %d%%, pressure %.2f" % [m.name, ", ".join(m.traits), m.last_intent, id, roundi(mercy * 100.0), pressure])
 	var rows := []
 	if words != null:
@@ -70,11 +75,23 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	rows.append({"id": "pressure", "label": "HOW HARD DOES IT ATTACK?", "answer": pressure})
 	flow.state.mind_rows = rows + pending_rows
 	pending_rows = []
-	return {"id": id, "feeling": feeling, "pressure": pressure, "pacified": Feelings.pacifies(id)}
+	return {"id": id, "feeling": feeling, "pressure": pressure, "pacified": Feelings.pacifies(id), "note": note}
+
+
+## Says that the mercy odds moved, and returns the words for it for the log ("" when they stayed, or the feature is off).
+func _mercy_moved(mercy: float) -> String:
+	var before := known_mercy
+	known_mercy = mercy
+	if before < 0.0 or not flow.feature("mercy-link") or roundi(before * 100.0) == roundi(mercy * 100.0):
+		return ""
+	flow.event("mercy_changed", {"from": before, "to": mercy})
+	return Texts.mercy_moved(before, mercy)
 
 
 ## After the player acts: show what happened, then the monster either holds back or winds up its attack.
 func after_player(lines: Array, decision: Dictionary, show_attack_line := true) -> void:
+	if decision.get("note", "") != "" and not lines.is_empty():
+		lines[0].text += " " + decision.note
 	lines = lines + _take_notes()
 	if decision.pacified:
 		lines.append(State.sys_line(Texts.NOT_ATTACKING))
@@ -123,6 +140,9 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	m.gone = how
 	s.tally[how] += 1
 	flow.event(how, {"boss": m.boss})
+	if how == "spared" and allow_join and flow.feature("recruit-step"):
+		await flow.go("ask")
+		return
 	var joined := false
 	var line = null
 	var rows := []
@@ -147,6 +167,39 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	s.mind_rows = rows + pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## The answer at the ask stage: it comes along. Nothing is rolled: it asked and you said yes.
+func take_along(m, wants: float) -> void:
+	var s = flow.state
+	s.allies.append(Ally.make(m.species, m.name, Allies.eager_loyalty(flow.dice, wants)))
+	s.tally.recruited += 1
+	flow.event("recruited", {"species": m.species})
+	var charm: Dictionary = Content.table("encounter").charms[m.species]
+	var healed := _heal(Allies.gift(m.species).heal)
+	flow.announce(Texts.joined_title(m), "%s: %s" % [charm.name, charm.text])
+	print("encounter: %s joins, loyalty %.0f, healed %d" % [m.name, s.allies.back().loyalty, healed])
+	await leave_fight([State.sys_line(Texts.joined(m, charm, healed))] + _take_notes())
+
+
+## The answer at the ask stage: it goes its own way, and leaves you something.
+func part_ways(m) -> void:
+	var s = flow.state
+	var gift: Dictionary = Allies.gift(m.species)
+	s.gold += int(gift.gold)
+	var healed := _heal(gift.heal)
+	print("encounter: %s leaves a gift: %d gold, healed %d" % [m.name, gift.gold, healed])
+	var line = foe_line(m, "leave_peacefully")
+	var lines := [line] if line != null else []
+	await leave_fight(lines + [State.sys_line(Texts.parted(int(gift.gold), healed))] + _take_notes())
+
+
+## Up to `amount` health back; returns how much it was.
+func _heal(amount) -> int:
+	var s = flow.state
+	var before: int = s.hp
+	s.hp = mini(s.max_hp, s.hp + int(amount))
+	return s.hp - before
 
 
 ## The fight is over: the log says how, and the party is back to walking, or in the personality slice on to its second

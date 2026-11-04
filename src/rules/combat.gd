@@ -22,6 +22,10 @@ const HIT_ANGER := 10.0
 const HIT_FEAR := 8.0
 const REFUSED_MERCY_ANGER := 4.0
 
+# What friends do for a fight (party-aid)
+const AID_PER_ALLY := 1 # added to every strike
+const GUARD_FROM_ALLIES := 2 # this many allies take a point off every hit
+
 # Damage the player takes from one hit in the dodge box
 const DODGE_DAMAGE := 3
 const DODGE_DAMAGE_BOSS := 4
@@ -33,14 +37,24 @@ const WINDUP_MS := 650.0
 
 ## How a strike landed. `x` is how far along the bar the line was when stopped (0..1). `hoard_fire` is whether the
 ## party has the dragon's charm, which adds to every strike.
-static func strike(x: float, boss: bool, hoard_fire: bool) -> Dictionary:
+static func strike(x: float, boss: bool, hoard_fire: bool, aid := 0) -> Dictionary:
 	var off := absf(x - 0.5) * 2.0
 	if off > MISS_EDGE:
 		return {"miss": true, "crit": false, "damage": 0}
 	var crit := off < CRIT_EDGE
 	var base := CRIT_DAMAGE if crit else 4.0 + 8.0 * pow(1.0 - off, 1.2)
-	var damage := roundi(base * (BOSS_DAMAGE_SCALE if boss else 1.0)) + (HOARD_FIRE_BONUS if hoard_fire else 0)
+	var damage := roundi(base * (BOSS_DAMAGE_SCALE if boss else 1.0)) + (HOARD_FIRE_BONUS if hoard_fire else 0) + aid
 	return {"miss": false, "crit": crit, "damage": damage}
+
+
+## What this many allies add to a strike.
+static func party_aid(allies: int) -> int:
+	return allies * AID_PER_ALLY
+
+
+## What this many allies take off each hit in the dodge box.
+static func party_guard(allies: int) -> int:
+	return 1 if allies >= GUARD_FROM_ALLIES else 0
 
 
 static func bar_ms(steady: bool) -> float:

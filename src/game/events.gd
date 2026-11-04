@@ -18,6 +18,7 @@ const FIELDS := {
 	"menu_move": [], # the cursor moved in a list of choices
 	"menu_pick": [], # a choice was confirmed
 	"mercy_refused": [],
+	"mercy_changed": ["from", "to"], # a deed moved the mercy odds (0..1)
 	"spared": ["boss"],
 	"slain": ["boss"],
 	"recruited": ["species"],

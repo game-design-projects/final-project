@@ -38,6 +38,7 @@ var hit_flash := -1e9
 var block_flash := -1e9
 var pulse := 0.0
 var boss := false
+var guard := 0 # what the party takes off each hit
 var foe_turn := 0
 var bandit_charm := false
 var snake_charm := false
@@ -97,7 +98,7 @@ func update(t: float, rng: Rng) -> Array:
 				events.append({"type": "shield"})
 				continue
 			hit_flash = t
-			events.append({"type": "hurt", "damage": Combat.DODGE_DAMAGE_BOSS if boss else Combat.DODGE_DAMAGE})
+			events.append({"type": "hurt", "damage": maxi(1, (Combat.DODGE_DAMAGE_BOSS if boss else Combat.DODGE_DAMAGE) - guard)})
 	hazards = hazards.filter(func(h): return t < h.end)
 	return events
 

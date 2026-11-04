@@ -19,7 +19,7 @@ const BOX_CELL := 28.0
 const BOX_X := (W - Dodge.COLS * BOX_CELL) / 2.0
 const BOX_Y := 82.0
 
-const FIGHT_STAGES := ["intro", "menu", "act", "talk", "fightbar", "wait", "dodge", "dead"]
+const FIGHT_STAGES := ["intro", "menu", "ask", "act", "talk", "fightbar", "wait", "dodge", "dead"]
 const HEALTH_OK := Color("#9ed36b")
 const LANTERN := Color("#fff3b0")
 const GRID := Color("#1c1c20")
@@ -29,6 +29,8 @@ const CHARM_USED := Color("#3a3a3a")
 const INTRO_FLASH_MS := 700.0
 const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pixels
 const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
+const BANNER_FADE_MS := 220.0
+const BANNER := Rect2(64, 40, 320, 46)
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
 # the receding corridor behind the title: how big each frame is against the picture
 const TITLE_FRAMES := [1.0, 0.556, 0.385, 0.294, 0.238]
@@ -104,6 +106,26 @@ func charm_rows() -> Array:
 	return out
 
 
+## The mercy odds as the mind last answered (0..1), for the gauge; below 0 when there is no gauge to draw.
+func mercy_gauge() -> float:
+	if not Flags.enabled("mercy-link") or state.foe == null or state.foe.is_gone():
+		return -1.0
+	for row in state.mind_rows:
+		if row.id == "mercy":
+			return float(row.answer)
+	return -1.0
+
+
+## The banner's strength now (0 when there is none): it fades in, holds and fades out.
+func banner_strength() -> float:
+	if state.banner == null:
+		return 0.0
+	var age: float = clock_ms - state.banner.t0
+	if age < 0.0 or age >= state.banner.ms:
+		return 0.0
+	return minf(1.0, minf(age, state.banner.ms - age) / BANNER_FADE_MS)
+
+
 ## How far the battle screen is knocked off its place this frame (picture pixels); zero when it isn't shaking.
 func shake_offset() -> Vector2:
 	if clock_ms >= shake_until:
@@ -141,6 +163,17 @@ func _draw() -> void:
 		var col: Color = p.color
 		col.a = 1.0 - age
 		_text(_body, p.text, p.at + Vector2(0.0, -26.0 * age), 22, col, HORIZONTAL_ALIGNMENT_CENTER)
+	_banner()
+
+
+func _banner() -> void:
+	var strength := banner_strength()
+	if strength <= 0.0:
+		return
+	draw_rect(BANNER, Color(0.0, 0.0, 0.0, 0.88 * strength))
+	draw_rect(BANNER, Color(Palette.MERCY, strength), false, 1.0)
+	_text(_title, state.banner.title, BANNER.position + Vector2(0, 17), 9, Color(Palette.MERCY, strength), HORIZONTAL_ALIGNMENT_CENTER, BANNER.size.x)
+	_text(_body, state.banner.text, BANNER.position + Vector2(0, 35), 14, Color(Palette.INK, strength), HORIZONTAL_ALIGNMENT_CENTER, BANNER.size.x)
 
 
 func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
@@ -200,6 +233,13 @@ func _name_and_health(m) -> void:
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.WARN if frac < 0.4 else HEALTH_OK)
+	var mercy := mercy_gauge()
+	if mercy >= 0.0:
+		var gauge := Rect2(12, 34, 120, 3)
+		draw_rect(gauge, Palette.FAINT)
+		draw_rect(Rect2(gauge.position, Vector2(gauge.size.x * mercy, gauge.size.y)), Palette.MERCY)
+		draw_line(gauge.position + Vector2(gauge.size.x * MERCY_AT, -1.0), gauge.position + Vector2(gauge.size.x * MERCY_AT, gauge.size.y + 1.0), Palette.INK)
+		_text(_title, "MERCY %d%%" % roundi(mercy * 100.0), Vector2(136, 38), 6, Palette.MERCY)
 	var genre: String = state.dodge.genre if state.dodge != null else state.genre_of(m)
 	var label: String = Content.table("encounter").genres[genre].name
 	if m.boss:
@@ -356,6 +396,10 @@ func _charms() -> void:
 	_text(_title, "CHARMS", Vector2(12, BOX_Y + 8.0), 7, Palette.DIM)
 	for row in rows:
 		_text(_title, row.name, Vector2(12, row.y), 7, row.color)
+	if Flags.enabled("party-aid"):
+		_text(_title, "+%d STRIKE" % rows.size(), Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 4.0), 6, Palette.DIM)
+		if state.dodge.guard > 0:
+			_text(_title, "-%d HURT" % state.dodge.guard, Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 14.0), 6, Palette.DIM)
 
 
 func _cell_rect(k: int) -> Rect2:

@@ -4,6 +4,8 @@ extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
 
+const WARM_UP := {"friendliness": 2.5, "anger": -1.0}
+
 
 static func all() -> Dictionary:
 	return Content.table("emotions").feelings
@@ -27,6 +29,13 @@ static func apply(m, id: String) -> Dictionary:
 			_shift(m, motives[t].meters.get(m.last_intent, {}))
 	print_verbose("feelings: %s feels %s -> %s" % [m.name, id, m.meters])
 	return feeling
+
+
+## Patience pays: a monster you kept talking to warms up a little however the words landed, unless they landed badly. So every
+## monster can be won over in the end, and the odds never stall (recruit-step).
+static func warm_up(m, feeling: Dictionary) -> void:
+	if feeling.get("tone", "") != "bad":
+		_shift(m, WARM_UP)
 
 
 static func _shift(m, shift: Dictionary) -> void:

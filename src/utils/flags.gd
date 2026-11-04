@@ -18,6 +18,7 @@ const KNOWN := {
 	"meet": "meet=<species>: start in a fight with that monster",
 	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
+	"pacifist": "for tools/autoplay.gd: never strike, only ACT and SPARE",
 	"pad": "show the touch pad (arrows, INFO, BACK, OK) without a touch screen",
 	"nosound": "no sound effects and no music",
 	"nosfx": "no sound effects and no monster voices (the music still plays)",
@@ -33,6 +34,10 @@ const FEATURES := {
 	"piece-icons": "chess attacks show a piece's shape and lines to the squares it reaches, not a letter, and every attack's rule is in plain words",
 	"gentle-dodge": "dodges run slower, and their pace follows the foe's friendliness, the floor, how you are doing and the EASY DODGE setting",
 	"mini-games": "every third attack is a mini-game: fly through the gaps in the walls, or catch the falling stars",
+	"recruit-step": "a spared monster asks to come along and you answer, with no second roll; peace leaves a gift, a refused SPARE no longer angers, and champions are presented as winnable",
+	"mercy-link": "the mercy odds show as a gauge beside the monster's health, and each deed says how far it moved them",
+	"party-aid": "each ally adds to your strikes, and two or more take the edge off every hit",
+	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 
 const OFF_WORDS := ["off", "0", "false", "no"]

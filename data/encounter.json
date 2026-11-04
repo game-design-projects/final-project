@@ -209,6 +209,16 @@
    "insult": 0.5
   }
  },
+ "kind_acts": {
+  "bandit": [{"label": "TREAT IT AS AN EQUAL", "intent": "courage"}]
+ },
+ "gifts": {
+  "slime": {"gold": 2, "heal": 4},
+  "bandit": {"gold": 5, "heal": 1},
+  "snake": {"gold": 3, "heal": 2},
+  "rock": {"gold": 2, "heal": 3},
+  "dragon": {"gold": 12, "heal": 8}
+ },
  "mini_games": [
   "gates",
   "stars"

@@ -18,10 +18,13 @@ const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
+const BANNER_MS := 3000.0
+
 const STAGES := {
 	"explore": preload("res://src/game/stages/explore.gd"),
 	"intro": preload("res://src/game/stages/intro.gd"),
 	"menu": preload("res://src/game/stages/menu.gd"),
+	"ask": preload("res://src/game/stages/ask.gd"),
 	"act": preload("res://src/game/stages/act.gd"),
 	"talk": preload("res://src/game/stages/talk.gd"),
 	"fightbar": preload("res://src/game/stages/fightbar.gd"),
@@ -174,6 +177,12 @@ func go(to: String, args := {}) -> void:
 	print("flow: %s -> %s" % [from if from != "" else "start", to])
 	event("stage", {"from": from, "to": to})
 	await _stages[to].enter(self, args)
+
+
+## Put a moment worth stopping for on the picture: a banner that fades by itself.
+func announce(title: String, text: String, ms := BANNER_MS) -> void:
+	state.banner = {"title": title, "text": text, "t0": clock, "ms": ms}
+	print("flow: banner %s: %s" % [title, text])
 
 
 ## Announce an event to whoever listens.
