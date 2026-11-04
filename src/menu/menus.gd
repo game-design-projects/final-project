@@ -218,6 +218,7 @@ static func gameplay() -> Dictionary:
 	return {"title": "GAMEPLAY", "hint": ADJUST_HINT, "items": [
 		_setting("easy", "EASY DODGE", "Attacks come slower, with longer warnings"),
 		_setting("tips", "TIPS", "Short tips the first time you meet something; off skips the tutorial"),
+		{"label": "SHOW THE TIPS AGAIN", "sub": "Forget which tips you have seen", "act": func(): Settings.set_value("seen_tips", [])},
 	]}
 
 

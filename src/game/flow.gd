@@ -6,6 +6,7 @@
 ## input is dropped while one is still working (`busy`).
 extends RefCounted
 
+const Coach = preload("res://src/game/coach.gd")
 const Dice = preload("res://src/utils/dice.gd")
 const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
@@ -19,6 +20,7 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 const BANNER_MS := 3000.0
+const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0
 
 const STAGES := {
@@ -49,6 +51,7 @@ var encounter
 var clock := 0.0
 var busy := false
 ## The setting EASY DODGE, which the scene hands in: the game doesn't read settings itself.
+var coach # the first-time tips
 var easy_dodge := false
 ## The personality slice (personality_slice.gd): while `dice` is pinned, every chance of an interaction (the cut,
 ## the answer, a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds
@@ -66,6 +69,7 @@ func _init(game_rng, game_mind) -> void:
 	dice = Dice.new(game_rng)
 	mind = game_mind
 	encounter = Encounter.new(self)
+	coach = Coach.new(self)
 	for name in STAGES:
 		_stages[name] = STAGES[name].new()
 	state = State.new()

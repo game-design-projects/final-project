@@ -1,0 +1,13 @@
+{
+ "tips": {
+  "menu": "Four choices. Try ACT first: see what it likes.",
+  "act": "CHECK is free. Everything else takes a turn.",
+  "mercy": "The gold bar is its mercy odds. What you do moves them.",
+  "spare": "Its name is gold: it will likely accept. Try SPARE.",
+  "strike": "Press ENTER when the line crosses the middle.",
+  "dodge": "You are the white diamond. Arrows move it. Stay off what glows.",
+  "ask": "Friends make every fight easier, and the Last Door needs one.",
+  "dead": "Dying only starts this fight over.",
+  "boss": "Champions change their attack every turn. They can be won over too."
+ }
+}

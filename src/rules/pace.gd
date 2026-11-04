@@ -11,6 +11,7 @@ const PER_STRUGGLE := 0.05 # for each hit lately
 const STRUGGLE_MAX := 4.0
 const PER_ALLY := 0.04
 const EASY_SCALE := 0.75
+const OPENING := [0.85, 0.92] # the first fights of a run, in order (the feature tutorial)
 const LOWEST := 0.4
 const HIGHEST := 1.05
 const DURATION_SCALE := 0.85 # a shorter dodge, so a fight isn't mostly waiting
@@ -25,6 +26,11 @@ static func of(foe, depth: int, struggle: float, allies: int, easy: bool) -> flo
 	p -= PER_ALLY * allies
 	p *= EASY_SCALE if easy else 1.0
 	return clampf(p, LOWEST, HIGHEST)
+
+
+## What the first fights of a run ease the pace by, from how many came before.
+static func opening(fights_before: int) -> float:
+	return OPENING[fights_before] if fights_before < OPENING.size() else 1.0
 
 
 ## How the struggle stands after a dodge in which you took `hits`: each hit adds one, a clean dodge eases it.

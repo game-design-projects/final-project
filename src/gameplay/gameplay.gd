@@ -85,6 +85,8 @@ func _ready() -> void:
 	add_child(audio)
 	audio.bind(flow)
 	flow.happened.connect(_on_event)
+	for id in Settings.get_value("seen_tips"):
+		flow.coach.seen[str(id)] = true
 	_debug = Flags.on("debug")
 	_tips.debug = _debug
 	_tips.mind_label = flow.mind.label()
@@ -243,6 +245,9 @@ func _process(dt: float) -> void:
 		return
 	_dock.thinking_ms = Network.waiting_ms()
 	flow.easy_dodge = Settings.get_value("easy")
+	flow.coach.enabled = Settings.get_value("tips")
+	if not flow.coach.seen.is_empty() and Settings.get_value("seen_tips").is_empty():
+		flow.coach.seen = {} # SHOW THE TIPS AGAIN, from the pause menu
 	_clock_ms += dt * 1000.0
 	flow.tick(_clock_ms)
 	var s = flow.state
@@ -410,6 +415,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_postfx.flash(Palette.MERCY, 0.4 * _softness())
 		"slain":
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
+		"coach":
+			Settings.set_value("seen_tips", flow.coach.seen.keys())
 		"mercy_changed":
 			var up: bool = data.to > data.from
 			_overlay.popup("%+d%% MERCY" % (roundi(data.to * 100.0) - roundi(data.from * 100.0)), Palette.MERCY if up else Palette.DIM, Vector2(150, 62))

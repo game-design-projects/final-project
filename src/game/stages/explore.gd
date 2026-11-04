@@ -46,5 +46,9 @@ func _step(flow, backwards: bool) -> void:
 	s.visited[next] = true
 	s.look()
 	flow.event("step")
+	if flow.feature("walk-heal"):
+		s.steps += 1
+		if s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
+			s.hp += 1
 	if next == s.floor_map.stairs:
 		await flow.go("end")

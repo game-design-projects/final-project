@@ -33,6 +33,7 @@ func _run() -> void:
 	await _dodges()
 	await _recruiting()
 	await _story()
+	await _tutorial()
 	_finish()
 
 
@@ -291,6 +292,61 @@ func _story() -> void:
 	flow = _flow(32, ["no-story"])
 	await flow.new_run()
 	_check(flow.state.lines[0].text == "B1F. Find the stairs." and flow.state.floors_of == 0, "no-story: the old opening line")
+	_use()
+
+
+func _tutorial() -> void:
+	var flow = _flow(33)
+	await flow.new_run()
+	var s = flow.state
+	s.banner = null
+	var shown := []
+	flow.happened.connect(func(n, d): if n == "coach": shown.append(d.id))
+	var m = s.floor_map.monsters[0]
+	await flow.go("intro", {"foe": m})
+	await flow.tick(flow.clock + 1000.0)
+	_check(shown == ["menu"] and s.banner.title == "TIP", "the first menu brings up one tip (%s)" % str(shown))
+	await flow.press("2")
+	_check(shown == ["menu"], "a tip waits while another is showing")
+	flow.clock += 10000.0
+	await flow.press("cancel")
+	await flow.press("2")
+	_check(shown == ["menu", "act"], "and comes up the next time (%s)" % str(shown))
+	flow.clock += 10000.0
+	await flow.press("cancel")
+	_check(shown.count("menu") == 1, "a tip is shown once")
+	flow.coach.enabled = false
+	flow.clock += 10000.0
+	await flow.press("1")
+	_check(not shown.has("strike"), "the TIPS setting skips them")
+	var later = _flow(34)
+	later.coach.seen = {"menu": true}
+	await later.new_run()
+	later.state.banner = null
+	await later.go("intro", {"foe": later.state.floor_map.monsters[0]})
+	await later.tick(later.clock + 1000.0)
+	_check(later.state.banner == null, "a tip seen in an earlier run stays quiet")
+	for id in Content.table("coach").tips:
+		_check(Content.table("coach").tips[id].length() <= 72, "the tip '%s' is short enough for the banner" % id)
+	_check(Pace.opening(0) < Pace.opening(1) and Pace.opening(1) < 1.0 and Pace.opening(5) == 1.0, "the first fights go slower")
+	flow = _flow(35, ["no-tutorial"])
+	await flow.new_run()
+	flow.state.banner = null
+	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
+	await flow.tick(flow.clock + 1000.0)
+	_check(flow.state.banner == null, "no-tutorial: no tips")
+	# walking heals
+	flow = _flow(36)
+	await flow.new_run()
+	s = flow.state
+	s.hp = 5
+	s.steps = 5
+	for i in 4:
+		if s.floor_map.is_open(s.cell + s.floor_map.DIRS[s.facing]) and s.floor_map.monster_at(s.cell + s.floor_map.DIRS[s.facing]) == null:
+			break
+		s.turn(1)
+	await flow.press("up")
+	_check(s.hp == 6, "the sixth step brings a point of health back (%d)" % s.hp)
 	_use()
 
 

@@ -14,6 +14,7 @@ const DEFAULTS := {
 	"shake": true, # the battle screen shakes when something hits
 	"easy": false, # slower dodges (the feature gentle-dodge)
 	"tips": true, # the first-time tips (the feature tutorial)
+	"seen_tips": [], # the tips already shown
 	"sfx": true,
 	"sfx_volume": 5, # 0..VOLUME_MAX, for the music too
 }
