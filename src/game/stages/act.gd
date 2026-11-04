@@ -3,6 +3,7 @@ extends "res://src/game/stages/list_stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -13,7 +14,7 @@ const CASHES_IN := ["bandit", "snake"] # these two can be paid off
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
-	var items := [{"label": "CHECK", "sub": "Free: read it"}]
+	var items := [{"label": "CHECK", "sub": "Free: read one thing about it" if flow.feature("reveal") else "Free: read it"}]
 	for a in _acts(m, flow):
 		var pays: bool = m.species in CASHES_IN and a.intent == "gold"
 		items.append({"label": a.label, "sub": Texts.GOLD_ACT_TIP if pays else ""})
@@ -30,7 +31,10 @@ func pick(flow, index: int) -> void:
 	var m = s.foe
 	var acts := _acts(m, flow)
 	if index == CHECK:
-		s.say([State.sys_line(Texts.check(m, m.clues()))])
+		if flow.feature("reveal"):
+			s.say([State.sys_line(Texts.check_piece(m, Reveal.next_piece(m)))])
+		else:
+			s.say([State.sys_line(Texts.check(m, m.clues()))])
 		await flow.go("menu")
 	elif index <= acts.size():
 		await _do_act(flow, acts[index - 1])

@@ -24,7 +24,7 @@ func _init(owner) -> void:
 
 ## Show this tip, if it is due. True when it went up.
 func say(id: String) -> bool:
-	if not enabled or seen.has(id) or not flow.feature("tutorial") or _banner_up():
+	if not enabled or seen.has(id) or not flow.feature("tutorial") or flow.banner_up():
 		return false
 	var tips: Dictionary = Content.table("coach").tips
 	if not tips.has(id):
@@ -35,11 +35,6 @@ func say(id: String) -> bool:
 	print("coach: %s" % id)
 	flow.event("coach", {"id": id})
 	return true
-
-
-func _banner_up() -> bool:
-	var b = flow.state.banner
-	return b != null and flow.clock - b.t0 < b.ms
 
 
 func _on_event(name: String, data: Dictionary) -> void:

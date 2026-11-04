@@ -99,6 +99,15 @@ static func parted(gold: int, healed: int) -> String:
 const BOSS_WINNABLE := "It can be won over too."
 
 
+## What one CHECK reads off the foe (see Reveal.next_piece).
+static func check_piece(foe, piece: Dictionary) -> String:
+	if piece.has("clue"):
+		return "%s %s." % [foe.name, piece.clue]
+	if piece.has("trait"):
+		return "%s seems %s." % [foe.name, piece.trait]
+	return "You have read all you can of %s. Try something on it." % foe.name
+
+
 # ---- a fair cut of gold
 
 static func cut_too_poor(gold: int, typed: bool) -> String:

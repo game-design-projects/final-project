@@ -20,7 +20,7 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0
@@ -210,6 +210,11 @@ func go(to: String, args := {}) -> void:
 func announce(title: String, text: String, ms := BANNER_MS) -> void:
 	state.banner = {"title": title, "text": text, "t0": clock, "ms": ms}
 	print("flow: banner %s: %s" % [title, text])
+
+
+## Whether a banner is showing now.
+func banner_up() -> bool:
+	return state.banner != null and clock - state.banner.t0 < state.banner.ms
 
 
 ## Announce an event to whoever listens.

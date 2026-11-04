@@ -294,8 +294,10 @@ func _hover_and_tips(game) -> void:
 	# the foe
 	tips.hover(Vector2(224, 150))
 	_check(tips.shown() == "foe", "the mouse over the foe shows its mind card")
-	var text := _text_of(tips.blocks())
 	var m = s.foe
+	m.checks = m.clues().size() # as if read: the feature reveal hides what isn't yet
+	m.known_traits = m.traits.duplicate()
+	var text := _text_of(tips.blocks())
 	_check(text.contains("FRIENDLY") and text.contains("ANGER") and text.contains("FEAR"), "the card has the three meters")
 	_check(text.contains(str(roundi(m.meters.friendliness))) and text.contains("Seems %s." % " and ".join(m.traits)), "with their numbers and 'Seems X and Y.' (%s)" % text.left(120))
 	_check(m.clues().all(func(c): return text.contains(c)), "and each clue the traits give")

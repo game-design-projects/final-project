@@ -91,6 +91,16 @@
    "attack_monster": [
     "*slaps {target} with a gooey fist*",
     "...{target} bad! *wobbles angrily at {target}*"
+   ],
+   "pleased": [
+    "*jiggles happily* ...nice. nice!",
+    "*wobbles closer* Again? Again!",
+    "*glows a little* ...{name} likes."
+   ],
+   "stung": [
+    "*shrinks back* ...not nice.",
+    "*goes very flat* ...blorp. Mean.",
+    "*a sad, wet noise*"
    ]
   },
   "reactions": {
@@ -207,6 +217,16 @@
    "attack_monster": [
     "Sold us out, {target}? *stabs {target}*",
     "Nobody crosses me, {target}! *slashes {target}*"
+   ],
+   "pleased": [
+    "Ha! Now you're talking my language.",
+    "Not bad. You've done this before, haven't you?",
+    "Careful. I might start to like you."
+   ],
+   "stung": [
+    "Oh, that's how it is. Noted.",
+    "Say that again and I take your boots.",
+    "You'll pay for that one. With interest."
    ]
   },
   "reactions": {
@@ -324,6 +344,16 @@
    "attack_monster": [
     "Traitor. *strikes at {target}*",
     "Ssstay out of my bargain, {target}. *bites {target}*"
+   ],
+   "pleased": [
+    "Ssso... you do have taste.",
+    "Mmm. Go on. Sssay more.",
+    "How flattering. I almost believe you."
+   ],
+   "stung": [
+    "Hsss. I will remember that.",
+    "Careful, little one. Ssscales have long memories.",
+    "You were doing ssso well."
    ]
   },
   "reactions": {
@@ -440,6 +470,16 @@
    "attack_monster": [
     "...you. quiet. *crushes {target}*",
     "*rolls over {target}*"
+   ],
+   "pleased": [
+    "...hm. Yes. That was good.",
+    "*a slow, pleased rumble*",
+    "...few have thought of that. In ages."
+   ],
+   "stung": [
+    "...no.",
+    "*gravel shifts, unhappily*",
+    "...this will be remembered. For a very long time."
    ]
   },
   "reactions": {
@@ -557,6 +597,16 @@
    "attack_monster": [
     "You side with them, {target}? Then burn. *rakes {target}*",
     "*snaps at {target}* Know your place."
+   ],
+   "pleased": [
+    "Ha! You amuse me, little one.",
+    "Mm. A rare thing, a mortal with manners.",
+    "Go on. I am almost not bored."
+   ],
+   "stung": [
+    "You dare? In my own halls?",
+    "That was unwise, and you know it.",
+    "*smoke curls from its teeth* Try that again."
    ]
   },
   "reactions": {

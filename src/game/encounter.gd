@@ -9,6 +9,7 @@ const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
+const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -65,6 +66,12 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
 	var mercy: float = after.mercy
 	var pressure: float = after.pressure
+	if not act is String and flow.feature("reveal"):
+		var learned := Reveal.learn(m, m.last_intent, str(feeling.get("tone", "")))
+		if not learned.is_empty():
+			print("encounter: found out about %s: %s" % [m.name, " ".join(learned)])
+			if not flow.banner_up():
+				flow.announce("YOU FOUND OUT", " ".join(learned))
 	if flow.feature("mood-cues"):
 		flow.event("mood", {"tone": str(feeling.get("tone", "odd"))})
 		if known_mercy >= 0.0 and known_mercy < Odds.LIKELY and mercy >= Odds.LIKELY:
@@ -79,7 +86,7 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	rows.append({"id": "pressure", "label": "HOW HARD DOES IT ATTACK?", "answer": pressure})
 	flow.state.mind_rows = rows + pending_rows
 	pending_rows = []
-	return {"id": id, "feeling": feeling, "pressure": pressure, "pacified": Feelings.pacifies(id), "note": note}
+	return {"id": id, "feeling": feeling, "pressure": pressure, "pacified": Feelings.pacifies(id), "note": note, "told": not act is String}
 
 
 ## Says that the mercy odds moved, and returns the words for it for the log ("" when they stayed, or the feature is off).
@@ -97,6 +104,10 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 	if decision.get("note", "") != "" and not lines.is_empty():
 		lines[0].text += " " + decision.note
 	lines = lines + _take_notes()
+	var reaction = _reaction(decision)
+	if reaction != null:
+		lines.append(reaction)
+		show_attack_line = false
 	if decision.pacified:
 		lines.append(State.sys_line(Texts.NOT_ATTACKING))
 		flow.state.say(lines)
@@ -108,6 +119,16 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 			lines.append(attack)
 	flow.state.say(lines)
 	await flow.go("wait", {"pressure": decision.pressure})
+
+
+## What the monster says about what was just done to it, in its own words (reveal): null when it has no strong opinion.
+func _reaction(decision: Dictionary):
+	if not decision.get("told", false) or not flow.feature("reveal"):
+		return null
+	var tone: String = str(decision.feeling.get("tone", ""))
+	if tone == "good":
+		return foe_line(flow.state.foe, "pleased")
+	return foe_line(flow.state.foe, "stung") if tone == "bad" else null
 
 
 func _take_notes() -> Array:

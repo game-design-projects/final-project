@@ -237,6 +237,12 @@ static func _monster_problem(m, f: Dictionary) -> String:
 			return "a monster's '%s' is not a number" % key
 	if m.has("meters") and (not m.meters is Dictionary or m.meters.values().any(func(v): return not _is_num(v))):
 		return "a monster's meters are not a record of numbers"
+	if m.has("checks") and not _is_num(m.checks):
+		return "a monster's 'checks' is not a number"
+	if m.has("tried") and not m.tried is Dictionary:
+		return "a monster's 'tried' is not a record"
+	if m.has("knownTraits") and not m.knownTraits is Array:
+		return "a monster's 'knownTraits' is not a list"
 	if m.has("traits") and (not m.traits is Array or m.traits.any(func(t): return not t is String)):
 		return "a monster's traits are not a list of words"
 	if m.has("taste") and (not m.taste is Dictionary or m.taste.values().any(func(v): return not _is_num(v))):

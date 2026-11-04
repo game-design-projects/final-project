@@ -17,6 +17,10 @@ var max_hp := 0
 ## friendliness, anger, fear: 0..100
 var meters := {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
 var traits: Array = []
+## What the player has found out so far (rules/reveal.gd): how many clues CHECK has read, intent -> "likes"/"hates"/"", and traits.
+var checks := 0
+var tried := {}
+var known_traits: Array = []
 ## Per intent (kindness, joke, gold, ...) how much this one monster likes it, on top of its species' leaning.
 var taste := {}
 var last_intent := ""
@@ -143,6 +147,7 @@ func to_dict() -> Dictionary:
 		"species": species, "genre": genre, "boss": boss, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
 		"meters": meters.duplicate(), "traits": traits.duplicate(), "taste": taste.duplicate(), "lastIntent": last_intent,
 		"spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
+		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(),
 	}
 
 
@@ -166,4 +171,7 @@ static func from_dict(d: Dictionary):
 	m.threshold = float(d.get("threshold", 0.0))
 	m.turn = maxi(0, int(d.get("turn", 0)))
 	m.gone = str(d.get("gone", "")) if str(d.get("gone", "")) in ["spared", "slain"] else ""
+	m.checks = maxi(0, int(d.get("checks", 0)))
+	m.tried = d.get("tried", {}).duplicate()
+	m.known_traits = d.get("knownTraits", []).duplicate()
 	return m

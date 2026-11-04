@@ -18,7 +18,9 @@ const Pace = preload("res://src/rules/pace.gd")
 const Hud = preload("res://src/view/hud.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
+const Tips = preload("res://src/view/tips.gd")
 
 const BASE := ["nosave", "nosound"]
 
@@ -36,6 +38,7 @@ func _run() -> void:
 	await _tutorial()
 	await _mood_cues()
 	await _clear_hp()
+	await _reveal()
 	_finish()
 
 
@@ -429,6 +432,59 @@ func _clear_hp() -> void:
 	bar._process(2.0)
 	_check(bar.trend() == 0, "and it goes away")
 	bar.free()
+	_use()
+
+
+func _reveal() -> void:
+	var flow = _flow(40)
+	var m = await _at_menu(flow)
+	var s = flow.state
+	var clues: Array = m.clues()
+	await flow.press("2")
+	await flow.press("1")
+	var first: String = s.lines[0].text
+	_check(not first.contains("likes") and not first.contains("hates"), "CHECK doesn't give away what it likes (%s)" % first)
+	if not clues.is_empty():
+		_check(first.contains(clues[0]) and m.checks == 1, "it reads one thing at a time (%s)" % first)
+	for i in 8:
+		await flow.press("2")
+		await flow.press("1")
+	_check(s.lines[0].text.contains("read all you can"), "and then says there's no more (%s)" % s.lines[0].text)
+	_check(m.known_traits.size() == m.traits.size(), "by then the traits are known")
+
+	flow = _flow(41)
+	m = await _at_menu(flow)
+	var card: String = Tips.found_text(m)
+	_check(card.contains("???") and not m.traits.any(func(t): return card.contains(t)), "at first the card hides its traits (%s)" % card)
+	_check(Reveal.learn(m, "kindness", "good") == ["It likes kindness."] or Reveal.found(m, Reveal.LIKES) == ["kindness"], "a liked thing is found by trying")
+	_check(Reveal.learn(m, "kindness", "bad").is_empty(), "and only once")
+	Reveal.learn(m, "insult", "bad")
+	card = Tips.found_text(m)
+	_check(card.contains("Likes kindness") and card.contains("Hates insults"), "the card remembers (%s)" % card)
+	_check(Reveal.learn(m, "joke", "odd").all(func(t): return not t.contains("likes")), "a puzzled look teaches nothing about its taste")
+
+	var entry := {"species": "snake", "genre": "shadow", "hp": 22}
+	var snake = Monster.given(entry, Vector2i(1, 1), "TEST", ["secretive"], {"friendliness": 10.0, "anger": 10.0, "fear": 10.0})
+	var taught: Array = Reveal.learn(snake, "question", "bad")
+	_check(taught.has("It is secretive."), "a trait that cares about the deed shows itself (%s)" % str(taught))
+	var again = Monster.from_dict(JSON.parse_string(JSON.stringify(snake.to_dict())))
+	_check(again.known_traits == ["secretive"] and again.tried.has("question"), "and a save keeps what was found")
+	for sp in Content.table("species"):
+		var spoken: Dictionary = Content.species(sp).lines
+		_check(not spoken.get("pleased", []).is_empty() and not spoken.get("stung", []).is_empty(), "%ss answer a deed in their own words" % sp)
+
+	# it answers what you did to it
+	flow = _flow(42)
+	m = await _at_menu(flow)
+	s = flow.state
+	await flow.encounter.after_player([State.sys_line("x")], {"pacified": false, "pressure": 1.0, "told": true, "feeling": {"tone": "good"}})
+	_check(s.lines.any(func(l): return l.kind == "say" and Content.species(m.species).lines.pleased.any(func(p): return l.text.contains(p.left(8)))), "a liked deed gets a pleased line (%s)" % str(s.lines))
+	flow = _flow(43, ["no-reveal"])
+	m = await _at_menu(flow)
+	s = flow.state
+	await flow.press("2")
+	await flow.press("1")
+	_check(s.lines[0].text.contains("likes"), "no-reveal: CHECK tells all at once")
 	_use()
 
 

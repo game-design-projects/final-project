@@ -14,6 +14,7 @@ const Flags = preload("res://src/utils/flags.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Reveal = preload("res://src/rules/reveal.gd")
 
 const W := 448.0
 const H := 288.0
@@ -176,7 +177,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "":
 		return []
 	if key == "foe":
-		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label)
+		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
 		return map_blocks()
 	if key.begins_with("ally"):
@@ -187,9 +188,12 @@ func _blocks_for(key: String) -> Array:
 # ---------------------------------------------------------------- the content
 
 ## The foe: who it is, what it seems like, how it feels, and the last `shown` answers of the mind (0 for all of them).
-static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "") -> Array:
+## `gradual` says only what the player has found out (the feature reveal), with ??? for the rest.
+static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gradual := false) -> Array:
 	var out := [{"kind": "head", "left": m.name, "right": str(Content.species(m.species).label).to_upper()}]
-	if not m.traits.is_empty():
+	if gradual:
+		out.append({"kind": "text", "text": found_text(m)})
+	elif not m.traits.is_empty():
 		var text := "Seems %s." % " and ".join(m.traits)
 		var clues: Array = m.clues()
 		if not clues.is_empty():
@@ -200,6 +204,26 @@ static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "") ->
 		out.append(question(row))
 	out.append({"kind": "note", "text": mind_note(label)})
 	return out
+
+
+## What has been found out about `m`, with ??? for each trait still hidden.
+static func found_text(m) -> String:
+	var seems: Array = m.known_traits.duplicate()
+	for i in maxi(0, m.traits.size() - seems.size()):
+		seems.append("???")
+	var text := "Seems %s." % " and ".join(seems)
+	var clues: Array = m.clues().slice(0, m.checks)
+	if not clues.is_empty():
+		text += "\nIt %s." % ". It ".join(clues)
+	var likes: Array = Reveal.found(m, Reveal.LIKES)
+	var hates: Array = Reveal.found(m, Reveal.HATES)
+	if not likes.is_empty():
+		text += "\nLikes %s." % ", ".join(likes)
+	if not hates.is_empty():
+		text += "\nHates %s." % ", ".join(hates)
+	if likes.is_empty() and hates.is_empty():
+		text += "\nTry things on it and see."
+	return text
 
 
 static func mind_note(label: String) -> String:
