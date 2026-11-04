@@ -42,5 +42,27 @@
  "flee_cost": {
   "gold": 2,
   "anger": 12
- }
+ },
+ "paths": [
+  {
+   "id": "steep",
+   "label": "THE STEEP STAIR",
+   "sub": "Tougher monsters below, and a purse on the way down: +6 gold",
+   "hp_scale": 1.25,
+   "gold": 6
+  },
+  {
+   "id": "quiet",
+   "label": "THE QUIET STAIR",
+   "sub": "Fewer monsters below, and a longer rest on the way: +6 HP",
+   "count": 2,
+   "rest": 6
+  },
+  {
+   "id": "territory",
+   "label": "THE %s WARREN",
+   "sub": "Every monster below is %s: make friends or enemies in bulk",
+   "territory": true
+  }
+ ]
 }

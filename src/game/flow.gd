@@ -104,13 +104,15 @@ func new_run() -> void:
 	await go("explore", {"lines": lines})
 
 
-## Take the stairs: the next floor of this run, keeping health, gold, allies and the tally, with a rest on the way down.
-func next_floor() -> void:
+## Take the stairs: the next floor of this run, keeping health, gold, allies and the tally, with a rest on the way down. `way` is
+## which way down was chosen (Floors.paths), if there was a choice.
+func next_floor(way := {}) -> void:
 	await _leave_current()
 	state.depth = mini(state.depth + 1, State.DEPTH_MAX)
 	state.foe = null
-	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal())
-	_make_floor()
+	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal() + int(way.get("rest", 0)))
+	state.gold += int(way.get("gold", 0))
+	_make_floor(way)
 	encounter.pending_notes = []
 	encounter.pending_rows = []
 	print("flow: down to B%dF (%s)" % [state.depth, state.summary()])
@@ -140,10 +142,10 @@ func _arrival() -> Array:
 
 ## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
 ## generator as it always was, so old seeds make the same floor.
-func _make_floor() -> void:
+func _make_floor(way := {}) -> void:
 	if feature("real-floors"):
-		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth))
-		var plan: Dictionary = Floors.plan(state.depth)
+		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
+		var plan: Dictionary = Floors.plan(state.depth, way)
 		plan.boss_at_exit = feature("boss-at-exit")
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:

@@ -6,6 +6,8 @@ extends RefCounted
 const Content = preload("res://src/rules/content.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
+const PATHS_OFFERED := 2
+const PATH_SEED := 100 # the ways down are drawn from their own seed, not any floor's
 const FLOOR_SEED_STEP := 7919 # a prime, so the floors' seeds don't line up with the seeds next to this run's
 
 
@@ -18,14 +20,17 @@ static func is_last(depth: int) -> bool:
 	return depth >= run_floors()
 
 
-## What generating this floor needs: {depth, champion: {name, hp}, hp_scale}.
-static func plan(depth: int) -> Dictionary:
+## What generating this floor needs: {depth, champion: {name, hp}, hp_scale}, and what the way down changes (see `paths`): {count,
+## only_species}.
+static func plan(depth: int, way := {}) -> Dictionary:
 	var t := Content.table("floors")
 	var champions: Array = t.champions
 	return {
 		"depth": depth,
 		"champion": champions[clampi(depth - 1, 0, champions.size() - 1)],
-		"hp_scale": 1.0 + float(t.hp_per_floor) * (depth - 1),
+		"hp_scale": (1.0 + float(t.hp_per_floor) * (depth - 1)) * float(way.get("hp_scale", 1.0)),
+		"count": int(way.get("count", -1)),
+		"only_species": str(way.get("only_species", "")),
 	}
 
 
@@ -73,6 +78,28 @@ static func fights_required(f) -> int:
 				else:
 					queue.insert(head, next) # a free step goes to the front, so the walk stays cheapest first
 	return cost.get(f.stairs, -1)
+
+
+## The two ways down from floor `depth` of this run, from its seed, so a printed seed offers the same ones. Each is what `plan`
+## takes, with its `path`, which picks the floor's seed, and its label and sub for the menu. The way to the last floor is one stair.
+static func paths(run_seed: int, depth: int) -> Array:
+	if is_last(depth + 1):
+		return []
+	var rng := Rng.new(floor_seed(run_seed, depth, PATH_SEED))
+	var kinds: Array = Content.table("floors").paths.duplicate()
+	var out := []
+	for i in PATHS_OFFERED:
+		var kind: Dictionary = kinds.pop_at(rng.int_range(0, kinds.size() - 1)).duplicate()
+		kind.path = i + 1
+		if kind.get("territory", false):
+			var roster: Array = Content.table("encounter").roster
+			var entry: Dictionary = roster[rng.int_range(0, roster.size() - 1)]
+			var word: String = str(Content.species(entry.species).label).to_lower()
+			kind.only_species = entry.species
+			kind.label = kind.label % word.to_upper()
+			kind.sub = kind.sub % ("a " + word)
+		out.append(kind)
+	return out
 
 
 ## What a rest at the stairs gives back.

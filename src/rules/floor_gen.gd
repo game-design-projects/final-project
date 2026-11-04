@@ -107,7 +107,7 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 	candidates.sort_custom(func(a, b): return a.dist < b.dist or (a.dist == b.dist and a.order < b.order))
 	var monsters := []
 	var used: Array = []
-	var roster: Array = enc.roster
+	var roster: Array = _roster_for(enc.roster, plan)
 	for i in roster.size():
 		var target := floori(float(i + 1) / (roster.size() + 1) * candidates.size())
 		var spot: Vector2i = candidates[target % candidates.size()].cell
@@ -123,6 +123,17 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 	var post: Vector2i = walk.farthest if plan.get("boss_at_exit", false) else hall
 	monsters.append(Monster.make(rng, {"species": boss.species, "genre": boss.genres[0], "hp": champion.hp, "name": champion.name, "boss": true}, post))
 	return monsters
+
+
+## Who lives on this floor: the whole roster, or what the way down left of it.
+static func _roster_for(roster: Array, plan: Dictionary) -> Array:
+	var out := roster
+	if str(plan.get("only_species", "")) != "":
+		var kind: Array = roster.filter(func(e): return e.species == plan.only_species)
+		out = roster.map(func(_e): return kind[0])
+	if int(plan.get("count", -1)) > 0:
+		out = out.slice(0, int(plan.count))
+	return out
 
 
 ## A roster line with the floor's toughness.

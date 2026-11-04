@@ -42,6 +42,7 @@ func _run() -> void:
 	await _reveal()
 	await _chat()
 	await _gate()
+	await _branching()
 	_finish()
 
 
@@ -104,8 +105,8 @@ func _real_floors() -> void:
 	await flow.press("1")
 	_check(flow.state == s and s.stage == "explore" and s.depth == 2, "GO DOWN goes to B2F (B%dF, %s)" % [s.depth, s.stage])
 	_check(s.floor_map != first_floor and s.cell == s.floor_map.start, "on a new floor, at its start")
-	_check(s.gold == 3 and s.tally.spared == 2 and s.allies.size() == 1, "gold, the tally and the party came along")
-	_check(s.hp == 5 + Floors.rest_heal(), "and the way down rests you a little (%d)" % s.hp)
+	_check(s.gold >= 3 and s.tally.spared == 2 and s.allies.size() == 1, "gold, the tally and the party came along")
+	_check(s.hp >= 5 + Floors.rest_heal(), "and the way down rests you a little (%d)" % s.hp)
 	_check(s.lines[0].text.begins_with("B2F"), "the log names the floor (%s)" % s.lines[0].text)
 	await _reach_stairs(flow)
 	await flow.press("1")
@@ -622,6 +623,55 @@ func _gate() -> void:
 	flow = _flow(48, ["no-boss-at-exit"])
 	await flow.new_run()
 	_check(flow.state.floor_map.monsters.back().cell != flow.state.floor_map.stairs, "no-boss-at-exit: the champion keeps to its hall")
+	_use()
+
+
+func _branching() -> void:
+	var ways: Array = Floors.paths(77, 1)
+	_check(ways.size() == 2 and ways[0].label != ways[1].label, "the stairs offer two different ways (%s, %s)" % [ways[0].label, ways[1].label])
+	_check(ways.all(func(w): return w.sub != ""), "each says what it is")
+	_check(str(Floors.paths(77, 1)) == str(ways), "the same seed offers the same ones")
+	var differs := false
+	for s in range(1, 20):
+		differs = differs or str(Floors.paths(s, 1)) != str(ways)
+	_check(differs, "other seeds offer others")
+	_check(Floors.paths(77, Floors.run_floors() - 1).is_empty(), "one way leads to the last floor")
+	var labels := {}
+	for s in range(1, 60):
+		for w in Floors.paths(s, 2):
+			labels[w.id] = true
+	_check(labels.size() == 3, "every kind of way comes up (%s)" % str(labels.keys()))
+
+	var quiet := {"count": 2, "path": 1, "rest": 6}
+	var f = FloorGen.generate(Rng.new(5), Floors.plan(2, quiet))
+	_check(f.monsters.size() == 3, "a quiet floor has fewer monsters (%d)" % f.monsters.size())
+	var steep = FloorGen.generate(Rng.new(5), Floors.plan(2, {"hp_scale": 1.25}))
+	var plain = FloorGen.generate(Rng.new(5), Floors.plan(2))
+	_check(steep.monsters[0].max_hp > plain.monsters[0].max_hp, "a steep floor's monsters are tougher")
+	var den = FloorGen.generate(Rng.new(5), Floors.plan(2, {"only_species": "rock"}))
+	_check(den.monsters.slice(0, -1).all(func(m): return m.species == "rock") and den.monsters.back().boss, "a warren is one kind of monster, and its champion")
+	_check(den.monsters.back().boss and den.stairs == plain.stairs, "and the same maze from the same seed")
+
+	var flow = _flow(49)
+	await flow.new_run()
+	var s = flow.state
+	await _reach_stairs(flow)
+	_check(s.stage == "end" and s.menu.size() == 3 and s.menu[2].label == "MAIN MENU", "the menu lists the two ways and the way out (%s)" % str(s.menu.map(func(i): return i.label)))
+	var expect: Array = Floors.paths(s.run_seed, 1)
+	s.hp = 1
+	var gold: int = s.gold
+	await flow.press("2")
+	_check(s.depth == 2, "picking one goes down")
+	_check(s.hp == mini(s.max_hp, 1 + Floors.rest_heal() + int(expect[1].get("rest", 0))) and s.gold == gold + int(expect[1].get("gold", 0)), "with what it promised (%d HP, %d gold)" % [s.hp, s.gold])
+	var other = _flow(49)
+	await other.new_run()
+	await _reach_stairs(other)
+	await other.press("1")
+	_check(other.state.floor_map.grid != s.floor_map.grid, "the two ways lead to different floors")
+	flow = _flow(50, ["no-branching"])
+	await flow.new_run()
+	await _reach_stairs(flow)
+	_check(flow.state.menu[0].label == "GO DOWN" and flow.state.menu.size() == 2, "no-branching: one stair")
 	_use()
 
 

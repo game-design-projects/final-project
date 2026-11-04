@@ -45,6 +45,7 @@ const FEATURES := {
 	"boss-at-exit": "the champion stands on the stairs: no way down without facing it, and the map hides it until seen",
 	"flee-cost": "backing away costs gold, and the monster keeps its wounds and holds a grudge",
 	"boss-reward": "a champion you beat or win over leaves you stronger: more max HP and some healing",
+	"branching": "the stairs offer two ways down to compare: a tougher floor with a purse on the way, a quiet one with a longer rest, or a single kind's territory",
 	"recruit-step": "a spared monster asks to come along and you answer, with no second roll; peace leaves a gift, a refused SPARE no longer angers, and champions are presented as winnable",
 	"mercy-link": "the mercy odds show as a gauge beside the monster's health, and each deed says how far it moved them",
 	"party-aid": "each ally adds to your strikes, and two or more take the edge off every hit",

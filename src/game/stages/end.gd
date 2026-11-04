@@ -12,6 +12,7 @@ const TURN_BACK := 0
 const LEAVE_ALONE := 1
 
 var _at_door := false
+var _ways: Array = [] # the ways down on offer (Floors.paths)
 
 
 func enter(flow, _args: Dictionary) -> void:
@@ -20,6 +21,7 @@ func enter(flow, _args: Dictionary) -> void:
 	flow.event("stairs")
 	s.run_over = not flow.feature("real-floors") or Floors.is_last(s.depth)
 	_at_door = false
+	_ways = []
 	if s.run_over and flow.feature("last-door") and flow.feature("real-floors") and s.allies.is_empty():
 		s.run_over = false
 		_at_door = true
@@ -30,7 +32,13 @@ func enter(flow, _args: Dictionary) -> void:
 		_finish(flow, Texts.ending(s.tally, s.allies))
 	else:
 		s.say([State.sys_line(Texts.floor_done(s.depth)), State.sys_line(s.summary() + ".")])
-		s.menu = [{"label": "GO DOWN", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
+		_ways = Floors.paths(s.run_seed, s.depth) if flow.feature("branching") else []
+		s.menu = []
+		for way in _ways:
+			s.menu.append({"label": way.label, "sub": way.sub})
+		if _ways.is_empty():
+			s.menu.append({"label": "GO DOWN", "sub": ""})
+		s.menu.append({"label": "MAIN MENU", "sub": ""})
 		print("end: B%dF done" % s.depth)
 	s.hint = "ENTER PICK · ESC MAIN MENU"
 
@@ -55,10 +63,13 @@ func pick(flow, index: int) -> void:
 			_:
 				flow.event("leave", {"to": "menu"})
 		return
-	if index == 1:
+	if index == flow.state.menu.size() - 1:
 		flow.event("leave", {"to": "menu"})
 	elif flow.state.run_over:
 		await flow.new_run()
+	elif index < _ways.size():
+		print("end: taking %s" % _ways[index].label)
+		await flow.next_floor(_ways[index])
 	else:
 		await flow.next_floor()
 
