@@ -407,6 +407,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_shake()
 			_postfx.hurt()
 			_overlay.popup("-%d" % data.damage, Palette.WARN, Vector2(224, 200))
+			if s.viewing("clear-hp"):
+				_overlay.comet(_overlay.soul_at())
 		"shield":
 			_overlay.popup("BLOCKED", Palette.MERCY, Vector2(224, 200))
 		"beat":
@@ -417,6 +419,11 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
 		"mood":
 			_overlay.emote(data.tone)
+			if data.tone == "good" and s.viewing("clear-hp"):
+				_postfx.flash(Palette.MERCY, 0.14 * _softness())
+		"recruited":
+			if s.viewing("clear-hp"):
+				_postfx.flash(Palette.MERCY, 0.45 * _softness())
 		"coach":
 			Settings.set_value("seen_tips", flow.coach.seen.keys())
 		"mercy_changed":

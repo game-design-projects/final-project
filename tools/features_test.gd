@@ -35,6 +35,7 @@ func _run() -> void:
 	await _story()
 	await _tutorial()
 	await _mood_cues()
+	await _clear_hp()
 	_finish()
 
 
@@ -328,7 +329,11 @@ func _tutorial() -> void:
 	await later.tick(later.clock + 1000.0)
 	_check(later.state.banner == null, "a tip seen in an earlier run stays quiet")
 	for id in Content.table("coach").tips:
-		_check(Content.table("coach").tips[id].length() <= 72, "the tip '%s' is short enough for the banner" % id)
+		_check(Overlay.banner_fits(Content.table("coach").tips[id]), "the tip '%s' fits the banner" % id)
+	_check(Overlay.banner_fits(Floors.premise().door) and Overlay.banner_fits(Floors.premise().banner), "and so does the story's")
+	for species in Content.table("encounter").charms:
+		var charm: Dictionary = Content.table("encounter").charms[species]
+		_check(Overlay.banner_fits("%s: %s" % [charm.name, charm.text]), "and %s's charm" % species)
 	_check(Pace.opening(0) < Pace.opening(1) and Pace.opening(1) < 1.0 and Pace.opening(5) == 1.0, "the first fights go slower")
 	flow = _flow(35, ["no-tutorial"])
 	await flow.new_run()
@@ -388,6 +393,42 @@ func _mood_cues() -> void:
 	_check(Flags.switched_off("show-mind"), "no-show-mind hides them")
 	_use(["classic"])
 	_check(not Flags.switched_off("show-mind"), "classic leaves them as they were")
+	_use()
+
+
+func _clear_hp() -> void:
+	var flow = _flow(39)
+	var m = await _at_menu(flow)
+	var s = flow.state
+	var view = Overlay.new()
+	view.state = s
+	_check(view.foe_bar() == Overlay.HEAD_BAR, "the foe's health sits over its head")
+	s.dodge = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {})
+	_check(view.foe_bar() != Overlay.HEAD_BAR, "and moves aside for the dodge box")
+	s.dodge = null
+	_check(Overlay.ghost_after(1.0, 0.5, 0.5) > 0.5 and Overlay.ghost_after(1.0, 0.5, 0.5) < 1.0, "the trail behind the damage catches up slowly")
+	_check(Overlay.ghost_after(0.2, 0.5, 0.1) == 0.5, "and doesn't lag behind healing")
+	m.meters = {"friendliness": 10.0, "anger": 90.0, "fear": 0.0}
+	_check(Overlay.mood_word(m)[0] == "ANGRY", "an angry foe says so")
+	m.meters = {"friendliness": 10.0, "anger": 0.0, "fear": 90.0}
+	_check(Overlay.mood_word(m)[0] == "AFRAID", "a frightened one too")
+	m.meters = {"friendliness": 100.0, "anger": 0.0, "fear": 0.0}
+	_check(Overlay.mood_word(m)[0] == "FRIENDLY", "and a friendly one")
+	view.free()
+	var bar = Hud.new()
+	bar.part = Hud.Part.STATUS
+	bar.state = s
+	bar._process(0.016)
+	_check(bar.trend() == 0, "your health bar has no arrow at rest")
+	s.hp -= 3
+	bar._process(0.016)
+	_check(bar.trend() == -1, "an arrow when it drops")
+	s.hp += 1
+	bar._process(0.016)
+	_check(bar.trend() == 1, "the other way when it rises")
+	bar._process(2.0)
+	_check(bar.trend() == 0, "and it goes away")
+	bar.free()
 	_use()
 
 

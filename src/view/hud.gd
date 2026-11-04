@@ -6,6 +6,7 @@ extends Control
 
 const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
+const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 
 enum Part { HEADER, STATUS, DOCK }
@@ -26,6 +27,10 @@ const BUTTON_H := 34.0
 const GAP := 6.0
 const DOCK_H := LOG_H + SLOT_H + KEYS_H + GAP * 2.0
 
+const TREND_S := 1.4 # how long your health bar's arrow stays after a change
+const FLASH_S := 0.14
+const HEAL := Color("#9ed36b")
+
 const KEY_NAMES := {"UP / DOWN": "ud", "LEFT / RIGHT": "lr", "ARROWS": "all", "ENTER": "ENTER", "ESC": "ESC", "I": "I", "ANY KEY": "ANY KEY", "1-4": "1 - 4"}
 
 var part := Part.HEADER
@@ -37,6 +42,11 @@ var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _talk: LineEdit
 var _say_button := Rect2()
+var _hp_last := -1 # your health as last seen
+var _hp_ghost := 1.0
+var _hp_trend := 0
+var _hp_trend_left := 0.0
+var _hp_flash := 0.0
 var _hover := -1 # the command under the pointer (or SAY_BUTTON)
 
 
@@ -72,7 +82,9 @@ func set_talking(on: bool) -> void:
 		_talk.release_focus()
 
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	if part == Part.STATUS and state != null:
+		_watch_health(dt)
 	if part == Part.DOCK and state != null and size.x > 0.0:
 		var want := DOCK_H + (SUB_LINE_H if _sub_wraps() else 0.0) # the picture gives way for a second line of help, only when one is needed
 		if absf(custom_minimum_size.y - want) > 0.5:
@@ -218,8 +230,41 @@ func _status() -> void:
 	bar.size.x = size.x - bar.position.x
 	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)
 	draw_rect(bar, Palette.FAINT)
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), hp_color(frac))
+	var clear: bool = state.viewing("clear-hp")
+	if clear and _hp_ghost > frac:
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _hp_ghost, bar.size.y)), Palette.INK)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if clear and _hp_flash > 0.0 else hp_color(frac))
 	draw_rect(bar.grow(-0.5), Palette.DIM, false, 1.0)
+	var moving := trend()
+	if clear and moving != 0:
+		_trend_arrow(Vector2(bar.position.x + bar.size.x * frac, bar.get_center().y), moving)
+
+
+## Which way your health is moving: -1, 0 or 1, for a moment after it changed. Like the arrow on a flight display's speed tape.
+func trend() -> int:
+	return _hp_trend if _hp_trend_left > 0.0 else 0
+
+
+func _trend_arrow(tip: Vector2, dir: int) -> void:
+	var length := 12.0 * dir
+	var ink: Color = Palette.WARN if dir < 0 else HEAL
+	draw_colored_polygon(PackedVector2Array([tip + Vector2(length, 0.0), tip + Vector2(0.0, -6.0), tip + Vector2(0.0, 6.0)]), ink)
+
+
+## Keeps the trail, the flash and the arrow of your health bar up to date.
+func _watch_health(dt: float) -> void:
+	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)
+	if _hp_last < 0:
+		_hp_last = state.hp
+		_hp_ghost = frac
+	if state.hp != _hp_last:
+		_hp_trend = 1 if state.hp > _hp_last else -1
+		_hp_trend_left = TREND_S
+		_hp_flash = FLASH_S if state.hp < _hp_last else 0.0
+		_hp_last = state.hp
+	_hp_trend_left = maxf(0.0, _hp_trend_left - dt)
+	_hp_flash = maxf(0.0, _hp_flash - dt)
+	_hp_ghost = Overlay.ghost_after(_hp_ghost, frac, dt)
 
 
 ## The health bar's colour at this share of your health: red once it is under 40%.

@@ -28,10 +28,16 @@ const CHARM_USED := Color("#3a3a3a")
 const INTRO_FLASH_MS := 700.0
 const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pixels
 const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
+const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
+const MOOD_STRONG := 60.0 # a meter this high names the mood
+const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
+const COMET_MS := 320.0
 const EMOTE_MS := 1100.0
 const BUBBLE_STAGES := ["intro", "menu", "act", "talk"]
 const BANNER_FADE_MS := 220.0
-const BANNER := Rect2(64, 40, 320, 46)
+const BANNER_W := 264.0
+const BANNER_H := 44.0
+const BANNER_PX := 13
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
 # the receding corridor behind the title: how big each frame is against the picture
 const TITLE_FRAMES := [1.0, 0.556, 0.385, 0.294, 0.238]
@@ -53,6 +59,9 @@ var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _popups: Array = [] # [{text, color, at, born}]
 var _emote := {} # {tone, born}: the last mood shown over the monster
+var _ghost := 1.0 # where the trail behind the foe's health is
+var _ghost_foe = null # whose
+var _comets: Array = [] # [{from, born}]: what just hit you, on its way to your health bar
 var _lantern_glow: GradientTexture2D
 
 
@@ -157,8 +166,19 @@ func popup(text: String, color: Color, at: Vector2) -> void:
 	_popups.append({"text": text, "color": color, "at": at, "born": clock_ms})
 
 
-func _process(_dt: float) -> void:
+## What hit you flies down to your health bar.
+func comet(from: Vector2) -> void:
+	_comets.append({"from": from, "born": clock_ms})
+
+
+func _process(dt: float) -> void:
 	_popups = _popups.filter(func(p): return clock_ms - p.born < 900.0)
+	_comets = _comets.filter(func(c): return clock_ms - c.born < COMET_MS)
+	if state != null and state.foe != null:
+		if state.foe != _ghost_foe:
+			_ghost_foe = state.foe
+			_ghost = state.foe.hp_fraction()
+		_ghost = ghost_after(_ghost, state.foe.hp_fraction(), dt)
 	queue_redraw()
 
 
@@ -182,17 +202,41 @@ func _draw() -> void:
 		var col: Color = p.color
 		col.a = 1.0 - age
 		_text(_body, p.text, p.at + Vector2(0.0, -26.0 * age), 22, col, HORIZONTAL_ALIGNMENT_CENTER)
+	for c in _comets:
+		var at: Vector2 = c.from.lerp(Vector2(W * 0.5, H), (clock_ms - c.born) / COMET_MS)
+		draw_circle(at, 3.0, Palette.WARN)
+		draw_line(at, at.lerp(c.from, 0.25), Color(Palette.WARN, 0.5), 2.0)
 	_banner()
+
+
+## Where the soul is in the box, in picture pixels (the box's middle when there is no dodge).
+func soul_at() -> Vector2:
+	if state == null or state.dodge == null:
+		return Vector2(W / 2.0, BOX_Y)
+	return _cell_rect(Dodge.index(state.dodge.soul.x, state.dodge.soul.y)).get_center()
+
+
+## Where the banner goes: above the dodge box in a dodge, else low on the picture, clear of the health bars and the popups.
+func banner_rect() -> Rect2:
+	var y := 36.0 if state != null and state.dodge != null else H - BANNER_H - 8.0
+	return Rect2((W - BANNER_W) / 2.0, y, BANNER_W, BANNER_H)
+
+
+## Whether `text` fits the banner: two lines at most.
+static func banner_fits(text: String) -> bool:
+	var body: Font = Fonts.body()
+	return body.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, BANNER_W - 12.0, BANNER_PX).y <= body.get_height(BANNER_PX) * 2.0
 
 
 func _banner() -> void:
 	var strength := banner_strength()
 	if strength <= 0.0:
 		return
-	draw_rect(BANNER, Color(0.0, 0.0, 0.0, 0.88 * strength))
-	draw_rect(BANNER, Color(Palette.MERCY, strength), false, 1.0)
-	_text(_title, state.banner.title, BANNER.position + Vector2(0, 17), 9, Color(Palette.MERCY, strength), HORIZONTAL_ALIGNMENT_CENTER, BANNER.size.x)
-	_text(_body, state.banner.text, BANNER.position + Vector2(0, 35), 14, Color(Palette.INK, strength), HORIZONTAL_ALIGNMENT_CENTER, BANNER.size.x)
+	var rect := banner_rect()
+	draw_rect(rect, Color(0.0, 0.0, 0.0, 0.9 * strength))
+	draw_rect(rect, Color(Palette.MERCY, strength), false, 1.0)
+	_text(_title, state.banner.title, rect.position + Vector2(0, 11), 7, Color(Palette.MERCY, strength), HORIZONTAL_ALIGNMENT_CENTER, rect.size.x)
+	draw_multiline_string(_body, rect.position + Vector2(6, 25), state.banner.text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 12.0, BANNER_PX, 2, Color(Palette.INK, strength))
 
 
 func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := HORIZONTAL_ALIGNMENT_LEFT, width := -1.0) -> void:
@@ -246,20 +290,57 @@ func _battle() -> void:
 		draw_rect(Rect2(0, 0, W, H), Color(1, 1, 1, flash))
 
 
+## Where the foe's health bar goes: over its head when it fills the picture, up in the corner while it is small over the dodge box.
+func foe_bar() -> Rect2:
+	if state.viewing("clear-hp") and state.dodge == null:
+		return HEAD_BAR
+	return Rect2(12, 26, 120, 6)
+
+
+## A word for how the foe feels now, and its colour. Read off its meters, so it changes as they do.
+static func mood_word(m) -> Array:
+	if m.meters.anger >= MOOD_STRONG:
+		return ["ANGRY", Palette.WARN]
+	if m.meters.fear >= MOOD_STRONG:
+		return ["AFRAID", Palette.YOU]
+	if m.meters.friendliness >= m.threshold:
+		return ["FRIENDLY", Palette.MERCY]
+	return ["WARY", Palette.DIM]
+
+
+## How far the white trail behind a health bar has caught up with the real value after `dt` seconds.
+static func ghost_after(ghost: float, frac: float, dt: float) -> float:
+	return frac if frac >= ghost else move_toward(ghost, frac, dt * GHOST_PER_S)
+
+
 func _name_and_health(m) -> void:
 	var spare := can_spare()
-	_text(_title, m.name + ("  (MERCY 50%+)" if spare else ""), Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
-	var bar := Rect2(12, 26, 120, 6)
+	var clear: bool = state.viewing("clear-hp")
+	var bar := foe_bar()
+	if clear and bar == HEAD_BAR:
+		_text(_title, m.name, Vector2(0, bar.position.y - 4.0), 8, Palette.MERCY if spare else Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
+	elif clear:
+		_text(_title, m.name, Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
+	else:
+		_text(_title, m.name + ("  (MERCY 50%+)" if spare else ""), Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.WARN if frac < 0.4 else HEALTH_OK)
+	if clear and _ghost > frac:
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _ghost, bar.size.y)), Palette.INK)
+	var struck: bool = clear and clock_ms < hurt_until
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if struck else (Palette.WARN if frac < 0.4 else HEALTH_OK))
+	if clear:
+		_text(_title, "%d/%d" % [maxi(0, m.hp), m.max_hp], bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0), 6, Palette.INK)
+		if not m.is_gone():
+			var mood := mood_word(m)
+			_text(_title, mood[0], Vector2(12, 21) if bar == HEAD_BAR else Vector2(12, 50), 7, mood[1])
 	var mercy := mercy_gauge()
 	if mercy >= 0.0:
-		var gauge := Rect2(12, 34, 120, 3)
+		var gauge := Rect2(bar.position + Vector2(0.0, bar.size.y + 4.0), Vector2(bar.size.x, 3.0))
 		draw_rect(gauge, Palette.FAINT)
 		draw_rect(Rect2(gauge.position, Vector2(gauge.size.x * mercy, gauge.size.y)), Palette.MERCY)
 		draw_line(gauge.position + Vector2(gauge.size.x * MERCY_AT, -1.0), gauge.position + Vector2(gauge.size.x * MERCY_AT, gauge.size.y + 1.0), Palette.INK)
-		_text(_title, "MERCY %d%%" % roundi(mercy * 100.0), Vector2(136, 38), 6, Palette.MERCY)
+		_text(_title, "MERCY %d%%" % roundi(mercy * 100.0), gauge.position + Vector2(gauge.size.x + 4.0, 5.0), 6, Palette.MERCY)
 	var genre: String = state.dodge.genre if state.dodge != null else state.genre_of(m)
 	var label: String = Content.table("encounter").genres[genre].name
 	if m.boss:
