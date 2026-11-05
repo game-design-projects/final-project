@@ -34,6 +34,7 @@ const EAST := 1
 const SOUTH := 2
 
 const FACE_MARGIN := 0.02 # how far in front of the body a face part must reach, in world units
+const SPRITE_SHAPE := {"slime": 1.2, "bandit": 0.98, "snake": 1.2, "rock": 1.35} # width over height of the sprites in art.gd
 const BEFORE_TRIS := {"slime": 1308, "bandit": 1572, "snake": 2384, "rock": 762, "dragon": 2356} # what the models had before the rewrite
 
 
@@ -59,8 +60,11 @@ func _run() -> void:
 	_sight_across_a_hall()
 	_sight_through_a_side_opening()
 	_sight_on_real_floors()
-	_faces_are_not_buried()
-	_models_have_their_detail()
+	for like_sprite in [false, true]:
+		_faces_are_not_buried(like_sprite)
+		_models_have_their_detail(like_sprite)
+	_models_match_their_sprites()
+	await _stage_wears_the_look()
 	_models_move_by_species()
 	_far_monsters_stay_readable()
 	await _camera_keeps_turning()
@@ -203,9 +207,9 @@ func _sight_on_real_floors() -> void:
 
 ## A monster faces +Z. Every eye, mouth and crack (the solid-coloured parts) must stick out of the body in front of it by a
 ## little, or the body's black fill hides it and the monster looks faceless from the front.
-func _faces_are_not_buried() -> void:
+func _faces_are_not_buried(like_sprite: bool) -> void:
 	for species in BEFORE_TRIS:
-		var model: Node3D = MonsterModel.build(species, Color.WHITE)
+		var model: Node3D = MonsterModel.build(species, Color.WHITE, like_sprite)
 		var black := []
 		var features := []
 		for part in model.get_node("Rig").get_children():
@@ -257,9 +261,9 @@ func _solid_groups(verts: PackedVector3Array, colors: PackedColorArray, idx: Pac
 
 
 ## Every species at the detail it had before the rewrite (near BEFORE_TRIS triangles), under the ceiling.
-func _models_have_their_detail() -> void:
+func _models_have_their_detail(like_sprite: bool) -> void:
 	for species in BEFORE_TRIS:
-		var model: Node3D = MonsterModel.build(species, Color.WHITE)
+		var model: Node3D = MonsterModel.build(species, Color.WHITE, like_sprite)
 		var tris := 0
 		for part in model.get_node("Rig").get_children():
 			tris += part.mesh.surface_get_array_index_len(0) / 3
@@ -267,6 +271,48 @@ func _models_have_their_detail() -> void:
 		var top := MonsterModel.top_of(model)
 		_check(top > 0.5 and top < DungeonMesh.WALL_H, "the %s stands under the ceiling (top at %.2f)" % [species, top])
 		model.free()
+
+
+## With sprite-look a model from the front has the shape of its sprite. The dragon's (1.63) has wings and a tail too wide for a
+## corridor, drawn in along x, so it is only held to staying wider than it is tall.
+func _models_match_their_sprites() -> void:
+	for species in BEFORE_TRIS:
+		var model: Node3D = MonsterModel.build(species, Color.WHITE, true)
+		var box := AABB()
+		var first := true
+		for part in model.get_node("Rig").get_children():
+			var verts: PackedVector3Array = part.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+			for v in verts:
+				var at: Vector3 = part.transform * v
+				box = AABB(at, Vector3.ZERO) if first else box.expand(at)
+				first = false
+		var shape: float = box.size.x / box.size.y
+		var want: float = SPRITE_SHAPE.get(species, shape if shape > 1.0 else 1.0)
+		_check(absf(shape - want) < 0.1 and (species != "dragon" or shape > 1.0), "the %s from the front is the sprite's shape (%.2f wide per tall, the sprite %.2f)" % [species, shape, want])
+		var widest: float = maxf(absf(box.position.x), absf(box.end.x)) * model.scale.x
+		_check(widest < DungeonMesh.CELL / 2.0, "the %s stays out of the walls of a corridor (%.2f from its middle)" % [species, widest])
+		model.free()
+	for species in BEFORE_TRIS:
+		var plain: Node3D = MonsterModel.build(species, Color.WHITE)
+		var drawn: Node3D = MonsterModel.build(species, Color.WHITE, true)
+		_check(plain.get_node("Rig").get_child_count() == drawn.get_node("Rig").get_child_count(), "the %s moves the same parts in either look" % species)
+		plain.free()
+		drawn.free()
+	var unknown: Node3D = MonsterModel.build("no such thing", Color.WHITE, true)
+	_check(unknown.get_node("Rig").get_child_count() > 0, "a species with no sprite shape gets a block too")
+	unknown.free()
+
+
+## The set builds what the game says to show (the suite in classic has sprite-look off).
+func _stage_wears_the_look() -> void:
+	var flow = await _walk(31)
+	var s = flow.state
+	var stage = _stage_for(s)
+	stage.update(s, 0.0, FRAME)
+	var m = s.floor_map.monsters.filter(func(x): return stage._models.has(x)).front()
+	var wanted: Array = MonsterModel._parts_of(m.species, Palette.monster(m), s.viewing("sprite-look"))
+	_check(stage._models[m].get_node("Rig").get_child(0).mesh == wanted[0][1], "the set shows the look the game asks for (sprite-look %s)" % s.viewing("sprite-look"))
+	stage.free()
 
 
 ## Each species moves its own way: the slime wobbles, the snake sways, the rock breathes, the bandit shifts, the dragon

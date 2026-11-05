@@ -56,7 +56,7 @@ func _model_picture(species: String, color: Color, angle: float) -> Image:
 	world.environment.background_mode = Environment.BG_COLOR
 	world.environment.background_color = Color.BLACK
 	view.add_child(world)
-	var model := MonsterModel.build(species, color)
+	var model := MonsterModel.build(species, color, Flags.enabled("sprite-look"))
 	view.add_child(model)
 	MonsterModel.pose(model, 0.0, 0.0)
 	var camera := Camera3D.new()
@@ -72,6 +72,10 @@ func _model_picture(species: String, color: Color, angle: float) -> Image:
 
 func _sprite_picture(species: String, color: Color) -> Image:
 	var view := _view()
+	var back := ColorRect.new()
+	back.color = Color.BLACK
+	back.size = Vector2(SIZE)
+	view.add_child(back)
 	var sprite := Sprite.new()
 	sprite.species = species
 	sprite.color = color
@@ -86,7 +90,6 @@ func _view() -> SubViewport:
 	var view := SubViewport.new()
 	view.size = SIZE
 	view.msaa_3d = Viewport.MSAA_4X
-	view.msaa_2d = Viewport.MSAA_4X
 	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	view.transparent_bg = false
 	root.add_child(view)

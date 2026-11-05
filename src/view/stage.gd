@@ -60,6 +60,7 @@ var _tags := {} # Monster -> Label3D
 var _tag_light := {} # Monster -> 0..1, how far its tag has come in
 var _tag_key := []
 var _floor_map = null
+var _like_sprite := false # the models take the shape of the fight sprites (sprite-look)
 var _floor_changes := 0 # the walls broken on it when it was built
 var _secrets: Node3D
 var _secrets_built := -1 # how many chests and items it was built with
@@ -122,6 +123,7 @@ func project(world_pos: Vector3, view_size: Vector2) -> Vector2:
 func update(state, now: float, dt: float) -> void:
 	if state.floor_map == null:
 		return
+	_like_sprite = state.viewing("sprite-look")
 	if state.floor_map != _floor_map or state.floor_map.changes != _floor_changes:
 		_load_floor(state)
 	if state.floor_map.treasure.size() + state.floor_map.pickups.size() != _secrets_built:
@@ -234,7 +236,7 @@ func _build_trader() -> void:
 
 
 func _figure(look: String, color: Color, cell: Vector2i) -> Node3D:
-	var out := MonsterModel.build(look, color)
+	var out := MonsterModel.build(look, color, _like_sprite)
 	out.position = DungeonMesh.center(cell)
 	add_child(out)
 	return out
@@ -434,7 +436,7 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 
 
 func _add_monster(m) -> void:
-	var model := MonsterModel.build(m.species, Palette.monster(m))
+	var model := MonsterModel.build(m.species, Palette.monster(m), _like_sprite)
 	model.position = DungeonMesh.center(m.cell)
 	add_child(model)
 	_models[m] = model

@@ -24,6 +24,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `shop`: some floors have a trader who sells items for gold.
 - `heavy-strike`: HEAVY in a fight, a faster line and a smaller mark for a harder hit that rocks and dragons take badly and slimes and snakes barely feel; a miss leaves you off balance.
 - `close-camera` and `wide-view`: the camera stands nearer the middle of your cell, and the 3D picture fills the panel instead of keeping 448:288.
+- `sprite-look`: the walk models take the outline and face of the fight sprites, so a monster looks the same in both views.
 - `lurkers`: something stirs in plain sight on a floor, never on the only way through: walk round it, or walk into it for a fight and its purse.
 - `npcs`: some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor, and be paid for it.
 - `roaming`: monsters take a turn each step you take, as who they are and how they feel say, the map shows where you last saw them, and backing out of a fight makes one hold still for a few steps.

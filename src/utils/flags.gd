@@ -63,6 +63,7 @@ const FEATURES := {
 	"heavy-strike": "HEAVY in a fight: a faster line and a smaller mark for a harder hit, which some monsters take worse than others, and a miss leaves you off balance",
 	"close-camera": "the camera stands nearer the middle of your cell, so a wall or a monster one cell away reads as close",
 	"wide-view": "the 3D picture follows the panel's shape instead of keeping 448:288 with black on both sides",
+	"sprite-look": "the walk models are shaped after the fight sprites, outline and face, so a monster looks the same in both views",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

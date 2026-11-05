@@ -4,7 +4,8 @@
 ## triangles are added directly.
 ##
 ## A vertex colour's alpha says how the part is drawn (shaders/solid, shaders/ink): 1 is black with an outline in the colour,
-## 0 is solid in the colour (a dot, a slit, a crack), 0.5 is black with no outline (a two-sided membrane).
+## 0 is solid in the colour (a dot, a slit, a crack), 0.15 is solid with no outline (a line as thin as it is drawn), 0.5 is black with
+## no outline (a two-sided membrane).
 ##
 ## Winding: Godot draws faces whose corners run clockwise as you look at them, so `quad(a, b, c, d)` takes the corners
 ## clockwise seen from the front (top left, top right, bottom right, bottom left).
@@ -14,6 +15,11 @@ extends RefCounted
 ## A colour for lines (alpha 1), or for a part drawn `solid` (alpha 0).
 static func color(c: Color, solid := false) -> Color:
 	return Color(c.r, c.g, c.b, 0.0 if solid else 1.0)
+
+
+## A colour for a line: solid, and no wider than its mesh.
+static func drawn(c: Color) -> Color:
+	return Color(c.r, c.g, c.b, 0.15)
 
 
 ## A colour for a part drawn black with no outline: a two-sided membrane, whose outline pass would show it whole.

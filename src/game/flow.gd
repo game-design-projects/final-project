@@ -23,7 +23,7 @@ const Transitions = preload("res://src/game/transitions.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]

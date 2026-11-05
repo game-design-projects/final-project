@@ -9,6 +9,7 @@ extends RefCounted
 
 const Materials = preload("res://src/view/materials.gd")
 const MeshKit = preload("res://src/view/mesh_kit.gd")
+const SpriteModels = preload("res://src/view/sprite_models.gd")
 
 const HURT_SHAKE := 0.07
 const SCALE := 0.92 # every model, the champion too: at this size the tallest still stands under the ceiling
@@ -17,8 +18,8 @@ const FACE_LIFT := 0.012 # how far a pupil sits in front of its ring
 static var _parts := {} # "species|colour" -> [[part name, ArrayMesh, Transform3D], ...]
 
 
-## `species` is a key of data/species.json; `tint` the colour of its lines.
-static func build(species: String, tint: Color) -> Node3D:
+## `species` is a key of data/species.json; `tint` the colour of its lines. `like_sprite` shapes it after its fight sprite (sprite-look).
+static func build(species: String, tint: Color, like_sprite := false) -> Node3D:
 	var root := Node3D.new()
 	var rig := Node3D.new() # everything a hit shakes
 	rig.name = "Rig"
@@ -26,7 +27,7 @@ static func build(species: String, tint: Color) -> Node3D:
 	var material := Materials.model()
 	root.set_meta("species", species)
 	root.set_meta("material", material)
-	for p in _parts_of(species, tint):
+	for p in _parts_of(species, tint, like_sprite):
 		var part := MeshInstance3D.new()
 		part.name = p[0]
 		part.mesh = p[1]
@@ -91,14 +92,14 @@ static func _at(model: Node3D, part_name: String, offset := Vector3.ZERO, rot :=
 	p.transform = Transform3D(rest.basis * Basis.from_euler(rot).scaled(scl), rest.origin + offset)
 
 
-static func _parts_of(species: String, tint: Color) -> Array:
-	var key := "%s|%s" % [species, tint.to_html()]
+static func _parts_of(species: String, tint: Color, like_sprite: bool) -> Array:
+	var key := "%s|%s|%s" % [species, tint.to_html(), like_sprite]
 	if _parts.has(key):
 		return _parts[key]
 	var ln := MeshKit.color(tint) # lines
 	var dot := MeshKit.color(tint, true) # drawn solid
-	var built: Dictionary
-	match species:
+	var built: Dictionary = SpriteModels.parts(species, ln) if like_sprite else {}
+	match species if built.is_empty() else "":
 		"slime":
 			built = _slime(ln, dot)
 		"bandit":
@@ -109,6 +110,8 @@ static func _parts_of(species: String, tint: Color) -> Array:
 			built = _rock(ln, dot)
 		"dragon":
 			built = _dragon(ln, dot)
+		"":
+			pass
 		_:
 			push_warning("monster_model: no model for '%s', using a block" % species)
 			var block := _b()
