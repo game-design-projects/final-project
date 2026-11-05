@@ -71,6 +71,9 @@ const FEATURES := {
 	"legacy": "a run that ends leaves embers, which buy boons between runs that every later run starts with",
 	"hunger": "walking wears on you: hungry, the walk stops healing; starving, it costs health. Enter makes camp to eat, and floors have food",
 	"butcher": "at camp a friend can become roasts: eat them, sell them to a trader, or feed them to the others, who like you for it until one works it out",
+	"ambush": "a monster that catches you strikes first: its attack comes before your first turn",
+	"toll": "the gate on the third stairs drops unless someone holds its chain and stays: you pay in health, or leave a friend, which the Last Door may make you regret",
+	"text-size": "a TEXT SIZE setting: the log and the speech box write larger wherever they still fit",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

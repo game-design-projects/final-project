@@ -9,10 +9,13 @@ const Content = preload("res://src/rules/content.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
+var _ambush := false # it caught you, and strikes first (the feature ambush)
+
 
 func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	var m = args.foe
+	_ambush = args.get("ambush", false)
 	s.foe = m
 	m.spoke = false
 	s.menu = []
@@ -45,4 +48,4 @@ func enter(flow, args: Dictionary) -> void:
 
 func tick(flow, _t: float) -> void:
 	if flow.stage_ms() >= Combat.INTRO_MS:
-		await flow.go("menu")
+		await flow.go("wait" if _ambush else "menu")

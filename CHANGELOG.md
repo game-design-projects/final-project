@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - `chat`: typed words fly to the monster, its reply gets its own box, and the info key keeps the talk so far.
 - `boss-at-exit`, `flee-cost` and `boss-reward`: the champion holds the stairs, backing away has a cost, and beating or befriending a champion makes you stronger.
 - `branching`: the stairs offer two seeded ways down to compare.
+- `ambush`: a monster that catches you strikes first.
+- `toll`: the gate on the third stairs drops unless someone holds its chain and stays, so you pay in health or leave a friend.
+- `text-size`: a TEXT SIZE setting; the log and the speech box write larger wherever every line still fits.
 - `mini-games`: DANCE, a light that moves on every beat and heals you if you are on it when the beat lands.
 - `map-gen`: half of the undercroft's floors are long or tall instead of square.
 - `branching` can offer a market stair, with a trader on the floor below.

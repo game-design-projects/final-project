@@ -21,6 +21,9 @@ signal cancelled ## Esc in the talk box
 const LOG_H := 66.0
 const SLOT_H := 74.0
 const KEYS_H := 26.0
+const LOG_PX := 20
+const LOG_SIZES_LARGE := [26, 24, 22]
+static var large_text := false # the TEXT SIZE setting (the scene keeps this up to date)
 const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
 const THINKING_AFTER_MS := 250 # a question out this long shows as "thinking"; a quick answer doesn't flicker it
 const SAY_BUTTON := -2 # what `_hover_at` says over the talk box's button
@@ -294,17 +297,26 @@ static func _log_head(l: Dictionary) -> String:
 	return "%s: " % l.who if l.kind == "say" and l.who != "" else ""
 
 
+## The size the log writes these lines at: with the TEXT SIZE setting, as large as still shows them all, so a larger size never costs a line.
+static func log_px(lines: Array, width: float) -> int:
+	if large_text:
+		for px in LOG_SIZES_LARGE:
+			if log_fits(lines, width, px) == lines.size():
+				return px
+	return LOG_PX
+
+
 ## How tall a log line is at this width, as `_log` draws it: the text wraps after the speaker's name.
-static func _log_line_h(l: Dictionary, width: float) -> float:
-	var indent := Fonts.body().get_string_size(_log_head(l), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
-	return Fonts.body().get_multiline_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, width - indent, 20).y
+static func _log_line_h(l: Dictionary, width: float, px := LOG_PX) -> float:
+	var indent := Fonts.body().get_string_size(_log_head(l), HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	return Fonts.body().get_multiline_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, width - indent, px).y
 
 
 ## How many of the first lines fit the log box, which cuts off at the first one that would run past its bottom.
-static func log_fits(lines: Array, width: float) -> int:
+static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 	var y := 0.0
 	for i in lines.size():
-		var h := _log_line_h(lines[i], width)
+		var h := _log_line_h(lines[i], width, px)
 		if y + h > LOG_H + 4.0:
 			return i
 		y += h
@@ -321,15 +333,18 @@ func _log_lines() -> Array:
 ## The log: the lines the game last said, top down, a speaker's name in gold.
 func _log(area: Rect2) -> void:
 	var y := area.position.y
-	for l in _log_lines():
+	var shown := _log_lines()
+	var px := log_px(shown, area.size.x)
+	var baseline := float(px) - 3.0
+	for l in shown:
 		var head := _log_head(l)
-		var rich_h := _log_line_h(l, area.size.x)
+		var rich_h := _log_line_h(l, area.size.x, px)
 		if y + rich_h > area.end.y + 4.0:
 			break
 		if head != "":
-			_text(_body, head, Vector2(0, y + 17.0), 20, Palette.MERCY)
-		var indent := _body.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
-		draw_multiline_string(_body, Vector2(indent, y + 17.0), l.text, HORIZONTAL_ALIGNMENT_LEFT, area.size.x - indent, 20, -1, Palette.INK if l.kind == "say" else Palette.DIM)
+			_text(_body, head, Vector2(0, y + baseline), px, Palette.MERCY)
+		var indent := _body.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		draw_multiline_string(_body, Vector2(indent, y + baseline), l.text, HORIZONTAL_ALIGNMENT_LEFT, area.size.x - indent, px, -1, Palette.INK if l.kind == "say" else Palette.DIM)
 		y += rich_h
 	if is_thinking():
 		var dots := ".".repeat(1 + int(Time.get_ticks_msec() / 300.0) % 3)

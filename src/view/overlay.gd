@@ -38,6 +38,8 @@ const SOUL_GLIDE := 28.0 # how fast your soul catches up with its square: the sh
 const LEAVE_FADE_MS := 280.0 # how long the battle screen takes to fade back to the halls
 const SPEECH := Rect2(96.0, 228.0, 256.0, 54.0)
 const SPEECH_SIZES := [14, 13, 12, 11, 10]
+const SPEECH_SIZES_LARGE := [18, 17, 16, 15, 14, 13, 12, 11, 10]
+static var large_text := false # the TEXT SIZE setting (the scene keeps this up to date)
 const SPEECH_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait"]
 const FLY_MS := 550.0
 const HEARD_MS := 950.0 # the listening dots stay this long after the words were sent, however fast the answer
@@ -202,7 +204,7 @@ func speech() -> Dictionary:
 ## The size the speech box writes `text` at: as large as fits, smaller for the longest lines.
 static func speech_px(text: String) -> int:
 	var body: Font = Fonts.body()
-	for px in SPEECH_SIZES:
+	for px in SPEECH_SIZES_LARGE if large_text else SPEECH_SIZES:
 		if body.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, SPEECH.size.x - 12.0, px).y <= SPEECH.size.y - 16.0:
 			return px
 	return SPEECH_SIZES[-1]

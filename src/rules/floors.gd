@@ -144,6 +144,11 @@ static func paths(run_seed: int, depth: int, traders := true) -> Array:
 	return out
 
 
+## The gate that wants someone left at its chain (the feature toll).
+static func toll() -> Dictionary:
+	return Content.table("floors").toll
+
+
 ## What a rest at the stairs gives back.
 static func rest_heal() -> int:
 	return int(Content.table("floors").rest_heal)

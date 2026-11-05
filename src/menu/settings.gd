@@ -14,6 +14,7 @@ const DEFAULTS := {
 	"shake": true, # the battle screen shakes when something hits
 	"easy": false, # slower dodges (the feature gentle-dodge)
 	"tips": true, # the first-time tips (the feature tutorial)
+	"text_size": "normal", # the log and the speech box (the feature text-size)
 	"seen_tips": [], # the tips already shown
 	"sfx": true,
 	"sfx_volume": 5, # 0..VOLUME_MAX, for the music too
@@ -21,6 +22,7 @@ const DEFAULTS := {
 const OPTIONS := {
 	"window_mode": ["windowed", "maximized", "fullscreen"],
 	"fps_cap": [0, 30, 60, 120, 144],
+	"text_size": ["normal", "large"],
 }
 const VOLUME_MAX := 10
 ## Where the game before the rewrite kept every setting, as one JSON string. Read once, moved to the keys below, and removed.
@@ -28,6 +30,7 @@ const OLD_KEY := "donjon.settings"
 const LABELS := {
 	"window_mode": {"windowed": "WINDOWED", "maximized": "MAXIMIZED", "fullscreen": "FULLSCREEN"},
 	"fps_cap": {0: "NO CAP", 30: "30", 60: "60", 120: "120", 144: "144"},
+	"text_size": {"normal": "NORMAL", "large": "LARGE"},
 }
 
 

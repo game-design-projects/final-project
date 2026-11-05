@@ -17,5 +17,5 @@
   "dragon": {"kind": "still"}
  },
  "tag": "HUNTING",
- "caught": "%s caught up with you."
+ "caught": "%s caught up with you.", "first": "It strikes first."
 }

@@ -270,6 +270,25 @@ func _walk_and_fight() -> void:
 	s.max_hp = real_max
 	s.hp = real_max
 	s.cell = s.floor_map.stairs
+	# the gate on the third stairs, with a full party and the longest name, in both text sizes
+	var depth_was: int = s.depth
+	var allies_were: Array = s.allies
+	s.depth = 3
+	s.allies = [Ally.make("bandit", "SLY TAM", 60.0), Ally.make("rock", "OLD SHALE", 60.0), Ally.make("slime", "GLOP", 60.0)]
+	await flow.go("end")
+	await _wait(0.3)
+	await _shot("11a_gate")
+	load("res://src/menu/settings.gd").set_value("text_size", "large")
+	await _wait(0.3)
+	await _shot("11b_gate_large_text")
+	await flow.press("1")
+	await _wait(0.3)
+	await _shot("11c_gate_paid_large_text")
+	load("res://src/menu/settings.gd").set_value("text_size", "normal")
+	s.depth = depth_was
+	s.allies = allies_were
+	await flow.go("explore")
+	s.cell = s.floor_map.stairs
 	await flow.go("end")
 	await _wait(0.3)
 	await _shot("11_end")

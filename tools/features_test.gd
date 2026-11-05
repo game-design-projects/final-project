@@ -3,6 +3,7 @@
 ##   godot --headless --path . -s res://tools/features_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
+const Ally = preload("res://src/game/ally.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
@@ -53,6 +54,7 @@ func _run() -> void:
 	await _chat()
 	await _gate()
 	await _branching()
+	await _late_decisions()
 	await _clans()
 	await _map_gen()
 	await _secrets()
@@ -619,6 +621,97 @@ func _chat() -> void:
 	s.stage = "menu"
 	_check(tips.targets().has("chat"), "the info key can open the talk so far")
 	tips.free()
+	_use()
+
+
+## The monster that catches you strikes first; the toll on the third stairs; the text size.
+func _late_decisions() -> void:
+	# ambush
+	for words in [[], ["no-ambush"]]:
+		var flow = _flow(61, words)
+		await flow.new_run()
+		var s = flow.state
+		var m = s.floor_map.monsters[0]
+		s.floor_map.monsters = [m]
+		s.floor_map.merchant = {}
+		s.floor_map.quester = {}
+		m.species = "snake"
+		m.lurking = false
+		m.hold = 0
+		var d := 0
+		while not s.floor_map.is_open(s.cell + FloorMap.DIRS[d]):
+			d += 1
+		m.cell = s.cell + FloorMap.DIRS[d]
+		s.banner = null
+		var caught: bool = await flow._stages["explore"]._monsters_move(flow)
+		_check(caught and s.stage == "intro" and s.foe == m, "a monster next to you catches you (%s)" % str(words))
+		await flow.tick(flow.clock + 5000.0)
+		var first: bool = words.is_empty()
+		_check(s.stage == ("wait" if first else "menu"), "%s (%s)" % ["and strikes first" if first else "no-ambush: you still go first", s.stage])
+		_check(s.lines.any(func(l): return l.text.contains("strikes first")) == first, "and the log says which")
+	# the toll
+	var toll: Dictionary = Floors.toll()
+	var flow = _flow(62)
+	await flow.new_run()
+	var s = flow.state
+	s.depth = int(toll.depth)
+	s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]
+	s.hp = 20
+	await _reach_stairs(flow)
+	_check(s.stage == "end" and s.menu[0].label == toll.hold_label and s.menu.size() == 4, "the gate asks who stays (%s)" % str(s.menu.map(func(i): return i.label)))
+	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and the log has room for it")
+	await flow.press("2")
+	_check(s.allies.size() == 1 and s.allies[0].name == "HISS" and s.left_behind == ["GLOP"], "a friend left at the chain stays there")
+	_check(s.allies[0].loyalty == 60.0 + float(toll.loyalty), "and the others saw")
+	_check(s.menu[-1].label == "MAIN MENU" and s.menu[0].label != toll.hold_label, "and the way down is open")
+	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))).left_behind == ["GLOP"], "a save remembers who")
+	var ended := {"route": "x", "text": "y", "tail": "z"}
+	flow._stages["end"]._finish(flow, ended)
+	_check(s.lines[-1].text.contains("GLOP"), "and so does the end of the run (%s)" % s.lines[-1].text)
+	flow = _flow(63)
+	await flow.new_run()
+	s = flow.state
+	s.depth = int(toll.depth)
+	s.allies = [Ally.make("slime", "GLOP", 60.0)]
+	s.hp = 8
+	await _reach_stairs(flow)
+	await flow.press("1")
+	_check(s.allies.size() == 1 and s.left_behind.is_empty() and s.hp == 1, "holding it yourself costs health, and never the last of it (%d)" % s.hp)
+	for words in [["no-toll"], []]:
+		flow = _flow(64, words)
+		await flow.new_run()
+		s = flow.state
+		s.depth = int(toll.depth) if not words.is_empty() else int(toll.depth) + 1
+		s.allies = [Ally.make("slime", "GLOP", 60.0)]
+		await _reach_stairs(flow)
+		_check(s.menu[0].label != toll.hold_label, "no gate %s" % ("with no-toll" if not words.is_empty() else "on another floor"))
+	flow = _flow(65)
+	await flow.new_run()
+	s = flow.state
+	s.depth = int(toll.depth)
+	s.allies = []
+	await _reach_stairs(flow)
+	_check(s.menu[0].label != toll.hold_label, "and none for someone with nobody to leave")
+	# text size
+	var line := "A short line."
+	Overlay.large_text = false
+	var normal: int = Overlay.speech_px(line)
+	Overlay.large_text = true
+	_check(Overlay.speech_px(line) > normal, "a large text size writes speech larger")
+	var long_said := "It says it might as well tell you: the stairs are that way, past the third turn, and the champion waits beyond."
+	var body: Font = load("res://src/view/fonts.gd").body()
+	_check(body.get_multiline_string_size(long_said, HORIZONTAL_ALIGNMENT_LEFT, Overlay.SPEECH.size.x - 12.0, Overlay.speech_px(long_said)).y <= Overlay.SPEECH.size.y - 16.0, "and a long answer still fits")
+	Overlay.large_text = false
+	var three := [State.sys_line("One line."), State.sys_line("Another line."), State.sys_line("A third line, and it matters.")]
+	var one := [State.sys_line("One line.")]
+	Hud.large_text = false
+	_check(Hud.log_px(one, 1100.0) == Hud.LOG_PX, "the log keeps its size by default")
+	Hud.large_text = true
+	_check(Hud.log_px(one, 1100.0) > Hud.LOG_PX, "a large text size writes the log larger")
+	_check(Hud.log_fits(three, 1100.0, Hud.log_px(three, 1100.0)) == 3, "and never at the cost of a line")
+	Hud.large_text = false
+	var settings = load("res://src/menu/settings.gd")
+	_check(settings.valid("text_size", "large") and not settings.valid("text_size", "huge"), "the setting has two sizes")
 	_use()
 
 

@@ -112,7 +112,9 @@ func _monsters_move(flow) -> bool:
 	s.spot()
 	print_verbose("explore: the monsters' turn took %d us" % (Time.get_ticks_usec() - t0))
 	if done.caught != null:
-		await flow.go("intro", {"foe": done.caught, "before": [State.sys_line(Roaming.table().caught % done.caught.name)]})
+		var ambush: bool = flow.feature("ambush")
+		var said: String = Roaming.table().caught % done.caught.name
+		await flow.go("intro", {"foe": done.caught, "ambush": ambush, "before": [State.sys_line(said + " " + str(Roaming.table().first) if ambush else said)]})
 		return true
 	if done.noticed.any(func(m): return s.in_sight.has(m.cell)):
 		flow.event("sound", {"name": "alert"})

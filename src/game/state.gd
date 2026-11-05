@@ -55,6 +55,7 @@ var hunger := 0.0 # 0 fed .. rules/survival.gd's starving_at
 var starved_steps := 0 # steps walked starving
 var butchered: Array = [] # {species, name}: the friends who went into the bag
 var meals := 0 # how many bowls you have fed the others
+var left_behind: Array = [] # the names of the friends left at a gate's chain
 var found_out := false # one of them worked it out
 
 # the fight
@@ -165,7 +166,7 @@ func to_dict() -> Dictionary:
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
 		"reputation": reputation.duplicate(), "deeds": deeds.duplicate(),
 		"items": items.duplicate(), "sharpened": sharpened, "heavyKnown": heavy_known.keys(),
-		"hunger": hunger, "starvedSteps": starved_steps, "butchered": butchered.duplicate(true), "meals": meals, "foundOut": found_out,
+		"hunger": hunger, "starvedSteps": starved_steps, "butchered": butchered.duplicate(true), "leftBehind": left_behind.duplicate(), "meals": meals, "foundOut": found_out,
 	}
 
 
@@ -217,6 +218,9 @@ static func from_dict(d: Dictionary):
 	s.starved_steps = maxi(0, _int(d.starvedSteps)) if _is_num(d.get("starvedSteps")) else 0
 	s.meals = maxi(0, _int(d.meals)) if _is_num(d.get("meals")) else 0
 	s.found_out = d.get("foundOut") == true
+	for who in d.get("leftBehind", []) if d.get("leftBehind") is Array else []:
+		if who is String:
+			s.left_behind.append(who)
 	for b in d.get("butchered", []) if d.get("butchered") is Array else []:
 		if b is Dictionary and b.get("species") is String and b.get("name") is String:
 			s.butchered.append({"species": b.species, "name": b.name})

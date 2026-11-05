@@ -20,11 +20,11 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 
 Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and on some floors someone who asks for a favour instead of a fight. Floors 2 and 4 have a trader.
 
-**Monsters move when you move**, and turning is free. Slimes drift, bandits patrol, snakes follow for a while, and rocks and dragons stay put; an angry monster, or one whose clan you have wronged, comes after you. One that has seen you is tagged HUNTING with an alert sound, one in sight makes a soft step as it moves, and an arrow at its feet shows the way it went. A monster that catches you starts the fight.
+**Monsters move when you move**, and turning is free. Slimes drift, bandits patrol, snakes follow for a while, and rocks and dragons stay put; an angry monster, or one whose clan you have wronged, comes after you. One that has seen you is tagged HUNTING with an alert sound, one in sight makes a soft step as it moves, and an arrow at its feet shows the way it went. A monster that catches you starts the fight and strikes first.
 
 **Hunger.** Walking slowly brings health back until you are hungry; starving, it costs you health every few steps. Press **Enter** to make camp and eat. Floors leave rations about, traders sell them, and going down a floor takes the edge off.
 
-**The stairs** offer two ways down to compare, chosen from the seed: a steep stair (tougher monsters, more gold), a quiet one (fewer monsters, a longer rest), a market stair (a trader below) or a warren (every monster below is one kind). The last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending.
+**The stairs** offer two ways down to compare, chosen from the seed: a steep stair (tougher monsters, more gold), a quiet one (fewer monsters, a longer rest), a market stair (a trader below) or a warren (every monster below is one kind). On the third stairs a gate drops unless someone holds its chain and stays: hold it yourself for 10 HP, or leave a friend behind, which the others see. The last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending.
 
 ## Fights
 

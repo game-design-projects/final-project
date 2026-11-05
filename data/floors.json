@@ -35,6 +35,20 @@
   "door": "It only opens for someone who is not alone.",
   "line": "You robbed the Hoard. It threw you down here, five floors above the Last Door."
  },
+ "toll": {
+  "depth": 3,
+  "hp": 10,
+  "loyalty": -15.0,
+  "ask": "The gate here drops unless someone holds its chain, and whoever holds it stays.",
+  "hold_label": "HOLD IT YOURSELF",
+  "hold_sub": "Nobody stays, and the gate catches you on the way under: %d HP",
+  "leave_label": "LEAVE %s",
+  "leave_sub": "It holds the gate and stays behind. The others will see",
+  "held": "You hold it, you run, and the gate catches you going under. %d HP.",
+  "left": "%s takes the chain and doesn't look at you. You go down without it.",
+  "others": "Nobody says anything for a long time.",
+  "ending": "%s is still holding the chain."
+ },
  "boss_reward": {
   "max_hp": 4,
   "heal": 6

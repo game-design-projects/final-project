@@ -267,6 +267,9 @@ func _process(dt: float) -> void:
 	_dock.thinking_ms = Network.waiting_ms()
 	flow.easy_dodge = Settings.get_value("easy")
 	flow.coach.enabled = Settings.get_value("tips")
+	var large: bool = flow.feature("text-size") and Settings.get_value("text_size") == "large"
+	Hud.large_text = large
+	Overlay.large_text = large
 	if not flow.coach.seen.is_empty() and Settings.get_value("seen_tips").is_empty():
 		flow.coach.seen = {} # SHOW THE TIPS AGAIN, from the pause menu
 	_clock_ms += dt * 1000.0
