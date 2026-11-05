@@ -1,9 +1,11 @@
-## One floor: a square grid of walls and open cells, the stairs, and the monsters standing on it.
-## `grid[y][x]` is 1 for open and 0 for wall. Facing is an int 0..3 for north, east, south, west (DIRS).
+## One floor: a square grid of walls and open cells, the stairs, the monsters standing on it, and what it hides.
+## `grid[y][x]` is 1 for open, 0 for wall, 2 for a cracked wall (a wall until it is broken). Facing is an int 0..3 for north, east,
+## south, west (DIRS).
 extends RefCounted
 
 const DIRS := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
 const DIR_NAMES := ["N", "E", "S", "W"]
+const CRACKED := 2
 
 var size := 0
 var grid: Array = []
@@ -11,6 +13,10 @@ var stairs := Vector2i.ZERO
 var start := Vector2i(1, 1)
 var monsters: Array = [] # Monster; the champion (boss) is the last one, in the middle hall
 var seed_value := 0
+var biome := "" # its id in data/biomes.json, "" for a floor with none
+var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find
+var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
+var changes := 0 # how many walls have been broken, for whoever built something from the grid
 
 
 func is_open(c: Vector2i) -> bool:
@@ -18,6 +24,46 @@ func is_open(c: Vector2i) -> bool:
 		return false
 	var row: Array = grid[c.y]
 	return c.x >= 0 and c.x < row.size() and row[c.x] == 1
+
+
+func is_cracked(c: Vector2i) -> bool:
+	if c.y < 0 or c.y >= grid.size():
+		return false
+	var row: Array = grid[c.y]
+	return c.x >= 0 and c.x < row.size() and row[c.x] == CRACKED
+
+
+## A cracked wall gives way.
+func break_wall(c: Vector2i) -> void:
+	grid[c.y][c.x] = 1
+	changes += 1
+
+
+## The other end of the pad in this cell, or null.
+func pad_partner(c: Vector2i):
+	for t in teleports:
+		if t.a == c:
+			return t.b
+		if t.b == c:
+			return t.a
+	return null
+
+
+## The pads' cells, as a set.
+func pads() -> Dictionary:
+	var out := {}
+	for t in teleports:
+		out[t.a] = true
+		out[t.b] = true
+	return out
+
+
+## Opens the chest in this cell if there is one: its gold, or 0.
+func take_treasure(c: Vector2i) -> int:
+	for i in treasure.size():
+		if treasure[i].cell == c:
+			return int(treasure.pop_at(i).gold)
+	return 0
 
 
 ## The monster standing in this cell that is still around, or null.
@@ -48,6 +94,9 @@ func to_dict() -> Dictionary:
 	return {
 		"size": size, "grid": grid, "stairs": [stairs.x, stairs.y], "start": [start.x, start.y], "seed": seed_value,
 		"monsters": monsters.map(func(m): return m.to_dict()),
+		"biome": biome,
+		"treasure": treasure.map(func(t): return {"cell": [t.cell.x, t.cell.y], "gold": t.gold}),
+		"teleports": teleports.map(func(t): return {"a": [t.a.x, t.a.y], "b": [t.b.x, t.b.y]}),
 	}
 
 
@@ -61,4 +110,11 @@ static func from_dict(d: Dictionary, monster_script):
 	f.start = Vector2i(int(st[0]), int(st[1]))
 	f.seed_value = int(d.get("seed", 0))
 	f.monsters = d.get("monsters", []).map(func(md): return monster_script.from_dict(md))
+	f.biome = str(d.get("biome", ""))
+	f.treasure = d.get("treasure", []).map(func(t): return {"cell": _cell(t.cell), "gold": int(t.gold)})
+	f.teleports = d.get("teleports", []).map(func(t): return {"a": _cell(t.a), "b": _cell(t.b)})
 	return f
+
+
+static func _cell(v: Array) -> Vector2i:
+	return Vector2i(int(v[0]), int(v[1]))

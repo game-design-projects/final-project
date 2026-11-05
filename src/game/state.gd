@@ -13,7 +13,7 @@ const Vision = preload("res://src/rules/vision.gd")
 
 const DEPTH_MAX := 99
 const CHAT_MAX := 60
-const GRID_MAX := 64 # the biggest floor a save may describe (the game's own is 13)
+const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' largest is 31)
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
@@ -246,6 +246,14 @@ static func _floor_problem(f) -> String:
 	for key in ["stairs", "start"]:
 		if not _is_cell(f.get(key)) or not _open(f, _cell(f[key])):
 			return "the floor's %s is not an open cell" % key
+	if f.has("biome") and not f.biome is String:
+		return "the floor's biome is not a word"
+	if f.has("treasure"):
+		if not f.treasure is Array or f.treasure.any(func(t): return not t is Dictionary or not _is_cell(t.get("cell")) or not _open(f, _cell(t.cell)) or not _is_num(t.get("gold"))):
+			return "the floor's chests are not a list of open cells with gold"
+	if f.has("teleports"):
+		if not f.teleports is Array or f.teleports.any(func(t): return not t is Dictionary or not _is_cell(t.get("a")) or not _is_cell(t.get("b")) or not _open(f, _cell(t.a)) or not _open(f, _cell(t.b))):
+			return "the floor's pads are not a list of pairs of open cells"
 	if not f.get("monsters") is Array:
 		return "the floor's monsters are not a list"
 	for m in f.monsters:

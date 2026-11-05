@@ -6,6 +6,7 @@ extends RefCounted
 
 const FloorMap = preload("res://src/rules/floor_map.gd")
 
+const RANGE := 12 # the farthest a cell can be seen, along either axis: the classic floor fits inside it, so a big one costs no more
 const STEP := 0.1 # how finely a line of sight is walked, in cells
 const BACK := 0.38 # how far behind the middle of your cell the camera stands, in cells (stage.gd stands it there)
 const VIEW_TAN := 1.0493 # the camera's field of view: tan of half its width, for FOV 68 at 448:288 (tools/view_test.gd checks it)
@@ -32,8 +33,8 @@ static func sight(floor_map, from: Vector2i, facing: int) -> Array:
 	var mid := Vector2(from) + Vector2(0.5, 0.5)
 	var eye := mid - fwd * BACK
 	var out := [from]
-	for y in floor_map.size:
-		for x in floor_map.size:
+	for y in range(maxi(0, from.y - RANGE), mini(floor_map.size, from.y + RANGE + 1)):
+		for x in range(maxi(0, from.x - RANGE), mini(floor_map.size, from.x + RANGE + 1)):
 			var c := Vector2i(x, y)
 			if c == from or not floor_map.is_open(c):
 				continue

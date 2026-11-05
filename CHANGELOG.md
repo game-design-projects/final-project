@@ -18,10 +18,18 @@ All notable changes to this project are documented here. The format follows [Kee
 - `boss-at-exit`, `flee-cost` and `boss-reward`: the champion holds the stairs, backing away has a cost, and beating or befriending a champion makes you stronger.
 - `branching`: the stairs offer two seeded ways down to compare.
 - `clans`: monsters belong to clans that remember your deeds, later ones say so and start in a different mood, and Jev is told the history.
+- `map-gen`: floors come in three biomes with their own generator (maze, authored chunks, caves), size up to 31x31, colours and monsters, with a scrolling automap.
+- `secrets`: chests behind cracked walls that break when you walk into them, and pairs of pads that carry you across the floor.
+- `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.
 - `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
 
 ### Changed
 - Each mini-game now lives in its own file under `src/rules/minigames/`.
+- `Vision.sight` stops 12 cells away, so a big floor costs no more than the classic one.
+- CI also runs `features_test` and every suite with `classic`, and `run_tests.sh` includes `audio_test`.
+
+### Fixed
+- `audio_test` no longer fails on the kinds of line that have no recording yet: they are named in `AWAITING_RENDER` until `tools/voices` renders them.
 
 ## [0.6.1] - 2026-11-03
 

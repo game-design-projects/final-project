@@ -14,7 +14,7 @@ const KNOWN := {
 	"mock": "monsters think with the seeded mind instead of calling Jev (not in the personality slice, which always uses the local rules)",
 	"jev": "jev=<url>: ask Jev through the proxy at this address (without it the rule-based mind answers)",
 	"seed": "seed=N: fixed random seed for the floor and the monsters (0 to 9223372036854775807, as the game prints it)",
-	"floor": "floor=N: call the floor B<N>F and give it floor N's colours (nothing else about the floor changes)",
+	"floor": "floor=N: start the run on floor N (with no-real-floors, only call it B<N>F)",
 	"meet": "meet=<species>: start in a fight with that monster",
 	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
@@ -50,6 +50,8 @@ const FEATURES := {
 	"recruit-step": "a spared monster asks to come along and you answer, with no second roll; peace leaves a gift, a refused SPARE no longer angers, and champions are presented as winnable",
 	"mercy-link": "the mercy odds show as a gauge beside the monster's health, and each deed says how far it moved them",
 	"party-aid": "each ally adds to your strikes, and two or more take the edge off every hit",
+	"map-gen": "floors come in biomes with their own generator, size, colours and monsters, and grow as you go down, with a scrolling automap",
+	"secrets": "floors hide chests behind cracked walls, which break when you walk into them, and pads that carry you across the floor",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

@@ -549,6 +549,8 @@ func _the_set_has_its_parts() -> void:
 func _automap_marks() -> void:
 	var flow = await _walk(11)
 	var s = flow.state
+	s.floor_map = FloorGen.generate(Rng.new(11)) # the classic floor, whichever the run's first one is
+	s.cell = s.floor_map.start
 	var map = Automap.new()
 	map.state = s
 	s.seen = {s.cell: true}

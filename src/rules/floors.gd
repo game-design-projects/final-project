@@ -8,6 +8,7 @@ const Rng = preload("res://src/utils/rng.gd")
 
 const PATHS_OFFERED := 2
 const PATH_SEED := 100 # the ways down are drawn from their own seed, not any floor's
+const BIOME_SEED := 200 # the order of the biomes has its own seed too
 const FLOOR_SEED_STEP := 7919 # a prime, so the floors' seeds don't line up with the seeds next to this run's
 
 
@@ -32,6 +33,46 @@ static func plan(depth: int, way := {}) -> Dictionary:
 		"count": int(way.get("count", -1)),
 		"only_species": str(way.get("only_species", "")),
 	}
+
+
+## The biome of floor `depth` of this run, at the size it is that deep: the biomes in an order from the run's seed, round and round,
+## so no two floors running are the same one.
+static func biome(run_seed: int, depth: int) -> Dictionary:
+	var order: Array = Content.table("biomes").biomes.duplicate()
+	Rng.new(floor_seed(run_seed, 0, BIOME_SEED)).shuffle(order)
+	return sized(order[posmod(depth - 1, order.size())], depth)
+
+
+## A biome with the size it has at `depth`.
+static func sized(entry: Dictionary, depth: int) -> Dictionary:
+	var out := entry.duplicate()
+	var sizes: Array = entry.sizes
+	out.size = int(sizes[clampi(depth - 1, 0, sizes.size() - 1)])
+	return out
+
+
+## The biome with this id, or an empty record.
+static func biome_named(id: String) -> Dictionary:
+	for b in Content.table("biomes").biomes:
+		if b.id == id:
+			return b
+	return {}
+
+
+## Which colours a floor wears (Palette.for_run): one of its biome's, by its seed. With no biome, its seed alone picks.
+static func palette(biome_id: String, seed_value: int) -> int:
+	var entry := biome_named(biome_id)
+	return seed_value if entry.is_empty() else int(entry.palettes[posmod(seed_value, entry.palettes.size())])
+
+
+## What the log says when you find something hidden ("wall", "chest", "pad").
+static func secret_line(kind: String) -> String:
+	return Content.table("biomes").lines[kind]
+
+
+## What a floor of this biome hides (an empty record: a floor with no biome).
+static func secrets(of_biome := {}) -> Dictionary:
+	return of_biome.get("secrets", Content.table("biomes").secrets)
 
 
 ## The seed of floor `depth` of the run seeded `run_seed`. `path` is which way down was taken (0 when there is one way).

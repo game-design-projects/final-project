@@ -2,7 +2,8 @@
 ## by a hash of its place and the floor's seed, so a wall is always decorated the same way. They are real shapes standing off
 ## the wall (mesh_kit.gd), black and outlined in the wall colour, dimming with distance like the walls' lines; a crack or an
 ## arch's edge is a strip drawn solid on the wall. Torch flames are a shader (shaders/flame.gdshader) in the accent colour, and
-## each torch lights the wall round it (shaders/wire.gdshader).
+## each torch lights the wall round it (shaders/wire.gdshader). A cracked wall always shows a fissure, in the accent colour: it can be
+## breakable only if it can be told apart from the cracks that are only cracks.
 extends RefCounted
 
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
@@ -24,6 +25,9 @@ static func placements(floor_map) -> Array:
 				continue
 			for side in 4:
 				if floor_map.is_open(c + FloorMap.DIRS[side]):
+					continue
+				if floor_map.is_cracked(c + FloorMap.DIRS[side]):
+					out.append({"cell": c, "side": side, "kind": "fissure", "roll": 0.0})
 					continue
 				var roll := _hash(x, y, side, floor_map.seed_value)
 				if roll[0] <= SHARE:
@@ -53,6 +57,8 @@ static func build(floor_map, wall_color: Color, accent: Color, torches: Array) -
 				_window(props, face, wall_color)
 			"niche":
 				_niche(props, face, wall_color)
+			"fissure":
+				_fissure(props, face, accent)
 	if not props.is_empty():
 		var shapes := MeshInstance3D.new()
 		shapes.name = "Props"
@@ -134,6 +140,15 @@ static func _crack(props: MeshKit.Builder, face: _Face, color: Color) -> void:
 	_strip(props, face, [[0.3, 0.18], [0.38, 0.34], [0.34, 0.46], [0.46, 0.6], [0.42, 0.72], [0.52, 0.86]], 0.035, solid)
 	_strip(props, face, [[0.38, 0.34], [0.48, 0.38]], 0.025, solid)
 	_strip(props, face, [[0.46, 0.6], [0.58, 0.62]], 0.025, solid)
+
+
+## A crack right across the wall, in the accent colour, branching: you can tell this one gives.
+static func _fissure(props: MeshKit.Builder, face: _Face, accent: Color) -> void:
+	var solid := MeshKit.color(accent, true)
+	_strip(props, face, [[0.22, 0.04], [0.36, 0.2], [0.3, 0.36], [0.5, 0.5], [0.44, 0.68], [0.62, 0.82], [0.58, 0.97]], 0.05, solid)
+	_strip(props, face, [[0.36, 0.2], [0.54, 0.26], [0.7, 0.2]], 0.035, solid)
+	_strip(props, face, [[0.5, 0.5], [0.72, 0.54], [0.82, 0.68]], 0.035, solid)
+	_strip(props, face, [[0.44, 0.68], [0.26, 0.74], [0.16, 0.9]], 0.035, solid)
 
 
 ## A dark hole in a frame, with a sill and three bars.

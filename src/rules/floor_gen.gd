@@ -1,78 +1,83 @@
-## Makes a floor: a maze carved by random walk, a few shortcuts, the champion's hall in the middle, the stairs at the far
-## end, and the roster's monsters spread along the way from near to far. The same seed makes the same floor.
+## Makes a floor in passes: a layout from the biome's generator (rules/maps), checked and carved again if it won't do; the secrets;
+## the stairs at the far end; and the monsters spread along the way from near to far. Every draw comes from the floor's generator, so
+## the same seed makes the same floor. With no biome it is the classic maze, drawing the numbers it always drew.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
+const Grid = preload("res://src/rules/maps/grid.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Secrets = preload("res://src/rules/secrets.gd")
 
-const SIZE := 13 # odd, so the carved cells land on odd coordinates and walls on even ones
-const HALL_RADIUS := 2 # the hall is 5x5
+## A biome names one of these (data/biomes.json); each is a file of its own in rules/maps, with `carve(rng, size, params)`.
+const GENERATORS := {
+	"halls": preload("res://src/rules/maps/halls.gd"),
+	"chunks": preload("res://src/rules/maps/chunks.gd"),
+	"caves": preload("res://src/rules/maps/caves.gd"),
+}
+const SIZE := 13 # the classic floor
+const HALL_RADIUS := Grid.HALL_RADIUS
 const SHORTCUT_TRIES := 12
+const CARVE_TRIES := 100 # a layout that won't do is carved again, from the same generator, so a seed still makes one floor
+const EXTRA_MONSTER_CELLS := 3 # a floor this much wider than the classic one has one more monster
 const MIN_MONSTER_DISTANCE := 3 # steps from the start before the first monster may stand
 const MONSTER_SPACING := 2 # no two monsters within this many cells of each other (Manhattan)
 
 
-## `plan` (rules/floors.gd) says how deep the floor is and who guards it; without one it is the classic first floor.
+## `plan` (rules/floors.gd) says how deep the floor is, who guards it, its biome and its secrets; without one it is the classic first
+## floor.
 static func generate(rng: Rng, plan := {}):
+	var t0 := Time.get_ticks_usec()
 	var f := FloorMap.new()
-	f.size = SIZE
 	f.seed_value = rng.seed_value
-	f.grid = _carve(rng)
-	var mid := floori(SIZE / 2.0)
-	var hall := Vector2i(mid, mid)
-	_open_hall(f.grid, hall)
+	var biome: Dictionary = plan.get("biome", {})
+	f.biome = str(biome.get("id", ""))
+	var hall := _lay_out(f, rng, biome)
 	var walk := _walk_from(f, f.start, hall)
+	var secrets: Dictionary = plan.get("secrets", {})
+	if not secrets.is_empty():
+		Secrets.hide_chests(rng, f, walk, hall, secrets)
+		walk = _walk_from(f, f.start, hall)
 	f.stairs = walk.farthest
-	f.monsters = _place_monsters(rng, walk, hall, plan)
-	print("floor: seed %d, stairs at %s, %d monsters" % [rng.seed_value, f.stairs, f.monsters.size()])
+	if not secrets.is_empty():
+		Secrets.place_pads(rng, f, walk, hall, secrets)
+	f.monsters = _place_monsters(rng, walk, hall, plan, f.pads())
+	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, (Time.get_ticks_usec() - t0) / 1000])
 	return f
 
 
-## Random-walk maze (depth-first), then a few walls knocked out between two open cells so it isn't a pure tree.
-static func _carve(rng: Rng) -> Array:
-	var grid := []
-	for _y in SIZE:
-		var row := []
-		row.resize(SIZE)
-		row.fill(0)
-		grid.append(row)
-	var stack: Array = [Vector2i(1, 1)]
-	grid[1][1] = 1
-	while not stack.is_empty():
-		var at: Vector2i = stack[-1]
-		var options := []
-		for d in FloorMap.DIRS:
-			var far: Vector2i = at + d * 2
-			if far.x > 0 and far.y > 0 and far.x < SIZE - 1 and far.y < SIZE - 1 and grid[far.y][far.x] == 0:
-				options.append([at + d, far])
-		if options.is_empty():
-			stack.pop_back()
-			continue
-		var pick: Array = rng.pick(options)
-		grid[pick[0].y][pick[0].x] = 1
-		grid[pick[1].y][pick[1].x] = 1
-		stack.append(pick[1])
-	for _i in SHORTCUT_TRIES:
-		var c := Vector2i(rng.int_range(1, SIZE - 2), rng.int_range(1, SIZE - 2))
-		if grid[c.y][c.x] == 1:
-			continue
-		var across_x: bool = grid[c.y][c.x - 1] == 1 and grid[c.y][c.x + 1] == 1
-		var across_y: bool = grid[c.y - 1][c.x] == 1 and grid[c.y + 1][c.x] == 1
-		if across_x or across_y:
-			grid[c.y][c.x] = 1
-	return grid
+## Gives the floor its grid, start and size, and returns where its hall is.
+static func _lay_out(f, rng: Rng, biome: Dictionary) -> Vector2i:
+	if biome.is_empty():
+		return _use(f, GENERATORS.halls.carve(rng, SIZE, {"shortcuts": SHORTCUT_TRIES}))
+	var size := int(biome.size)
+	for i in CARVE_TRIES:
+		var hall := _use(f, GENERATORS[biome.generator].carve(rng, size, biome.params))
+		if _will_do(f, hall, biome):
+			if i > 0:
+				print("floor: %s took %d tries" % [biome.id, i + 1])
+			return hall
+	push_warning("floor: %s made nothing usable in %d tries; plain halls instead" % [biome.id, CARVE_TRIES])
+	return _use(f, GENERATORS.halls.carve(rng, size | 1, {"shortcuts": SHORTCUT_TRIES}))
 
 
-static func _open_hall(grid: Array, hall: Vector2i) -> void:
-	for y in range(hall.y - HALL_RADIUS, hall.y + HALL_RADIUS + 1):
-		for x in range(hall.x - HALL_RADIUS, hall.x + HALL_RADIUS + 1):
-			grid[y][x] = 1
+static func _use(f, layout: Dictionary) -> Vector2i:
+	f.grid = layout.grid
+	f.size = layout.grid.size()
+	f.start = layout.start
+	return layout.hall
 
 
-static func _in_hall(c: Vector2i, hall: Vector2i) -> bool:
-	return absi(c.x - hall.x) <= HALL_RADIUS and absi(c.y - hall.y) <= HALL_RADIUS
+## All the floor in one piece, enough of it, and the stairs a good walk from the start.
+static func _will_do(f, hall: Vector2i, biome: Dictionary) -> bool:
+	if not f.is_open(f.start) or not f.is_open(hall):
+		return false
+	var open := 0
+	for row in f.grid:
+		open += row.count(1)
+	var walk := _walk_from(f, f.start, hall)
+	return walk.order.size() == open and float(open) / (f.size * f.size) >= float(biome.params.get("min_open", 0.0)) and walk.dist[walk.farthest] >= f.size
 
 
 ## Breadth-first from `from`: `order` is the cells in discovery order, `dist` the steps to each, `farthest` the
@@ -90,24 +95,24 @@ static func _walk_from(f, from: Vector2i, hall: Vector2i) -> Dictionary:
 			if f.is_open(next) and not dist.has(next):
 				dist[next] = dist[cur] + 1
 				order.append(next)
-				if not _in_hall(next, hall) and dist[next] > dist[farthest]:
+				if not Grid.in_hall(next, hall) and dist[next] > dist[farthest]:
 					farthest = next
 	return {"dist": dist, "order": order, "farthest": farthest}
 
 
 ## Roster monsters spread out nearest first, evenly through the candidate cells; the champion stands in the hall.
-static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Dictionary) -> Array:
+static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Dictionary, reserved: Dictionary) -> Array:
 	var enc := Content.table("encounter")
 	var candidates := []
 	for i in walk.order.size():
 		var c: Vector2i = walk.order[i]
 		var d: int = walk.dist[c]
-		if d >= MIN_MONSTER_DISTANCE and not _in_hall(c, hall) and c != walk.farthest:
+		if d >= MIN_MONSTER_DISTANCE and not Grid.in_hall(c, hall) and c != walk.farthest and not reserved.has(c):
 			candidates.append({"cell": c, "dist": d, "order": i})
 	candidates.sort_custom(func(a, b): return a.dist < b.dist or (a.dist == b.dist and a.order < b.order))
 	var monsters := []
 	var used: Array = []
-	var roster: Array = _roster_for(enc.roster, plan)
+	var roster: Array = _roster_for(enc.roster, plan, rng)
 	for i in roster.size():
 		var target := floori(float(i + 1) / (roster.size() + 1) * candidates.size())
 		var spot: Vector2i = candidates[target % candidates.size()].cell
@@ -125,15 +130,34 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 	return monsters
 
 
-## Who lives on this floor: the whole roster, or what the way down left of it.
-static func _roster_for(roster: Array, plan: Dictionary) -> Array:
+## Who lives on this floor: the whole roster, more on a bigger floor (the biome says of what), or what the way down left of it.
+static func _roster_for(roster: Array, plan: Dictionary, rng: Rng) -> Array:
 	var out := roster
+	var biome: Dictionary = plan.get("biome", {})
+	if not biome.is_empty():
+		out = roster.duplicate()
+		for _i in maxi(0, (int(biome.size) - SIZE) / EXTRA_MONSTER_CELLS):
+			out.append(_one_of(roster, biome.get("weights", {}), rng))
 	if str(plan.get("only_species", "")) != "":
 		var kind: Array = roster.filter(func(e): return e.species == plan.only_species)
-		out = roster.map(func(_e): return kind[0])
+		out = out.map(func(_e): return kind[0])
 	if int(plan.get("count", -1)) > 0:
-		out = out.slice(0, int(plan.count))
+		var scale := float(biome.get("size", SIZE)) / SIZE
+		out = out.slice(0, ceili(int(plan.count) * scale))
 	return out
+
+
+## A roster line, the biome's favourites more often.
+static func _one_of(roster: Array, weights: Dictionary, rng: Rng) -> Dictionary:
+	var total := 0.0
+	for e in roster:
+		total += float(weights.get(e.species, 1))
+	var roll := rng.real() * total
+	for e in roster:
+		roll -= float(weights.get(e.species, 1))
+		if roll < 0.0:
+			return e
+	return roster[-1]
 
 
 ## A roster line with the floor's toughness.

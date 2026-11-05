@@ -16,6 +16,7 @@ const MonsterModel = preload("res://src/view/monster_model.gd")
 const Content = preload("res://src/rules/content.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
+const SecretProps = preload("res://src/view/secret_props.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const CELL := Materials.CELL
@@ -56,6 +57,9 @@ var _tags := {} # Monster -> Label3D
 var _tag_light := {} # Monster -> 0..1, how far its tag has come in
 var _tag_key := []
 var _floor_map = null
+var _floor_changes := 0 # the walls broken on it when it was built
+var _secrets: Node3D
+var _chests_built := -1
 var _pos := Vector3.ZERO
 var _yaw := 0.0
 var _yaw_goal := 0.0 # where the camera is turning to, counted past a full circle so a held key keeps it turning one way
@@ -110,8 +114,10 @@ func project(world_pos: Vector3, view_size: Vector2) -> Vector2:
 func update(state, now: float, dt: float) -> void:
 	if state.floor_map == null:
 		return
-	if state.floor_map != _floor_map:
+	if state.floor_map != _floor_map or state.floor_map.changes != _floor_changes:
 		_load_floor(state)
+	if state.floor_map.treasure.size() != _chests_built:
+		_build_secrets()
 	_now = now
 	_move_camera(state, now)
 	if is_visible_in_tree():
@@ -146,6 +152,7 @@ func _flicker(now: float) -> void:
 func _load_floor(state) -> void:
 	var t0 := Time.get_ticks_usec()
 	_floor_map = state.floor_map
+	_floor_changes = _floor_map.changes
 	palette = Palette.for_run(state.palette_id)
 	if _dungeon != null:
 		_dungeon.queue_free()
@@ -176,6 +183,7 @@ func _load_floor(state) -> void:
 	_stairs_slab = _slab(palette.accent)
 	_stairs_slab.position = DungeonMesh.center(_floor_map.stairs) + Vector3(0.0, SLAB_H / 2.0, 0.0)
 	add_child(_stairs_slab)
+	_build_secrets()
 	var target := _camera_target(state.cell, state.facing)
 	_pos = target.pos
 	_yaw = target.yaw
@@ -185,7 +193,15 @@ func _load_floor(state) -> void:
 	_cell = state.cell
 	_glide = null
 	_apply_camera()
-	print_verbose("stage: built the floor, %d torches, in %d ms" % [_torches.size(), (Time.get_ticks_usec() - t0) / 1000])
+	print("stage: built the %dx%d floor, %d torches, in %d ms" % [_floor_map.size, _floor_map.size, _torches.size(), (Time.get_ticks_usec() - t0) / 1000])
+
+
+func _build_secrets() -> void:
+	if _secrets != null:
+		_secrets.queue_free()
+	_secrets = SecretProps.build(_floor_map, palette.wall, palette.accent)
+	add_child(_secrets)
+	_chests_built = _floor_map.treasure.size()
 
 
 ## Where the camera stands and looks from a cell.
@@ -200,11 +216,12 @@ func _camera_target(cell: Vector2i, facing: int) -> Dictionary:
 func _move_camera(state, now: float) -> void:
 	var target := _camera_target(state.cell, state.facing)
 	var stepped: bool = state.cell != _cell
+	var jumped: bool = absi(state.cell.x - _cell.x) + absi(state.cell.y - _cell.y) > 1 # a pad: there is no gliding across the floor
 	var turned: bool = state.quarter_turns != _turns or state.facing != _facing
 	if stepped or turned:
 		_turn_goal(state.facing, state.quarter_turns)
 		_cell = state.cell
-		if is_visible_in_tree():
+		if is_visible_in_tree() and not jumped:
 			_glide = {"from_pos": _pos, "from_yaw": _yaw, "t0": now, "ms": STEP_MS if stepped else TURN_MS}
 		else:
 			_glide = null

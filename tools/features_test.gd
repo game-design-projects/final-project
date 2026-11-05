@@ -46,6 +46,8 @@ func _run() -> void:
 	await _gate()
 	await _branching()
 	await _clans()
+	await _map_gen()
+	await _secrets()
 	_finish()
 
 
@@ -875,3 +877,133 @@ func _dodges() -> void:
 	await classic.new_run()
 	_check(not classic.state.rotate_mini_games, "no-mini-games leaves them out")
 	_use()
+
+
+func _map_gen() -> void:
+	var flow = _flow(41)
+	await flow.new_run()
+	var s = flow.state
+	var kinds := {}
+	for depth in range(1, Floors.run_floors() + 1):
+		var biome: Dictionary = Floors.biome(41, depth)
+		_check(s.floor_map.biome == biome.id and s.floor_map.size == int(biome.size), "B%dF is %s at %dx%d (%s at %d)" % [depth, biome.id, biome.size, s.floor_map.biome, s.floor_map.size])
+		_check(biome.palettes.map(func(v): return int(v)).has(s.palette_id), "in the colours of its biome")
+		_check(s.floor_map.monsters.size() == Content.table("encounter").roster.size() + 1 + maxi(0, (int(biome.size) - 13) / 3), "with more monsters the bigger it is (%d at %d)" % [s.floor_map.monsters.size(), biome.size])
+		kinds[biome.id] = true
+		if depth < Floors.run_floors():
+			s.foe = null
+			await flow.next_floor()
+			_check(s.banner != null and s.banner.title == Floors.biome(41, depth + 1).name, "going down names the biome (%s)" % str(s.banner))
+			_check(s.lines.any(func(l): return l.text == Floors.biome(41, depth + 1).line), "and the log describes it")
+	_check(kinds.size() == 3, "a run goes through all the biomes (%s)" % [kinds.keys()])
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	var back = _flow(41)
+	_check(await back.load_state(saved) and back.state.floor_map.biome == s.floor_map.biome and back.state.floor_map.size == s.floor_map.size, "a big floor saves and loads")
+	var again = _flow(41)
+	await again.new_run()
+	var other = _flow(41)
+	await other.new_run()
+	_check(JSON.stringify(again.state.floor_map.to_dict()) == JSON.stringify(other.state.floor_map.to_dict()), "the same seed makes the same floor")
+	var quiet = FloorGen.generate(Rng.new(5), _with_biome(Floors.plan(5, {"count": 2})))
+	_check(quiet.monsters.size() > 3 and quiet.monsters.size() < FloorGen.generate(Rng.new(5), _with_biome(Floors.plan(5))).size, "the quiet stair's two monsters scale with a bigger floor (%d)" % quiet.monsters.size())
+	var plain = _flow(41, ["no-map-gen"])
+	await plain.new_run()
+	_check(plain.state.floor_map.size == 13 and plain.state.floor_map.biome == "", "no-map-gen: the floor is the 13x13 maze")
+	_check(plain.state.palette_id == plain.state.floor_map.seed_value, "in the colours its seed picks")
+	_check(not plain.state.floor_map.teleports.is_empty() or not plain.state.floor_map.treasure.is_empty(), "with its secrets, which are a feature of their own")
+	_use()
+
+
+func _with_biome(plan: Dictionary) -> Dictionary:
+	plan.biome = Floors.sized(Content.table("biomes").biomes[1], 5)
+	return plan
+
+
+## Stand next to a cell, facing it.
+func _face(s, cell: Vector2i) -> void:
+	for i in 4:
+		var from: Vector2i = cell - s.floor_map.DIRS[i]
+		if s.floor_map.is_open(from) and s.floor_map.pad_partner(from) == null and not s.floor_map.treasure.any(func(t): return t.cell == from):
+			s.cell = from
+			s.facing = i
+			return
+
+
+func _cracked_wall(f) -> Vector2i:
+	for y in f.size:
+		for x in f.size:
+			if f.is_cracked(Vector2i(x, y)):
+				return Vector2i(x, y)
+	return Vector2i(-1, -1)
+
+
+func _secrets() -> void:
+	var flow = _flow(47)
+	var heard := []
+	flow.happened.connect(func(name, data): heard.append([name, data]))
+	await flow.new_run()
+	var s = flow.state
+	var f = s.floor_map
+	var wall := _cracked_wall(f)
+	_check(wall != Vector2i(-1, -1) and not f.is_open(wall), "a floor has a cracked wall, which is a wall")
+	var chest: Dictionary = f.treasure.filter(func(t): return absi(t.cell.x - wall.x) + absi(t.cell.y - wall.y) == 1)[0]
+	_check(not f.is_open(wall) and not s.seen.has(chest.cell), "with a chest behind it, out of sight")
+	s.banner = null
+	flow.clock = 100000.0
+	flow.coach.seen = {}
+	_face(s, wall)
+	_check(s.floor_map.is_cracked(s.cell + f.DIRS[s.facing]), "standing in front of it")
+	await flow.press("left")
+	await flow.press("right")
+	_check(s.banner != null and s.banner.text == Content.table("coach").tips.crack, "the first time you face one, a tip says what it is")
+	var was: Vector2i = s.cell
+	var changes: int = f.changes
+	heard.clear()
+	await flow.press("up")
+	_check(f.is_open(wall) and f.changes == changes + 1, "walking into it breaks it")
+	_check(s.cell == was, "and you stay where you are")
+	_check(heard.any(func(h): return h[0] == "sound" and h[1].name == "hit"), "with a crash")
+	_check(s.lines.any(func(l): return l.text == Floors.secret_line("wall")), "and the log says so")
+	_check(s.seen.has(wall), "and the map learns what opened")
+	var gold: int = s.gold
+	s.cell = wall
+	s.facing = f.DIRS.find(chest.cell - wall)
+	await flow.press("up")
+	_check(s.gold == gold + chest.gold and not f.treasure.has(chest), "stepping on the chest takes its gold (%d)" % chest.gold)
+	_check(s.lines.any(func(l): return l.text == Floors.secret_line("chest") % chest.gold), "and says how much")
+	var pad: Dictionary = f.teleports[0]
+	_face(s, pad.a)
+	await flow.press("up")
+	_check(s.cell == pad.b, "a pad carries you to its other end (at %s, %s)" % [s.cell, pad.b])
+	_check(s.visited.has(pad.b) and s.seen.has(pad.b), "and the map learns where you are")
+	_check(s.stage == "explore", "and you are still walking")
+	_face(s, pad.b)
+	await flow.press("up")
+	_check(s.cell == pad.a, "and back")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	var back = _flow(47)
+	await back.load_state(saved)
+	_check(back.state.floor_map.is_open(wall) and back.state.floor_map.treasure.size() == f.treasure.size(), "a broken wall and an emptied chest stay that way in a save")
+	var map = load("res://src/view/automap.gd").new()
+	map.state = s
+	s.cell = pad.a
+	s.seen = {pad.a: true}
+	_check(map.secret_marks().size() == 1, "the map marks a pad you have seen")
+	s.seen = {}
+	_check(map.secret_marks().is_empty(), "and only then")
+	map.free()
+	var decor: Array = load("res://src/view/decor.gd").placements(f)
+	_check(not decor.any(func(p): return p.kind == "fissure" and p.cell + f.DIRS[p.side] == wall), "with the wall broken, no fissure is left on it")
+	var other = _flow(47)
+	await other.new_run()
+	var w2 := _cracked_wall(other.state.floor_map)
+	var fissures: Array = load("res://src/view/decor.gd").placements(other.state.floor_map).filter(func(p): return p.kind == "fissure" and p.cell + other.state.floor_map.DIRS[p.side] == w2)
+	_check(fissures.size() == 2, "a cracked wall always shows a fissure, on both its faces (%d)" % fissures.size())
+	var hidden = _flow(47, ["no-secrets"])
+	await hidden.new_run()
+	var h = hidden.state.floor_map
+	_check(h.treasure.is_empty() and h.teleports.is_empty() and _cracked_wall(h) == Vector2i(-1, -1), "no-secrets: nothing is hidden")
+	_check(not hidden.state.viewing("secrets"), "and the map's legend doesn't speak of it")
+	_check(Tips.map_blocks(true).size() == Tips.map_blocks().size() + 2, "with them, the legend names pads and chests")
+	_use()
+

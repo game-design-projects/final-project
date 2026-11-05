@@ -187,7 +187,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
-		return map_blocks()
+		return map_blocks(state.viewing("secrets"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -265,7 +265,7 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks() -> Array:
+static func map_blocks(secrets := false) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -274,6 +274,9 @@ static func map_blocks() -> Array:
 	fights[Content.table("encounter").boss.species] = "all four"
 	for id in Content.table("species"):
 		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": fights.get(id, "")})
+	if secrets:
+		out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
+		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
 	return out
 
 

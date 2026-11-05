@@ -1,0 +1,47 @@
+{
+ "secrets": {
+  "cracks": 1,
+  "pads": 1,
+  "gold": [5, 9]
+ },
+ "lines": {
+  "wall": "The cracked wall gives way.",
+  "chest": "A chest nobody was meant to find: %d gold.",
+  "pad": "The floor lights up under you, and you are somewhere else."
+ },
+ "biomes": [
+  {
+   "id": "halls",
+   "name": "THE OLD HALLS",
+   "line": "Long straight halls, cut by someone who cared about corners.",
+   "generator": "halls",
+   "sizes": [13, 15, 17, 19, 21],
+   "params": {"shortcuts": 12, "rooms": 2},
+   "palettes": [0, 4, 5],
+   "weights": {"bandit": 3, "rock": 2, "snake": 1, "slime": 1},
+   "secrets": {"cracks": 1, "pads": 1, "gold": [5, 9]}
+  },
+  {
+   "id": "undercroft",
+   "name": "THE UNDERCROFT",
+   "line": "Rooms upon rooms, built in pieces that nearly fit.",
+   "generator": "chunks",
+   "sizes": [19, 19, 25, 25, 31],
+   "params": {"loops": 0.2},
+   "palettes": [2, 6],
+   "weights": {"rock": 3, "bandit": 2, "slime": 1, "snake": 1},
+   "secrets": {"cracks": 2, "pads": 1, "gold": [4, 7]}
+  },
+  {
+   "id": "caves",
+   "name": "THE WET CAVES",
+   "line": "No walls here, only where the rock stopped. Keep your bearings.",
+   "generator": "caves",
+   "sizes": [17, 19, 23, 25, 29],
+   "params": {"fill": 0.46, "passes": 3, "min_open": 0.33},
+   "palettes": [1, 3, 7],
+   "weights": {"slime": 3, "snake": 3, "rock": 1, "bandit": 1},
+   "secrets": {"cracks": 1, "pads": 1, "gold": [6, 10]}
+  }
+ ]
+}

@@ -20,7 +20,7 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0
@@ -99,7 +99,7 @@ func new_run() -> void:
 	var lines := _arrival()
 	if _telling_story():
 		var premise: Dictionary = Floors.premise()
-		lines.push_front(State.sys_line(premise.line))
+		lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
 		announce(premise.title, premise.door if feature("last-door") else premise.banner, STORY_BANNER_MS)
 	await go("explore", {"lines": lines})
 
@@ -117,6 +117,9 @@ func next_floor(way := {}) -> void:
 	encounter.pending_rows = []
 	print("flow: down to B%dF (%s)" % [state.depth, state.summary()])
 	event("state_replaced", {"how": "floor"})
+	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
+	if not biome.is_empty():
+		announce(biome.name, biome.line)
 	await go("explore", {"lines": _arrival()})
 
 
@@ -135,9 +138,15 @@ func _telling_story() -> bool:
 
 ## What the log says on arriving on this floor.
 func _arrival() -> Array:
+	var lines := []
 	if _telling_story():
-		return [State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion))]
-	return [State.sys_line(Texts.new_floor(state.depth))]
+		lines.append(State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion)))
+	else:
+		lines.append(State.sys_line(Texts.new_floor(state.depth)))
+	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
+	if not biome.is_empty():
+		lines.append(State.sys_line(biome.line))
+	return lines
 
 
 ## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
@@ -147,10 +156,14 @@ func _make_floor(way := {}) -> void:
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
 		plan.boss_at_exit = feature("boss-at-exit")
+		if feature("map-gen"):
+			plan.biome = Floors.biome(state.run_seed, state.depth)
+		if feature("secrets"):
+			plan.secrets = Floors.secrets(plan.get("biome", {}))
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:
 		state.floor_map = FloorGen.generate(rng)
-	state.palette_id = state.floor_map.seed_value
+	state.palette_id = Floors.palette(state.floor_map.biome, state.floor_map.seed_value)
 	state.cell = state.floor_map.start
 	state.facing = state.floor_map.start_facing()
 	state.quarter_turns = 0
