@@ -1,7 +1,7 @@
 ## The first-time tips: one short line at a time, on the picture, the first time something comes up, so the game teaches itself
 ## while it is being played. It listens to what happens and never changes the game. A tip that comes up while another banner is
 ## showing waits for the next time. What has been seen is remembered across runs by the scene (`seen`), and the TIPS setting
-## switches them all off (`enabled`).
+## switches them all off (`enabled`), and the slow first fights with them (stages/dodge.gd).
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -57,8 +57,8 @@ func _on_stage(to: String) -> void:
 			if flow.feature("clans") and not flow.state.deeds.is_empty():
 				say("clans")
 		"menu":
-			if not say("menu") and flow.feature("heavy-strike"):
-				say("heavy")
+			if not say("menu") and not (flow.feature("heavy-strike") and say("heavy")) and seen.has("act") and seen.has("strike"):
+				say("flee") # last: what to do comes before how to get out of it
 		"act":
 			say("act")
 		"fightbar":
