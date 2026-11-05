@@ -187,7 +187,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
-		return map_blocks(state.viewing("secrets"), state.viewing("items"), state.viewing("lurkers"), state.viewing("npcs"))
+		return map_blocks(state.viewing("secrets"), state.viewing("items"), state.viewing("lurkers"), state.viewing("npcs"), state.viewing("roaming"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -265,8 +265,8 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(secrets := false, items := false, lurkers := false, npcs := false) -> Array:
-	var out := [{"kind": "head", "left": "MONSTERS SHOW WHEN SEEN", "right": ""}]
+static func map_blocks(secrets := false, items := false, lurkers := false, npcs := false, roaming := false) -> Array:
+	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
 	for entry in Content.table("encounter").roster:

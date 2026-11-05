@@ -36,6 +36,7 @@ var cell := Vector2i(1, 1)
 var facing := 0
 var quarter_turns := 0 # every quarter turn made, right +1 and left -1, adding up: the camera follows this, not `facing`, which is mod 4
 var visited := {} # Vector2i -> true: cells you stood in
+var in_sight := {} # Vector2i -> true: the cells the camera sees right now; worked out again by `look`
 var seen := {} # Vector2i -> true: cells you saw from where you stood (rules/vision.gd), for the automap
 
 # the party
@@ -123,8 +124,18 @@ func turn(quarters: int) -> void:
 func look() -> void:
 	for c in Vision.ahead(floor_map, cell, facing):
 		seen[c] = true
+	in_sight = {}
 	for c in Vision.sight(floor_map, cell, facing):
 		seen[c] = true
+		in_sight[c] = true
+	spot()
+
+
+## Note where the monsters in view are now, for the map.
+func spot() -> void:
+	for m in floor_map.monsters:
+		if in_sight.has(m.cell):
+			m.last_seen = m.cell
 
 
 ## "spared 1 · slain 0 · 8 gold", for the log when you come back to a save.
@@ -277,6 +288,8 @@ static func _floor_problem(f) -> String:
 		var problem := _monster_problem(m, f)
 		if problem != "":
 			return problem
+	if f.has("steps") and not _is_num(f.steps):
+		return "the floor's steps are not a number"
 	if f.has("quester") and not f.quester is Dictionary:
 		return "the floor's request is not a record"
 	if f.has("quester") and not f.quester.is_empty():
@@ -310,8 +323,13 @@ static func _monster_problem(m, f: Dictionary) -> String:
 		return "what a monster heard is not a record"
 	if m.has("traits") and (not m.traits is Array or m.traits.any(func(t): return not t is String)):
 		return "a monster's traits are not a list of words"
-	if m.has("purse") and not _is_num(m.purse):
-		return "a monster's purse is not a number"
+	for key in ["purse", "hold", "leg"]:
+		if m.has(key) and not _is_num(m[key]):
+			return "a monster's '%s' is not a number" % key
+	if m.has("patrol") and (not m.patrol is Array or m.patrol.size() not in [0, 2] or m.patrol.any(func(c): return not _is_cell(c) or not _open(f, _cell(c)))):
+		return "a monster's beat is not two open cells"
+	if m.has("lastSeen") and not _is_cell(m.lastSeen):
+		return "where a monster was last seen is not a cell"
 	if m.has("taste") and (not m.taste is Dictionary or m.taste.values().any(func(v): return not _is_num(v))):
 		return "a monster's taste is not a record of numbers"
 	return ""

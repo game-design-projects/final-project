@@ -1,0 +1,21 @@
+{
+ "flee_hold": 4,
+ "patrol_reach": 14,
+ "angry_at": 35,
+ "angry_sense": 8,
+ "afraid_at": 50,
+ "afraid_sense": 5,
+ "friendly_at": 55,
+ "friendly_sense": 6,
+ "revenge_at": -14,
+ "revenge_sense": 14,
+ "species": {
+  "slime": {"kind": "drift", "every": 2},
+  "bandit": {"kind": "patrol"},
+  "snake": {"kind": "stalk", "sense": 5, "keeps_on": 3},
+  "rock": {"kind": "still"},
+  "dragon": {"kind": "still"}
+ },
+ "tag": "HUNTING",
+ "caught": "%s caught up with you."
+}

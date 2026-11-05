@@ -10,6 +10,7 @@ const Palette = preload("res://src/view/palette.gd")
 const PANEL := 115.0 # the whole panel, border and margin included
 const MARGIN := 5.0 # border and margin round the map
 const MAP_PX := 105
+const LAST_SEEN_DARK := 0.45 # a monster out of sight is darker, because it may not be there now
 const MIN_CELL_PX := 7 # a smaller cell has no room for a dot in it; a floor that would need one scrolls instead
 const SEEN := Color("#262626")
 const VISITED := Color("#5a5a5a")
@@ -65,16 +66,23 @@ func _shown() -> Array:
 func monster_marks() -> Array:
 	var s := cell_px()
 	var out := []
+	var roaming: bool = state.viewing("roaming")
 	for m in state.floor_map.monsters:
-		if m.is_gone() or not _in_window(m.cell):
+		var at: Vector2i = m.cell
+		if roaming and (not m.boss or m.hunting):
+			at = m.last_seen # a monster on the move shows where you last saw it, never through a wall
+		if m.is_gone() or at.x < 0 or not _in_window(at):
 			continue
 		if m.boss and state.viewing("boss-at-exit") and not state.seen.has(m.cell):
 			continue
 		if m.boss:
-			out.append({"rect": Rect2(Vector2(m.cell) * s, Vector2(s, s)), "color": Palette.BOSS})
-		elif state.seen.has(m.cell):
+			out.append({"rect": Rect2(Vector2(at) * s, Vector2(s, s)), "color": Palette.BOSS})
+		elif roaming or state.seen.has(at):
 			var dot := maxf(2.0, s - 4.0)
-			out.append({"rect": Rect2(Vector2(m.cell) * s + Vector2.ONE * (s - dot) / 2.0, Vector2(dot, dot)), "color": Palette.STIR if m.lurking else Palette.monster(m)})
+			var look: Color = Palette.STIR if m.lurking else Palette.monster(m)
+			if roaming and not state.in_sight.has(m.cell):
+				look = look.darkened(LAST_SEEN_DARK)
+			out.append({"rect": Rect2(Vector2(at) * s + Vector2.ONE * (s - dot) / 2.0, Vector2(dot, dot)), "color": look})
 	return out
 
 
@@ -132,7 +140,7 @@ func secret_marks() -> Array:
 func _process(_dt: float) -> void:
 	if state == null or state.floor_map == null:
 		return
-	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size()]
+	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size(), state.floor_map.steps]
 	if key != _drawn_key:
 		_drawn_key = key
 		queue_redraw()

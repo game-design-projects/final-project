@@ -24,6 +24,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - `shop`: some floors have a trader who sells items for gold.
 - `lurkers`: something stirs in plain sight on a floor, never on the only way through: walk round it, or walk into it for a fight and its purse.
 - `npcs`: some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor, and be paid for it.
+- `roaming`: monsters take a turn each step you take, as who they are and how they feel say, the map shows where you last saw them, and backing out of a fight makes one hold still for a few steps.
+- `boss-chase`: a champion you have seen comes after you, unless it is holding the stairs.
 - `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.
 - `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
 
@@ -33,6 +35,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - CI also runs `features_test` and every suite with `classic`, and `run_tests.sh` includes `audio_test`.
 
 ### Fixed
+- A monster whose fight was tried again no longer leaves its old model standing on the floor.
 - `audio_test` no longer fails on the kinds of line that have no recording yet: they are named in `AWAITING_RENDER` until `tools/voices` renders them.
 
 ## [0.6.1] - 2026-11-03

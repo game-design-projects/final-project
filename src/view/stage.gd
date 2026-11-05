@@ -18,6 +18,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 const SecretProps = preload("res://src/view/secret_props.gd")
 const Requests = preload("res://src/rules/requests.gd")
+const Roaming = preload("res://src/rules/roaming.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const CELL := Materials.CELL
@@ -38,6 +39,7 @@ const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels c
 const TAG_GAP := 0.12 # above the head
 const TAG_FADE_S := 0.12 # how long a tag takes to come and go
 const TRADER_LOOK := "bandit" # the model the trader wears, in gold
+const WALK_SNAP := 1.5 # a model further than this many cells from its monster goes there at once: nothing walks that far in a step
 const STIR_TURN := 1.6 # how fast something stirring goes round, in radians a second
 # the torches nearest the camera glow on the walls; each flickers on its own, in steps like the flames drawn on them
 const MAX_TORCHES := 10 # as in shaders/wire.gdshader
@@ -348,6 +350,7 @@ static func _slab(color: Color) -> MeshInstance3D:
 
 
 func _show_monsters(state, now: float, dt: float) -> void:
+	_drop_the_replaced(state.floor_map)
 	if _trader != null:
 		_show_figure(_trader, _trader_tag, state.floor_map, state.floor_map.merchant.cell, now)
 	if _quester != null:
@@ -368,12 +371,43 @@ func _show_monsters(state, now: float, dt: float) -> void:
 			_add_monster(m)
 		var model: Node3D = _models[m]
 		model.visible = true
+		_walk_model(m, model, dt)
 		var to_camera := _camera.position - model.position
 		model.rotation.y = atan2(to_camera.x, to_camera.z)
 		var since: float = now - _hit_at.get(m, -10.0)
 		MonsterModel.flash(model, clampf(1.0 - since / FLASH_S, 0.0, 1.0))
 		MonsterModel.pose(model, now, clampf(1.0 - since / 0.4, 0.0, 1.0))
 	_show_tags(state, dt)
+
+
+## A fight tried again has a fresh monster in the list (Encounter.retry_fight): the one it replaced must not go on standing there.
+func _drop_the_replaced(f) -> void:
+	if _models.keys().all(func(m): return f.monsters.has(m)):
+		return
+	for m in _models.keys():
+		if not f.monsters.has(m):
+			_models[m].queue_free()
+			_tags[m].queue_free()
+			_models.erase(m)
+			_tags.erase(m)
+			_tag_light.erase(m)
+			_tag_key = []
+
+
+## A model goes where its monster has gone at the pace you walk, with its name over it; a hunter's name says so.
+func _walk_model(m, model: Node3D, dt: float) -> void:
+	var tag: Label3D = _tags[m]
+	var goal := DungeonMesh.center(m.cell)
+	if model.position != goal:
+		var far := model.position.distance_to(goal) > CELL * WALK_SNAP
+		model.position = goal if far else model.position.move_toward(goal, dt * CELL * 1000.0 / STEP_MS)
+		tag.position = Vector3(model.position.x, tag.position.y, model.position.z)
+	var word: String = str(Roaming.table().tag) if m.hunting else _plain_tag(m)
+	if tag.text != word:
+		tag.text = word
+		var look: Color = Palette.WARN if m.hunting else Palette.monster(m)
+		tag.modulate = Color(look, tag.modulate.a)
+		_tag_key = []
 
 
 func _show_figure(figure: Node3D, tag: Label3D, f, cell: Vector2i, now: float) -> void:
@@ -407,7 +441,7 @@ func _add_monster(m) -> void:
 	add_child(model)
 	_models[m] = model
 	var tag := Label3D.new()
-	tag.text = "CHAMPION" if m.boss else Content.table("encounter").genres[m.genre].name
+	tag.text = _plain_tag(m)
 	tag.font = Fonts.title()
 	tag.font_size = TAG_FONT_PX
 	tag.pixel_size = TAG_PIXEL_SIZE
@@ -426,10 +460,14 @@ func _add_monster(m) -> void:
 	tag.set_meta("wanted", false)
 
 
+static func _plain_tag(m) -> String:
+	return "CHAMPION" if m.boss else str(Content.table("encounter").genres[m.genre].name)
+
+
 ## Which tags show: its monster is in a straight line of open floor from the camera, and it doesn't overlap a nearer tag. The
 ## tags then ease in and out and fade with distance, like the lines.
 func _show_tags(state, dt: float) -> void:
-	var key := [_pos, _yaw, state.floor_map.monsters_left()]
+	var key := [_pos, _yaw, state.floor_map.monsters_left(), state.floor_map.steps]
 	if key != _tag_key:
 		_tag_key = key
 		_pick_tags(state)

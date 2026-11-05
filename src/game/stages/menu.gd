@@ -4,6 +4,7 @@ extends "res://src/game/stages/list_stage.gd"
 const Combat = preload("res://src/rules/combat.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Odds = preload("res://src/rules/odds.gd")
+const Roaming = preload("res://src/rules/roaming.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -84,6 +85,7 @@ func _flee(flow) -> void:
 		print("menu: backing away from %s cost %d gold; anger now %.0f" % [m.name, dropped, m.meters.anger])
 	flow.encounter.judge("flee") # before the slice ends, so an ally's verdict is drawn at the fixed roll too
 	flow.end_slice() # a fled slice is over: no second bandit follows
+	Roaming.hold(m)
 	if not costly:
 		m.hp = m.max_hp
 	var lines := [State.sys_line(Texts.flee_cost(m, dropped) if costly else Texts.flee(m))]

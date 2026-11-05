@@ -23,6 +23,7 @@ const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Requests = preload("res://src/rules/requests.gd")
+const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const Tips = preload("res://src/view/tips.gd")
@@ -54,6 +55,7 @@ func _run() -> void:
 	await _shop()
 	await _lurkers()
 	await _npcs()
+	await _roaming()
 	_finish()
 
 
@@ -1337,3 +1339,290 @@ func _npcs() -> void:
 			kinds[no_items.state.floor_map.quester.kind] = true
 	_check(not kinds.has("fetch") and not kinds.is_empty(), "no-items: nobody asks you to fetch (%s)" % [kinds.keys()])
 	_use()
+
+
+## A random walk of `steps` steps on the floor as `flow` has it, the monsters' turns in between: where everybody stood after each.
+## `problems` collects what should never be. A monster that catches you puts you back at the start.
+func _roam(flow, steps: int, rng_seed: int, problems: Dictionary) -> Array:
+	var s = flow.state
+	var f = s.floor_map
+	var rng := Rng.new(rng_seed)
+	var path := []
+	var note := func(what: String): problems[what] = problems.get(what, 0) + 1
+	for _i in steps:
+		var ways := []
+		for d in f.DIRS:
+			var c: Vector2i = s.cell + d
+			if f.is_open(c) and f.monster_at(c) == null and not f.in_the_way(c) and c != f.stairs:
+				ways.append(c)
+		if not ways.is_empty():
+			s.cell = rng.pick(ways)
+		var before := {}
+		for m in f.monsters:
+			before[m] = m.cell
+		var done := Roaming.turn(s, {"revenge": true, "boss_chase": false})
+		var barred: Dictionary = f.reserved()
+		for t in f.treasure:
+			barred[t.cell] = true
+		for m in f.monsters:
+			if m.is_gone():
+				continue
+			if not f.is_open(m.cell):
+				note.call("a monster in a wall")
+			if m.cell != before[m] and (barred.has(m.cell) or m.cell == f.stairs):
+				note.call("a monster on something it may not stand on")
+			if absi(m.cell.x - before[m].x) + absi(m.cell.y - before[m].y) > 1:
+				note.call("a monster that jumped")
+			if m.lurking and m.cell != before[m]:
+				note.call("something stirring that moved")
+			if m.boss and m.cell != before[m]:
+				note.call("a champion that left without boss-chase")
+			if f.monsters.any(func(o): return o != m and not o.is_gone() and o.cell == m.cell):
+				note.call("two monsters in one cell")
+			if m.cell == s.cell:
+				note.call("a monster on top of you")
+		if done.caught != null:
+			s.cell = f.start
+			done.caught.hold = 8
+		path.append(f.monsters.map(func(m): return m.cell))
+	return path
+
+
+func _roaming() -> void:
+	var t: Dictionary = Roaming.table()
+	# many seeds: nothing stands where it shouldn't, and the same seed and steps walk the same way, a save or not
+	var problems := {}
+	var moved := 0
+	for i in 12:
+		var one = _flow(800 + i)
+		await one.new_run()
+		var before: Array = one.state.floor_map.monsters.map(func(m): return m.cell)
+		var path := _roam(one, 150, i, problems)
+		if path[-1] != before:
+			moved += 1
+		var two = _flow(800 + i)
+		await two.new_run()
+		_check(path == _roam(two, 150, i, {}), "seed %d: the same seed and steps give the same paths" % (800 + i))
+		var three = _flow(800 + i)
+		await three.new_run()
+		var first := _roam(three, 75, i, {})
+		var saved: Dictionary = JSON.parse_string(JSON.stringify(three.state.to_dict()))
+		var loaded = _flow(800 + i)
+		await loaded.load_state(saved)
+		var whole_run = _flow(800 + i)
+		await whole_run.new_run()
+		var whole := _roam(whole_run, 75, i, {})
+		_check(first == whole and saved.floor.steps == 75, "seed %d: (the first half is the same)" % (800 + i))
+		_check(_after_load_same(whole_run, loaded), "seed %d: a save and load changes nothing about where they go" % (800 + i))
+	_check(problems.is_empty(), "12 seeds, 150 steps each: nothing stands where it shouldn't %s" % [problems])
+	_check(moved == 12, "and things did move (%d of 12)" % moved)
+	# species: on a floor from pictures rows
+	var flow = _flow(860)
+	await flow.new_run()
+	var s = flow.state
+	var f = s.floor_map
+	var m = f.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
+	f.monsters = [m, f.monsters.back()]
+	var bare := func(sp: String):
+		m.species = sp
+		m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
+		m.patrol = []
+		m.hold = 0
+		m.hunting = false
+		s.reputation = {}
+	bare.call("rock")
+	var at: Vector2i = m.cell
+	for _i in 6:
+		Roaming.turn(s)
+	_check(m.cell == at, "a rock stays where it is")
+	bare.call("slime")
+	var moves := 0
+	for _i in 40:
+		var was: Vector2i = m.cell
+		var on_even: bool = (f.steps + 1) % 2 == 0
+		Roaming.turn(s)
+		if m.cell != was:
+			moves += 1
+			_check(on_even, "a slime moves only every other step")
+	_check(moves > 8, "and drifts when it does (%d)" % moves)
+	bare.call("bandit")
+	var seen_cells := {}
+	for _i in 40:
+		Roaming.turn(s)
+		seen_cells[m.cell] = true
+	_check(seen_cells.size() > 3 and m.patrol.size() == 2, "a bandit walks a beat (%d cells)" % seen_cells.size())
+	# who is near: put them by the walk from you
+	var field: Dictionary = Roaming._field(f, s.cell, Roaming._barred(f))
+	var cell_at := func(d: int) -> Vector2i:
+		for c in field:
+			if field[c] == d:
+				return c
+		return s.cell
+	bare.call("snake")
+	var far: int = int(t.species.snake.sense) + int(t.species.snake.keeps_on) + 2
+	m.cell = cell_at.call(far)
+	var waiting: Vector2i = m.cell
+	Roaming.turn(s)
+	_check(m.cell == waiting and not m.hunting, "a snake waits while you are far (%d)" % far)
+	m.cell = cell_at.call(int(t.species.snake.sense))
+	var done := Roaming.turn(s)
+	_check(m.hunting and done.noticed == [m] and Roaming._field(f, s.cell, Roaming._barred(f))[m.cell] == int(t.species.snake.sense) - 1, "close by, it comes after you, and you are told")
+	_check(Roaming.turn(s).noticed.is_empty(), "(once)")
+	# how it feels overrides who it is
+	bare.call("rock")
+	m.meters.anger = float(t.angry_at)
+	m.cell = cell_at.call(3)
+	Roaming.turn(s)
+	_check(Roaming._field(f, s.cell, Roaming._barred(f))[m.cell] == 2, "an angry monster comes after you, even a rock")
+	bare.call("rock")
+	m.meters.fear = float(t.afraid_at)
+	m.cell = cell_at.call(3)
+	Roaming.turn(s)
+	_check(Roaming._field(f, s.cell, Roaming._barred(f))[m.cell] >= 3, "a frightened one won't come closer")
+	bare.call("rock")
+	m.meters.friendliness = float(t.friendly_at)
+	m.cell = cell_at.call(1)
+	var near_you: Vector2i = m.cell
+	_check(Roaming.turn(s).caught == null and m.cell == near_you, "a friendly one comes up and stops short of a fight")
+	bare.call("rock")
+	s.reputation = {Clans.of("rock"): float(t.revenge_at)}
+	m.cell = cell_at.call(int(t.revenge_sense))
+	var wronged: Vector2i = m.cell
+	Roaming.turn(s, {"revenge": false})
+	_check(m.cell == wronged, "without clans, a wronged clan's monster takes no notice")
+	Roaming.turn(s, {"revenge": true})
+	_check(m.cell != wronged and m.hunting, "with them it comes for you from far off")
+	# a whole floor, by the keys
+	var walk = _flow(861)
+	await walk.new_run()
+	var ws = walk.state
+	var wf = ws.floor_map
+	var foe = wf.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
+	wf.monsters = [foe, wf.monsters.back()]
+	foe.species = "snake"
+	foe.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
+	var walk_field: Dictionary = Roaming._field(wf, ws.cell, Roaming._barred(wf))
+	var open_way := -1
+	for i in 4:
+		if wf.is_open(ws.cell + wf.DIRS[i]) and not wf.in_the_way(ws.cell + wf.DIRS[i]):
+			open_way = i
+	ws.facing = open_way
+	var steps_before: int = wf.steps
+	await walk.press("left")
+	await walk.press("right")
+	_check(wf.steps == steps_before, "turning gives nobody a turn")
+	var wall_way := -1
+	for i in 4:
+		if not wf.is_open(ws.cell + wf.DIRS[i]) and not wf.is_cracked(ws.cell + wf.DIRS[i]):
+			wall_way = i
+	if wall_way >= 0:
+		ws.facing = wall_way
+		await walk.press("up")
+		_check(wf.steps == steps_before, "nor does bumping a wall")
+	ws.facing = open_way
+	var next_cell: Vector2i = ws.cell + wf.DIRS[open_way]
+	foe.cell = next_cell + wf.DIRS[open_way]
+	if not wf.is_open(foe.cell) or wf.reserved().has(foe.cell) or foe.cell == wf.stairs:
+		for d in wf.DIRS:
+			if wf.is_open(next_cell + d) and next_cell + d != ws.cell and not wf.reserved().has(next_cell + d) and next_cell + d != wf.stairs:
+				foe.cell = next_cell + d
+	await walk.press("up")
+	_check(ws.stage == "intro" and ws.foe == foe and ws.cell == next_cell, "a step next to a snake, and it walks into you: a fight (%s)" % ws.stage)
+	_check(ws.lines[0].text.contains(foe.name) and ws.lines[0].kind == "sys", "and the log says who caught you (%s)" % ws.lines[0].text)
+	await walk.tick(walk.clock + 5000.0)
+	var frozen: Array = wf.monsters.map(func(o): return o.cell)
+	var fight_steps: int = wf.steps
+	for _i in 3:
+		await walk.tick(walk.clock + 300.0)
+	_check(frozen == wf.monsters.map(func(o): return o.cell) and wf.steps == fight_steps, "nobody moves during a fight")
+	# backing away
+	while ws.stage != "menu":
+		await walk.tick(walk.clock + 500.0)
+	await walk.press("4")
+	_check(ws.stage == "explore" and foe.hold == int(t.flee_hold), "backing out of the fight (%s), it holds still (%d)" % [ws.stage, foe.hold])
+	var stood_at: Vector2i = foe.cell
+	var free_steps := 0
+	for _i in int(t.flee_hold):
+		var back_way := -1
+		for i in 4:
+			var c: Vector2i = ws.cell + wf.DIRS[i]
+			if wf.is_open(c) and c != foe.cell and not wf.in_the_way(c) and c != wf.stairs and wf.monster_at(c) == null:
+				back_way = i
+		ws.facing = back_way
+		await walk.press("up")
+		if ws.stage == "explore" and foe.cell == stood_at:
+			free_steps += 1
+	_check(free_steps == int(t.flee_hold), "and doesn't start the same fight for %d steps (%d)" % [int(t.flee_hold), free_steps])
+	# the stairs are checked before anybody's turn
+	var last = _flow(862)
+	await last.new_run()
+	var ls = last.state
+	var lf = ls.floor_map
+	lf.monsters = [lf.monsters.back()]
+	lf.monsters[0].gone = "spared"
+	_face(ls, lf.stairs)
+	var stairs_steps: int = lf.steps
+	await last.press("up")
+	_check(ls.stage == "end" and lf.steps == stairs_steps, "reaching the stairs ends the walk before anybody moves (%s)" % ls.stage)
+	# the champion
+	await _champion_moves()
+	# off
+	var still = _flow(860, ["no-roaming"])
+	await still.new_run()
+	var sf = still.state.floor_map
+	var cells: Array = sf.monsters.map(func(o): return o.cell)
+	for i in 4:
+		var c: Vector2i = still.state.cell + sf.DIRS[i]
+		if sf.is_open(c) and sf.monster_at(c) == null and not sf.in_the_way(c):
+			still.state.facing = i
+			await still.press("up")
+			break
+	_check(sf.steps == 0 and cells == sf.monsters.map(func(o): return o.cell), "no-roaming: nobody moves")
+	var slice = _flow(860)
+	slice.slice_floor = true
+	_check(not slice.feature("roaming"), "and never on the slice")
+	var old: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	old.floor.erase("steps")
+	for o in old.floor.monsters:
+		for key in ["hold", "patrol", "leg", "hunting", "lastSeen"]:
+			o.erase(key)
+	var from_old = _flow(860)
+	_check(await from_old.load_state(old), "a save from before this loads")
+	for damage in [func(d): d.floor.steps = "x", func(d): d.floor.monsters[0].hold = "x", func(d): d.floor.monsters[0].patrol = [[0, 0], [0, 0]], func(d): d.floor.monsters[0].lastSeen = "x"]:
+		var bad: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+		damage.call(bad)
+		_check(not State.is_playable(bad), "a damaged save doesn't load")
+	for tip in ["roaming", "hunted"]:
+		_check(Overlay.banner_fits(str(Content.table("coach").tips[tip])), "the %s tip fits the banner" % tip)
+	_use()
+
+
+## Whether two runs are at the same place and go on the same way: 40 more steps from each.
+func _after_load_same(a, b) -> bool:
+	return _roam(a, 40, 9, {}) == _roam(b, 40, 9, {})
+
+
+func _champion_moves() -> void:
+	var held = _flow(870)
+	await held.new_run()
+	var hs = held.state
+	var boss = hs.floor_map.monsters.back()
+	hs.seen[boss.cell] = true
+	var post: Vector2i = boss.cell
+	for _i in 5:
+		Roaming.turn(hs, {"boss_chase": true})
+	_check(post == hs.floor_map.stairs and boss.cell == post, "with boss-at-exit, a champion holds the stairs, boss-chase or not")
+	var free = _flow(870, ["no-boss-at-exit"])
+	await free.new_run()
+	var fs = free.state
+	var ff = fs.floor_map
+	var chaser = ff.monsters.back()
+	var hall: Vector2i = chaser.cell
+	Roaming.turn(fs, {"boss_chase": true})
+	_check(chaser.cell == hall, "unseen, it stays in its hall")
+	Roaming.turn(fs, {"boss_chase": false})
+	fs.seen[hall] = true
+	Roaming.turn(fs, {"boss_chase": false})
+	_check(chaser.cell == hall, "no-boss-chase: it stays even once seen")
+	Roaming.turn(fs, {"boss_chase": true})
+	_check(chaser.cell != hall and chaser.hunting, "seen, with boss-chase, it comes after you")

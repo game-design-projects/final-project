@@ -12,6 +12,7 @@ const Floors = preload("res://src/rules/floors.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
+const Roaming = preload("res://src/rules/roaming.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -300,6 +301,7 @@ func slip_away(m, line: String) -> void:
 	judge("flee")
 	flow.end_slice()
 	m.hp = m.max_hp
+	Roaming.hold(m)
 	print("encounter: slipped away from %s" % m.name)
 	await flow.go("explore", {"lines": [State.sys_line(line)] + _take_notes()})
 

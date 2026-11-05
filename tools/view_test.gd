@@ -12,6 +12,8 @@ const Flags = preload("res://src/utils/flags.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const MonsterModel = preload("res://src/view/monster_model.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
+const Monster = preload("res://src/rules/monster.gd")
+const Roaming = preload("res://src/rules/roaming.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Automap = preload("res://src/view/automap.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
@@ -72,11 +74,47 @@ func _run() -> void:
 	await _palette_is_picked_and_saved()
 	await _held_key_waits_for_the_camera()
 	await _fight_staging()
+	await _models_follow_their_monsters()
 	_style()
 	_postfx_decays()
 	await _picture_is_set_up()
 	await _slow_frames_keep_the_direction()
 	_finish()
+
+
+## A monster that moves glides there at the pace of a step, with its name; one replaced by a retried fight leaves no model behind.
+func _models_follow_their_monsters() -> void:
+	var flow = await _walk(11)
+	var s = flow.state
+	var stage = _stage_for(s)
+	var m = s.floor_map.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
+	stage.update(s, 0.0, FRAME)
+	var model: Node3D = stage._models[m]
+	var start: Vector3 = model.position
+	var tag_y: float = stage._tags[m].position.y
+	m.cell += FloorMap.DIRS[0]
+	var goal: Vector3 = DungeonMesh.center(m.cell)
+	stage.update(s, 0.0, FRAME)
+	_check(model.position != start and model.position != goal, "a monster's model doesn't jump to its new cell")
+	for i in 20:
+		stage.update(s, FRAME * i, FRAME)
+	_check(model.position == goal, "it gets there within a step's time")
+	_check(stage._tags[m].position == Vector3(goal.x, tag_y, goal.z), "and its name comes with it")
+	m.hunting = true
+	stage.update(s, 1.0, FRAME)
+	_check(stage._tags[m].text == str(Roaming.table().tag), "a hunter's name says so")
+	m.hunting = false
+	stage.update(s, 1.0, FRAME)
+	_check(stage._tags[m].text != str(Roaming.table().tag), "and stops saying so")
+	m.cell += FloorMap.DIRS[0] * 5
+	stage.update(s, 2.0, FRAME)
+	_check(model.position == DungeonMesh.center(m.cell), "from far away (a load) it goes at once")
+	var fresh = Monster.from_dict(m.to_dict())
+	s.floor_map.monsters[s.floor_map.monsters.find(m)] = fresh
+	stage.update(s, 3.0, FRAME)
+	stage.update(s, 3.0, FRAME)
+	_check(not stage._models.has(m) and stage._models.has(fresh), "the one it replaced is gone from the set")
+	stage.free()
 
 
 ## A floor from picture rows: `#` wall, anything else open.
@@ -551,6 +589,27 @@ func _the_set_has_its_parts() -> void:
 	stage.free()
 
 
+## A monster on the move shows on the map where you last saw it, darker once it's out of sight, and never where it really is.
+func _last_seen_on_the_map(s, map) -> void:
+	var m = s.floor_map.monsters[0]
+	var had: Vector2i = m.cell
+	var dot := func(at: Vector2i): return map.monster_marks().filter(func(k): return Rect2(Vector2(at) * map.cell_px(), Vector2.ONE * map.cell_px()).encloses(k.rect))
+	m.last_seen = Vector2i(-1, -1)
+	s.in_sight = {}
+	_check(dot.call(had).is_empty(), "a monster you never saw isn't on the map, even over floor you have seen")
+	m.last_seen = had
+	s.in_sight = {had: true}
+	var near: Array = dot.call(had)
+	_check(near.size() == 1 and near[0].color == Palette.monster(m), "one in sight shows at its cell in its colour")
+	s.in_sight = {}
+	m.cell = had + Vector2i(1, 0)
+	var left: Array = dot.call(had)
+	_check(left.size() == 1 and left[0].color != Palette.monster(m), "out of sight it stays where you saw it, darker")
+	_check(dot.call(m.cell).is_empty(), "and doesn't show where it went")
+	m.cell = had
+	m.last_seen = Vector2i(-1, -1)
+
+
 func _automap_marks() -> void:
 	var flow = await _walk(11)
 	var s = flow.state
@@ -566,11 +625,15 @@ func _automap_marks() -> void:
 	var marks: Array = map.monster_marks()
 	if s.viewing("boss-at-exit"):
 		s.seen.erase(boss.cell)
+	if s.viewing("roaming"):
+		_last_seen_on_the_map(s, map)
 	_check(marks.any(func(k): return k.color == Palette.BOSS and k.rect.size == Vector2(8, 8)), "the champion is on the map, in red, from the start")
 	_check(not s.seen.has(boss.cell), "though you have not seen its cell")
 	var m = s.floor_map.monsters[0]
 	_check(not marks.any(func(k): return k.rect.position == Vector2(m.cell) * 8.0 + Vector2(2, 2)), "a monster you have not seen is not")
 	s.seen[m.cell] = true
+	m.last_seen = m.cell
+	s.in_sight[m.cell] = true
 	var dot: Array = map.monster_marks().filter(func(k): return k.rect.position == Vector2(m.cell) * 8.0 + Vector2(2, 2))
 	_check(dot.size() == 1 and dot[0].rect.size == Vector2(4, 4) and dot[0].color == Palette.monster(m), "a seen monster is a dot of its colour, with a size")
 	m.gone = "spared"

@@ -32,6 +32,13 @@ var turn := 0
 var gone := "" # "", "spared" or "slain"
 var lurking := false # you can see that something is there, not what, until you walk into it
 var purse := 0 # gold it leaves when it is out of the fight
+## How it gets about (rules/roaming.gd): steps it still holds still for, the two ends of its beat and which it is heading for, and
+## whether it is after you. And where you last saw it, which is what the map shows: x < 0 when you never have.
+var hold := 0
+var patrol: Array = []
+var leg := 0
+var hunting := false
+var last_seen := Vector2i(-1, -1)
 
 
 ## `entry` is one line of the roster (species, genre, hp), or the boss. `cell` is where it stands.
@@ -153,6 +160,7 @@ func to_dict() -> Dictionary:
 		"spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
 		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
 		"lurking": lurking, "purse": purse,
+		"hold": hold, "patrol": patrol.map(func(c): return [c.x, c.y]), "leg": leg, "hunting": hunting, "lastSeen": [last_seen.x, last_seen.y],
 	}
 
 
@@ -182,4 +190,10 @@ static func from_dict(d: Dictionary):
 	m.heard = d.get("heard", {}).duplicate()
 	m.lurking = bool(d.get("lurking", false))
 	m.purse = maxi(0, int(d.get("purse", 0)))
+	m.hold = maxi(0, int(d.get("hold", 0)))
+	m.patrol = d.get("patrol", []).map(func(v): return Vector2i(int(v[0]), int(v[1])))
+	m.leg = clampi(int(d.get("leg", 0)), 0, 1)
+	m.hunting = bool(d.get("hunting", false))
+	var seen: Array = d.get("lastSeen", [-1, -1])
+	m.last_seen = Vector2i(int(seen[0]), int(seen[1]))
 	return m

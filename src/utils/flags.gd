@@ -56,6 +56,8 @@ const FEATURES := {
 	"shop": "some floors have a trader who sells items for gold",
 	"lurkers": "something stirs in plain sight on a floor: walk round it, or walk into it for a fight and its purse",
 	"npcs": "some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor",
+	"roaming": "monsters take a turn each step you take: slimes drift, bandits patrol, snakes follow, and an angry or wronged one hunts you",
+	"boss-chase": "a champion you have seen comes after you, unless it is holding the stairs (boss-at-exit)",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

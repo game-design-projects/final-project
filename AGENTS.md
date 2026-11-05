@@ -14,7 +14,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Always pass `nosave` when a scri
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). No `class_name`: modules are used through `preload` constants. Rules live in `src/rules/` with no UI; the stages in `src/game/stages/` are one state machine with a transition table; views only read `flow.state` and listen to `flow.happened`. Every chance roll goes through `Dice`.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). No `class_name`: modules are used through `preload` constants. Rules live in `src/rules/` with no UI; the stages in `src/game/stages/` are one state machine with a transition table; views only read `flow.state` and listen to `flow.happened`. Every chance roll goes through `Dice`, with one exception: a roaming monster's move (`src/rules/roaming.gd`) is worked out from the floor's seed, the monster's index and the floor's saved step count, because `Dice` isn't saved and is pinned in the slice.
 
 ## Gotchas
 

@@ -5,6 +5,7 @@ extends "res://src/game/stages/stage.gd"
 
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
+const Roaming = preload("res://src/rules/roaming.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const State = preload("res://src/game/state.gd")
@@ -74,7 +75,27 @@ func _step(flow, backwards: bool) -> void:
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
 		return
+	if flow.feature("roaming") and await _monsters_move(flow):
+		return
 	_notice(flow)
+
+
+## Everybody's turn. True when one of them walked into you, and the fight is on.
+func _monsters_move(flow) -> bool:
+	var s = flow.state
+	var t0 := Time.get_ticks_usec()
+	var done := Roaming.turn(s, {"revenge": flow.feature("clans"), "boss_chase": flow.feature("boss-chase")})
+	s.spot()
+	print_verbose("explore: the monsters' turn took %d us" % (Time.get_ticks_usec() - t0))
+	if done.caught != null:
+		await flow.go("intro", {"foe": done.caught, "before": [State.sys_line(Roaming.table().caught % done.caught.name)]})
+		return true
+	if done.noticed.any(func(m): return s.in_sight.has(m.cell)):
+		flow.event("sound", {"name": "odd"})
+		flow.coach.say("hunted")
+	elif done.moved.any(func(m): return s.in_sight.has(m.cell)):
+		flow.coach.say("roaming")
+	return false
 
 
 ## You walked into what was stirring: now you see what it is.

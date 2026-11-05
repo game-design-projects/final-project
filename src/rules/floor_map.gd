@@ -19,6 +19,7 @@ var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
 var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
 var merchant := {} # {cell: Vector2i, stock: [item id]}, or empty when no trader is here
 var quester := {} # {cell, species, name, kind, target, want, taken} (rules/requests.gd), or empty when nobody here is asking
+var steps := 0 # how many steps have been taken here, which the monsters' moves are worked out from (rules/roaming.gd)
 var changes := 0 # how many walls have been broken, for whoever built something from the grid
 
 
@@ -134,6 +135,7 @@ func to_dict() -> Dictionary:
 		"pickups": pickups.map(func(p): return {"cell": [p.cell.x, p.cell.y], "item": p.item}),
 		"merchant": {} if merchant.is_empty() else {"cell": [merchant.cell.x, merchant.cell.y], "stock": merchant.stock.duplicate()},
 		"quester": {} if quester.is_empty() else _quester_dict(),
+		"steps": steps,
 	}
 
 
@@ -160,6 +162,7 @@ static func from_dict(d: Dictionary, monster_script):
 	var trader: Dictionary = d.get("merchant", {})
 	if not trader.is_empty():
 		f.merchant = {"cell": _cell(trader.cell), "stock": trader.stock.map(func(id): return str(id))}
+	f.steps = maxi(0, int(d.get("steps", 0)))
 	var asking: Dictionary = d.get("quester", {})
 	if not asking.is_empty():
 		f.quester = asking.duplicate()
