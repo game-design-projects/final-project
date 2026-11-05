@@ -28,6 +28,21 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `network_test` | Timeouts, retries, Jev's answers |
 | `view_test` | Models, sight, camera, automap, palettes |
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
+| `map_test` | The floor generators, biomes and chunks, and what sight costs on a big floor |
+| `meta_test` | Achievements, Legacy, hunger, camp, butchering, and a save without any of them |
+| `features_test` | Each feature with its flag on and off (it switches them itself) |
+
+`tools/run_tests.sh [on|classic|both]` runs them all, plays whole games in each mode, and with the features on plays five games without a strike.
+
+Tests can't judge how it looks. These draw the real thing and print numbers, with pictures if given `out=<dir>`. They need a window, which may stay hidden:
+
+| Script | What it tells you |
+| --- | --- |
+| `flicker_check` | Which pixels of a monster blink as it stands there, and how much its lit area jumps gliding (`only=<species>`) |
+| `far_check` | Every species at every distance down the longest line of each floor, and across floors: is it seen, and is a name ever over nothing |
+| `hold_check` | Each arrow held in the real game scene: cells, turns, bumps, whether the camera turned back, the slowest frame |
+| `screenshots`, `camera_shots`, `model_shots`, `map_shots` | Pictures to look at |
+| `sim_recruit` | How long winning each monster over takes against killing it |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
 
@@ -36,6 +51,14 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.
 
 `debug` · `mock` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `personality-slice` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
+
+## Features
+
+Every game feature since 0.6.1 has a flag, on by default. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off, and `classic` turns them all off.
+
+A new feature goes in `FEATURES`, is read with `flow.feature(name)`, and if the view has to know, in `flow.VIEW_FEATURES` (the view reads `state.viewing(name)`). A save keeps working with any of them off.
+
+`motifs` is the one exception to shipping: Abdulla's motifs aren't in the repo. See [AUDIO.md](AUDIO.md).
 
 ## The Worker (Jev)
 

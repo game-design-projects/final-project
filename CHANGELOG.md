@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - `chat`: typed words fly to the monster, its reply gets its own box, and the info key keeps the talk so far.
 - `boss-at-exit`, `flee-cost` and `boss-reward`: the champion holds the stairs, backing away has a cost, and beating or befriending a champion makes you stronger.
 - `branching`: the stairs offer two seeded ways down to compare.
+- `mini-games`: DANCE, a light that moves on every beat and heals you if you are on it when the beat lands.
+- `map-gen`: half of the undercroft's floors are long or tall instead of square.
+- `branching` can offer a market stair, with a trader on the floor below.
+- `roaming`: an alert sound when a monster sees you, a soft step when one in sight moves, and an arrow at its feet for the way it went.
 - `clans`: monsters belong to clans that remember your deeds, later ones say so and start in a different mood, and Jev is told the history.
 - `map-gen`: floors come in three biomes with their own generator (maze, authored chunks, caves), size up to 31x31, colours and monsters, with a scrolling automap.
 - `secrets`: chests behind cracked walls that break when you walk into them, and pairs of pads that carry you across the floor.
@@ -42,6 +46,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - `tools/flicker_check.gd` measures flicker in the models frame by frame on the GPU, per species and distance, and marks the blinking pixels on a picture.
 
 ### Changed
+- A run says who you are and why the Hoard threw you down, and the champions' lore names the clans; FLEE has a tip, and the TIPS setting also skips the slow first fights.
+- Monsters answer a sad, frightening or strange deed in their own words too, and two names were changed (Vex read like Vexalith, Mellow like a trait).
 - Each mini-game now lives in its own file under `src/rules/minigames/`.
 - `Vision.sight` stops 12 cells away, so a big floor costs no more than the classic one.
 - CI also runs `features_test` and every suite with `classic`, and `run_tests.sh` includes `audio_test`.
