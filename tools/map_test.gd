@@ -49,6 +49,8 @@ func _plan(biome: Dictionary, depth: int, boss_at_exit := true) -> Dictionary:
 	plan.boss_at_exit = boss_at_exit
 	plan.items = true
 	plan.shop = true
+	plan.lurkers = true
+	plan.request = true
 	return plan
 
 
@@ -95,6 +97,11 @@ func _walkable(f, breaking := false) -> Dictionary:
 		pads[t.b] = true
 	if not f.merchant.is_empty():
 		pads[f.merchant.cell] = true
+	if not f.quester.is_empty():
+		pads[f.quester.cell] = true
+	for m in f.monsters:
+		if m.lurking:
+			pads[m.cell] = true # the floor has to work without going through one
 	var dist := {f.start: 0}
 	var queue: Array = [f.start]
 	var head := 0
@@ -116,6 +123,8 @@ func _thousand_floors(biome: Dictionary) -> void:
 	var pads := 0
 	var chests := 0
 	var worst_us := 0
+	var scarce := 0
+	var unasked := 0
 	for i in FLOORS_EACH:
 		var depth := i % 5 + 1
 		var one_t0 := Time.get_ticks_usec()
@@ -130,8 +139,13 @@ func _thousand_floors(biome: Dictionary) -> void:
 			note.call("stairs out of reach")
 		elif dist[f.stairs] < f.size:
 			note.call("stairs close to the start")
+		var lurkers := 0
 		for m in f.monsters:
-			if not dist.has(m.cell):
+			if m.lurking:
+				lurkers += 1
+				if m.boss or m.purse <= 0 or not FloorMap.DIRS.any(func(d): return dist.has(m.cell + d)):
+					note.call("a lurker that is not one you can walk up to")
+			elif not dist.has(m.cell):
 				note.call("a monster out of reach")
 			if not f.is_open(m.cell):
 				note.call("a monster in a wall")
@@ -146,7 +160,8 @@ func _thousand_floors(biome: Dictionary) -> void:
 				var c := Vector2i(x, y)
 				if f.is_open(c):
 					open += 1
-					if not dist.has(c) and not f.in_the_way(c) and not f.treasure.any(func(t): return t.cell == c):
+					var stirring: bool = f.monster_at(c) != null and f.monster_at(c).lurking
+					if not dist.has(c) and not f.in_the_way(c) and not stirring and not f.treasure.any(func(t): return t.cell == c):
 						note.call("open floor out of reach")
 				if f.is_cracked(c):
 					cracked.append(c)
@@ -174,8 +189,21 @@ func _thousand_floors(biome: Dictionary) -> void:
 		for p in f.pickups:
 			if not dist.has(p.cell):
 				note.call("an item out of reach")
-		if f.pickups.size() != int(Items.table().pickups_per_floor):
+		if f.pickups.size() < int(Items.table().pickups_per_floor):
 			note.call("the wrong number of items")
+		if lurkers < 1:
+			scarce += 1
+		if f.quester.is_empty():
+			unasked += 1
+		else:
+			if not FloorMap.DIRS.any(func(d): return dist.has(f.quester.cell + d)):
+				note.call("someone asking whom nobody can walk up to")
+			if f.reserved().has(f.quester.cell) and f.monster_at(f.quester.cell) != null:
+				note.call("a monster on someone asking")
+			if f.quester.kind == "fetch" and f.pickup_at(f.pickups[-1].cell) != f.quester.want:
+				note.call("what is wanted isn't on the floor")
+			if f.quester.kind != "fetch" and (f.monsters[f.quester.target].boss or f.monsters[f.quester.target].lurking):
+				note.call("a request about the wrong monster")
 		if f.merchant.is_empty() or f.merchant.stock.size() != int(Items.table().stock):
 			note.call("no trader with a full shelf")
 		elif not FloorMap.DIRS.any(func(d): return dist.has(f.merchant.cell + d)):
@@ -186,6 +214,8 @@ func _thousand_floors(biome: Dictionary) -> void:
 				note.call("a seed that makes two floors")
 	var ms := (Time.get_ticks_usec() - t0) / 1000
 	print("map_test: %s: %d floors in %d ms (worst %d ms), %d cracked walls, %d chests, %d pairs of pads" % [biome.id, FLOORS_EACH, ms, worst_us / 1000, cracks, chests, pads])
+	_check(scarce <= FLOORS_EACH * 0.05, "%s: nearly every floor has something stirring (%d without)" % [biome.id, scarce])
+	_check(unasked <= FLOORS_EACH * 0.05, "%s: nearly every floor told to has someone asking (%d without)" % [biome.id, unasked])
 	_check(problems.is_empty(), "%s: %d floors, everything in reach and the secrets in place %s" % [biome.id, FLOORS_EACH, problems])
 	_check(cracks == chests and chests >= FLOORS_EACH * 0.98, "%s: nearly every floor hides a chest behind a cracked wall (%d walls, %d chests)" % [biome.id, cracks, chests])
 	_check(pads >= FLOORS_EACH * 0.9, "%s: nearly every floor has a pair of pads (%d)" % [biome.id, pads])
@@ -268,6 +298,12 @@ func _save_keeps_the_secrets() -> void:
 		func(d): d.floor.merchant = {"cell": [0, 0], "stock": []},
 		func(d): d.floor.merchant = {"cell": [1, 1], "stock": ["nothing"]},
 		func(d): d.floor.merchant = 3,
+		func(d): d.floor.quester = 3,
+		func(d): d.floor.quester = {"cell": [0, 0], "kind": "rid", "species": "slime", "name": "X", "target": 0},
+		func(d): d.floor.quester = {"cell": [1, 1], "kind": "nothing", "species": "slime", "name": "X", "target": 0},
+		func(d): d.floor.quester = {"cell": [1, 1], "kind": "rid", "species": "slime", "name": "X", "target": 99},
+		func(d): d.floor.quester = {"cell": [1, 1], "kind": "fetch", "species": "slime", "name": "X", "want": "nothing"},
+		func(d): d.floor.monsters[0].purse = "lots",
 	]:
 		var wrong: Dictionary = saved.duplicate(true)
 		bad.call(wrong)
@@ -278,6 +314,10 @@ func _save_keeps_the_secrets() -> void:
 	old.floor.erase("biome")
 	old.floor.erase("pickups")
 	old.floor.erase("merchant")
+	old.floor.erase("quester")
+	for m in old.floor.monsters:
+		m.erase("lurking")
+		m.erase("purse")
 	old.erase("items")
 	old.erase("sharpened")
 	var loaded = State.from_dict(old)

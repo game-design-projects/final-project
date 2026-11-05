@@ -18,6 +18,7 @@ var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find
 var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
 var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
 var merchant := {} # {cell: Vector2i, stock: [item id]}, or empty when no trader is here
+var quester := {} # {cell, species, name, kind, target, want, taken} (rules/requests.gd), or empty when nobody here is asking
 var changes := 0 # how many walls have been broken, for whoever built something from the grid
 
 
@@ -61,12 +62,18 @@ func reserved() -> Dictionary:
 		out[p.cell] = true
 	if not merchant.is_empty():
 		out[merchant.cell] = true
+	if not quester.is_empty():
+		out[quester.cell] = true
 	return out
 
 
-## Whether stepping into this cell would take you somewhere other than through it (a pad, a trader), so a route goes round it.
+## Whether stepping into this cell would take you somewhere other than through it (a pad, a trader, someone asking), so a route goes round it.
 func in_the_way(c: Vector2i) -> bool:
-	return pad_partner(c) != null or merchant_at(c)
+	return pad_partner(c) != null or merchant_at(c) or quester_at(c)
+
+
+func quester_at(c: Vector2i) -> bool:
+	return not quester.is_empty() and quester.cell == c
 
 
 func merchant_at(c: Vector2i) -> bool:
@@ -126,7 +133,14 @@ func to_dict() -> Dictionary:
 		"teleports": teleports.map(func(t): return {"a": [t.a.x, t.a.y], "b": [t.b.x, t.b.y]}),
 		"pickups": pickups.map(func(p): return {"cell": [p.cell.x, p.cell.y], "item": p.item}),
 		"merchant": {} if merchant.is_empty() else {"cell": [merchant.cell.x, merchant.cell.y], "stock": merchant.stock.duplicate()},
+		"quester": {} if quester.is_empty() else _quester_dict(),
 	}
+
+
+func _quester_dict() -> Dictionary:
+	var out := quester.duplicate()
+	out.cell = [quester.cell.x, quester.cell.y]
+	return out
 
 
 static func from_dict(d: Dictionary, monster_script):
@@ -146,6 +160,13 @@ static func from_dict(d: Dictionary, monster_script):
 	var trader: Dictionary = d.get("merchant", {})
 	if not trader.is_empty():
 		f.merchant = {"cell": _cell(trader.cell), "stock": trader.stock.map(func(id): return str(id))}
+	var asking: Dictionary = d.get("quester", {})
+	if not asking.is_empty():
+		f.quester = asking.duplicate()
+		f.quester.cell = _cell(asking.cell)
+		f.quester.target = int(asking.get("target", -1))
+		f.quester.want = str(asking.get("want", ""))
+		f.quester.taken = bool(asking.get("taken", false))
 	return f
 
 

@@ -8,6 +8,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Items = preload("res://src/rules/items.gd")
 const Monster = preload("res://src/rules/monster.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Secrets = preload("res://src/rules/secrets.gd")
 
@@ -47,14 +48,60 @@ static func generate(rng: Rng, plan := {}):
 		var cell: Variant = Secrets.place_trader(rng, f, walk, hall)
 		if cell != null:
 			f.merchant = {"cell": cell, "stock": Items.stock(rng, plan)}
+	if plan.get("request", false):
+		var cell: Variant = Secrets.place_trader(rng, f, walk, hall)
+		if cell != null:
+			f.quester = {"cell": cell}
+	var stirs := {}
+	if plan.get("lurkers", false) and int(plan.get("count", -1)) <= 0: # a quiet way down is quiet
+		var numbers: Dictionary = Content.table("npcs").lurkers
+		for cell in Secrets.place_lurkers(rng, f, walk, hall, rng.int_range(int(numbers.count[0]), int(numbers.count[1]))):
+			stirs[cell] = true
 	if plan.get("items", false):
 		for item in Items.floor_finds(rng, plan):
-			var cell: Variant = Secrets.quiet_spot(rng, f, walk, hall)
+			var cell: Variant = Secrets.quiet_spot(rng, f, walk, hall, stirs)
 			if cell != null:
 				f.pickups.append({"cell": cell, "item": item})
-	f.monsters = _place_monsters(rng, walk, hall, plan, f.reserved())
-	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
+	var reserved: Dictionary = f.reserved()
+	reserved.merge(stirs)
+	f.monsters = _place_monsters(rng, walk, hall, plan, reserved)
+	_add_lurkers(rng, f, stirs.keys(), plan)
+	if not f.quester.is_empty():
+		_finish_request(rng, f, walk, hall, plan, stirs)
+	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", ", someone asking" if not f.quester.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
 	return f
+
+
+## Whoever stirs in these cells: a monster like the floor's others, with a purse. The champion stays the last of the list.
+static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
+	var numbers: Dictionary = Content.table("npcs").lurkers
+	var roster: Array = Content.table("encounter").roster
+	if str(plan.get("only_species", "")) != "":
+		roster = roster.filter(func(e): return e.species == plan.only_species)
+	var champion = f.monsters.pop_back()
+	for c: Vector2i in cells:
+		var m = Monster.make(rng, _at_depth(_one_of(roster, plan.get("biome", {}).get("weights", {}), rng), plan), c)
+		m.lurking = true
+		m.purse = rng.int_range(int(numbers.purse[0]), int(numbers.purse[1]))
+		f.monsters.append(m)
+	f.monsters.append(champion)
+
+
+## Who asks, and what it asks for; what's fetched lies on this floor. Nobody asks when there is nothing to ask about.
+static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan: Dictionary, stirs: Dictionary) -> void:
+	if not Requests.fill(rng, f, plan):
+		f.quester = {}
+		return
+	if f.quester.kind != "fetch":
+		return
+	var taken := stirs.duplicate()
+	for m in f.monsters:
+		taken[m.cell] = true
+	var cell: Variant = Secrets.quiet_spot(rng, f, walk, hall, taken)
+	if cell == null:
+		f.quester = {}
+		return
+	f.pickups.append({"cell": cell, "item": f.quester.want})
 
 
 ## Gives the floor its grid, start and size, and returns where its hall is.

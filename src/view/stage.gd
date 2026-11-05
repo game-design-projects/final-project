@@ -17,6 +17,7 @@ const Content = preload("res://src/rules/content.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 const SecretProps = preload("res://src/view/secret_props.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const CELL := Materials.CELL
@@ -37,6 +38,7 @@ const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels c
 const TAG_GAP := 0.12 # above the head
 const TAG_FADE_S := 0.12 # how long a tag takes to come and go
 const TRADER_LOOK := "bandit" # the model the trader wears, in gold
+const STIR_TURN := 1.6 # how fast something stirring goes round, in radians a second
 # the torches nearest the camera glow on the walls; each flickers on its own, in steps like the flames drawn on them
 const MAX_TORCHES := 10 # as in shaders/wire.gdshader
 const TORCH_REACH2 := 100.0 # world units, squared
@@ -63,6 +65,9 @@ var _secrets: Node3D
 var _secrets_built := -1 # how many chests and items it was built with
 var _trader: Node3D
 var _trader_tag: Label3D
+var _quester: Node3D
+var _quester_tag: Label3D
+var _stirs := {} # Monster -> Node3D, what you see of it while it lurks
 var _pos := Vector3.ZERO
 var _yaw := 0.0
 var _yaw_goal := 0.0 # where the camera is turning to, counted past a full circle so a held key keeps it turning one way
@@ -164,6 +169,9 @@ func _load_floor(state) -> void:
 	for m in _models:
 		_models[m].queue_free()
 		_tags[m].queue_free()
+	for m in _stirs:
+		_stirs[m].queue_free()
+	_stirs = {}
 	_models = {}
 	_tags = {}
 	_tag_light = {}
@@ -208,18 +216,34 @@ func _build_secrets() -> void:
 	_secrets_built = _floor_map.treasure.size() + _floor_map.pickups.size()
 
 
-## The trader: a gold figure that turns to you, with a name shown while a line reaches it, like a monster's.
+## The trader and whoever is asking: figures that turn to you, not monsters to fight, with a name shown while a line reaches them.
 func _build_trader() -> void:
-	if _trader != null:
-		_trader.queue_free()
-		_trader = null
-	if _floor_map.merchant.is_empty():
-		return
-	_trader = MonsterModel.build(TRADER_LOOK, Palette.MERCY)
-	_trader.position = DungeonMesh.center(_floor_map.merchant.cell)
-	add_child(_trader)
+	for old in [_trader, _quester]:
+		if old != null:
+			old.queue_free()
+	_trader = null
+	_quester = null
+	if not _floor_map.merchant.is_empty():
+		_trader = _figure(TRADER_LOOK, Palette.MERCY, _floor_map.merchant.cell)
+		_trader_tag = _name_tag("TRADER", Palette.MERCY, MonsterModel.top_of(_trader))
+		_trader.add_child(_trader_tag)
+	if not _floor_map.quester.is_empty():
+		_quester = _figure(_floor_map.quester.species, Palette.YOU, _floor_map.quester.cell)
+		_quester_tag = _name_tag(str(Requests.table().tag), Palette.YOU, MonsterModel.top_of(_quester))
+		_quester.add_child(_quester_tag)
+
+
+func _figure(look: String, color: Color, cell: Vector2i) -> Node3D:
+	var out := MonsterModel.build(look, color)
+	out.position = DungeonMesh.center(cell)
+	add_child(out)
+	return out
+
+
+## A name over something, drawn over walls: it is shown only while a line reaches what it names.
+func _name_tag(text: String, color: Color, top: float) -> Label3D:
 	var tag := Label3D.new()
-	tag.text = "TRADER"
+	tag.text = text
 	tag.font = Fonts.title()
 	tag.font_size = TAG_FONT_PX
 	tag.pixel_size = TAG_PIXEL_SIZE
@@ -229,10 +253,9 @@ func _build_trader() -> void:
 	tag.no_depth_test = true
 	tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	tag.outline_size = 0
-	tag.modulate = Palette.MERCY
-	tag.position = Vector3(0.0, MonsterModel.top_of(_trader) + TAG_GAP, 0.0)
-	_trader.add_child(tag)
-	_trader_tag = tag
+	tag.modulate = color
+	tag.position = Vector3(0.0, top + TAG_GAP, 0.0)
+	return tag
 
 
 ## Where the camera stands and looks from a cell.
@@ -326,14 +349,16 @@ static func _slab(color: Color) -> MeshInstance3D:
 
 func _show_monsters(state, now: float, dt: float) -> void:
 	if _trader != null:
-		var to_you := _camera.position - _trader.position
-		_trader.rotation.y = atan2(to_you.x, to_you.z)
-		MonsterModel.pose(_trader, now, 0.0)
-		_trader_tag.visible = Vision.reaches(state.floor_map, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), state.floor_map.merchant.cell)
+		_show_figure(_trader, _trader_tag, state.floor_map, state.floor_map.merchant.cell, now)
+	if _quester != null:
+		_quester.visible = not state.floor_map.quester.is_empty()
+		if _quester.visible:
+			_show_figure(_quester, _quester_tag, state.floor_map, state.floor_map.quester.cell, now)
 	_stairs_slab.visible = state.floor_map.monster_at(state.floor_map.stairs) != null
 	for m in state.floor_map.monsters:
 		var here: bool = not m.is_gone() and m.cell != state.cell
-		if not here:
+		_show_stir(m, here and m.lurking, state.floor_map, now)
+		if not here or m.lurking:
 			if _models.has(m):
 				_models[m].visible = false
 				_tags[m].visible = false
@@ -349,6 +374,31 @@ func _show_monsters(state, now: float, dt: float) -> void:
 		MonsterModel.flash(model, clampf(1.0 - since / FLASH_S, 0.0, 1.0))
 		MonsterModel.pose(model, now, clampf(1.0 - since / 0.4, 0.0, 1.0))
 	_show_tags(state, dt)
+
+
+func _show_figure(figure: Node3D, tag: Label3D, f, cell: Vector2i, now: float) -> void:
+	var to_you := _camera.position - figure.position
+	figure.rotation.y = atan2(to_you.x, to_you.z)
+	MonsterModel.pose(figure, now, 0.0)
+	tag.visible = Vision.reaches(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), cell)
+
+
+## Something stirring goes round and round where it waits, until you walk into it.
+func _show_stir(m, showing: bool, f, now: float) -> void:
+	if not showing:
+		if _stirs.has(m):
+			_stirs[m].visible = false
+		return
+	if not _stirs.has(m):
+		var made := SecretProps.stir(Palette.STIR)
+		made.position = DungeonMesh.center(m.cell)
+		made.add_child(_name_tag(str(Content.table("npcs").lurkers.tag), Palette.STIR, SecretProps.STIR_HEIGHT + TAG_GAP))
+		add_child(made)
+		_stirs[m] = made
+	var stir: Node3D = _stirs[m]
+	stir.visible = true
+	stir.rotation.y = now * STIR_TURN
+	stir.get_child(0).visible = Vision.reaches(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), m.cell)
 
 
 func _add_monster(m) -> void:

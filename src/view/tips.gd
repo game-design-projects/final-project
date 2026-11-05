@@ -163,14 +163,14 @@ func _allowed(key: String) -> bool:
 	if key == "foe":
 		return state.foe != null and state.stage in CARD_STAGES
 	if key == "map":
-		return state.stage in ["explore", "end", "trade"]
+		return state.stage in ["explore", "end", "trade", "request"]
 	if key == "chat":
 		return state.viewing("chat") and not state.chat.is_empty() and state.stage in CARD_STAGES
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
 		var i := int(key.substr(7))
-		return state.stage in ["menu", "act", "items", "trade"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
+		return state.stage in ["menu", "act", "items", "trade", "request"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
 	return false
 
 
@@ -187,7 +187,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
-		return map_blocks(state.viewing("secrets"), state.viewing("items"))
+		return map_blocks(state.viewing("secrets"), state.viewing("items"), state.viewing("lurkers"), state.viewing("npcs"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -265,7 +265,7 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(secrets := false, items := false) -> Array:
+static func map_blocks(secrets := false, items := false, lurkers := false, npcs := false) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -280,6 +280,10 @@ static func map_blocks(secrets := false, items := false) -> Array:
 	if items:
 		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
 		out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
+	if npcs:
+		out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
+	if lurkers:
+		out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
 	return out
 
 

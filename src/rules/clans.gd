@@ -57,15 +57,25 @@ static func record(state, m, deed: String) -> void:
 	if from == "":
 		push_error("clans: %s has no clan" % m.species)
 		return
-	var worth: float = float(_table().deeds[deed]) * (float(_table().champion_weight) if m.boss else 1.0)
-	for clan in _table().clans:
-		var part: float = worth * reach(from, clan)
-		if part != 0.0:
-			state.reputation[clan] = clampf(float(state.reputation.get(clan, 0.0)) + part, -STANDING_MAX, STANDING_MAX)
+	_spread(state, from, float(_table().deeds[deed]) * (float(_table().champion_weight) if m.boss else 1.0))
 	state.deeds.append({"clan": from, "species": m.species, "who": m.name, "deed": deed})
 	if state.deeds.size() > DEEDS_MAX:
 		state.deeds = state.deeds.slice(-DEEDS_MAX)
 	print("clans: %s %s (%s), standing now %s" % [deed, m.name, from, state.reputation])
+
+
+## A kindness to this kind of monster that isn't a deed in a fight: it moves opinions, and nobody tells the tale.
+static func favour(state, species: String, worth: float) -> void:
+	var from := of(species)
+	if from != "":
+		_spread(state, from, worth)
+
+
+static func _spread(state, from: String, worth: float) -> void:
+	for clan in _table().clans:
+		var part: float = worth * reach(from, clan)
+		if part != 0.0:
+			state.reputation[clan] = clampf(float(state.reputation.get(clan, 0.0)) + part, -STANDING_MAX, STANDING_MAX)
 
 
 ## How much a clan's opinion moves a monster's starting mood.

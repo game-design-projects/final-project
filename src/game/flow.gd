@@ -15,13 +15,14 @@ const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const STORY_BANNER_MS := 6000.0
@@ -34,6 +35,7 @@ const STAGES := {
 	"act": preload("res://src/game/stages/act.gd"),
 	"items": preload("res://src/game/stages/items.gd"),
 	"trade": preload("res://src/game/stages/trade.gd"),
+	"request": preload("res://src/game/stages/request.gd"),
 	"talk": preload("res://src/game/stages/talk.gd"),
 	"fightbar": preload("res://src/game/stages/fightbar.gd"),
 	"wait": preload("res://src/game/stages/wait.gd"),
@@ -165,6 +167,8 @@ func _make_floor(way := {}) -> void:
 			plan.secrets = Floors.secrets(plan.get("biome", {}))
 		plan.items = feature("items")
 		plan.shop = feature("items") and feature("shop") and Items.shop_on(state.depth)
+		plan.lurkers = feature("lurkers")
+		plan.request = feature("npcs") and Requests.due(state.depth)
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:
 		state.floor_map = FloorGen.generate(rng)

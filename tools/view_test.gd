@@ -419,7 +419,12 @@ func _every_monster_stands_on_the_set() -> void:
 	for facing in 4:
 		s.facing = facing
 		stage.update(s, 0.0, FRAME)
-		_check(all.all(func(m): return stage._models.has(m) and stage._models[m].visible), "all %d monsters are on the set, facing %s" % [all.size(), FloorMap.DIR_NAMES[facing]])
+		_check(all.all(func(m): return (stage._stirs.has(m) and stage._stirs[m].visible and not stage._models.has(m)) if m.lurking else (stage._models.has(m) and stage._models[m].visible)), "all %d monsters are on the set, facing %s" % [all.size(), FloorMap.DIR_NAMES[facing]])
+	var stirring: Array = all.filter(func(m): return m.lurking)
+	if not stirring.is_empty():
+		stirring[0].lurking = false
+		stage.update(s, 0.0, FRAME)
+		_check(not stage._stirs[stirring[0]].visible and stage._models[stirring[0]].visible, "what stirred shows itself once you walk into it")
 	var victim = all[0]
 	victim.gone = "slain"
 	stage.update(s, 0.1, FRAME)

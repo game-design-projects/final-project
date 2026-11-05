@@ -3,10 +3,13 @@
 ## off as soon as you step on it.
 extends "res://src/game/stages/stage.gd"
 
+const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const State = preload("res://src/game/state.gd")
+
+const SIGHT_AHEAD := 6 # how many cells down a straight line the first-time tips look
 
 const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · I INFO · ESC MENU"
 
@@ -49,10 +52,15 @@ func _step(flow, backwards: bool) -> void:
 		return
 	var monster = s.floor_map.monster_at(next)
 	if monster != null:
+		if monster.lurking:
+			_stirred(flow, monster)
 		await flow.go("intro", {"foe": monster})
 		return
 	if s.floor_map.merchant_at(next):
 		await flow.go("trade")
+		return
+	if s.floor_map.quester_at(next):
+		await flow.go("request")
 		return
 	s.cell = next
 	s.visited[next] = true
@@ -67,6 +75,14 @@ func _step(flow, backwards: bool) -> void:
 		await flow.go("end")
 		return
 	_notice(flow)
+
+
+## You walked into what was stirring: now you see what it is.
+func _stirred(flow, m) -> void:
+	m.lurking = false
+	var numbers: Dictionary = Content.table("npcs").lurkers
+	flow.announce(m.name, numbers.stirred % ("a " + str(Content.species(m.species).label).to_lower()))
+	print("explore: %s was stirring at %s, purse %d" % [m.name, m.cell, m.purse])
 
 
 func _break_wall(flow, wall: Vector2i) -> void:
@@ -109,8 +125,20 @@ func _find_secrets(flow) -> void:
 		flow.event("sound", {"name": "holy"})
 
 
-## The first time a cracked wall is right in front of you, say what it is.
+## The first time a cracked wall is right in front of you, or something new is down the line you face, say what it is.
 func _notice(flow) -> void:
 	var s = flow.state
 	if s.floor_map.is_cracked(s.cell + FloorMap.DIRS[s.facing]):
 		flow.coach.say("crack")
+	var at: Vector2i = s.cell
+	for _i in SIGHT_AHEAD:
+		at += FloorMap.DIRS[s.facing]
+		if not s.floor_map.is_open(at):
+			return
+		var m = s.floor_map.monster_at(at)
+		if m != null and m.lurking:
+			flow.coach.say("lurker")
+			return
+		if s.floor_map.quester_at(at):
+			flow.coach.say("request")
+			return

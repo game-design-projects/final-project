@@ -10,6 +10,7 @@ const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Items = preload("res://src/rules/items.gd")
 const Monster = preload("res://src/rules/monster.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const DEPTH_MAX := 99
@@ -276,6 +277,12 @@ static func _floor_problem(f) -> String:
 		var problem := _monster_problem(m, f)
 		if problem != "":
 			return problem
+	if f.has("quester") and not f.quester is Dictionary:
+		return "the floor's request is not a record"
+	if f.has("quester") and not f.quester.is_empty():
+		if not _is_cell(f.quester.get("cell")) or not _open(f, _cell(f.quester.cell)):
+			return "the floor's request is not on an open cell"
+		return Requests.problem(f.quester, f.monsters.size())
 	return ""
 
 
@@ -303,6 +310,8 @@ static func _monster_problem(m, f: Dictionary) -> String:
 		return "what a monster heard is not a record"
 	if m.has("traits") and (not m.traits is Array or m.traits.any(func(t): return not t is String)):
 		return "a monster's traits are not a list of words"
+	if m.has("purse") and not _is_num(m.purse):
+		return "a monster's purse is not a number"
 	if m.has("taste") and (not m.taste is Dictionary or m.taste.values().any(func(v): return not _is_num(v))):
 		return "a monster's taste is not a record of numbers"
 	return ""

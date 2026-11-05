@@ -22,6 +22,7 @@ const Items = preload("res://src/rules/items.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const Tips = preload("res://src/view/tips.gd")
@@ -51,6 +52,8 @@ func _run() -> void:
 	await _secrets()
 	await _items()
 	await _shop()
+	await _lurkers()
+	await _npcs()
 	_finish()
 
 
@@ -889,9 +892,10 @@ func _map_gen() -> void:
 	var kinds := {}
 	for depth in range(1, Floors.run_floors() + 1):
 		var biome: Dictionary = Floors.biome(41, depth)
-		_check(s.floor_map.biome == biome.id and s.floor_map.size == int(biome.size), "B%dF is %s at %dx%d (%s at %d)" % [depth, biome.id, biome.size, s.floor_map.biome, s.floor_map.size])
+		_check(s.floor_map.biome == biome.id and s.floor_map.size == int(biome.size), "B%dF is %s at %d (%s at %d)" % [depth, biome.id, biome.size, s.floor_map.biome, s.floor_map.size])
 		_check(biome.palettes.map(func(v): return int(v)).has(s.palette_id), "in the colours of its biome")
-		_check(s.floor_map.monsters.size() == Content.table("encounter").roster.size() + 1 + maxi(0, (int(biome.size) - 13) / 3), "with more monsters the bigger it is (%d at %d)" % [s.floor_map.monsters.size(), biome.size])
+		var standing: Array = s.floor_map.monsters.filter(func(m): return not m.lurking)
+		_check(standing.size() == Content.table("encounter").roster.size() + 1 + maxi(0, (int(biome.size) - 13) / 3), "with more monsters the bigger it is (%d at %d)" % [standing.size(), biome.size])
 		kinds[biome.id] = true
 		if depth < Floors.run_floors():
 			s.foe = null
@@ -1105,7 +1109,7 @@ func _items() -> void:
 	await walk.new_run()
 	var ws = walk.state
 	var f = ws.floor_map
-	_check(f.pickups.size() == int(Items.table().pickups_per_floor), "a floor has things lying about (%d)" % f.pickups.size())
+	_check(f.pickups.size() >= int(Items.table().pickups_per_floor), "a floor has things lying about (%d)" % f.pickups.size())
 	var thing: Dictionary = f.pickups[0]
 	ws.banner = null
 	_face(ws, thing.cell)
@@ -1185,3 +1189,151 @@ func _shop() -> void:
 	_check(not closed.state.floor_map.pickups.is_empty(), "though things still lie about")
 	_use()
 
+
+## A floor of this seed's, on the given depth, with things standing as they do on it.
+func _floor_with_lurker(seed_value: int, words := []) -> Variant:
+	var flow = _flow(seed_value, words)
+	await flow.new_run()
+	return flow
+
+
+func _lurkers() -> void:
+	var flow = await _floor_with_lurker(71)
+	var s = flow.state
+	var f = s.floor_map
+	var stirs: Array = f.monsters.filter(func(m): return m.lurking)
+	_check(not stirs.is_empty(), "something stirs on the floor (%d)" % stirs.size())
+	var m = stirs[0]
+	_check(m.purse > 0 and not m.boss, "it has a purse, and it is no champion")
+	_check(f.monsters.back().boss, "the champion is still the last in the list")
+	_check(Floors.fights_required(f) <= f.monsters.filter(func(o): return not o.lurking).size(), "the walk to the stairs doesn't count on going through one")
+	var again = await _floor_with_lurker(71)
+	_check(JSON.stringify(again.state.floor_map.to_dict()) == JSON.stringify(f.to_dict()), "the same seed stirs the same way")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	var back = _flow(71)
+	await back.load_state(saved)
+	var kept: Array = back.state.floor_map.monsters.filter(func(o): return o.lurking)
+	_check(kept.size() == stirs.size() and kept[0].purse == m.purse, "a save keeps them stirring, with their purses")
+	s.banner = null
+	_face(s, m.cell)
+	var stood: Vector2i = s.cell
+	var gold: int = s.gold
+	await flow.press("up")
+	_check(s.stage == "intro" and s.foe == m and s.cell == stood, "walking into it starts a fight (%s)" % s.stage)
+	_check(not m.lurking, "and you see what it was")
+	_check(s.banner != null and Overlay.banner_fits(s.banner.text), "the picture says so, and it fits")
+	await flow.tick(flow.clock + 5000.0)
+	_check(s.encounter_start.foe.lurking == false, "a retried fight is against something you've seen")
+	var purse: int = m.purse
+	await flow.encounter.defeat(m, "slain")
+	_check(s.gold == gold + purse and m.purse == 0, "out of the fight it leaves its purse (%d)" % s.gold)
+	var plain = await _floor_with_lurker(71, ["no-lurkers"])
+	_check(plain.state.floor_map.monsters.all(func(o): return not o.lurking), "no-lurkers: nothing stirs")
+	var way: Dictionary = Floors.plan(2, {"count": 2})
+	way.lurkers = true
+	_check(FloorGen.generate(Rng.new(5), way).monsters.all(func(o): return not o.lurking), "a quiet way down is quiet")
+	var tips = await _floor_with_lurker(72)
+	var ts = tips.state
+	_face(ts, ts.floor_map.monsters.filter(func(x): return x.lurking)[0].cell)
+	ts.facing = posmod(ts.facing - 1, 4)
+	ts.banner = null
+	await tips.press("right")
+	_check(tips.coach.seen.has("lurker"), "the first one you face gets a tip (%s)" % [tips.coach.seen.keys()])
+	_check(Overlay.banner_fits(str(Content.table("coach").tips.lurker)) and Overlay.banner_fits(str(Content.table("coach").tips.request)), "the tips fit the banner")
+	_use()
+
+
+## A floor with someone asking for this, whichever seed from `start` gives one.
+func _asking(start: int, kind: String) -> Variant:
+	for i in 200:
+		var flow = _flow(start + i)
+		await flow.new_run()
+		if not flow.state.floor_map.quester.is_empty() and flow.state.floor_map.quester.kind == kind:
+			return flow
+	_check(false, "no seed has someone asking for %s" % kind)
+	return null
+
+
+func _npcs() -> void:
+	var t: Dictionary = Requests.table()
+	_check(Requests.due(1) and not Requests.due(2), "some floors have someone asking")
+	for kind in t.kinds:
+		for key in ["ask", "wait", "ready", "thanks", "yes", "give", "sub"]:
+			_check(t.kinds[kind].has(key), "%s says %s" % [kind, key])
+	# fetching
+	var flow = await _asking(100, "fetch")
+	var s = flow.state
+	var f = s.floor_map
+	var q: Dictionary = f.quester
+	_check(f.pickups.any(func(p): return p.item == q.want), "what it wants lies on this floor")
+	_check(f.in_the_way(q.cell) and f.reserved().has(q.cell), "routes go round it")
+	s.banner = null
+	_face(s, q.cell)
+	var stood: Vector2i = s.cell
+	s.gold = 0
+	s.hp = 3
+	s.items = []
+	await flow.press("up")
+	_check(s.stage == "request" and s.cell == stood, "walking up to it opens a talk, not a fight (%s)" % s.stage)
+	_check(s.foe == null and s.lines[0].kind == "say" and s.lines[0].who == q.name, "it says what it wants")
+	_check(s.lines[0].text.contains(Items.label(q.want)), "by name (%s)" % s.lines[0].text)
+	_check(s.menu.size() == 2 and s.menu[0].label == t.kinds.fetch.yes, "and you answer")
+	await flow.press("1")
+	_check(s.stage == "explore" and q.taken, "you say you will, and walk on")
+	await flow.press("up")
+	_check(s.stage == "request" and s.menu.size() == 1, "come back empty-handed and there's only leaving")
+	await flow.press("cancel")
+	s.items = [q.want]
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	await flow.press("up")
+	_check(s.menu[0].label == t.kinds.fetch.give, "with it in the bag you can hand it over")
+	await flow.press("1")
+	_check(s.stage == "explore" and s.items.is_empty(), "it takes it")
+	_check(s.gold == int(t.gold) and s.hp == 3 + int(t.heal), "and pays (%d gold, %d hp)" % [s.gold, s.hp])
+	_check(f.quester.is_empty() and not f.in_the_way(stood + f.DIRS[s.facing]), "then it's gone, and so is what stood in the way")
+	_check(s.reputation.get(Clans.of(q.species), 0.0) > 0.0, "and its clan thinks better of you")
+	_check(s.banner != null and Overlay.banner_fits(s.banner.text), "the banner says so and fits")
+	var back = _flow(s.run_seed)
+	await back.load_state(saved)
+	var bq: Dictionary = back.state.floor_map.quester
+	_check(bq.taken and bq.kind == "fetch" and bq.want == q.want and bq.cell == q.cell, "a save keeps the request as it stood")
+	# sparing
+	var kin = await _asking(300, "spare")
+	var ks = kin.state
+	var kq: Dictionary = ks.floor_map.quester
+	var target = ks.floor_map.monsters[kq.target]
+	_check(kq.species == target.species and not target.boss, "kin is its own kind")
+	_check(Requests.status(kq, ks) == "new", "not yet asked")
+	target.gone = "spared"
+	_check(Requests.status(kq, ks) == "ready", "spared is done")
+	target.gone = "slain"
+	_check(Requests.status(kq, ks) == "failed", "killed isn't")
+	ks.banner = null
+	_face(ks, kq.cell)
+	await kin.press("up")
+	_check(ks.menu.size() == 1 and ks.lines[0].text.contains(target.name), "it says so and has nothing to offer (%s)" % ks.lines[0].text)
+	var before: int = ks.gold
+	await kin.press("1")
+	_check(ks.floor_map.quester.is_empty() and ks.gold == before, "and it's gone, with nothing paid")
+	# getting rid
+	var rid = await _asking(500, "rid")
+	var rq: Dictionary = rid.state.floor_map.quester
+	var whom = rid.state.floor_map.monsters[rq.target]
+	whom.gone = "slain"
+	_check(Requests.status(rq, rid.state) == "ready", "gone is gone, whichever way")
+	# the fights it's about are the same after a retry
+	var saves: Dictionary = JSON.parse_string(JSON.stringify(rid.state.to_dict()))
+	saves.floor.quester.target = 999
+	_check(not State.is_playable(saves), "a request about nobody doesn't load")
+	var off = _flow(100, ["no-npcs"])
+	await off.new_run()
+	_check(off.state.floor_map.quester.is_empty(), "no-npcs: nobody asks")
+	var no_items = _flow(100, ["no-items"])
+	var kinds := {}
+	for i in 40:
+		no_items = _flow(100 + i, ["no-items"])
+		await no_items.new_run()
+		if not no_items.state.floor_map.quester.is_empty():
+			kinds[no_items.state.floor_map.quester.kind] = true
+	_check(not kinds.has("fetch") and not kinds.is_empty(), "no-items: nobody asks you to fetch (%s)" % [kinds.keys()])
+	_use()

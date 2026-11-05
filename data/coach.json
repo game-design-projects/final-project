@@ -11,6 +11,8 @@
   "dead": "Dying only starts this fight over.",
  "item": "Found something. In a fight, ITEM uses it. Hover to read it.",
   "crack": "That wall is cracked. Walk into it.",
+  "lurker": "Something stirs. Walk round it, or into it: a fight, and its purse.",
+  "request": "That one isn't here to fight. Walk up and hear what it wants.",
   "boss": "Champions change attack every turn. They can be won over too."
  }
 }

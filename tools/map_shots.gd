@@ -51,6 +51,8 @@ func _plan(biome: Dictionary, depth: int) -> Dictionary:
 	plan.boss_at_exit = true
 	plan.items = true
 	plan.shop = true
+	plan.lurkers = true
+	plan.request = true
 	return plan
 
 
@@ -133,6 +135,24 @@ func _walk_through(biome: Dictionary) -> void:
 		await flow.press("up")
 		await _wait(0.4)
 		await _shot("%s_8_shelf" % biome.id)
+		await flow.press("cancel")
+	var stirring: Array = f.monsters.filter(func(m): return m.lurking)
+	if not stirring.is_empty():
+		_look_at(s, f, stirring[0].cell)
+		await _wait(0.4)
+		await _shot("%s_a_lurker" % biome.id)
+	if not f.quester.is_empty():
+		_look_at(s, f, f.quester.cell)
+		await _wait(0.4)
+		await _shot("%s_b_asking" % biome.id)
+		for i in 4:
+			if f.quester.cell == s.cell + FloorMap.DIRS[i]:
+				s.facing = i
+		_put(s, f.quester.cell - FloorMap.DIRS[s.facing], s.facing)
+		s.banner = null
+		await flow.press("up")
+		await _wait(0.4)
+		await _shot("%s_c_request" % biome.id)
 		await flow.press("cancel")
 	s.items = ["salve", "sugar", "smoke"]
 	await flow.go("intro", {"foe": f.monsters[0]})

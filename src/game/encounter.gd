@@ -192,6 +192,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 		Clans.record(s, m, how)
 	if m.boss and flow.feature("boss-reward"):
 		_reward_for_champion(m)
+	_open_purse(m)
 	if how == "spared" and allow_join and flow.feature("recruit-step"):
 		await flow.go("ask")
 		return
@@ -221,6 +222,19 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	s.mind_rows = rows + pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## Whatever it was carrying is yours, however it ended.
+func _open_purse(m) -> void:
+	if m.purse <= 0:
+		return
+	var s = flow.state
+	var numbers: Dictionary = Content.table("npcs").lurkers
+	s.gold += m.purse
+	print("encounter: %s leaves %d gold" % [m.name, m.purse])
+	if not flow.banner_up():
+		flow.announce(numbers.purse_title, numbers.purse_line % [m.name, m.purse])
+	m.purse = 0
 
 
 ## A champion beaten or won over leaves you stronger, however it ended.

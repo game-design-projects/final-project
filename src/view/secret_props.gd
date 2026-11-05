@@ -11,6 +11,10 @@ const PAD_RINGS := [[0.42, 0.04], [0.26, 0.03], [0.1, 0.1]] # half width and thi
 const LIFT := 0.012 # how far a ring sits off the floor, so the two don't flicker into each other
 const CHEST := Vector3(0.9, 0.42, 0.6)
 const LID_H := 0.16
+const STIR_MOTES := 18
+const STIR_RADIUS := 0.26
+const STIR_HEIGHT := 1.0
+const STIR_MOTE := 0.07
 
 
 ## A node holding them all, or an empty one for a floor that hides nothing.
@@ -32,6 +36,21 @@ static func build(floor_map, wall_color: Color, accent: Color) -> Node3D:
 		shapes.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(shapes)
 	return root
+
+
+## What you see of something stirring: motes going round a pillar of air, in a node of their own, which the stage turns.
+static func stir(color: Color) -> MeshInstance3D:
+	var b := MeshKit.Builder.new()
+	var glow := MeshKit.color(color, true)
+	for i in STIR_MOTES:
+		var a := float(i) / STIR_MOTES * TAU * 3.0
+		var at := Vector3(cos(a) * STIR_RADIUS, 0.12 + float(i) / STIR_MOTES * STIR_HEIGHT, sin(a) * STIR_RADIUS)
+		b.box(Transform3D(Basis(Vector3.UP, a), at), Vector3.ONE * STIR_MOTE, glow)
+	var out := MeshInstance3D.new()
+	out.mesh = b.commit()
+	out.material_override = Materials.prop()
+	out.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return out
 
 
 ## A small sack with a bright tie, sat on the floor.

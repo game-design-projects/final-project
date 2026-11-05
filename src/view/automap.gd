@@ -74,7 +74,7 @@ func monster_marks() -> Array:
 			out.append({"rect": Rect2(Vector2(m.cell) * s, Vector2(s, s)), "color": Palette.BOSS})
 		elif state.seen.has(m.cell):
 			var dot := maxf(2.0, s - 4.0)
-			out.append({"rect": Rect2(Vector2(m.cell) * s + Vector2.ONE * (s - dot) / 2.0, Vector2(dot, dot)), "color": Palette.monster(m)})
+			out.append({"rect": Rect2(Vector2(m.cell) * s + Vector2.ONE * (s - dot) / 2.0, Vector2(dot, dot)), "color": Palette.STIR if m.lurking else Palette.monster(m)})
 	return out
 
 
@@ -124,13 +124,15 @@ func secret_marks() -> Array:
 			out.append({"rect": Rect2(Vector2(p.cell) * s + Vector2.ONE * 2.0, Vector2.ONE * (s - 4.0)), "color": Palette.MERCY})
 	if not f.merchant.is_empty() and state.seen.has(f.merchant.cell) and _in_window(f.merchant.cell):
 		out.append({"rect": Rect2(Vector2(f.merchant.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.INK})
+	if not f.quester.is_empty() and state.seen.has(f.quester.cell) and _in_window(f.quester.cell):
+		out.append({"rect": Rect2(Vector2(f.quester.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.YOU})
 	return out
 
 
 func _process(_dt: float) -> void:
 	if state == null or state.floor_map == null:
 		return
-	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes]
+	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size()]
 	if key != _drawn_key:
 		_drawn_key = key
 		queue_redraw()

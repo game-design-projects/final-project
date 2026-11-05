@@ -54,6 +54,8 @@ const FEATURES := {
 	"secrets": "floors hide chests behind cracked walls, which break when you walk into them, and pads that carry you across the floor",
 	"items": "floors have things lying about, and ITEM in a fight heals, sharpens, slips away or gives a gift a monster may love",
 	"shop": "some floors have a trader who sells items for gold",
+	"lurkers": "something stirs in plain sight on a floor: walk round it, or walk into it for a fight and its purse",
+	"npcs": "some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

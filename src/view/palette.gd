@@ -11,6 +11,7 @@ const INK := Color("#e8e8e8") # text
 const DIM := Color("#8a8a8a") # quiet text
 const WARN := Color("#ff5a4a")
 const FAINT := Color("#2e2e33") # borders of things that are not picked
+const STIR := Color("#d9a0ff") # something you can see but can't make out
 
 const RUNS := [
 	{"name": "BONE CRYPT", "wall": "#e8e2d0", "accent": "#ffb347"},

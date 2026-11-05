@@ -1,0 +1,54 @@
+{
+ "lurkers": {
+  "count": [1, 2],
+  "purse": [5, 9],
+  "tag": "SOMETHING",
+  "stirred": "It was %s, with a purse. It wants a fight.",
+  "purse_title": "ITS PURSE",
+  "purse_line": "%s leaves %d gold behind."
+ },
+ "requests": {
+  "floors": [1, 3],
+  "tag": "A REQUEST",
+  "gold": 8,
+  "heal": 6,
+  "standing": 10,
+  "done_title": "A DEBT PAID",
+  "done_line": "%d gold and %d health, and word of it will get around.",
+  "kinds": {
+   "fetch": {
+    "ask": "You there. I want %s. It is on this floor. I can't go far.",
+    "wait": "No %s yet? I can wait. I am good at it.",
+    "ready": "Is that %s? Oh. Oh, hand it over.",
+    "thanks": "Mine. You don't know what this means. Here, take this.",
+    "yes": "I'LL FIND IT",
+    "give": "HAND IT OVER",
+    "sub": "Find %s and bring it back. It's lying about somewhere."
+   },
+   "spare": {
+    "ask": "%s is kin, and will not back down. Don't kill them. Please.",
+    "wait": "Is %s still breathing? Keep it that way.",
+    "ready": "%s came by, alive. I heard what you did.",
+    "failed": "You killed %s. I asked you for one thing. Go away.",
+    "thanks": "You could have. You didn't. Take this.",
+    "yes": "I'LL SPARE THEM",
+    "give": "YOU'RE WELCOME",
+    "sub": "Win %s over, or let them go. Don't kill them."
+   },
+   "rid": {
+    "ask": "%s took my corner of this place. Make them leave. I don't care how.",
+    "wait": "%s is still out there. I can hear it.",
+    "ready": "%s is gone. I don't need to know how.",
+    "thanks": "It's quiet again. Here. We never met.",
+    "yes": "I'LL DEAL WITH IT",
+    "give": "IT IS DONE",
+    "sub": "Get %s off the floor, however you like."
+   }
+  },
+  "not_now": "NOT NOW",
+  "not_now_sub": "Back to the walk",
+  "reward_sub": "It pays %d gold, and heals %d",
+  "leave": "LEAVE",
+  "farewell": "It goes back to waiting."
+ }
+}

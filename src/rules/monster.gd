@@ -30,6 +30,8 @@ var spoke := false # it only hears one line per fight
 var threshold := 0.0 # how friendly it must be before it will join
 var turn := 0
 var gone := "" # "", "spared" or "slain"
+var lurking := false # you can see that something is there, not what, until you walk into it
+var purse := 0 # gold it leaves when it is out of the fight
 
 
 ## `entry` is one line of the roster (species, genre, hp), or the boss. `cell` is where it stands.
@@ -150,6 +152,7 @@ func to_dict() -> Dictionary:
 		"meters": meters.duplicate(), "traits": traits.duplicate(), "taste": taste.duplicate(), "lastIntent": last_intent,
 		"spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
 		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
+		"lurking": lurking, "purse": purse,
 	}
 
 
@@ -177,4 +180,6 @@ static func from_dict(d: Dictionary):
 	m.tried = d.get("tried", {}).duplicate()
 	m.known_traits = d.get("knownTraits", []).duplicate()
 	m.heard = d.get("heard", {}).duplicate()
+	m.lurking = bool(d.get("lurking", false))
+	m.purse = maxi(0, int(d.get("purse", 0)))
 	return m

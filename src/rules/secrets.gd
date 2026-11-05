@@ -9,6 +9,7 @@ const Grid = preload("res://src/rules/maps/grid.gd")
 const PAD_NEAR := [[0.1, 0.35], [0.03, 0.5]] # where the pads go, as shares of the walk from the start to the far end of the floor, and where if not there
 const PAD_FAR := [[0.6, 0.9], [0.5, 0.98]]
 const TRADER_AT := [[0.3, 0.7], [0.1, 0.95]]
+const LURKER_AT := [0.15, 0.95]
 const SAFE_TRIES := 40
 const MIN_FROM_START := 3
 
@@ -132,9 +133,25 @@ static func place_trader(rng, f, walk: Dictionary, hall: Vector2i) -> Variant:
 	return _pad_in(rng, f, walk, hall, TRADER_AT, walk.dist[walk.farthest], f.reserved())
 
 
-## A place for something to lie about: the end of a corridor if there is one, where only someone looking would go. Or null.
-static func quiet_spot(rng, f, walk: Dictionary, hall: Vector2i) -> Variant:
+## Where the things that stir wait: on the way somewhere, so you see one coming, yet never where the floor needs you to pass (a
+## roomy spot or a loop, with a way round). The cells, fewer if the floor has no such place. Nothing has to stand here yet.
+static func place_lurkers(rng, f, walk: Dictionary, hall: Vector2i, count: int) -> Array:
+	var blocked: Dictionary = f.reserved()
+	var out := []
+	for _i in count:
+		var spot: Variant = _pad_spot(rng, f, walk, hall, LURKER_AT, walk.dist[walk.farthest], blocked, true)
+		if spot == null:
+			break
+		blocked[spot] = true
+		out.append(spot)
+	return out
+
+
+## A place for something to lie about: the end of a corridor if there is one, where only someone looking would go. Or null. `also`
+## is more cells to keep off.
+static func quiet_spot(rng, f, walk: Dictionary, hall: Vector2i, also := {}) -> Variant:
 	var taken: Dictionary = f.reserved()
+	taken.merge(also)
 	var ends := []
 	var others := []
 	for c: Vector2i in walk.order:
@@ -158,8 +175,8 @@ static func _pad_in(rng, f, walk: Dictionary, hall: Vector2i, shares: Array, lon
 	return null
 
 
-## A cell in that stretch of the walk that no route needs, or null. A dead end if there is one.
-static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, longest: int, blocked: Dictionary) -> Variant:
+## A cell in that stretch of the walk that no route needs, or null. A dead end if there is one, or the other way about with `in_the_open`.
+static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, longest: int, blocked: Dictionary, in_the_open := false) -> Variant:
 	var ends := []
 	var others := []
 	for c: Vector2i in walk.order:
@@ -170,7 +187,7 @@ static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, lo
 			ends.append(c)
 		else:
 			others.append(c)
-	for pool in [rng.shuffle(ends), rng.shuffle(others)]:
+	for pool in [rng.shuffle(others), rng.shuffle(ends)] if in_the_open else [rng.shuffle(ends), rng.shuffle(others)]:
 		for i in mini(pool.size(), SAFE_TRIES):
 			if _leaves_floor_whole(f, walk, blocked, pool[i]):
 				return pool[i]
