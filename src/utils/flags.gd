@@ -25,6 +25,7 @@ const KNOWN := {
 	"nomusic": "no music (the effects and voices still play)",
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
+	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
 	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
 	"classic": "every feature in FEATURES off (name one after it to bring it back)",
 }
@@ -65,6 +66,7 @@ const FEATURES := {
 	"close-camera": "the camera stands nearer the middle of your cell, so a wall or a monster one cell away reads as close",
 	"wide-view": "the 3D picture follows the panel's shape instead of keeping 448:288 with black on both sides",
 	"sprite-look": "the walk models are shaped after the fight sprites, outline and face, so a monster looks the same in both views",
+	"motifs": "exploring takes turns with Abdulla's motifs (issue #49), if tools/music/cut_motifs.sh has put them in build/motifs/: nothing ships, so without those files nothing changes",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

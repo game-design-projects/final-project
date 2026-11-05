@@ -7,6 +7,7 @@ extends Node
 const Flags = preload("res://src/utils/flags.gd")
 const Mix = preload("res://src/audio/mix.gd")
 const Music = preload("res://src/audio/music.gd")
+const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Sfx = preload("res://src/audio/sfx.gd")
 const Voices = preload("res://src/audio/voices.gd")
 
@@ -34,6 +35,8 @@ func _ready() -> void:
 	add_child(_sfx)
 	_music = Music.new()
 	_music.enabled = not Flags.on("nomusic")
+	if Flags.enabled("motifs") and not PersonalitySlice.pending():
+		_music.motifs = Music.pick_motifs(Music.local_motifs(), Flags.value("motif"))
 	add_child(_music)
 	_voice = AudioStreamPlayer.new()
 	_voice.bus = Mix.SFX

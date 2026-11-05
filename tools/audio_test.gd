@@ -93,6 +93,7 @@ func _run() -> void:
 	_voice_keys()
 	await _music_pacing()
 	await _music_fades()
+	await _motifs()
 	_finish()
 
 
@@ -502,6 +503,80 @@ func _music_pacing() -> void:
 	m.advance(len + 4.5)
 	_check(not m.is_resting() and m.mode() == "explore", "...and it does")
 	m.free()
+
+
+## Five seconds of silence, as a motif's stand-in: the real ones are local files that aren't in the repository.
+func _fake_motif(seconds := 5.0) -> AudioStreamWAV:
+	var w := AudioStreamWAV.new()
+	w.format = AudioStreamWAV.FORMAT_16_BITS
+	w.mix_rate = 8000
+	var data := PackedByteArray()
+	data.resize(int(seconds * w.mix_rate) * 2)
+	w.data = data
+	return w
+
+
+## Abdulla's motifs, on trial (#49): only from local files, taking turns with the exploring music, never in what ships.
+func _motifs() -> void:
+	var m = _music()
+	await process_frame
+	m.set_mode("explore")
+	_check(m.playing_motif() == 0 and m.loop_player("explore").playing, "no motifs: the exploring music as ever")
+	m.free()
+	m = _music()
+	m.motifs = [_fake_motif(), _fake_motif(), _fake_motif()]
+	await process_frame
+	m.set_mode("explore")
+	_check(m.playing_motif() == 1, "with motifs, the first stretch is the first of them")
+	_check(not m.loop_player("explore").playing, "and the exploring music waits")
+	var p: float = m.pending_in()
+	_check(absf(p - 5.0) < 0.01, "it plays once, to its end (%.1f)" % p)
+	m.advance(p + 0.1)
+	_check(m.playing_motif() == 0 and m.is_resting(), "then a rest")
+	_check(m.pending_in() <= Music.TRIAL.rest[1], "a short one, so the team can compare (%.1f)" % m.pending_in())
+	m.advance(m.pending_in() + 0.1)
+	_check(m.playing_motif() == 0 and m.loop_player("explore").playing and not m.is_resting(), "then the exploring music, next to it")
+	_check(m.pending_in() <= Music.TRIAL.play[1], "for a short stretch (%.1f)" % m.pending_in())
+	m.advance(m.pending_in() + 0.1)
+	m.advance(m.pending_in() + 0.1)
+	_check(m.playing_motif() == 2, "then the next motif")
+	m.set_mode("battle")
+	_check(m.playing_motif() == 0, "a fight takes it off")
+	_check(m.pending_in() < 0.0, "with nothing waiting")
+	m.set_mode("explore")
+	m.advance(m.pending_in() + 0.1)
+	_check(m.playing_motif() == 0 and m.loop_player("explore").playing, "back from a fight, it is the exploring music's turn")
+	m.advance(m.pending_in() + 0.1)
+	m.advance(m.pending_in() + 0.1)
+	_check(m.playing_motif() == 3, "and then the one after")
+	m.sting("victory")
+	_check(m.playing_motif() == 0, "a sting takes it off too")
+	m.free()
+	_check(Music.local_motifs("res://no/such/dir/").is_empty(), "no local files, no motifs")
+	var dir := DirAccess.open("res://assets")
+	var shipped := []
+	for path in _files_under("res://assets"):
+		if path.get_file().to_lower().contains("motif"):
+			shipped.append(path)
+	_check(dir != null and shipped.is_empty(), "no motif is in what ships (%s)" % [shipped])
+	_check(not FileAccess.get_file_as_string("res://assets/CREDITS.txt").to_lower().contains("motif"), "nor in the credits: its license isn't known")
+	_check(Music.MOTIF_DIR.begins_with("res://build/"), "they load from build/, which git and the exports leave out")
+	var one := Music.pick_motifs([1, 2, 3], "2")
+	_check(one == [2], "motif=N keeps that one")
+	_check(Music.pick_motifs([1, 2, 3], "") == [1, 2, 3], "without it, all of them")
+	_check(Music.pick_motifs([1, 2, 3], "9") == [1, 2, 3], "and a number that isn't one is ignored")
+
+
+func _files_under(path: String) -> Array:
+	var out := []
+	var dir := DirAccess.open(path)
+	if dir == null:
+		return out
+	for f in dir.get_files():
+		out.append(path.path_join(f))
+	for d in dir.get_directories():
+		out.append_array(_files_under(path.path_join(d)))
+	return out
 
 
 ## An old fade must not stop what a newer one is playing: the loop faded out for a fight and brought back before the fade

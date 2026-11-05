@@ -26,9 +26,16 @@ const PACE := {
 }
 const FIRST_FADE_IN := 1.5
 const SILENT_DB := -60.0
+## Abdulla's motifs on trial (issue #49, the feature `motifs`): local files cut by tools/music/cut_motifs.sh, never shipped until
+## their soundfont and license are known. Stretches take turns, a motif then the exploring music, with short rests so they can be
+## compared. They are mastered at -17 dBFS RMS: this level puts them with the exploring music, not over it.
+const MOTIF_DIR := "res://build/motifs/"
+const TRIAL := {"play": [25.0, 35.0], "rest": [4.0, 8.0], "volume": 0.58}
 
 ## False with the `nomusic` flag: no player is made and nothing plays.
 var enabled := true
+## The motifs on trial, as streams in their order: none (as a shipped game has) leaves the music as it always was.
+var motifs: Array = []
 ## () -> float in [0, 1), for the pacing and the choice of theme (tests drive it).
 var random: Callable = func(): return randf()
 
@@ -47,6 +54,10 @@ var _sting_length := 0.0
 var _streams := {}
 var _tweens := {} # player -> the fade it is in
 var _duck_tween: Tween
+var _motif: AudioStreamPlayer # the motif playing, or null
+var _motif_at := 0 # which comes next
+var _motif_playing := 0 # 1.. while one plays
+var _motif_turn := true # whose turn the next stretch is
 
 
 func _ready() -> void:
@@ -83,10 +94,12 @@ func set_mode(mode: String) -> void:
 		"battle":
 			_cancel_next()
 			_resting = false
+			_drop_motif(FADES.explore.under_fight)
 			_fade_out_explore(FADES.explore.under_fight)
 			_start_battle()
 		_:
 			_cancel_next()
+			_drop_motif(FADES.explore.out)
 			_drop_battle(FADES.battle.out)
 			_fade_out_explore(FADES.explore.out)
 
@@ -102,6 +115,7 @@ func sting(name: String) -> void:
 		return
 	var stream: AudioStream = _stream(path)
 	_drop_battle(FADES.sting)
+	_drop_motif(FADES.sting)
 	_fade_out_explore(FADES.sting)
 	_sting.stream = stream
 	_sting.volume_db = linear_to_db(VOLUME.sting)
@@ -149,6 +163,11 @@ func loop_player(track: String) -> AudioStreamPlayer:
 ## The theme of the fight on, or of the last one.
 func battle_name() -> String:
 	return _battle_name
+
+
+## Which motif is playing, from 1, or 0 for none.
+func playing_motif() -> int:
+	return _motif_playing
 
 
 ## Seconds until the exploring music next starts or rests, or -1 when nothing is waiting.
@@ -199,11 +218,15 @@ func _explore_in(fade: float) -> void:
 	if _mode != "explore":
 		return
 	_resting = false
+	if not motifs.is_empty() and _motif_turn:
+		_play_motif()
+		return
+	_motif_turn = true
 	_explore.stream_paused = false # it keeps its place while resting and comes back from there
 	if not _explore.playing:
 		_explore.play()
 	_fade(_explore, linear_to_db(VOLUME.explore), fade)
-	_schedule(_between(PACE.play), _rest_after_playing)
+	_schedule(_between(TRIAL.play if not motifs.is_empty() else PACE.play), _rest_after_playing)
 	print_verbose("music: exploring music in, resting in %.0f s" % pending_in())
 
 
@@ -213,7 +236,36 @@ func _resume_explore() -> void:
 
 func _rest_after_playing() -> void:
 	_fade_out_explore(FADES.explore.out)
-	_rest_for(_between(PACE.rest))
+	_rest_for(_between(TRIAL.rest if not motifs.is_empty() else PACE.rest))
+
+
+## The next motif, once, to its end. The exploring music keeps its place.
+func _play_motif() -> void:
+	var stream: AudioStream = motifs[_motif_at % motifs.size()]
+	_motif_playing = _motif_at % motifs.size() + 1
+	_motif_at += 1
+	_motif_turn = false
+	_motif = _player(Mix.MUSIC_IN)
+	_motif.stream = stream
+	_motif.volume_db = linear_to_db(TRIAL.volume)
+	_motif.play()
+	print("music: motif %d of %d (%.1f s)" % [_motif_playing, motifs.size(), stream.get_length()])
+	_schedule(stream.get_length(), _motif_done)
+
+
+func _motif_done() -> void:
+	_drop_motif(FADES.sting)
+	_rest_for(_between(TRIAL.rest))
+
+
+func _drop_motif(seconds: float) -> void:
+	if _motif == null:
+		return
+	if not motifs.is_empty() and _motif_playing > 0:
+		_motif_turn = false # it was cut short or it ended: either way the exploring music is next
+	_fade(_motif, SILENT_DB, seconds, _release.bind(_motif))
+	_motif = null
+	_motif_playing = 0
 
 
 ## The exploring music is out; it comes back in `seconds`, or when the last sting has rung out, whichever is later.
@@ -240,6 +292,29 @@ func _cancel_next() -> void:
 
 func _between(range_: Array) -> float:
 	return range_[0] + (range_[1] - range_[0]) * float(random.call())
+
+
+# ---- the motifs on trial
+
+## The sections cut into `dir`, as streams in their order. None when they aren't there, as in anything exported.
+static func local_motifs(dir := MOTIF_DIR) -> Array:
+	var out := []
+	var n := 1
+	while FileAccess.file_exists("%smotif-%d.ogg" % [dir, n]):
+		var stream := AudioStreamOggVorbis.load_from_file("%smotif-%d.ogg" % [dir, n])
+		if stream != null:
+			out.append(stream)
+		n += 1
+	if not out.is_empty():
+		print("music: %d motifs on trial from %s" % [out.size(), dir])
+	return out
+
+
+## All of them, or the one `motif=N` asks for (from 1).
+static func pick_motifs(all: Array, wanted: String) -> Array:
+	if wanted.is_valid_int() and int(wanted) >= 1 and int(wanted) <= all.size():
+		return [all[int(wanted) - 1]]
+	return all
 
 
 # ---- players and fades

@@ -25,6 +25,19 @@ None goes faster than 132 BPM. Each fight picks one at random, never the one you
 
 **How it's made.** `tools/music/sampler.py` is an offline sampler. It decodes each soundfont key once, fixes the samples' tuning where two pitch estimators agree (the harpsichord runs up to 14 cents sharp), loops long organ, string and choir notes, and renders into a circular timeline so the loop points are seamless. The notes, chords and mix levels are tables at the top of each build script, and each build prints its bar-by-bar chord and melody table, a check of the outer voices for parallel fifths and octaves, the loudness of every part per section, and the peak, RMS, spectrum and loop seam. `tools/music/to_ogg.sh` cuts exactly one loop out of a render and encodes it, so Godot's gapless Ogg loop wraps inside the music. Rebuilding (numpy, scipy and ffmpeg with libvorbis) is in [tools/music/README.md](../tools/music/README.md); if you change a loop's tempo or length, update its `loopSeconds` in `TRACKS` (`src/audio/ambient.gd`), which `tests/audio/test_ambient.gd` checks. The soundfonts live in `tools/music/soundfonts/` and stay out of the exports; only the rendered `.ogg` files ship. Credits are in `assets/CREDITS.txt`.
 
+### On trial: Abdulla's motifs (issue #49)
+
+Abdulla's FluidSynth audition is five separate pieces of 13 to 24 seconds. None of it ships: the soundfont and its license aren't known yet, and an MP3 can't loop cleanly, so a keeper has to be rendered again from source. To hear them in the game, next to the current music:
+
+```
+tools/music/cut_motifs.sh motif_audition.mp3      # the file attached to the issue; writes build/motifs/motif-1.ogg ...
+godot --path .                                    # all five, turn about with the exploring music
+godot --path . -- motif=3                         # one of them
+godot --path . -- no-motifs                       # without them
+```
+
+The feature `motifs` is on by default and does nothing unless those files are there: `build/` is ignored by git and left out of every export. Each motif plays once, then a rest of 4 to 8 seconds, then 25 to 35 seconds of `ambient.ogg`, and the log prints `music: motif N of 5` as each one starts. A fight or a sting takes it off. Still open for the team: which sections to keep, where they fit, and from Abdulla the source, the soundfont and its license. Whatever stays goes through `tools/music/`, `assets/CREDITS.txt` and `tools/audio_test.gd`, and this section goes away.
+
 ## Sound effects
 
 Effects are synthesised at 44.1 kHz from recipes in `src/audio/sfx.gd` on the synth in `src/audio/synth.gd`, and rendered once when the game starts, spread over frames. The Master bus has a compressor and a limiter, and effects send to a room reverb (`src/audio/mix.gd`). `nosfx` silences effects and voices.
