@@ -7,6 +7,7 @@
 extends "res://tools/test_base.gd"
 
 const Flags = preload("res://src/utils/flags.gd")
+const Flow = preload("res://src/game/flow.gd")
 
 var Saves = null # loaded when the test runs, like the other scripts that reach the Store autoload
 
@@ -50,6 +51,7 @@ func _run() -> void:
 	await _thinking(game)
 	await _sub_text_wraps(game)
 	await _start_is_guarded(game)
+	await _keys_after_a_fight(game)
 	game.queue_free()
 	await process_frame
 	await _pad_and_debug()
@@ -99,6 +101,7 @@ func _on_picture(game, p: Vector2) -> Vector2:
 ## Put the party in a fight with the first monster and in its command menu.
 func _fight(game) -> void:
 	await game.flow.go("explore")
+	game.flow._keys_back_at = -1.0 # as if the moment after the last fight has passed
 	var m = game.flow.state.floor_map.monsters[0]
 	await game.flow.go("intro", {"foe": m})
 	await game.flow.go("menu")
@@ -212,6 +215,7 @@ func _keys(game) -> void:
 	game.flow.happened.connect(func(name, _d): if name == "leave": left.v = true)
 	s.cell = s.floor_map.stairs
 	await game.flow.go("explore")
+	game.flow._keys_back_at = -1.0
 	await game.flow.go("end")
 	await game.flow.press("cancel")
 	_check(left.v, "Esc on the route screen leaves for the main menu")
@@ -460,6 +464,66 @@ func _start_is_guarded(game) -> void:
 	_check(flow.state.stage == "menu", "after that the intro runs its course")
 	flow.mind = real
 	await game.flow.new_run()
+
+
+# ---------------------------------------------------------------- the end of a fight
+
+## Ends the fight on `game` with a key held and a key mashed, and returns where the party stood.
+func _end_a_fight(game) -> Vector2i:
+	await game.flow.new_run()
+	var s = game.flow.state
+	s.banner = null
+	var open: Vector2i = s.cell + s.floor_map.DIRS[s.facing]
+	_check(s.floor_map.is_open(open), "(a way to walk on from the start)")
+	await game.flow.go("intro", {"foe": s.floor_map.monsters[0]})
+	await game.flow.go("menu")
+	s.floor_map.monsters[0].gone = "spared"
+	await game.flow.encounter.leave_fight([])
+	_check(s.stage == "explore", "the fight is over (%s)" % s.stage)
+	return s.cell
+
+
+func _echo(code: int) -> InputEventKey:
+	var e := _key(code)
+	e.echo = true
+	return e
+
+
+func _keys_after_a_fight(game) -> void:
+	if not game.flow.feature("input-cooldown"):
+		return
+	var stood := await _end_a_fight(game)
+	var s = game.flow.state
+	game._unhandled_input(_echo(KEY_UP))
+	await process_frame
+	_check(s.cell == stood, "an arrow still held from the fight doesn't walk you on")
+	game._unhandled_input(_key(KEY_UP))
+	await process_frame
+	_check(s.cell == stood, "and for a moment nor does a mashed one")
+	await create_timer(Flow.AFTER_FIGHT_MS / 1000.0 + 0.1).timeout
+	game._unhandled_input(_echo(KEY_UP))
+	await process_frame
+	_check(s.cell == stood, "held on after the moment has passed, it still does nothing")
+	game._unhandled_input(_key(KEY_UP))
+	await process_frame
+	_check(s.cell != stood, "pressed afresh it walks")
+	await create_timer(0.3).timeout
+	var on: Vector2i = s.cell
+	s.facing = _way_on(s)
+	game._unhandled_input(_echo(KEY_UP))
+	await process_frame
+	_check(s.cell != on, "and held from there it goes on walking")
+	game.flow._keys_back_at = -1.0
+	game.flow._held_over = false
+
+
+## A way to walk from here.
+func _way_on(s) -> int:
+	for i in 4:
+		var c: Vector2i = s.cell + s.floor_map.DIRS[i]
+		if s.floor_map.is_open(c) and not s.floor_map.in_the_way(c) and s.floor_map.monster_at(c) == null and c != s.floor_map.stairs:
+			return i
+	return s.facing
 
 
 # ---------------------------------------------------------------- the touch pad and the debug flag

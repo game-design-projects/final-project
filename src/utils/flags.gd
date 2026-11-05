@@ -58,6 +58,8 @@ const FEATURES := {
 	"npcs": "some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor",
 	"roaming": "monsters take a turn each step you take: slimes drift, bandits patrol, snakes follow, and an angry or wronged one hunts you",
 	"boss-chase": "a champion you have seen comes after you, unless it is holding the stairs (boss-at-exit)",
+	"input-cooldown": "for a moment after a fight keys do nothing, and a key still held from it stays dropped until it is pressed again, so a mash can't walk you on",
+	"smooth-fight": "in a fight your soul glides between squares, and the battle screen fades back to the halls instead of cutting",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

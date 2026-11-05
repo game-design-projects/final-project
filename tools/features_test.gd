@@ -56,6 +56,7 @@ func _run() -> void:
 	await _lurkers()
 	await _npcs()
 	await _roaming()
+	await _input_cooldown()
 	_finish()
 
 
@@ -613,6 +614,7 @@ func _gate() -> void:
 	await flow.encounter.defeat(boss, "slain")
 	_check(s.max_hp == hp + Floors.boss_reward().max_hp and s.hp == 5 + Floors.boss_reward().heal, "beating a champion leaves you stronger (%d/%d)" % [s.hp, s.max_hp])
 	_check(s.banner != null and s.banner.text.contains("stronger"), "and says so")
+	await flow.tick(flow.clock + 1000.0)
 	await _step_onto(flow, s.floor_map.stairs)
 	_check(s.stage == "end", "with it gone the stairs are open (%s)" % s.stage)
 
@@ -1626,3 +1628,38 @@ func _champion_moves() -> void:
 	_check(chaser.cell == hall, "no-boss-chase: it stays even once seen")
 	Roaming.turn(fs, {"boss_chase": true})
 	_check(chaser.cell != hall and chaser.hunting, "seen, with boss-chase, it comes after you")
+
+
+## What a fight's end does to keys, without the scene. (gameplay_test presses real keys.)
+func _input_cooldown() -> void:
+	for on in [true, false]:
+		var flow = _flow(880, [] if on else ["no-input-cooldown"])
+		await flow.new_run()
+		var s = flow.state
+		var m = s.floor_map.monsters[0]
+		s.foe = m
+		await flow.go("intro", {"foe": m})
+		await flow.go("menu")
+		m.gone = "spared"
+		await flow.encounter.leave_fight([])
+		var stood: Vector2i = s.cell
+		await flow.press("up")
+		_check((s.cell == stood) == on, "a key just after a fight %s (%s)" % ["does nothing" if on else "walks, with no-input-cooldown", s.cell])
+		if on:
+			await flow.tick(flow.clock + Flow.AFTER_FIGHT_MS + 1.0)
+			await flow.press("up", true)
+			_check(s.cell == stood, "a key still held does nothing after that either")
+			await flow.press("up")
+			_check(s.cell != stood, "a fresh press walks")
+			var moved_to: Vector2i = s.cell
+			await flow.press("left", true)
+			_check(s.cell == moved_to, "(a held turn doesn't step)")
+	var hurried = _flow(881)
+	await hurried.new_run()
+	await hurried.press("up")
+	_check(hurried.state.cell != hurried.state.floor_map.start or hurried.state.stage != "explore", "keys work as ever before any fight")
+	var slice = _flow(882)
+	slice.slice_floor = true
+	_check(not slice.feature("input-cooldown"), "and the slice stays as it was")
+	_use()
+

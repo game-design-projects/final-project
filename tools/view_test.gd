@@ -729,12 +729,50 @@ func _held_key_waits_for_the_camera() -> void:
 
 
 ## The flat battle screen: the flash as a fight begins, mercy by the name, and what the dodge box shows.
+## Your soul glides to its square, and the battle screen fades out as the fight ends.
+func _fight_eases(s, m) -> void:
+	var overlay = Overlay.new()
+	overlay.state = s
+	var was_on: bool = s.viewing("smooth-fight")
+	s.views["smooth-fight"] = true
+	s.foe = m
+	s.stage = "dodge"
+	s.dodge = {"soul": Vector2i(1, 1)}
+	overlay._process(FRAME)
+	var from: Vector2 = overlay._soul_shown
+	s.dodge.soul = Vector2i(2, 1)
+	var goal: Vector2 = Overlay.soul_square(s.dodge)
+	overlay._process(FRAME)
+	_check(overlay._soul_shown != from and overlay._soul_shown != goal, "your soul doesn't jump to its new square")
+	for _i in 30:
+		overlay._process(FRAME)
+	_check(overlay._soul_shown.distance_to(goal) < 0.5, "it is there within half a second")
+	overlay.clock_ms = 500.0
+	overlay._process(FRAME)
+	_check(overlay.leave_fade() == 0.0, "no fade during a fight")
+	s.stage = "explore"
+	s.foe = null
+	s.dodge = null
+	overlay._process(FRAME)
+	_check(overlay.leave_fade() == 1.0, "the fight ends in black")
+	overlay.clock_ms = 500.0 + Overlay.LEAVE_FADE_MS / 2.0
+	_check(is_equal_approx(overlay.leave_fade(), 0.5), "half gone halfway")
+	overlay.clock_ms = 500.0 + Overlay.LEAVE_FADE_MS
+	_check(overlay.leave_fade() == 0.0, "and the halls are back")
+	s.views["smooth-fight"] = false
+	overlay.clock_ms = 500.0
+	_check(overlay.leave_fade() == 0.0, "no-smooth-fight: no fade")
+	s.views["smooth-fight"] = was_on
+	overlay.free()
+
+
 func _fight_staging() -> void:
 	var flow = await _walk(21)
 	var s = flow.state
 	var overlay = Overlay.new()
 	overlay.state = s
 	var m = s.floor_map.monsters[0]
+	_fight_eases(s, m)
 	s.foe = m
 	s.stage = "intro"
 	overlay.intro_at = 1000.0

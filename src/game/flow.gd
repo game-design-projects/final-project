@@ -22,9 +22,11 @@ const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
+const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]
+const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
 const STORY_BANNER_MS := 6000.0
 
 const STAGES := {
@@ -69,6 +71,8 @@ var slice_floor := false
 
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
+var _keys_back_at := -1.0 # keys do nothing until the clock says this, once a fight is over
+var _held_over := false # a key still held from the fight stays dropped until something is pressed afresh
 
 
 func _init(game_rng, game_mind) -> void:
@@ -224,6 +228,9 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
+	if to == "explore" and from in FIGHT_STAGES and feature("input-cooldown"):
+		_keys_back_at = clock + AFTER_FIGHT_MS
+		_held_over = true
 	state.stage = to
 	_since = clock
 	state.selected = 0
@@ -249,12 +256,24 @@ func event(name: String, data := {}) -> void:
 		happened.emit(name, data)
 
 
-func press(key: String) -> void:
+## `held` says it is a key repeating by itself, not one just pressed.
+func press(key: String, held := false) -> void:
 	if busy or state.stage == "":
+		return
+	if _keys_dropped(held):
+		print_verbose("flow: %s dropped, the fight has only just ended" % key)
 		return
 	busy = true
 	await _stages[state.stage].handle(self, key)
 	busy = false
+
+
+func _keys_dropped(held: bool) -> bool:
+	if clock < _keys_back_at or (held and _held_over):
+		return true
+	if not held:
+		_held_over = false
+	return false
 
 
 ## Run `action` (a Callable that may await stage changes) the way a key press runs: once any press or tick still working has

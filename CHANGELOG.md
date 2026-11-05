@@ -26,6 +26,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - `npcs`: some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor, and be paid for it.
 - `roaming`: monsters take a turn each step you take, as who they are and how they feel say, the map shows where you last saw them, and backing out of a fight makes one hold still for a few steps.
 - `boss-chase`: a champion you have seen comes after you, unless it is holding the stairs.
+- `input-cooldown`: keys do nothing for a moment after a fight, and a key held from it stays dropped until pressed again.
+- `smooth-fight`: your soul glides between squares in a fight, and the battle screen fades back to the halls.
 - `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.
 - `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
 

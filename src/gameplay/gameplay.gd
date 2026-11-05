@@ -286,7 +286,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var key := key_name(event)
 	if key != "":
-		_press(key)
+		_press(key, event.echo)
 		get_viewport().set_input_as_handled()
 
 
@@ -310,9 +310,9 @@ static func key_name(event: InputEventKey) -> String:
 
 
 ## A key of the game, from the keyboard, the pad or a click: it closes a card that was kept open, then acts.
-func _press(key: String) -> void:
+func _press(key: String, held := false) -> void:
 	_tips.unpin()
-	flow.press(key)
+	flow.press(key, held)
 
 
 ## The pointer over the picture, and a click or tap on it. Where the strike bar sweeps (and on the title card) the picture is
@@ -370,7 +370,7 @@ func _on_pad(key: String) -> void:
 ## A held arrow of the pad: it keeps walking and dodging the way a held key does.
 func _on_pad_repeat(key: String) -> void:
 	if not _pause.visible and not _on_title and flow.state.stage in REPEATING:
-		flow.press(key)
+		flow.press(key, true)
 
 
 func _on_event(name: String, data: Dictionary) -> void:

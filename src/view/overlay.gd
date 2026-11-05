@@ -32,6 +32,8 @@ const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
 const MOOD_STRONG := 60.0 # a meter this high names the mood
 const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
 const COMET_MS := 320.0
+const SOUL_GLIDE := 28.0 # how fast your soul catches up with its square: the share left after a second is e to minus this
+const LEAVE_FADE_MS := 280.0 # how long the battle screen takes to fade back to the halls
 const SPEECH := Rect2(96.0, 228.0, 256.0, 54.0)
 const SPEECH_SIZES := [14, 13, 12, 11, 10]
 const SPEECH_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait"]
@@ -70,6 +72,9 @@ var _ghost := 1.0 # where the trail behind the foe's health is
 var _ghost_foe = null # whose
 var _comets: Array = [] # [{from, born}]: what just hit you, on its way to your health bar
 var _lantern_glow: GradientTexture2D
+var _soul_shown = null # where your soul is drawn now (smooth-fight), null to start at its square
+var _was_fighting := false
+var _left_fight_at := -1e9
 
 
 ## True while the flat battle screen is showing (the 3D set is hidden behind it).
@@ -90,6 +95,29 @@ func can_spare() -> bool:
 		if row.id == "mercy":
 			return not state.foe.is_gone() and float(row.answer) >= MERCY_AT
 	return false
+
+
+## How dark the picture still is from the fight that just ended (0 once it has faded).
+func leave_fade() -> float:
+	if state == null or not state.viewing("smooth-fight"):
+		return 0.0
+	return clampf(1.0 - (clock_ms - _left_fight_at) / LEAVE_FADE_MS, 0.0, 1.0)
+
+
+## The soul's square in picture pixels.
+static func soul_square(run) -> Vector2:
+	return Vector2(BOX_X + (run.soul.x + 0.5) * BOX_CELL, BOX_Y + (run.soul.y + 0.5) * BOX_CELL)
+
+
+func _follow_soul(dt: float) -> void:
+	if state == null or state.dodge == null or state.stage != "dodge":
+		_soul_shown = null
+		return
+	var square := soul_square(state.dodge)
+	if _soul_shown == null or not state.viewing("smooth-fight"):
+		_soul_shown = square
+	else:
+		_soul_shown = _soul_shown.lerp(square, 1.0 - exp(-SOUL_GLIDE * dt))
 
 
 ## The bar of the dodge's time left, whole (it is inside the picture, under the box).
@@ -216,6 +244,10 @@ func _process(dt: float) -> void:
 			_ghost_foe = state.foe
 			_ghost = state.foe.hp_fraction()
 		_ghost = ghost_after(_ghost, state.foe.hp_fraction(), dt)
+	_follow_soul(dt)
+	if _was_fighting and not in_fight():
+		_left_fight_at = clock_ms
+	_was_fighting = in_fight()
 	queue_redraw()
 
 
@@ -234,6 +266,9 @@ func _draw() -> void:
 			draw_set_transform(shake_offset() * k, 0.0, Vector2(k, k))
 		_battle()
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
+	var fade := leave_fade()
+	if fade > 0.0:
+		draw_rect(Rect2(0.0, 0.0, W, H), Color(0, 0, 0, fade))
 	for p in _popups:
 		var age: float = (clock_ms - p.born) / 900.0
 		var col: Color = p.color
@@ -603,7 +638,7 @@ func _cell_rect(k: int) -> Rect2:
 
 
 func _soul(run) -> void:
-	var at := Vector2(BOX_X + (run.soul.x + 0.5) * BOX_CELL, BOX_Y + (run.soul.y + 0.5) * BOX_CELL)
+	var at: Vector2 = _soul_shown if _soul_shown != null else soul_square(run)
 	var alpha := 1.0 if clock_ms > run.iframes or int(clock_ms / 70.0) % 2 == 0 else 0.25
 	var col := Color(Palette.YOU, alpha)
 	var r := 8.0
