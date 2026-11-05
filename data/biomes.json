@@ -27,7 +27,7 @@
    "line": "Rooms upon rooms, built in pieces that nearly fit.",
    "generator": "chunks",
    "sizes": [19, 19, 25, 25, 31],
-   "params": {"loops": 0.2},
+   "params": {"loops": 0.2, "long": 0.5},
    "palettes": [2, 6],
    "weights": {"rock": 3, "bandit": 2, "slime": 1, "snake": 1},
    "secrets": {"cracks": 2, "pads": 1, "gold": [4, 7]}

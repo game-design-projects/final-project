@@ -129,6 +129,7 @@ func turn(quarters: int) -> void:
 ## Remember what you know from here (after a step or a turn): the cells straight ahead, and where a monster stands that is
 ## in front of you with nothing between (a little wider than the picture, which has its own field of view).
 func look() -> void:
+	var t0 := Time.get_ticks_usec()
 	for c in Vision.ahead(floor_map, cell, facing):
 		seen[c] = true
 	in_sight = {}
@@ -136,6 +137,7 @@ func look() -> void:
 		seen[c] = true
 		in_sight[c] = true
 	spot()
+	print_verbose("state: sight from %s took %d us, %d cells" % [cell, Time.get_ticks_usec() - t0, in_sight.size()])
 
 
 ## Note where the monsters in view are now, for the map.

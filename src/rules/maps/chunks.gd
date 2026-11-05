@@ -14,18 +14,21 @@ const SIDES := [1, 2, 4, 8] # the mask's bit for north, east, south, west (Floor
 static var _library = null # every chunk in every turn: [{id, rows, mask}]
 
 
-## {grid, start, hall}. `params`: {loops}, the chance a slot's wall to its neighbour is opened as well as the plan's own.
+## {grid, start, hall}. `params`: {loops}, the chance a slot's wall to its neighbour is opened as well as the plan's own, and {long},
+## the chance the floor is long or tall instead of square: some rows or columns of slots stay rock. The grid stays square, so
+## nothing else has to know.
 static func carve(rng, size: int, params: Dictionary) -> Dictionary:
 	var slots := maxi(1, (size - 1) / SPAN)
 	var cells := slots * SPAN + 1
-	var plan := _plan(rng, slots, float(params.get("loops", 0.0)))
+	var shape := _shape(rng, slots, float(params.get("long", 0.0)))
+	var plan := _plan(rng, shape, float(params.get("loops", 0.0)))
 	var grid := Grid.blank(cells)
 	var by_mask := _by_mask()
-	for sy in slots:
-		for sx in slots:
+	for sy in shape.y:
+		for sx in shape.x:
 			var options: Array = by_mask[plan[sy][sx]]
 			_stamp(grid, rng.pick(options).rows, Vector2i(sx, sy) * SPAN)
-	var hall := Grid.middle(cells)
+	var hall := (shape * SPAN + Vector2i.ONE) / 2 if shape != Vector2i(slots, slots) else Grid.middle(cells)
 	Grid.open_hall(grid, hall)
 	var start := Grid.nearest_open(grid, Vector2i(1, 1))
 	Grid.join_up(grid, start)
@@ -112,9 +115,17 @@ static func _stamp(grid: Array, rows: Array, at: Vector2i) -> void:
 				grid[at.y + y][at.x + x] = 1
 
 
+## How many slots across and down: all of them, or, by the chance `long`, down to half of them one way.
+static func _shape(rng, slots: int, long: float) -> Vector2i:
+	if slots < 2 or not rng.chance(long):
+		return Vector2i(slots, slots)
+	var short: int = rng.int_range(ceili(slots / 2.0), slots - 1)
+	return Vector2i(slots, short) if rng.chance(0.5) else Vector2i(short, slots)
+
+
 ## The maze of slots, as each slot's mask of open sides: a random walk from the first slot, and some walls opened besides.
-static func _plan(rng, slots: int, loops: float) -> Array:
-	var masks := Grid.blank(slots)
+static func _plan(rng, shape: Vector2i, loops: float) -> Array:
+	var masks := Grid.blank(maxi(shape.x, shape.y))
 	var seen := {Vector2i.ZERO: true}
 	var stack: Array = [Vector2i.ZERO]
 	while not stack.is_empty():
@@ -122,7 +133,7 @@ static func _plan(rng, slots: int, loops: float) -> Array:
 		var options := []
 		for side in 4:
 			var next: Vector2i = at + FloorMap.DIRS[side]
-			if next.x >= 0 and next.y >= 0 and next.x < slots and next.y < slots and not seen.has(next):
+			if next.x >= 0 and next.y >= 0 and next.x < shape.x and next.y < shape.y and not seen.has(next):
 				options.append(side)
 		if options.is_empty():
 			stack.pop_back()
@@ -132,11 +143,11 @@ static func _plan(rng, slots: int, loops: float) -> Array:
 		_link(masks, at, side)
 		seen[next] = true
 		stack.append(next)
-	for y in slots:
-		for x in slots:
+	for y in shape.y:
+		for x in shape.x:
 			for side in [1, 2]: # east and south, so each wall is rolled once
 				var next: Vector2i = Vector2i(x, y) + FloorMap.DIRS[side]
-				if next.x < slots and next.y < slots and rng.chance(loops):
+				if next.x < shape.x and next.y < shape.y and rng.chance(loops):
 					_link(masks, Vector2i(x, y), side)
 	return masks
 

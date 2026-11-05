@@ -16,6 +16,7 @@ const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Materials = preload("res://src/view/materials.gd")
 const Monster = preload("res://src/rules/monster.gd")
+const Grid = preload("res://src/rules/maps/grid.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
 const Vision = preload("res://src/rules/vision.gd")
@@ -69,6 +70,26 @@ func _chunk_library() -> void:
 		if by_mask.get(mask, 0) < 2:
 			missing.append(mask)
 	_check(missing.is_empty(), "every shape of openings has at least two chunks to pick from (short: %s; %d chunks with turns)" % [missing, library.size()])
+	# long or tall floors: the open part isn't square, in one piece, and the same seed makes the same one
+	var shapes := {}
+	for i in 60:
+		var made: Dictionary = Chunks.carve(Rng.new(i + 1), 31, {"loops": 0.2, "long": 0.5})
+		var box := Rect2i(made.start, Vector2i.ONE)
+		for y in made.grid.size():
+			for x in made.grid[y].size():
+				if made.grid[y][x] != 0:
+					box = box.expand(Vector2i(x, y))
+		var key := "long" if box.size.x > box.size.y else ("tall" if box.size.y > box.size.x else "square")
+		shapes[key] = shapes.get(key, 0) + 1
+		var open := 0
+		for row in made.grid:
+			for c in row:
+				open += 1 if c != 0 else 0
+		_check(Grid.flood(made.grid, made.start).size() == open, "a %s floor is all in one piece (seed %d)" % [key, i + 1])
+		_check(made.grid[made.hall.y][made.hall.x] != 0, "and its hall is on it")
+	print("map_test: chunk floor shapes %s" % shapes)
+	_check(shapes.get("long", 0) > 5 and shapes.get("tall", 0) > 5 and shapes.get("square", 0) > 5, "floors come long, tall and square")
+	_check(Chunks.carve(Rng.new(9), 31, {"long": 1.0}).grid == Chunks.carve(Rng.new(9), 31, {"long": 1.0}).grid, "the same seed makes the same one")
 
 
 func _biome_order() -> void:
