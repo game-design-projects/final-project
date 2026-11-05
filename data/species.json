@@ -20,7 +20,7 @@
    "Blorbo",
    "Squish",
    "Gloob",
-   "Mellow",
+   "Puddle",
    "Drip",
    "Wobbles"
   ],
@@ -97,6 +97,21 @@
     "*wobbles closer* Again? Again!",
     "*glows a little* ...{name} likes."
    ],
+   "hurt": [
+    "*droops* ...oh.",
+    "*a small, sad bubble rises*",
+    "...{name} sad now."
+   ],
+   "scared": [
+    "*hides inside itself*",
+    "*quivers so hard it blurs* ...no no no.",
+    "*tries to be a puddle*"
+   ],
+   "puzzled": [
+    "*tilts, all of it* ...blorp?",
+    "*stares at you, then at nothing*",
+    "...what?"
+   ],
    "stung": [
     "*shrinks back* ...not nice.",
     "*goes very flat* ...blorp. Mean.",
@@ -162,7 +177,7 @@
   "values": "Wants a party that pays well and shares the loot fairly. Pleased by profit and clever tricks. Upset by gold given away to monsters, by heroics that risk its neck, and by being treated as lesser.",
   "names": [
    "Rook",
-   "Vex",
+   "Patch",
    "Mags",
    "Dirk",
    "Sly Tam",
@@ -238,6 +253,21 @@
     "Ha! Now you're talking my language.",
     "Not bad. You've done this before, haven't you?",
     "Careful. I might start to like you."
+   ],
+   "hurt": [
+    "Yeah. Heard that one from my mother.",
+    "...Didn't need to say that, did you.",
+    "Ouch. No, really. Ouch."
+   ],
+   "scared": [
+    "Whoa! Whoa. Hands where I can see 'em. Mine, I mean.",
+    "I've got a family! I don't. But I could!",
+    "Okay, okay! Nobody needs to get excited."
+   ],
+   "puzzled": [
+    "Is that a threat? Is it a deal? What is that?",
+    "...Run that by me again, slow.",
+    "Now what's your angle?"
    ],
    "stung": [
     "Oh, that's how it is. Noted.",
@@ -382,6 +412,21 @@
     "Mmm. Go on. Sssay more.",
     "How flattering. I almost believe you."
    ],
+   "hurt": [
+    "...Ssso that is what you think of me.",
+    "Hm. Old wounds, little one. You found one.",
+    "*turns its head away, slowly*"
+   ],
+   "scared": [
+    "*coils tight* Ssstay back.",
+    "*the tongue stops* ...what are you?",
+    "Hsss! Not ssso close!"
+   ],
+   "puzzled": [
+    "Sssuch a curious thing to do. Why?",
+    "*tastes the air* ...I cannot read you.",
+    "Ssspeak plainly, or don't."
+   ],
    "stung": [
     "Hsss. I will remember that.",
     "Careful, little one. Ssscales have long memories.",
@@ -523,6 +568,21 @@
     "...hm. Yes. That was good.",
     "*a slow, pleased rumble*",
     "...few have thought of that. In ages."
+   ],
+   "hurt": [
+    "...old. yes. *a pebble falls*",
+    "*a crack goes dim*",
+    "...stone feels it. slowly."
+   ],
+   "scared": [
+    "*draws its arms in, very slowly*",
+    "...the mountain shook once. like this.",
+    "...go back. please."
+   ],
+   "puzzled": [
+    "...? *thinks, for some time*",
+    "...what is this, you do.",
+    "*the crack narrows* ...hm."
    ],
    "stung": [
     "...no.",
@@ -666,6 +726,21 @@
     "Ha! You amuse me, little one.",
     "Mm. A rare thing, a mortal with manners.",
     "Go on. I am almost not bored."
+   ],
+   "hurt": [
+    "...Do you know how long since anyone said that to me?",
+    "*the fire behind its eyes sinks low*",
+    "Leave my age out of it."
+   ],
+   "scared": [
+    "*its wings snap wide* What IS that?",
+    "You would not. ...You would not.",
+    "*backs one step. It has never done this.*"
+   ],
+   "puzzled": [
+    "In nine hundred years, nobody has tried that.",
+    "Is this a joke? Do tell me if it is a joke.",
+    "*one eye opens wider than the other*"
    ],
    "stung": [
     "You dare? In my own halls?",

@@ -16,6 +16,8 @@ const Roaming = preload("res://src/rules/roaming.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
+const REACTION_LINES := {"good": "pleased", "bad": "stung", "sad": "hurt", "fear": "scared", "odd": "puzzled"} # how a deed landed -> what it says about it
+
 var flow
 ## Allies' reactions to the last deed, said with the next message.
 var pending_notes: Array = []
@@ -149,10 +151,8 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 func _reaction(decision: Dictionary):
 	if not decision.get("told", false) or not flow.feature("reveal"):
 		return null
-	var tone: String = str(decision.feeling.get("tone", ""))
-	if tone == "good":
-		return foe_line(flow.state.foe, "pleased")
-	return foe_line(flow.state.foe, "stung") if tone == "bad" else null
+	var kind: String = REACTION_LINES.get(str(decision.feeling.get("tone", "")), "")
+	return null if kind == "" else foe_line(flow.state.foe, kind)
 
 
 func _take_notes() -> Array:

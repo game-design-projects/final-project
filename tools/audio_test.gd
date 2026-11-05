@@ -33,7 +33,7 @@ const RENDERED_KINDS := [
 	"join_party", "leave_peacefully", "attack_monster",
 ]
 ## The kinds written since, which the synthesised voice says until tools/voices renders them; then they move to the list above.
-const AWAITING_RENDER := ["pleased", "stung", "kin_spared", "kin_slain", "side_spared", "side_slain"]
+const AWAITING_RENDER := ["pleased", "stung", "hurt", "scared", "puzzled", "kin_spared", "kin_slain", "side_spared", "side_slain"]
 
 
 ## Stands in for the effects: remembers what it was asked to play.
