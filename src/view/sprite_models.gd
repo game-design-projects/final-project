@@ -12,11 +12,12 @@ const FEET := 270.0 # where its feet are along y
 const SCALE := 0.0072 # world units per sprite unit: the tallest fits under the ceiling
 const WING_SCALE := 0.0048 # along x, for what the sprite spreads wider than a corridor: the dragon's wings
 const TAIL_SCALE := 0.0036 # and its tail
-const LINE := 0.012 # how thick a drawn line is: about the sprite's width in the next cell
+const LINE := 0.015 # how thick a drawn line is: about the sprite's width in the next cell
 const LIMB := LINE * 1.4 # an arm, a leg or a tail: a stroke in the sprite too, a little stronger
 const LIFT := 0.012 # how far a line stands in front of what it is drawn on
 const SLIME_FEET := 258.0 # the slime's feet along y: its puddle, not the end of its drips
 const COIL_DEPTH := 0.26 # how far a snake's coil comes forward
+const HEAD_CLEAR := 0.28 # how far forward the snake's head stands: far enough off its hood's front (0.19) for the whole of its line to show
 const ROUND := 0.62 # how far in the top of a puffed body starts, as a share of the way from its middle to its outline
 
 
@@ -178,7 +179,8 @@ static func _bandit(ln: Color, dot: Color) -> Dictionary:
 	_line(b, [240, 214, 256, 214, 256, 230, 240, 230, 240, 214], coat, dot)
 	_puff(b, _pts([224, 38, 258, 66, 272, 106, 264, 138, 224, 146, 184, 138, 176, 106, 190, 66]), 0.2, 0.09, ln, 0.8) # the hood
 	var face := 0.3
-	b.sphere(Transform3D(Basis(), _p(224, 98, face)), Vector3(26.0 * SCALE, 32.0 * SCALE, 0.08), ln, 16, 8)
+	b.sphere(Transform3D(Basis(), _p(224, 98, face)), Vector3(26.0 * SCALE, 32.0 * SCALE, 0.08), MeshKit.bare(ln), 16, 8)
+	_ellipse(b, 224, 98, 26, 32, face + LIFT, dot) # drawn: so close in front of the hood an inked line would lie half buried, and crawl
 	var eyes := face + 0.08 + LIFT
 	_line(b, [208, 90, 218, 88], eyes, dot)
 	_line(b, [230, 88, 240, 90], eyes, dot)
@@ -224,16 +226,16 @@ static func _snake(ln: Color, dot: Color) -> Dictionary:
 	var marks := 0.19 + LIFT
 	_line(up, [196, 70, 206, 86], marks, dot)
 	_line(up, [252, 70, 242, 86], marks, dot)
-	_puff(up, _pts([210, 96, 210, 74, 224, 64, 238, 74, 238, 96, 224, 106]), 0.2, 0.05, ln, 0.8) # the head
-	var eyes := 0.25 + LIFT
+	_puff(up, _pts([210, 96, 210, 74, 224, 64, 238, 74, 238, 96, 224, 106]), HEAD_CLEAR, 0.05, ln, 0.8) # the head
+	var eyes := HEAD_CLEAR + 0.05 + LIFT
 	_line(up, [213, 82, 221, 84], eyes, dot)
 	_line(up, [227, 84, 235, 82], eyes, dot)
 	_dot(up, 217, 83, 2.0, eyes, dot)
 	_dot(up, 231, 83, 2.0, eyes, dot)
 	var tongue := MeshKit.Builder.new()
-	_line(tongue, [224, 106, 224, 118, 218, 124], eyes, dot)
-	_line(tongue, [224, 118, 230, 124], eyes, dot)
-	return {"Coils": [coils, Transform3D()], "Upper": [up, Transform3D()], "Tongue": [tongue, Transform3D()]}
+	_line(tongue, [224, 106, 224, 118, 218, 124], 0.0, dot, MIDDLE, SCALE, 106.0) # from its mouth, the origin of the part
+	_line(tongue, [224, 118, 230, 124], 0.0, dot, MIDDLE, SCALE, 106.0)
+	return {"Coils": [coils, Transform3D()], "Upper": [up, Transform3D()], "Tongue": [tongue, Transform3D(Basis(), _p(224, 106, eyes))]}
 
 
 ## The heap and the head on it, cracked, with two boulders for each arm, on its own patch of ground.

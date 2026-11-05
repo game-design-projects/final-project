@@ -34,6 +34,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.
 - `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
 
+- `tools/flicker_check.gd` measures flicker in the models frame by frame on the GPU, per species and distance, and marks the blinking pixels on a picture.
+
 ### Changed
 - Each mini-game now lives in its own file under `src/rules/minigames/`.
 - `Vision.sight` stops 12 cells away, so a big floor costs no more than the classic one.
@@ -41,6 +43,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 - A monster whose fight was tried again no longer leaves its old model standing on the floor.
+- Monster lines no longer break into crawling dots where a part sits close in front of another: the ink spreads across the view only, the bandit's face is drawn on it, and the snake's head stands clear of its hood.
+- The snake's tongue slides in and out instead of blinking on and off.
 - `audio_test` no longer fails on the kinds of line that have no recording yet: they are named in `AWAITING_RENDER` until `tools/voices` renders them.
 
 ## [0.6.1] - 2026-11-03

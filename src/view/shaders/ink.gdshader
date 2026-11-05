@@ -18,7 +18,12 @@ void vertex() {
 	// world units per view pixel at this distance (the projection's y scale is negative into a texture)
 	float d = length(CAMERA_POSITION_WORLD - VERTEX);
 	float per_px = 2.0 * d / (abs(PROJECTION_MATRIX[1][1]) * view_h);
-	VERTEX += normalize(NORMAL) * ink_px * per_px;
+	// out across the view only: pushed along the normal itself, the far side of the hull sinks away from the part as the line widens, and
+	// where a part sits close in front of another its line then lies half buried, broken into dots that crawl as it moves
+	vec3 to_camera = normalize(CAMERA_POSITION_WORLD - VERTEX);
+	vec3 across = normalize(NORMAL);
+	across -= to_camera * dot(across, to_camera);
+	VERTEX += across * ink_px * per_px;
 	if (abs(COLOR.a - 0.5) < 0.25 || abs(COLOR.a - 0.15) < 0.1) {
 		VERTEX = vec3(0.0); // no line: every corner at one point, nothing to draw
 	}

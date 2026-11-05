@@ -25,6 +25,7 @@ const KNOWN := {
 	"nomusic": "no music (the effects and voices still play)",
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
+	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
 	"classic": "every feature in FEATURES off (name one after it to bring it back)",
 }
 

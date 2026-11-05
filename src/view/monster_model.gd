@@ -14,6 +14,7 @@ const SpriteModels = preload("res://src/view/sprite_models.gd")
 const HURT_SHAKE := 0.07
 const SCALE := 0.92 # every model, the champion too: at this size the tallest still stands under the ceiling
 const FACE_LIFT := 0.012 # how far a pupil sits in front of its ring
+const TONGUE_S := 0.22 # how fast a snake's tongue goes in and out
 
 static var _parts := {} # "species|colour" -> [[part name, ArrayMesh, Transform3D], ...]
 
@@ -61,8 +62,9 @@ static func pose(model: Node3D, t: float, hurt: float) -> void:
 		"snake":
 			var sway := sin(t / 0.5)
 			_at(model, "Upper", Vector3(sway * 0.06, 0, 0), Vector3(0, 0, -sway * 0.05))
-			_at(model, "Tongue", Vector3(sway * 0.06, 0, 0), Vector3(0, 0, -sway * 0.05))
-			part(model, "Tongue").visible = sin(t / 0.22) > 0.2
+			var out := clampf(sin(t / TONGUE_S) * 2.5, 0.0, 1.0) # it slides out and back: a part that blinks on and off reads as a fault
+			_at(model, "Tongue", Vector3(sway * 0.06, 0, 0), Vector3(0, 0, -sway * 0.05), Vector3(1.0, maxf(out, 0.001), maxf(out, 0.001)))
+			part(model, "Tongue").visible = out > 0.0
 		"rock":
 			_at(model, "Upper", Vector3(0, sin(t / 0.9) * 0.025, 0))
 		"bandit":
@@ -240,10 +242,10 @@ static func _snake(ln: Color, dot: Color) -> Dictionary:
 		up.sphere(_t(0.075 * s, 1.43, 0.27), Vector3(0.04, 0.03, 0.02), dot, 8, 4) # slit eyes
 		up.box(_t(0.075 * s, 1.43, 0.29), Vector3(0.008, 0.05, 0.008), dot)
 	var tongue := _b()
-	tongue.limb(Vector3(0, 1.3, 0.27), Vector3(0, 1.26, 0.4), 0.012, 0.01, ln, 4)
-	tongue.limb(Vector3(0, 1.26, 0.4), Vector3(-0.03, 1.22, 0.46), 0.01, 0.0, ln, 4)
-	tongue.limb(Vector3(0, 1.26, 0.4), Vector3(0.03, 1.22, 0.46), 0.01, 0.0, ln, 4)
-	return {"Coils": [coils, Transform3D()], "Upper": [up, Transform3D()], "Tongue": [tongue, Transform3D()]}
+	tongue.limb(Vector3.ZERO, Vector3(0, -0.04, 0.13), 0.012, 0.01, ln, 4) # from its mouth, the origin of the part
+	tongue.limb(Vector3(0, -0.04, 0.13), Vector3(-0.03, -0.08, 0.19), 0.01, 0.0, ln, 4)
+	tongue.limb(Vector3(0, -0.04, 0.13), Vector3(0.03, -0.08, 0.19), 0.01, 0.0, ln, 4)
+	return {"Coils": [coils, Transform3D()], "Upper": [up, Transform3D()], "Tongue": [tongue, _t(0, 1.3, 0.27)]}
 
 
 # Grey rock entity: a heap of boulders with arms, cracked all over, one glowing crack for an eye.

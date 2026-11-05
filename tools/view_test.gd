@@ -334,10 +334,15 @@ func _models_move_by_species() -> void:
 	dragon.free()
 	var snake: Node3D = MonsterModel.build("snake", Color.WHITE)
 	var shown := {}
+	var lengths := {}
 	for i in 200:
 		MonsterModel.pose(snake, i * 0.02, 0.0)
-		shown[MonsterModel.part(snake, "Tongue").visible] = true
-	_check(shown.size() == 2, "the snake's tongue flickers in and out")
+		var tongue := MonsterModel.part(snake, "Tongue")
+		shown[tongue.visible] = true
+		if tongue.visible:
+			lengths[snappedf(tongue.basis.get_scale().y, 0.1)] = true
+	_check(shown.size() == 2, "the snake's tongue goes in and out")
+	_check(lengths.size() >= 4, "sliding, not blinking on and off (%s)" % [lengths.keys()])
 	snake.free()
 	var unknown: Node3D = MonsterModel.build("no such thing", Color.WHITE)
 	MonsterModel.pose(unknown, 1.0, 1.0)
