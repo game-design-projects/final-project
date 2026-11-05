@@ -6,17 +6,17 @@
   {
    "name": "EMBERLING",
    "hp": 28,
-   "lore": "The youngest of Vexalith's brood. Nobody has ever talked back to it."
+   "lore": "The youngest of the Hoard, Vexalith's brood. Nobody has ever talked back to it."
   },
   {
    "name": "CINDERA",
    "hp": 36,
-   "lore": "The walls here are scratched with tally marks: everyone who came down before you."
+   "lore": "The walls here are scratched with tally marks: everyone the Hoard threw down before you."
   },
   {
    "name": "ASHKA",
    "hp": 44,
-   "lore": "It has counted every one of those marks, and it can tell you whose they were."
+   "lore": "The Crew and the Coil pay it to look away. The Burrow and the Old Stone just hide."
   },
   {
    "name": "SCORIA",
@@ -33,7 +33,7 @@
   "title": "THE LAST DOOR",
   "banner": "Five floors down, and the only way out.",
   "door": "It only opens for someone who is not alone.",
-  "line": "Thrown down here. The only way out is the Last Door, five floors below."
+  "line": "You robbed the Hoard. It threw you down here, five floors above the Last Door."
  },
  "boss_reward": {
   "max_hp": 4,
