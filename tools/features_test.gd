@@ -14,6 +14,7 @@ const Floors = preload("res://src/rules/floors.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
+const Hints = preload("res://src/rules/hints.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Gates = preload("res://src/rules/minigames/gates.gd")
 const Monster = preload("res://src/rules/monster.gd")
@@ -601,6 +602,18 @@ func _chat() -> void:
 	_check(true, "every monster line fits the speech box")
 	var hint_line := "It says it might as well tell you: the stairs are that way, past the third turn, and the champion waits beyond."
 	_check(body.get_multiline_string_size(hint_line, HORIZONTAL_ALIGNMENT_LEFT, Overlay.SPEECH.size.x - 12.0, Overlay.speech_px(hint_line)).y <= Overlay.SPEECH.size.y - 16.0, "and so does a long answer about the floor")
+	# what a monster says about the floor is put together as it speaks: however it comes out, it fits
+	var longest := ""
+	for seed_n in 30:
+		var f = FloorGen.generate(Rng.new(seed_n + 1), Floors.plan(1))
+		var asker = f.monsters[0]
+		var other = f.monsters[1]
+		for q in ["Where are the stairs?", "Where is the champion?", "What does %s want?" % other.name, "Where is %s?" % other.name, "Who holds this floor?", "What are you?"]:
+			var said: String = Hints.answer(f, asker.cell, asker, q)
+			longest = said if said.length() > longest.length() else longest
+			if body.get_multiline_string_size(said, HORIZONTAL_ALIGNMENT_LEFT, Overlay.SPEECH.size.x - 12.0, Overlay.speech_px(said)).y > Overlay.SPEECH.size.y - 16.0:
+				_check(false, "an answer doesn't fit the speech box: %s" % said)
+	_check(longest != "", "every answer about the floor fits the speech box, the longest: %s" % longest)
 	var tips = Tips.new()
 	tips.state = s
 	s.stage = "menu"
