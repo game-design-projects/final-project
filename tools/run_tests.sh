@@ -53,6 +53,17 @@ if [ "$mode" = both ] || [ "$mode" = on ]; then
 	SUITES+=(features_test) # it switches the features itself, so `classic` on the command line would only get in its way
 	run_mode on
 	unset 'SUITES[${#SUITES[@]}-1]'
+	# A run with no strike in it, start to end: the peaceful way through has to stay open.
+	log="$OUT/on-pacifist.log"
+	code=0
+	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound pacifist >"$log" 2>&1 || code=$?
+	if ! grep -qE '^autoplay: 5 of 5' "$log" || grep -E '^autoplay: seed' "$log" | grep -qvE ' slain 0 '; then
+		code=1
+	fi
+	echo "on pacifist: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo 'no verdict')"
+	if [ "$code" != 0 ]; then
+		failed=1
+	fi
 fi
 if [ "$mode" = both ] || [ "$mode" = classic ]; then
 	run_mode classic classic

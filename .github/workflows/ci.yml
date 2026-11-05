@@ -96,6 +96,12 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/meta_test.gd -- nosave nosound
+      # A whole run with no strike in it, start to end.
+      - name: Check the peaceful way through
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/autoplay.gd -- nosave nosound pacifist | tee /tmp/pacifist.log | grep -E '^autoplay: 5 of 5'
+          ! grep -E '^autoplay: seed' /tmp/pacifist.log | grep -vE ' slain 0 '
       # Every suite again with `classic`: with the features off the game is what it was before them.
       - name: Check the game without the features
         run: tools/run_tests.sh classic

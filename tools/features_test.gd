@@ -6,6 +6,8 @@ extends "res://tools/test_base.gd"
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Dance = preload("res://src/rules/minigames/dance.gd")
+const Encounter = preload("res://src/game/encounter.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
@@ -306,6 +308,12 @@ func _story() -> void:
 	_check(s.lines[0].text.contains("Last Door") and s.lines[1].text.contains(Floors.plan(1).champion.name), "a run says why you are here and who holds the floor (%s)" % s.lines[0].text)
 	_check(s.banner != null and s.banner.title == "THE LAST DOOR", "and puts it on the picture")
 	_check(s.floors_of == Floors.run_floors(), "the header can count the floors")
+	_check(Floors.premise().line.begins_with("You "), "it says who you are: %s" % Floors.premise().line)
+	var told := ""
+	for c in Content.table("floors").champions:
+		told += str(c.lore) + " "
+	for clan in Content.table("clans").clans.values():
+		_check(told.contains(str(clan.name).trim_prefix("The ")) or Floors.premise().line.contains(str(clan.name).trim_prefix("The ")), "and the story knows %s" % clan.name)
 	_check(Hud.log_fits(s.lines, 1100.0) == s.lines.size(), "and the log has room for it at the window's width")
 	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and at a narrow one")
 	await _reach_stairs(flow)
@@ -360,6 +368,26 @@ func _tutorial() -> void:
 		var charm: Dictionary = Content.table("encounter").charms[species]
 		_check(Overlay.banner_fits("%s: %s" % [charm.name, charm.text]), "and %s's charm" % species)
 	_check(Pace.opening(0) < Pace.opening(1) and Pace.opening(1) < 1.0 and Pace.opening(5) == 1.0, "the first fights go slower")
+	# the menu teaches one more each time it comes up, FLEE last
+	flow = _flow(36)
+	await flow.new_run()
+	flow.state.banner = null
+	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
+	flow.coach.seen = {"menu": true, "heavy": true, "act": true, "strike": true}
+	flow.state.banner = null
+	flow.coach._on_stage("menu")
+	_check(flow.coach.seen.has("flee"), "FLEE gets a tip too")
+	# the TIPS setting skips the slow start as well: only the first fights' pace knows about it
+	var paces := {}
+	for tips in [true, false]:
+		flow = _flow(37)
+		await flow.new_run()
+		flow.coach.enabled = tips
+		flow.state.banner = null
+		flow.state.foe = flow.state.floor_map.monsters[0]
+		flow._stages["dodge"].enter(flow, {})
+		paces[tips] = flow.state.dodge.pace
+	_check(paces[true] < paces[false], "with TIPS off the first fights aren't slowed (%.2f, %.2f)" % [paces[true], paces[false]])
 	flow = _flow(35, ["no-tutorial"])
 	await flow.new_run()
 	flow.state.banner = null
@@ -494,6 +522,8 @@ func _reveal() -> void:
 	for sp in Content.table("species"):
 		var spoken: Dictionary = Content.species(sp).lines
 		_check(not spoken.get("pleased", []).is_empty() and not spoken.get("stung", []).is_empty(), "%ss answer a deed in their own words" % sp)
+		for kind in Encounter.REACTION_LINES.values():
+			_check(not spoken.get(kind, []).is_empty(), "%ss have a word for every way a deed lands (%s)" % [sp, kind])
 
 	# it answers what you did to it
 	flow = _flow(42)
@@ -501,6 +531,8 @@ func _reveal() -> void:
 	s = flow.state
 	await flow.encounter.after_player([State.sys_line("x")], {"pacified": false, "pressure": 1.0, "told": true, "feeling": {"tone": "good"}})
 	_check(s.lines.any(func(l): return l.kind == "say" and Content.species(m.species).lines.pleased.any(func(p): return l.text.contains(p.left(8)))), "a liked deed gets a pleased line (%s)" % str(s.lines))
+	await flow.encounter.after_player([State.sys_line("x")], {"pacified": false, "pressure": 1.0, "told": true, "feeling": {"tone": "fear"}})
+	_check(s.lines.any(func(l): return l.kind == "say" and Content.species(m.species).lines.scared.any(func(p): return l.text.contains(p.left(8)))), "and a frightening one a scared line")
 	flow = _flow(43, ["no-reveal"])
 	m = await _at_menu(flow)
 	s = flow.state
@@ -607,6 +639,9 @@ func _gate() -> void:
 	var map = load("res://src/view/automap.gd").new()
 	map.state = s
 	s.seen = {}
+	for other in s.floor_map.monsters:
+		other.hunting = false # (a hunter shows wherever it is)
+		other.last_seen = Vector2i(-1, -1) # (and the others where you last saw them)
 	_check(map.monster_marks().is_empty(), "the map keeps it hidden until seen")
 	s.seen[boss.cell] = true
 	_check(map.monster_marks().size() == 1, "and shows it after")
@@ -766,6 +801,19 @@ func _branching() -> void:
 	_check(ways.size() == 2 and ways[0].label != ways[1].label, "the stairs offer two different ways (%s, %s)" % [ways[0].label, ways[1].label])
 	_check(ways.all(func(w): return w.sub != ""), "each says what it is")
 	_check(str(Floors.paths(77, 1)) == str(ways), "the same seed offers the same ones")
+	var market := {}
+	for run in 200:
+		for w in Floors.paths(run, 1, false):
+			_check(not w.get("shop", false), "without traders no way leads to one")
+		for w in Floors.paths(run, 1):
+			if w.get("shop", false):
+				market = w
+	_check(not market.is_empty(), "one way down can be a market")
+	var market_flow = _flow(77)
+	await market_flow.new_run()
+	market_flow.state.depth = 4 # not a floor that has a trader anyway
+	market_flow._make_floor(market)
+	_check(not market_flow.state.floor_map.merchant.is_empty() or not Items.shop_on(4), "and it has a trader")
 	var differs := false
 	for s in range(1, 20):
 		differs = differs or str(Floors.paths(s, 1)) != str(ways)
@@ -775,7 +823,7 @@ func _branching() -> void:
 	for s in range(1, 60):
 		for w in Floors.paths(s, 2):
 			labels[w.id] = true
-	_check(labels.size() == 3, "every kind of way comes up (%s)" % str(labels.keys()))
+	_check(labels.size() == 4, "every kind of way comes up (%s)" % str(labels.keys()))
 
 	var quiet := {"count": 2, "path": 1, "rest": 6}
 	var f = FloorGen.generate(Rng.new(5), Floors.plan(2, quiet))
@@ -883,6 +931,33 @@ func _dodges() -> void:
 	_check(got.any(func(e): return e.type == "star"), "standing under a star catches it")
 	_check(not got.any(func(e): return e.type == "hurt"), "and it doesn't hurt")
 	_check(not stars.update(star.hit + 2.0, star_rng).any(func(e): return e.type == "star"), "a star is caught once")
+
+	var dance = DodgeRun.start("dance", 1.0, false, 0, 0.0, {}, 1.0)
+	var dance_rng := Rng.new(8)
+	var beats := 0
+	var pads := []
+	for t in range(10, 2000, 10):
+		for e in dance.update(float(t), dance_rng):
+			beats += 1 if e.type == "beat" else 0
+		for h in dance.hazards:
+			if h.kind == "pad" and not pads.has(h):
+				pads.append(h)
+	_check(beats >= 3 and pads.size() == beats, "the dance has a light for every beat (%d beats, %d lights)" % [beats, pads.size()])
+	_check(pads[1].hit - pads[0].hit > 300.0, "a beat apart")
+	var away: Vector2i = Vector2i(pads[1].at % Dodge.COLS, floori(float(pads[1].at) / Dodge.COLS)) - Vector2i(pads[0].at % Dodge.COLS, floori(float(pads[0].at) / Dodge.COLS))
+	_check(absi(away.x) + absi(away.y) == 1, "a step apart, so you can keep up")
+	var on_the_light = DodgeRun.start("dance", 1.0, false, 0, 0.0, {}, 1.0)
+	on_the_light.update(10.0, dance_rng)
+	var light: Dictionary = on_the_light.hazards[0]
+	on_the_light.soul = Vector2i(light.at % Dodge.COLS, floori(float(light.at) / Dodge.COLS))
+	on_the_light.hazards = [light]
+	var danced: Array = on_the_light.update(light.hit + 1.0, dance_rng)
+	_check(danced.any(func(e): return e.type == "star") and not danced.any(func(e): return e.type == "hurt"), "on the light when it lands you heal")
+	for pace in [0.6, 1.0]:
+		var slow = DodgeRun.start("dance", 1.0, false, 0, 0.0, {}, pace)
+		slow.update(10.0, dance_rng)
+		var beat_ms: float = Dance.BEAT_MS / sqrt(slow.intensity * pace)
+		_check(absf(slow.hazards[0].hit - slow.hazards[0].warn - beat_ms) < 1.0, "the next light is shown one beat ahead at any pace (%.2f)" % pace)
 
 	var flow = _flow(13)
 	await flow.new_run()
