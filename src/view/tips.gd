@@ -44,6 +44,7 @@ var _card: Card
 var _panel: Card
 var _last_shown := ""
 var _last_rows := ""
+var extra_x := 0.0 # how much wider the picture is than 448 on each side, in its pixels (wide-view): this layer keeps the middle
 
 
 func _init() -> void:
@@ -329,11 +330,20 @@ static func _top_bars(odds: Dictionary, name_of: Callable, picked: String) -> Ar
 	return bars
 
 
+## Keep to the 448 x 288 in the middle of a picture this wide.
+func fit(picture_w: int) -> void:
+	extra_x = (picture_w - W) / 2.0
+	anchor_left = extra_x / picture_w
+	anchor_right = 1.0 - anchor_left
+	offset_left = 0.0
+	offset_right = 0.0
+
+
 ## Where the automap's panel is in the picture, for hovering it. It sits over the picture at a fixed size in screen pixels (automap.gd).
 func automap_rect() -> Rect2:
 	var k := size.x / W if size.x > 0.0 else 1.0
 	var span := Automap.PANEL / k
-	return Rect2(Vector2(W - span - AUTOMAP_MARGIN / k, AUTOMAP_MARGIN / k), Vector2(span, span))
+	return Rect2(Vector2(W + extra_x - span - AUTOMAP_MARGIN / k, AUTOMAP_MARGIN / k), Vector2(span, span))
 
 
 # ---------------------------------------------------------------- the frame each frame
@@ -403,7 +413,7 @@ func _update_chips() -> void:
 			_chips.append(chip)
 	var k := size.x / W
 	for i in _chips.size():
-		_chips[i].place(i, k)
+		_chips[i].place(i, k, extra_x)
 
 
 ## An ally over the picture: a colour dot and the charm's name. Hover it, or tap it, for the ally's card.
@@ -432,10 +442,10 @@ class Chip:
 		warn = a.loyalty < Allies.LEAVE_BELOW
 
 	## Chip number `i` from the bottom, at scale `k` (the picture's size over 448).
-	func place(i: int, scale_k: float) -> void:
+	func place(i: int, scale_k: float, extra_x: float) -> void:
 		k = scale_k
 		var width := _title.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x + 18.0
-		position = Vector2(9.0, H - 10.0 - 9.0 - 12.0 * i) * k
+		position = Vector2(9.0 - extra_x, H - 10.0 - 9.0 - 12.0 * i) * k
 		size = Vector2(width, 12.0) * k
 		queue_redraw()
 

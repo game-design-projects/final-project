@@ -26,6 +26,8 @@ const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
+const FloorMap = preload("res://src/rules/floor_map.gd")
+const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
 
 const BASE := ["nosave", "nosound"]
@@ -58,6 +60,7 @@ func _run() -> void:
 	await _roaming()
 	await _input_cooldown()
 	await _heavy_strike()
+	_close_camera()
 	_finish()
 
 
@@ -1157,6 +1160,31 @@ func _heavy_fight(seed_value: int, species: String, words := []) -> Variant:
 	flow.coach.enabled = false
 	flow.state.banner = null
 	return flow
+
+
+func _close_camera() -> void:
+	_flow(71)
+	_check(Vision.back == Vision.CLOSE_BACK, "close-camera: the camera stands closer")
+	_flow(72, ["no-close-camera"])
+	_check(Vision.back == Vision.BACK, "no-close-camera: where it was")
+	_flow(73, ["personality-slice"])
+	_check(Vision.back == Vision.BACK, "and in the playtest slice")
+	_flow(74)
+	# how wide you see follows the picture (the scene sets it, as wide as it has made the picture)
+	var f = FloorMap.new()
+	f.size = 21
+	f.grid = []
+	for y in 21:
+		var row := []
+		for x in 21:
+			row.append(0 if x == 0 or y == 0 or x == 20 or y == 20 else 1)
+		f.grid.append(row)
+	var narrow: Array = Vision.sight(f, Vector2i(10, 10), 0)
+	Vision.view_tan = Vision.VIEW_TAN * 1.5
+	var wide: Array = Vision.sight(f, Vector2i(10, 10), 0)
+	Vision.view_tan = Vision.VIEW_TAN
+	_check(wide.size() > narrow.size(), "a wider picture takes in more of the floor (%d cells, not %d)" % [wide.size(), narrow.size()])
+	_use()
 
 
 func _heavy_strike() -> void:

@@ -8,6 +8,7 @@ extends "res://tools/test_base.gd"
 
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
+const Vision = preload("res://src/rules/vision.gd")
 
 var Saves = null # loaded when the test runs, like the other scripts that reach the Store autoload
 
@@ -52,10 +53,49 @@ func _run() -> void:
 	await _sub_text_wraps(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
+	await _wide_view(game)
 	game.queue_free()
 	await process_frame
 	await _pad_and_debug()
 	_finish()
+
+
+## The picture follows the panel's shape, and what lies over it and points at it follows the picture.
+func _wide_view(game) -> void:
+	if not game.flow.feature("wide-view"):
+		_check(game._viewport.size == Vector2i(448, 288) and game._overlay.extra_x == 0.0, "no wide-view: the picture keeps 448:288")
+		return
+	var script = game.get_script()
+	_check(script.picture_width(Vector2(400, 400)) == 448, "a squarer panel keeps the old shape")
+	_check(script.picture_width(Vector2(1000, 400)) == 688, "a very wide one stops at the widest (%d)" % script.picture_width(Vector2(1000, 400)))
+	_check(script.picture_width(Vector2(1136, 540)) % 16 == 0 and script.picture_width(Vector2(1136, 540)) > 448, "the width moves in steps")
+	var was: Vector2i = root.size
+	root.size = Vector2i(1500, 1000) # a window with room to the sides
+	await process_frame
+	await process_frame
+	var want: int = script.picture_width(game._room.size)
+	_check(want > 448, "this window has a panel wider than the old shape (%s)" % game._room.size)
+	_check(game._viewport.size == Vector2i(want, 288), "the picture fills the panel (%s in %s)" % [game._viewport.size, game._room.size])
+	_check(is_equal_approx(game._aspect.ratio, want / 288.0), "the frame takes the same shape")
+	var shown: float = game._picture.size.x / game._picture.size.y
+	_check(absf(shown - game._room.size.x / game._room.size.y) < 0.06, "with no black on either side (%.2f in a panel of %.2f)" % [shown, game._room.size.x / game._room.size.y])
+	var extra: float = (want - 448) / 2.0
+	_check(game._overlay.extra_x == extra and game._overlay.position.x == extra, "the overlay keeps the middle")
+	_check(game._overlay._whole_picture().size.x == want and game._overlay._whole_picture().position.x == -extra, "and its black and flashes reach the edges")
+	_check(game._in_picture(game._picture.size / 2.0).is_equal_approx(Vector2(224, 144)), "the middle of the picture is the middle of the overlay")
+	var k: float = game._tips.size.x / 448.0
+	_check(absf(game._tips.size.y / 288.0 - k) < 0.02, "the tips keep 448:288 too (%s)" % game._tips.size)
+	var map: Rect2 = game._tips.automap_rect()
+	var corner: Vector2 = game._automap.get_global_rect().get_center()
+	var as_seen: Vector2 = game._in_picture(corner - game._picture.get_global_position())
+	_check(map.has_point(as_seen), "the map's card knows where the map is (%s in %s)" % [as_seen, map])
+	_check(absf(Vision.view_tan - tan(deg_to_rad(34.0)) * want / 288.0) < 0.002, "what the party sees is what the picture shows")
+	if game._postfx.attached():
+		_check(game._postfx._bloom_view.size.x >= want / 4, "and the glow is worked out for this size")
+	root.size = was
+	await process_frame
+	await process_frame
+	_check(game._viewport.size.x == script.picture_width(game._room.size), "and it follows the window back (%d)" % game._viewport.size.x)
 
 
 func _bound(game) -> bool:
@@ -95,7 +135,7 @@ func _move(at: Vector2) -> InputEventMouseMotion:
 
 ## A point of the picture (in its own 448 x 288 pixels) as the picture control sees it.
 func _on_picture(game, p: Vector2) -> Vector2:
-	return p / Vector2(448.0, 288.0) * game._picture.size
+	return (p + Vector2(game._overlay.extra_x, 0.0)) / Vector2(game._viewport.size) * game._picture.size
 
 
 ## Put the party in a fight with the first monster and in its command menu.

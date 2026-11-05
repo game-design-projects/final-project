@@ -25,13 +25,24 @@ const Saves = preload("res://src/menu/saves.gd")
 const Session = preload("res://src/menu/session.gd")
 const Settings = preload("res://src/menu/settings.gd")
 const StageScript = preload("res://src/view/stage.gd")
+const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
 
 const MENU_SCENE := "res://src/menu/main_menu.tscn"
 const VIEW_W := 448
 const VIEW_H := 288
+const WIDEST := 2.4 # with wide-view the picture follows the panel's shape up to this: FOV 68 is its height, so its width grows with it
+const WIDTH_STEP := 16 # and its width moves in steps this big, so a line more or less in the dock doesn't remake the picture
 const FRAME_MARGIN := 8
 const FRAME_PAD_X := 14 # between the white frame and what is inside it, left and right
+
+
+## How wide the picture is, in its pixels, to fill a panel this shape with wide-view on. Its height stays VIEW_H.
+static func picture_width(room: Vector2) -> int:
+	if room.x <= 0.0 or room.y <= 0.0:
+		return VIEW_W
+	var shape := clampf(room.x / room.y, float(VIEW_W) / VIEW_H, WIDEST)
+	return maxi(VIEW_W, snappedi(VIEW_H * shape, WIDTH_STEP))
 
 
 ## How wide the dock (the log, the commands) is in a window this wide.
@@ -61,6 +72,8 @@ var _overlay
 var _automap
 var _postfx
 var _picture: TextureRect
+var _room: Control
+var _aspect: AspectRatioContainer
 var _header
 var _status
 var _dock
@@ -87,6 +100,7 @@ func _ready() -> void:
 	flow.happened.connect(_on_event)
 	for id in Settings.get_value("seen_tips"):
 		flow.coach.seen[str(id)] = true
+	_fit_picture()
 	_debug = Flags.on("debug")
 	_tips.debug = _debug
 	_tips.mind_label = flow.mind.label()
@@ -184,11 +198,14 @@ func _build_screen() -> void:
 	column.add_child(rule)
 
 	var room := Control.new() # takes what the dock leaves; the picture keeps its shape inside
+	_room = room
+	room.resized.connect(_fit_picture)
 	room.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	room.custom_minimum_size = Vector2(320, 206)
 	room.clip_contents = true
 	column.add_child(room)
 	var aspect := AspectRatioContainer.new()
+	_aspect = aspect
 	aspect.ratio = float(VIEW_W) / VIEW_H
 	aspect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	room.add_child(aspect)
@@ -338,11 +355,28 @@ func _on_picture_input(event: InputEvent) -> void:
 		_tips.tap(_in_picture(event.position))
 
 
-## A point of the picture control as a point of the 448 x 288 picture.
+## A point of the picture control as a point of the overlay's 448 x 288, which sits in the middle of a wider picture.
 func _in_picture(at: Vector2) -> Vector2:
 	if _picture.size.x <= 0.0 or _picture.size.y <= 0.0:
 		return Vector2(-1, -1)
-	return at / _picture.size * Vector2(VIEW_W, VIEW_H)
+	return at / _picture.size * Vector2(_viewport.size) - Vector2(_overlay.extra_x, 0.0)
+
+
+## Fill the panel, with wide-view: the 3D picture, the way the overlay and the tips sit in it, and what the party's sight takes in.
+func _fit_picture() -> void:
+	if flow == null:
+		return
+	var width: int = picture_width(_room.size) if flow.feature("wide-view") else VIEW_W
+	if width == _viewport.size.x:
+		return
+	_viewport.size = Vector2i(width, VIEW_H)
+	_aspect.ratio = float(width) / VIEW_H
+	_overlay.extra_x = (width - VIEW_W) / 2.0
+	_overlay.position.x = _overlay.extra_x
+	_tips.fit(width)
+	Vision.view_tan = Vision.VIEW_TAN * width / VIEW_W
+	_postfx.fit()
+	print("gameplay: the picture is %dx%d in a panel of %s" % [width, VIEW_H, _room.size])
 
 
 ## The pointer is over command `index` of the dock (-1: it left them): it becomes the picked one, and its help shows.
@@ -380,6 +414,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 		print("gameplay: event %s %s (stage %s, hp %d/%d)" % [name, data, s.stage, s.hp, s.max_hp])
 	match name:
 		"state_replaced":
+			_fit_picture()
 			_bind_views()
 			_fresh_floor = data.how in ["new", "floor"] and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
 		"stage":

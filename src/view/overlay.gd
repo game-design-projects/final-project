@@ -67,6 +67,7 @@ var intro_strength := 0.5
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _popups: Array = [] # [{text, color, at, born}]
+var extra_x := 0.0 # how much wider the picture is than this layer, on each side (wide-view)
 var _words := "" # what you last typed, on its way to the monster
 var _words_at := -1e9
 var _emote := {} # {tone, born}: the last mood shown over the monster
@@ -270,7 +271,7 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
 	var fade := leave_fade()
 	if fade > 0.0:
-		draw_rect(Rect2(0.0, 0.0, W, H), Color(0, 0, 0, fade))
+		draw_rect(_whole_picture(), Color(0, 0, 0, fade))
 	for p in _popups:
 		var age: float = (clock_ms - p.born) / 900.0
 		var col: Color = p.color
@@ -288,6 +289,11 @@ func soul_at() -> Vector2:
 	if state == null or state.dodge == null:
 		return Vector2(W / 2.0, BOX_Y)
 	return _cell_rect(Dodge.index(state.dodge.soul.x, state.dodge.soul.y)).get_center()
+
+
+## The whole picture in this layer's coordinates: the layer keeps its 448 x 288 in the middle of a picture that may be wider.
+func _whole_picture() -> Rect2:
+	return Rect2(-extra_x, 0.0, W + extra_x * 2.0, H)
 
 
 ## Where the banner goes: above the dodge box or the strike bar when one is up, else low on the picture, clear of the health bars and the popups.
@@ -325,7 +331,7 @@ func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := H
 
 ## A receding corridor, the name in its box, what the game is, a blinking prompt, and how to leave.
 func _title_screen() -> void:
-	draw_rect(Rect2(0, 0, W, H), Color.BLACK)
+	draw_rect(_whole_picture(), Color.BLACK)
 	for f in TITLE_FRAMES:
 		var size_at := (Vector2(W, H) - Vector2(8, 8)) * float(f)
 		draw_rect(Rect2((Vector2(W, H) - size_at) / 2.0, size_at).abs(), Palette.INK, false, 2.0)
@@ -349,7 +355,7 @@ func title_prompt_on() -> bool:
 func _battle() -> void:
 	var m = state.foe
 	var color := Palette.monster(m)
-	draw_rect(Rect2(0, 0, W, H), Color.BLACK)
+	draw_rect(_whole_picture(), Color.BLACK)
 	var small: bool = state.dodge != null
 	var hurt := 1.0 if clock_ms < hurt_until else 0.0
 	if small:
@@ -367,7 +373,7 @@ func _battle() -> void:
 		_strike_bar()
 	var flash := intro_flash()
 	if flash > 0.0:
-		draw_rect(Rect2(0, 0, W, H), Color(1, 1, 1, flash))
+		draw_rect(_whole_picture(), Color(1, 1, 1, flash))
 
 
 ## Where the foe's health bar goes: over its head when it fills the picture, up in the corner while it is small over the dodge box.
@@ -485,10 +491,10 @@ func _mood_glyph(tone: String, c: Vector2, ink: Color) -> void:
 func _flashes() -> void:
 	var run = state.dodge
 	if clock_ms - run.block_flash < 160.0:
-		draw_rect(Rect2(0, 0, W, H), Color(Palette.YOU, 0.22))
+		draw_rect(_whole_picture(), Color(Palette.YOU, 0.22))
 		_text(_title, "BOUNCY! THE SLIME TAKES THE HIT", Vector2(0, BOX_Y - 8.0), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
 	if clock_ms - run.hit_flash < 120.0:
-		draw_rect(Rect2(0, 0, W, H), Color(Palette.WARN, 0.25))
+		draw_rect(_whole_picture(), Color(Palette.WARN, 0.25))
 
 
 # ---------------------------------------------------------------- the dodge box

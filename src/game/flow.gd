@@ -20,6 +20,7 @@ const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Transitions = preload("res://src/game/transitions.gd")
+const Vision = preload("res://src/rules/vision.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
 const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight"]
@@ -84,6 +85,7 @@ func _init(game_rng, game_mind) -> void:
 	for name in STAGES:
 		_stages[name] = STAGES[name].new()
 	state = State.new()
+	_place_camera() # a save looks about it as it loads, so this is in place before that
 
 
 ## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice, whose routes stay fixed so
@@ -136,8 +138,13 @@ func next_floor(way := {}) -> void:
 func _apply_features() -> void:
 	state.rotate_mini_games = feature("mini-games")
 	state.floors_of = Floors.run_floors() if _telling_story() else 0
+	_place_camera()
 	for name in VIEW_FEATURES:
 		state.views[name] = feature(name)
+
+
+func _place_camera() -> void:
+	Vision.back = Vision.CLOSE_BACK if feature("close-camera") else Vision.BACK
 
 
 ## The story needs a below to tell of.

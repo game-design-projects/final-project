@@ -148,7 +148,10 @@ func _sight_across_a_hall() -> void:
 	var corner := _floor(["#####", "#.#.#", "#.#.#", "#...#", "#####"])
 	_check(not Vision.sight(corner, Vector2i(1, 3), EAST).has(Vector2i(3, 1)), "a wall corner on the line hides what is beyond it")
 	_check(absf(Vision.VIEW_TAN - tan(deg_to_rad(Stage.FOV / 2.0)) * 448.0 / 288.0) < 0.001, "the field of view on the floor plan is the camera's")
-	_check(is_equal_approx(Vision.BACK, Stage.BACK), "and so is where it stands")
+	var stage = Stage.new()
+	var where: Dictionary = stage._camera_target(Vector2i(3, 3), EAST)
+	_check(is_equal_approx(where.pos.x, DungeonMesh.center(Vector2i(3, 3)).x - Vision.back * DungeonMesh.CELL), "and so is where it stands")
+	stage.free()
 
 
 ## Walking down a corridor you see into a side opening, as far as a line reaches; `look` adds that to the corridor ahead.

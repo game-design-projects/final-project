@@ -28,6 +28,7 @@ var _pulse := 0.0
 var _time := 0.0
 var _rect: TextureRect
 var _bloom_view: SubViewport
+var _bloom_paint: ColorRect
 var _bloom_material := ShaderMaterial.new()
 
 
@@ -43,24 +44,31 @@ func attach(rect: TextureRect) -> void:
 	_rect = rect
 	rect.material = material
 	rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	var src: Vector2 = rect.texture.get_size()
-	var bloom := Vector2i(ceili(src.x / BLOOM_DIVISOR), ceili(src.y / BLOOM_DIVISOR))
 	_bloom_view = SubViewport.new()
 	_bloom_view.name = "Bloom"
 	_bloom_view.disable_3d = true
-	_bloom_view.size = bloom
 	_bloom_view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	var paint := ColorRect.new()
-	paint.material = _bloom_material
-	paint.size = Vector2(bloom)
-	_bloom_view.add_child(paint)
+	_bloom_paint = ColorRect.new()
+	_bloom_paint.material = _bloom_material
+	_bloom_view.add_child(_bloom_paint)
 	rect.add_child(_bloom_view)
-	_bloom_material.set_shader_parameter("src_size", src)
 	_bloom_material.set_shader_parameter("src_tex", rect.texture)
+	material.set_shader_parameter("bloom_tex", _bloom_view.get_texture())
+	fit()
+	print("postfx: on, bloom %s" % _bloom_view.size)
+
+
+## The picture changed size: everything worked out from it follows.
+func fit() -> void:
+	if _rect == null:
+		return
+	var src: Vector2 = _rect.texture.get_size()
+	var bloom := Vector2i(ceili(src.x / BLOOM_DIVISOR), ceili(src.y / BLOOM_DIVISOR))
+	_bloom_view.size = bloom
+	_bloom_paint.size = Vector2(bloom)
+	_bloom_material.set_shader_parameter("src_size", src)
 	material.set_shader_parameter("src_size", src)
 	material.set_shader_parameter("bloom_size", Vector2(bloom))
-	material.set_shader_parameter("bloom_tex", _bloom_view.get_texture())
-	print("postfx: on, bloom %dx%d" % [bloom.x, bloom.y])
 
 
 ## Back to the plain picture, pixels scaled as they are: the material comes off and the bloom's viewport goes away.
@@ -74,6 +82,7 @@ func detach() -> void:
 		_bloom_view.queue_free()
 	_rect = null
 	_bloom_view = null
+	_bloom_paint = null
 	material.set_shader_parameter("bloom_tex", null)
 	_bloom_material.set_shader_parameter("src_tex", null)
 	print("postfx: off")

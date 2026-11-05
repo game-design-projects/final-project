@@ -9,7 +9,11 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const RANGE := 12 # the farthest a cell can be seen, along either axis: the classic floor fits inside it, so a big one costs no more
 const STEP := 0.1 # how finely a line of sight is walked, in cells
 const BACK := 0.38 # how far behind the middle of your cell the camera stands, in cells (stage.gd stands it there)
+const CLOSE_BACK := 0.2 # the same with close-camera
 const VIEW_TAN := 1.0493 # the camera's field of view: tan of half its width, for FOV 68 at 448:288 (tools/view_test.gd checks it)
+static var back := BACK # where the camera stands now (the flow sets it, by close-camera)
+static var view_tan := VIEW_TAN # and how wide it sees (the scene sets it, as wide as the picture is)
+
 const SAMPLES := [Vector2(0, 0), Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)] # where in a cell a line may end, from its middle
 
 
@@ -31,7 +35,7 @@ static func sight(floor_map, from: Vector2i, facing: int) -> Array:
 	var fwd := Vector2(FloorMap.DIRS[facing])
 	var side := fwd.orthogonal()
 	var mid := Vector2(from) + Vector2(0.5, 0.5)
-	var eye := mid - fwd * BACK
+	var eye := mid - fwd * back
 	var out := [from]
 	for y in range(maxi(0, from.y - RANGE), mini(floor_map.size, from.y + RANGE + 1)):
 		for x in range(maxi(0, from.x - RANGE), mini(floor_map.size, from.x + RANGE + 1)):
@@ -42,7 +46,7 @@ static func sight(floor_map, from: Vector2i, facing: int) -> Array:
 			for o in SAMPLES:
 				var p: Vector2 = centre + o
 				var z := (p - eye).dot(fwd)
-				if z > 0.0 and absf((p - eye).dot(side)) <= z * VIEW_TAN and clear_line(floor_map, mid, p):
+				if z > 0.0 and absf((p - eye).dot(side)) <= z * view_tan and clear_line(floor_map, mid, p):
 					out.append(c)
 					break
 	return out

@@ -25,7 +25,6 @@ const CELL := Materials.CELL
 const SLAB_H := 0.03
 const FOV := 68.0
 const EYE := 0.85 # camera height
-const BACK := Vision.BACK # how far behind the middle of your cell the camera stands, in cells
 const STEP_MS := 150.0 # how long the camera takes over a step, a turn, and a lunge at a wall and back
 const TURN_MS := 170.0
 const BUMP_MS := 140.0
@@ -33,7 +32,6 @@ const LUNGE := 0.28 # how far the lunge goes, in world units
 const CALM_LUNGE := 0.35 # the share of it left with the `calm` setting
 const FLASH_S := 0.25
 # the name tags: real 3D text the same size on screen near or far, over the model's real top
-const VIEW_SIZE := Vector2(448.0, 288.0)
 const TAG_FONT_PX := 16
 const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels come out 8 view pixels tall: whole, so nearest stays sharp
 const TAG_GAP := 0.12 # above the head
@@ -264,7 +262,7 @@ func _name_tag(text: String, color: Color, top: float) -> Label3D:
 func _camera_target(cell: Vector2i, facing: int) -> Dictionary:
 	var fwd := Vector3(FloorMap.DIRS[facing].x, 0.0, FloorMap.DIRS[facing].y)
 	return {
-		"pos": DungeonMesh.center(cell) - fwd * CELL * BACK + Vector3(0.0, EYE, 0.0),
+		"pos": DungeonMesh.center(cell) - fwd * CELL * Vision.back + Vector3(0.0, EYE, 0.0),
 		"yaw": -facing * PI / 2.0,
 	}
 
@@ -492,7 +490,7 @@ func _pick_tags(state) -> void:
 		tag.set_meta("wanted", false)
 		if m.is_gone() or m.cell == state.cell or _camera.is_position_behind(tag.position) or not Vision.reaches(state.floor_map, from, m.cell):
 			continue
-		var at := project(tag.position, VIEW_SIZE)
+		var at := project(tag.position, Vector2(get_viewport().size))
 		var rect := Rect2(at.x - tag.text.length() * 4.0, at.y - 8.0, tag.text.length() * 8.0, 8.0).grow(5.0)
 		if not placed.any(func(r): return r.intersects(rect)):
 			placed.append(rect)

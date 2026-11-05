@@ -61,6 +61,8 @@ const FEATURES := {
 	"input-cooldown": "for a moment after a fight keys do nothing, and a key still held from it stays dropped until it is pressed again, so a mash can't walk you on",
 	"smooth-fight": "in a fight your soul glides between squares, and the battle screen fades back to the halls instead of cutting",
 	"heavy-strike": "HEAVY in a fight: a faster line and a smaller mark for a harder hit, which some monsters take worse than others, and a miss leaves you off balance",
+	"close-camera": "the camera stands nearer the middle of your cell, so a wall or a monster one cell away reads as close",
+	"wide-view": "the 3D picture follows the panel's shape instead of keeping 448:288 with black on both sides",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 
