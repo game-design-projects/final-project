@@ -37,7 +37,7 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 		{"label": "SAVE MANAGER", "sub": "Copy, rename, delete", "act": _go(panel, func(): return slot_list(panel, ctx, "manage"))},
 	]
 	if Flags.enabled("legacy"):
-		items.append({"label": "LEGACY", "sub": "%d embers to spend" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
+		items.append({"label": "LEGACY", "sub": "Embers to spend: %d" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
 	if Flags.enabled("achievements"):
 		items.append({"label": "ACHIEVEMENTS", "sub": "%d of %d" % [Progress.earned().size(), Achievements.ids().size()], "act": _go(panel, func(): return achievements())})
 	items.append_array([
@@ -288,7 +288,7 @@ static func legacy(panel) -> Dictionary:
 				Progress.buy(id)
 				panel.refresh(),
 		})
-	return {"title": "LEGACY · %d EMBERS" % Progress.embers(), "items": items, "hint": KEYS_HINT + " · Every run that ends leaves embers."}
+	return {"title": "LEGACY · EMBERS %d" % Progress.embers(), "items": items, "hint": KEYS_HINT + " · Every run that ends leaves embers."}
 
 
 ## What has been earned, by name. The rest stay a surprise.
