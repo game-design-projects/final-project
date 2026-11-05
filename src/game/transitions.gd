@@ -6,6 +6,7 @@
 ##      │                 │  ▶ fightbar   │
 ##      ▼                 ▼        ▼      ▼
 ##     end            wait ─▶ dodge ─▶ dead
+##   Enter on the walk sits you down: explore to camp and back.
 ##   SPARE that lands goes from menu to ask (it asks to come along), and from there back to explore.
 ##   HEAVY goes from menu to fightbar as FIGHT does. ITEM goes from menu to items and on like an ACT; walking into a trader goes from explore to trade and back, and into a monster with a request to request and back.
 ##   A fight that ends (spared, slain, a cut paid, fled) goes from menu, act, talk or fightbar straight back to explore,
@@ -14,7 +15,8 @@ extends RefCounted
 
 const ALLOWED := {
 	"": ["explore"], # a new run or a loaded one
-	"explore": ["intro", "end", "explore", "trade", "request"],
+	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
+	"camp": ["explore"],
 	"intro": ["menu"],
 	"menu": ["act", "items", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
 	"items": ["menu", "wait", "explore", "intro"],

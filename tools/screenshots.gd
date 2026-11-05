@@ -26,6 +26,7 @@ func _initialize() -> void:
 	root.add_child(menu)
 	await _wait(0.5)
 	await _shot("00_main_menu")
+	await _pages(menu)
 	menu.free()
 	var scene = load("res://src/gameplay/gameplay.tscn").instantiate()
 	root.add_child(scene)
@@ -39,9 +40,29 @@ func _initialize() -> void:
 	await _shot("00c_title_card_prompt")
 	await _game._begin()
 	await _wait(0.4)
+	await _camp()
 	await _walk_and_fight()
 	print("screenshots: written to %s" % _out)
 	quit()
+
+
+## The pages of what is kept between runs, with something on them. In memory: the tool runs with nosave.
+func _pages(menu) -> void:
+	var store = root.get_node("Store")
+	store.set_value("embers", 14)
+	store.set_value("achievements", ["words", "friend", "chest"])
+	var menus = load("res://src/menu/menus.gd")
+	var panel = menu.panel
+	panel.push(func(): return menus.legacy(panel))
+	await _wait(0.3)
+	await _shot("00d_legacy")
+	panel.pop()
+	panel.push(func(): return menus.achievements())
+	await _wait(0.3)
+	await _shot("00e_achievements")
+	panel.pop()
+	store.remove("embers")
+	store.remove("achievements")
 
 
 func _wait(seconds: float) -> void:
@@ -252,6 +273,34 @@ func _walk_and_fight() -> void:
 	await flow.go("end")
 	await _wait(0.3)
 	await _shot("11_end")
+
+
+## Sitting down: hungry, with a friend and something to eat, the question it asks, and a roast to share.
+func _camp() -> void:
+	var flow = _game.flow
+	var s = flow.state
+	var kept: Array = s.items.duplicate()
+	s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]
+	s.items = ["ration"]
+	s.hunger = 70.0
+	await _wait(0.2)
+	await _shot("01c_hungry")
+	await flow.press("confirm")
+	await _wait(0.3)
+	await _shot("01d_camp")
+	await flow.press("2")
+	await _wait(0.3)
+	await _shot("01e_camp_asks")
+	await flow.press("cancel")
+	s.items = ["roast", "ration"]
+	flow._stages["camp"]._fill(flow)
+	await _wait(0.3)
+	await _shot("01f_camp_roast")
+	await flow.press("cancel")
+	s.allies = []
+	s.items = kept
+	s.hunger = 0.0
+	await _wait(0.2)
 
 
 ## The cards over the picture and the touch pad, in the fight menu: the foe's mind (after a kind word, so it has something to say),

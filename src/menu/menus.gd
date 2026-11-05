@@ -6,7 +6,10 @@
 ## `save_slot` and `resume` exist only while a run is on screen, and `save_slot` only while walking, so the pages show what fits.
 extends RefCounted
 
+const Achievements = preload("res://src/rules/achievements.gd")
 const Flags = preload("res://src/utils/flags.gd")
+const Legacy = preload("res://src/rules/legacy.gd")
+const Progress = preload("res://src/menu/progress.gd")
 const Saves = preload("res://src/menu/saves.gd")
 const Settings = preload("res://src/menu/settings.gd")
 
@@ -32,9 +35,15 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 		{"label": "NEW GAME", "sub": "Five floors down to the Last Door" if Flags.enabled("real-floors") else "One floor, one run", "act": func(): ctx.new_game.call()},
 		{"label": "LOAD GAME", "disabled": not any_save, "act": _go(panel, func(): return slot_list(panel, ctx, "load"))},
 		{"label": "SAVE MANAGER", "sub": "Copy, rename, delete", "act": _go(panel, func(): return slot_list(panel, ctx, "manage"))},
+	]
+	if Flags.enabled("legacy"):
+		items.append({"label": "LEGACY", "sub": "%d embers to spend" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
+	if Flags.enabled("achievements"):
+		items.append({"label": "ACHIEVEMENTS", "sub": "%d of %d" % [Progress.earned().size(), Achievements.ids().size()], "act": _go(panel, func(): return achievements())})
+	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{"label": "CREDITS", "act": _go(panel, func(): return credits())},
-	]
+	])
 	if ctx.has("quit"):
 		items.append({"label": "QUIT GAME", "act": func(): ctx.quit.call()})
 	return {"title": "DONJON", "items": items, "hint": KEYS_HINT}
@@ -261,6 +270,37 @@ static func _do_delete_all(panel) -> void:
 
 
 # ---------------------------------------------------------------- credits
+
+## What the embers buy: a line per boon, with its next cost. Picking one buys that rank at once.
+static func legacy(panel) -> Dictionary:
+	var ranks := Progress.ranks()
+	var items := []
+	for id in Legacy.boons():
+		var rank: int = ranks.get(id, 0)
+		var cost := Legacy.next_cost(id, rank)
+		var name := str(Legacy.boons()[id].label)
+		var shown := "%s %d/%d" % [name, rank, Legacy.top_rank(id)]
+		items.append({
+			"label": "%s · FULL" % shown if cost < 0 else "%s · %d EMBERS" % [shown, cost],
+			"sub": Legacy.describe(id, mini(rank + 1, Legacy.top_rank(id))),
+			"disabled": cost < 0 or cost > Progress.embers(),
+			"act": func():
+				Progress.buy(id)
+				panel.refresh(),
+		})
+	return {"title": "LEGACY · %d EMBERS" % Progress.embers(), "items": items, "hint": KEYS_HINT + " · Every run that ends leaves embers."}
+
+
+## What has been earned, by name. The rest stay a surprise.
+static func achievements() -> Dictionary:
+	var earned := Progress.earned()
+	var lines := []
+	for id in earned:
+		var info := Achievements.info(str(id))
+		lines.append("[color=#ffd27a]%s[/color]\n%s" % [str(info.label), str(info.text)])
+	var body := "\n\n".join(lines) if not lines.is_empty() else "Nothing yet. Go and do something worth remembering."
+	return {"title": "ACHIEVEMENTS · %d OF %d" % [earned.size(), Achievements.ids().size()], "body": body, "items": [], "hint": "UP / DOWN SCROLL · ESC BACK"}
+
 
 static func credits() -> Dictionary:
 	var text := FileAccess.get_file_as_string("res://assets/CREDITS.txt").replace("[", "[lb]")

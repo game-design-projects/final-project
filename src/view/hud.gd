@@ -8,6 +8,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Survival = preload("res://src/rules/survival.gd")
 
 enum Part { HEADER, STATUS, DOCK }
 
@@ -226,6 +227,10 @@ func _status() -> void:
 	for piece in [["HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU], ["   GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY]]:
 		_text(_title, piece[0], Vector2(x, y), 9, piece[1])
 		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var hunger: String = Survival.stage_of(state.hunger).to_upper() if state.viewing("hunger") else ""
+	if hunger != "":
+		_text(_title, "   " + hunger, Vector2(x, y), 9, Palette.WARN if hunger == "STARVING" else Palette.MERCY)
+		x += _title.get_string_size("   " + hunger, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	var bar := Rect2(maxf(x, 150.0) + 12.0, size.y * 0.5 - 6.0, 0.0, 12.0)
 	bar.size.x = size.x - bar.position.x
 	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)

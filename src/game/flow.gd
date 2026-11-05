@@ -7,6 +7,7 @@
 extends RefCounted
 
 const Coach = preload("res://src/game/coach.gd")
+const Trophies = preload("res://src/game/trophies.gd")
 const Dice = preload("res://src/utils/dice.gd")
 const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
@@ -14,16 +15,18 @@ const FloorGen = preload("res://src/rules/floor_gen.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
+const Legacy = preload("res://src/rules/legacy.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
+const Survival = preload("res://src/rules/survival.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger"]
 const BANNER_MS := 3000.0
 const WALK_HEAL_STEPS := 6
 const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]
@@ -38,6 +41,7 @@ const STAGES := {
 	"act": preload("res://src/game/stages/act.gd"),
 	"items": preload("res://src/game/stages/items.gd"),
 	"trade": preload("res://src/game/stages/trade.gd"),
+	"camp": preload("res://src/game/stages/camp.gd"),
 	"request": preload("res://src/game/stages/request.gd"),
 	"talk": preload("res://src/game/stages/talk.gd"),
 	"fightbar": preload("res://src/game/stages/fightbar.gd"),
@@ -62,6 +66,9 @@ var clock := 0.0
 var busy := false
 ## The setting EASY DODGE, which the scene hands in: the game doesn't read settings itself.
 var coach # the first-time tips
+var trophies # the achievements
+## The boons bought between runs (boon id -> rank), which the scene hands in: the game doesn't read what is kept itself.
+var legacy_ranks := {}
 var easy_dodge := false
 ## The personality slice (personality_slice.gd): while `dice` is pinned, every chance of an interaction (the cut,
 ## the answer, a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds
@@ -82,6 +89,7 @@ func _init(game_rng, game_mind) -> void:
 	mind = game_mind
 	encounter = Encounter.new(self)
 	coach = Coach.new(self)
+	trophies = Trophies.new(self)
 	for name in STAGES:
 		_stages[name] = STAGES[name].new()
 	state = State.new()
@@ -102,6 +110,8 @@ func new_run() -> void:
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.run_seed = rng.seed_value
 	_apply_features()
+	if feature("legacy"):
+		Legacy.apply(state, legacy_ranks)
 	_make_floor()
 	encounter.pending_notes = []
 	encounter.pending_rows = []
@@ -123,6 +133,8 @@ func next_floor(way := {}) -> void:
 	state.foe = null
 	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal() + int(way.get("rest", 0)))
 	state.gold += int(way.get("gold", 0))
+	if feature("hunger"):
+		Survival.rest(state)
 	_make_floor(way)
 	encounter.pending_notes = []
 	encounter.pending_rows = []
@@ -131,7 +143,20 @@ func next_floor(way := {}) -> void:
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
 		announce(biome.name, biome.line)
+	if Floors.is_last(state.depth):
+		event("reached_last")
 	await go("explore", {"lines": _arrival()})
+
+
+## This run is over for good: at the last stairs, or given up after a fall. What it earned in all (0 without the feature legacy). The scene
+## pays it; a run left and loaded again pays only what is new.
+func close_run(cleared: bool) -> int:
+	if not feature("legacy"):
+		return 0
+	var embers := Legacy.earned(state, cleared)
+	print("flow: run closed, %d embers" % embers)
+	event("run_closed", {"embers": embers})
+	return embers
 
 
 ## What the views read from the state rather than ask the flags, because the personality slice has them off.
@@ -177,6 +202,7 @@ func _make_floor(way := {}) -> void:
 		if feature("secrets"):
 			plan.secrets = Floors.secrets(plan.get("biome", {}))
 		plan.items = feature("items")
+		plan.food = feature("items") and feature("hunger")
 		plan.shop = feature("items") and feature("shop") and Items.shop_on(state.depth)
 		plan.lurkers = feature("lurkers")
 		plan.request = feature("npcs") and Requests.due(state.depth)

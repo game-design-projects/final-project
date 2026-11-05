@@ -31,6 +31,13 @@ const FIELDS := {
 	"dead": [],
 	"coach": ["id"], # a first-time tip went up
 	"stairs": [], # reached the stairs
+	"reached_last": [], # came down to the run's last floor
+	"run_ended": ["how"], # the run ended at the stairs: "cleared" or "lonely"
+	"run_closed": ["embers"], # the run is over for good, having earned this many embers in all (the feature legacy)
+	"trophy": ["id"], # an achievement was earned; the scene keeps it
+	"found": ["what"], # you found something on the floor: "chest"
+	"butchered": ["species"], # a friend went into the bag
+	"found_out": ["species"], # a friend worked out what happened to another
 	"state_replaced": ["how"], # a new run ("new"), the next floor ("floor") or a loaded save ("load") replaced the game state; whoever holds the old one must let go
 	"pause_requested": [],
 	"leave": ["to"], # the player chose to go back to the main menu

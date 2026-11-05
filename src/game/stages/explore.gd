@@ -9,17 +9,19 @@ const Roaming = preload("res://src/rules/roaming.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const State = preload("res://src/game/state.gd")
+const Survival = preload("res://src/rules/survival.gd")
 
 const SIGHT_AHEAD := 6 # how many cells down a straight line the first-time tips look
 
 const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · I INFO · ESC MENU"
+const CAMP_HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · ENTER CAMP · I INFO · ESC MENU"
 
 
 func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	s.foe = null
 	s.menu = []
-	s.hint = HINT
+	s.hint = CAMP_HINT if _can_camp(flow) else HINT
 	if args.has("lines"):
 		s.say(args.lines)
 
@@ -37,8 +39,15 @@ func handle(flow, key: String) -> void:
 		"right":
 			s.turn(1)
 			_notice(flow)
+		"confirm":
+			if _can_camp(flow):
+				await flow.go("camp")
 		"cancel":
 			flow.event("pause_requested")
+
+
+func _can_camp(flow) -> bool:
+	return flow.feature("hunger") or flow.feature("butcher")
 
 
 func _step(flow, backwards: bool) -> void:
@@ -67,9 +76,13 @@ func _step(flow, backwards: bool) -> void:
 	s.visited[next] = true
 	s.look()
 	flow.event("step")
+	var fed := true
+	if flow.feature("hunger"):
+		fed = Survival.heals(s)
+		_get_hungrier(flow)
 	if flow.feature("walk-heal"):
 		s.steps += 1
-		if s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
+		if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 			s.hp += 1
 	_find_secrets(flow)
 	if s.cell == s.floor_map.stairs:
@@ -78,6 +91,16 @@ func _step(flow, backwards: bool) -> void:
 	if flow.feature("roaming") and await _monsters_move(flow):
 		return
 	_notice(flow)
+
+
+func _get_hungrier(flow) -> void:
+	var s = flow.state
+	var done := Survival.walk(s)
+	if done.crossed != "":
+		s.say([State.sys_line(Survival.line(done.crossed))])
+		flow.event("sound", {"name": "odd"})
+		flow.coach.say("hungry")
+		print("explore: %s after %d steps" % [done.crossed, s.steps])
 
 
 ## Everybody's turn. True when one of them walked into you, and the fight is on.
@@ -123,6 +146,7 @@ func _find_secrets(flow) -> void:
 		s.gold += gold
 		s.say([State.sys_line(Floors.secret_line("chest") % gold)])
 		print("explore: a chest at %s, %d gold" % [s.cell, gold])
+		flow.event("found", {"what": "chest"})
 		flow.event("sound", {"name": "good"})
 	var found: String = s.floor_map.pickup_at(s.cell)
 	if found != "":

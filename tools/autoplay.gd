@@ -9,6 +9,8 @@ extends SceneTree
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Flags = preload("res://src/utils/flags.gd")
+const Items = preload("res://src/rules/items.gd")
+const Survival = preload("res://src/rules/survival.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -82,7 +84,14 @@ func _press_something(flow) -> void:
 	var s = flow.state
 	match s.stage:
 		"explore":
-			await flow.press(_explore_key(s))
+			if flow.feature("hunger") and Survival.stage_of(s.hunger) != "" and s.items.any(func(id): return str(Items.info(id).kind) == "food"):
+				await flow.press("confirm")
+			else:
+				await flow.press(_explore_key(s))
+		"camp":
+			await flow.press("1") # food is listed first, and LEAVE last: it eats what there is and gets up
+		"trade", "request":
+			await flow.press("cancel")
 		"menu", "act":
 			if _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
 				await flow.press(str(_kindest_act(flow)))

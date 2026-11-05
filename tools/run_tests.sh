@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 GODOT="${GODOT:-godot}"
 OUT="${TMPDIR:-/tmp}/donjon-tests"
 mkdir -p "$OUT"
-SUITES=(rules_test gameplay_test slice_test menu_test saves_test network_test view_test audio_test map_test)
+SUITES=(rules_test gameplay_test slice_test menu_test saves_test network_test view_test audio_test map_test meta_test)
 failed=0
 
 run_mode() {

@@ -1,0 +1,36 @@
+{
+ "hunger": {
+  "per_step": 0.32,
+  "hungry_at": 60.0,
+  "starving_at": 100.0,
+  "starve_every": 5,
+  "per_floor": -20.0
+ },
+ "butcher": {
+  "roasts": 2,
+  "feed_loyalty": 14.0,
+  "notice": {"slime": 0.05, "bandit": 0.18, "snake": 0.24, "rock": 0.06, "dragon": 0.14},
+  "notice_at_butcher": 0.2,
+  "notice_per_meal": 0.05,
+  "told_loyalty": -35.0,
+  "clan_worth": -20.0
+ },
+ "lines": {
+  "camp": "You sit down with your back to a wall.",
+  "leave": "You get up and go on.",
+  "nothing": "Nothing to eat, and nobody to share it with.",
+  "ate": "You eat %s. %d health back.",
+  "hungry": "Your stomach has started talking.",
+  "starving": "You are starving. Every few steps costs you.",
+  "ask": "%s has come a long way with you. Are you sure?",
+  "butchered": "You send %s off ahead, and follow it round the corner with the knife. %d %s for the bag.",
+  "no_room": "Your bag has no room for what is left.",
+  "fed": "You hand %s a hot bowl. It eats everything, and it likes you better for it.",
+  "found_out": "%s stops chewing. It looks at the bowl, then at you. It knows. It walks out, and it will tell.",
+  "witness": "%s saw you come back alone, with the knife. It walks out, and it will tell.",
+  "told": "%s heard what you did. It keeps its distance now.",
+  "sold": "The trader sniffs the %s, doesn't ask, and pays %d gold. %d gold now.",
+  "kept": "Nobody ever asked what was in the stew.",
+  "known": "Everyone down here knows what was in the stew."
+ }
+}

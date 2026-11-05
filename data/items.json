@@ -27,6 +27,8 @@
   "ring": {"label": "STOLEN RING", "kind": "gift", "loves": "bandit", "price": 7, "weight": 2, "sub": "A gift. Bandits adore it; anyone else only shrugs."},
   "egg": {"label": "WARM EGG", "kind": "gift", "loves": "snake", "price": 7, "weight": 2, "sub": "A gift. Snakes adore it; anyone else only shrugs."},
   "moss": {"label": "OLD MOSS", "kind": "gift", "loves": "rock", "price": 7, "weight": 2, "sub": "A gift. Rocks adore it; anyone else only shrugs."},
+  "ration": {"label": "RATION", "kind": "food", "food": 45, "amount": 3, "price": 3, "weight": 0, "sub": "Dry, and it fills you. Heals 3."},
+  "roast": {"label": "ROAST", "kind": "food", "food": 60, "amount": 8, "price": 0, "weight": 0, "sell": 9, "sub": "It smells wonderful. Heals 8. A trader would pay for it."},
   "ember": {"label": "LAST EMBER", "kind": "gift", "loves": "dragon", "price": 12, "weight": 1, "sub": "A gift. Champions adore it; anyone else only shrugs."}
  }
 }

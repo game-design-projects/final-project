@@ -11,6 +11,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Items = preload("res://src/rules/items.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Requests = preload("res://src/rules/requests.gd")
+const Survival = preload("res://src/rules/survival.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
 const DEPTH_MAX := 99
@@ -50,6 +51,11 @@ var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
+var hunger := 0.0 # 0 fed .. rules/survival.gd's starving_at
+var starved_steps := 0 # steps walked starving
+var butchered: Array = [] # {species, name}: the friends who went into the bag
+var meals := 0 # how many bowls you have fed the others
+var found_out := false # one of them worked it out
 
 # the fight
 var foe # Monster, or null when not in a fight
@@ -157,6 +163,7 @@ func to_dict() -> Dictionary:
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
 		"reputation": reputation.duplicate(), "deeds": deeds.duplicate(),
 		"items": items.duplicate(), "sharpened": sharpened, "heavyKnown": heavy_known.keys(),
+		"hunger": hunger, "starvedSteps": starved_steps, "butchered": butchered.duplicate(true), "meals": meals, "foundOut": found_out,
 	}
 
 
@@ -204,6 +211,13 @@ static func from_dict(d: Dictionary):
 	for species in d.get("heavyKnown", []) if d.get("heavyKnown") is Array else []:
 		if Combat.HEAVY_WEAK.has(str(species)):
 			s.heavy_known[str(species)] = true
+	s.hunger = clampf(float(d.hunger), 0.0, float(Survival.table().hunger.starving_at)) if _is_num(d.get("hunger")) else 0.0
+	s.starved_steps = maxi(0, _int(d.starvedSteps)) if _is_num(d.get("starvedSteps")) else 0
+	s.meals = maxi(0, _int(d.meals)) if _is_num(d.get("meals")) else 0
+	s.found_out = d.get("foundOut") == true
+	for b in d.get("butchered", []) if d.get("butchered") is Array else []:
+		if b is Dictionary and b.get("species") is String and b.get("name") is String:
+			s.butchered.append({"species": b.species, "name": b.name})
 	for a in d.allies.slice(0, Combat.PARTY_MAX):
 		var ally = Ally.from_dict(a)
 		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)

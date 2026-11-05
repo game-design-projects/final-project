@@ -4,6 +4,7 @@ extends "res://src/game/stages/list_stage.gd"
 const Encounter = preload("res://src/game/encounter.gd")
 const Items = preload("res://src/rules/items.gd")
 const State = preload("res://src/game/state.gd")
+const Survival = preload("res://src/rules/survival.gd")
 const Texts = preload("res://src/game/texts.gd")
 
 
@@ -28,6 +29,11 @@ func pick(flow, index: int) -> void:
 			print("items: %s healed %d" % [id, healed])
 			var pressure: float = await flow.mind.pressure(m)
 			await flow.encounter.after_player([State.sys_line(Items.line("healed") % [what, healed])], {"pressure": pressure, "pacified": false})
+		"food":
+			var healed := Survival.eat(s, index)
+			flow.event("sound", {"name": "good"})
+			var pressure: float = await flow.mind.pressure(m)
+			await flow.encounter.after_player([State.sys_line(Survival.line("ate") % [what, healed])], {"pressure": pressure, "pacified": false})
 		"sharpen":
 			s.items.remove_at(index)
 			s.sharpened += int(item.amount)

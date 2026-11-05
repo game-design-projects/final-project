@@ -5,7 +5,9 @@
 extends "res://src/game/stages/list_stage.gd"
 
 const Floors = preload("res://src/rules/floors.gd")
+const Legacy = preload("res://src/rules/legacy.gd")
 const State = preload("res://src/game/state.gd")
+const Survival = preload("res://src/rules/survival.gd")
 const Texts = preload("res://src/game/texts.gd")
 
 const TURN_BACK := 0
@@ -43,10 +45,17 @@ func enter(flow, _args: Dictionary) -> void:
 	s.hint = "ENTER PICK · ESC MAIN MENU"
 
 
-func _finish(flow, ending: Dictionary) -> void:
+func _finish(flow, ending: Dictionary, how := "cleared") -> void:
 	var s = flow.state
 	s.run_over = true
-	s.say([State.speech(ending.route, ending.text), State.sys_line(ending.tail)])
+	flow.event("run_ended", {"how": how})
+	var embers: int = flow.close_run(how == "cleared")
+	var tail: String = ending.tail
+	if flow.feature("butcher") and Survival.ending_note(s) != "":
+		tail = Survival.ending_note(s)
+	elif embers > 0:
+		tail += " " + Legacy.line("carried") % embers
+	s.say([State.speech(ending.route, ending.text), State.sys_line(tail)])
 	s.menu = [{"label": "NEW RUN" if flow.feature("real-floors") else "NEW FLOOR", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
 	print("end: %s" % ending.route)
 
@@ -59,7 +68,7 @@ func pick(flow, index: int) -> void:
 			LEAVE_ALONE:
 				_at_door = false
 				flow.state.selected = 0
-				_finish(flow, Texts.lonely_ending())
+				_finish(flow, Texts.lonely_ending(), "lonely")
 			_:
 				flow.event("leave", {"to": "menu"})
 		return

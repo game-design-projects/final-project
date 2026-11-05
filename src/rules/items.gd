@@ -4,6 +4,8 @@ extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
 
+const FOOD := "ration" # a floor with hunger on it leaves one about, and a trader always has one
+
 
 static func table() -> Dictionary:
 	return Content.table("items")
@@ -47,6 +49,8 @@ static func floor_finds(rng, plan: Dictionary) -> Array:
 	var favours: Dictionary = plan.get("biome", {}).get("weights", {})
 	while out.size() < int(table().pickups_per_floor):
 		out.append(_draw(rng, favours, out))
+	if plan.get("food", false):
+		out.append(FOOD)
 	return out
 
 
@@ -55,6 +59,8 @@ static func stock(rng, plan: Dictionary) -> Array:
 	var out := []
 	while out.size() < int(table().stock):
 		out.append(_draw(rng, plan.get("biome", {}).get("weights", {}), out))
+	if plan.get("food", false):
+		out.append(FOOD)
 	return out
 
 
@@ -84,6 +90,8 @@ static func _draw(rng, favours: Dictionary, already: Array) -> String:
 		if id in already:
 			continue
 		var w := _weight(id, favours)
+		if w <= 0.0: # food comes on its own terms, and nobody finds a roast lying about
+			continue
 		pool.append([id, w])
 		total += w
 	var roll: float = rng.real() * total

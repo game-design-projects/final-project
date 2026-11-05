@@ -17,6 +17,7 @@ const Network = preload("res://src/network/network.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pad = preload("res://src/view/pad.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Progress = preload("res://src/menu/progress.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const PostFx = preload("res://src/view/postfx.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -100,6 +101,9 @@ func _ready() -> void:
 	flow.happened.connect(_on_event)
 	for id in Settings.get_value("seen_tips"):
 		flow.coach.seen[str(id)] = true
+	for id in Progress.earned():
+		flow.trophies.earned[str(id)] = true
+	flow.legacy_ranks = Progress.ranks()
 	_fit_picture()
 	_debug = Flags.on("debug")
 	_tips.debug = _debug
@@ -272,7 +276,7 @@ func _process(dt: float) -> void:
 	_stage.calm = Settings.get_value("calm")
 	_stage.update(s, _clock_ms / 1000.0, dt)
 	_overlay.clock_ms = _clock_ms
-	_automap.visible = s.floor_map != null and s.stage in ["explore", "end", "trade", "request"]
+	_automap.visible = s.floor_map != null and s.stage in ["explore", "end", "trade", "request", "camp"]
 	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
 	_postfx.update(dt)
@@ -464,6 +468,11 @@ func _on_event(name: String, data: Dictionary) -> void:
 				_postfx.flash(Palette.MERCY, 0.45 * _softness())
 		"coach":
 			Settings.set_value("seen_tips", flow.coach.seen.keys())
+		"trophy":
+			Progress.earn(data.id)
+		"run_closed":
+			Progress.pay(s.run_seed, data.embers)
+			flow.legacy_ranks = Progress.ranks()
 		"mercy_changed":
 			var up: bool = data.to > data.from
 			_overlay.popup("%+d%% MERCY" % (roundi(data.to * 100.0) - roundi(data.from * 100.0)), Palette.MERCY if up else Palette.DIM, Vector2(150, 62))

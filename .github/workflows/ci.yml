@@ -91,6 +91,11 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/features_test.gd -- nosave nosound
+      # What outlasts a run: achievements, Legacy, hunger, camp and butchering, and a save without any of them.
+      - name: Check what outlasts a run
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/meta_test.gd -- nosave nosound
       # Every suite again with `classic`: with the features off the game is what it was before them.
       - name: Check the game without the features
         run: tools/run_tests.sh classic

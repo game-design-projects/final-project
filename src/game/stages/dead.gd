@@ -24,6 +24,8 @@ func pick(flow, index: int) -> void:
 		RETRY:
 			await flow.encounter.retry_fight()
 		NEW_FLOOR:
+			flow.close_run(false)
 			await flow.new_run()
 		MAIN_MENU:
+			flow.close_run(false)
 			flow.event("leave", {"to": "menu"})

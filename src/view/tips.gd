@@ -164,14 +164,14 @@ func _allowed(key: String) -> bool:
 	if key == "foe":
 		return state.foe != null and state.stage in CARD_STAGES
 	if key == "map":
-		return state.stage in ["explore", "end", "trade", "request"]
+		return state.stage in ["explore", "end", "trade", "request", "camp"]
 	if key == "chat":
 		return state.viewing("chat") and not state.chat.is_empty() and state.stage in CARD_STAGES
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
 		var i := int(key.substr(7))
-		return state.stage in ["menu", "act", "items", "trade", "request"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
+		return state.stage in ["menu", "act", "items", "trade", "request", "camp"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
 	return false
 
 

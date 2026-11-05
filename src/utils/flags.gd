@@ -67,6 +67,10 @@ const FEATURES := {
 	"wide-view": "the 3D picture follows the panel's shape instead of keeping 448:288 with black on both sides",
 	"sprite-look": "the walk models are shaped after the fight sprites, outline and face, so a monster looks the same in both views",
 	"motifs": "exploring takes turns with Abdulla's motifs (issue #49), if tools/music/cut_motifs.sh has put them in build/motifs/: nothing ships, so without those files nothing changes",
+	"achievements": "deeds worth keeping go up on the picture and stay earned across runs, with a page in the main menu",
+	"legacy": "a run that ends leaves embers, which buy boons between runs that every later run starts with",
+	"hunger": "walking wears on you: hungry, the walk stops healing; starving, it costs health. Enter makes camp to eat, and floors have food",
+	"butcher": "at camp a friend can become roasts: eat them, sell them to a trader, or feed them to the others, who like you for it until one works it out",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

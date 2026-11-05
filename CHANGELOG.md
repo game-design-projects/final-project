@@ -30,6 +30,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - `roaming`: monsters take a turn each step you take, as who they are and how they feel say, the map shows where you last saw them, and backing out of a fight makes one hold still for a few steps.
 - `boss-chase`: a champion you have seen comes after you, unless it is holding the stairs.
 - `motifs`: Abdulla's FluidSynth motifs take turns with the exploring music if `tools/music/cut_motifs.sh` has put them in `build/motifs/`; `motif=N` tries one, and none of it ships.
+- `achievements`: deeds worth keeping go up on the picture and stay earned across runs, with a page in the main menu.
+- `legacy`: a run that ends leaves embers, which buy boons on a new main menu page that every later run starts with.
+- `hunger`: walking wears on you until the walk stops healing and then costs health; Enter makes camp to eat, floors leave rations about and traders sell them.
+- `butcher`: at camp a friend can become roasts, to eat, to sell to a trader who won't ask, or to feed to the others, who like you for it until one works it out, leaves and tells.
 - `input-cooldown`: keys do nothing for a moment after a fight, and a key held from it stays dropped until pressed again.
 - `smooth-fight`: your soul glides between squares in a fight, and the battle screen fades back to the halls.
 - `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.

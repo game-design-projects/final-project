@@ -1,0 +1,16 @@
+{
+ "earn": {"spared": 2, "recruited": 3, "slain": 1, "floor": 2, "cleared": 6},
+ "boons": {
+  "skin": {"label": "THICKER SKIN", "sub": "Start every run with %d more max HP.", "max_hp": 3, "cost": [6, 12, 20]},
+  "purse": {"label": "OLD PURSE", "sub": "Start every run with %d more gold.", "gold": 4, "cost": [5, 10, 16]},
+  "satchel": {"label": "PACKED SATCHEL", "sub": "Start every run with %d salves in the bag.", "item": "salve", "cost": [8, 16]},
+  "edge": {"label": "KEPT EDGE", "sub": "Your first strike of a run hits %d harder.", "sharpened": 3, "cost": [6, 14]}
+ },
+ "lines": {
+  "title": "LEGACY",
+  "carried": "You carry %d embers out of the dark.",
+  "bought": "%s, rank %d.",
+  "poor": "%s needs %d embers.",
+  "full": "%s can't go any higher."
+ }
+}
