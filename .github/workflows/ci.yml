@@ -86,6 +86,14 @@ jobs:
         run: |
           set -euo pipefail
           godot --headless --path . -s res://tools/audio_test.gd -- nosave
+      # What the feature flags add: each feature with its flag on and off (it switches them itself).
+      - name: Check the features
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/features_test.gd -- nosave nosound
+      # Every suite again with `classic`: with the features off the game is what it was before them.
+      - name: Check the game without the features
+        run: tools/run_tests.sh classic
 
   build:
     needs: check

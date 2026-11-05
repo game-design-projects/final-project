@@ -27,6 +27,13 @@ const REACHABLE := [
 ]
 const VOICE_KINDS := ["roar", "bark", "grunt", "growl", "hiss", "squelch", "laugh", "squeal", "whimper", "sigh", "rumble", "zap", "babble"]
 const NOW_ONLY := ["step", "beat", "mercy_refused", "shout", "move", "pick"]
+## The kinds of line the bank was rendered for, which must keep finding their recordings.
+const RENDERED_KINDS := [
+	"attack", "special", "defend", "flee", "converse", "not_ready", "demand_tribute", "accept_tribute", "refuse_tribute",
+	"join_party", "leave_peacefully", "attack_monster",
+]
+## The kinds written since, which the synthesised voice says until tools/voices renders them; then they move to the list above.
+const AWAITING_RENDER := ["pleased", "stung", "kin_spared", "kin_slain", "side_spared", "side_slain"]
 
 
 ## Stands in for the effects: remembers what it was asked to play.
@@ -412,10 +419,17 @@ func _voice_keys() -> void:
 	var spoken := 0
 	var found := 0
 	var stage_only := 0
+	var waiting := 0
+	var unknown_kinds := {}
 	var unrecorded := []
 	for species in ["bandit", "dragon", "slime", "snake", "rock"]:
 		var sp := Content.species(species)
 		for kind in sp.lines:
+			if kind in AWAITING_RENDER:
+				waiting += sp.lines[kind].size() * sp.names.size()
+				continue
+			if not kind in RENDERED_KINDS:
+				unknown_kinds[kind] = true
 			for line in sp.lines[kind]:
 				for who in sp.names:
 					var text := Content.fill(line, {"name": who.left(1) + who.substr(1).to_lower(), "target": "you"})
@@ -427,7 +441,8 @@ func _voice_keys() -> void:
 						found += 1
 					elif unrecorded.size() < 6:
 						unrecorded.append("%s: %s" % [species, text])
-	print("audio_test: %d of %d spoken roster lines have a recording, %d are stage directions only; first misses: %s" % [found, spoken, stage_only, unrecorded])
+	print("audio_test: %d of %d spoken roster lines have a recording, %d are stage directions only, %d wait for a render (%s); first misses: %s" % [found, spoken, stage_only, waiting, AWAITING_RENDER, unrecorded])
+	_check(unknown_kinds.is_empty(), "a new kind of line is rendered or named in AWAITING_RENDER (%s)" % [unknown_kinds.keys()])
 	_check(spoken > 150 and float(found) / spoken >= 0.9, "nearly every line with words finds its recording: %d of %d" % [found, spoken])
 
 

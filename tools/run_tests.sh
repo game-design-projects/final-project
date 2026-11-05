@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 GODOT="${GODOT:-godot}"
 OUT="${TMPDIR:-/tmp}/donjon-tests"
 mkdir -p "$OUT"
-SUITES=(rules_test gameplay_test slice_test menu_test saves_test network_test view_test)
+SUITES=(rules_test gameplay_test slice_test menu_test saves_test network_test view_test audio_test)
 failed=0
 
 run_mode() {
@@ -19,7 +19,11 @@ run_mode() {
 	for t in "${SUITES[@]}"; do
 		local log="$OUT/$mode-$t.log"
 		local code=0
-		timeout 170 "$GODOT" --headless --path . -s "res://tools/$t.gd" -- nosave nosound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
+		local sound=nosound
+		if [ "$t" = audio_test ]; then
+			sound="" # it builds the audio buses
+		fi
+		timeout 170 "$GODOT" --headless --path . -s "res://tools/$t.gd" -- nosave $sound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
 		local fails
 		fails=$(grep -c ' FAIL ' "$log" || true)
 		if ! grep -q 'all checks passed' "$log"; then
