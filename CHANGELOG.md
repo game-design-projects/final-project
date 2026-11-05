@@ -50,6 +50,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - A monster whose fight was tried again no longer leaves its old model standing on the floor.
 - Monster lines no longer break into crawling dots where a part sits close in front of another: the ink spreads across the view only, the bandit's face is drawn on it, and the snake's head stands clear of its hood.
 - The snake's tongue slides in and out instead of blinking on and off.
+- A monster's name no longer hangs over a wall when only the far corner of its cell is in line and the monster itself is hidden.
+- Holding a key against a wall lunges at it once, instead of about six times a second with the bump sound each time.
 - `audio_test` no longer fails on the kinds of line that have no recording yet: they are named in `AWAITING_RENDER` until `tools/voices` renders them.
 
 ## [0.6.1] - 2026-11-03

@@ -528,6 +528,7 @@ func _every_monster_stands_on_the_set() -> void:
 
 
 func _name_tags() -> void:
+	_no_name_without_a_body()
 	var f := _floor(["##########", "#........#", "##########", "#........#", "##########"])
 	var near = load("res://src/rules/monster.gd").new()
 	near.species = "slime"
@@ -779,7 +780,50 @@ func _held_key_waits_for_the_camera() -> void:
 	await process_frame
 	await scene.flow.press("up")
 	_check(scene._stage.moving(), "walking into a wall lunges the camera")
+	# the key stays down against that wall: the one lunge, not one every time the key repeats
+	var bumps := [0]
+	var count_bumps := func(n, _d):
+		if n == "bump":
+			bumps[0] += 1
+	scene.flow.happened.connect(count_bumps)
+	scene._clock_ms += 1000.0
+	await process_frame
+	await process_frame
+	await scene.flow.press("up", true)
+	await process_frame
+	await process_frame
+	_check(bumps[0] == 0 and not scene._stage.moving(), "a held key doesn't lunge at the wall again and again")
+	await scene.flow.press("up")
+	_check(bumps[0] == 1, "a fresh press does")
 	scene.free()
+
+
+## Round a corner: only the far corner of the monster's cell shows, so it has no name yet, as nothing stands there to name. A step on it has.
+func _no_name_without_a_body() -> void:
+	var f := _floor(["#######", "#.....#", "#####.#", "#####.#", "#######"])
+	var m = load("res://src/rules/monster.gd").new()
+	m.species = "slime"
+	m.genre = "bullet"
+	m.cell = Vector2i(5, 2)
+	f.monsters = [m]
+	var s = State.new()
+	s.floor_map = f
+	s.cell = Vector2i(3, 1)
+	s.facing = EAST
+	var stage = _stage_for(s)
+	var t := 0.0
+	for i in 30:
+		t += FRAME
+		stage.update(s, t, FRAME)
+	var eye := Vector2(3.5 - Vision.back, 1.5)
+	_check(Vision.reaches(f, eye, m.cell) and not Vision.sees_body(f, eye, m.cell), "from here a corner of its cell shows and the monster doesn't")
+	_check(not stage._tags[m].get_meta("wanted"), "a monster you can't see has no name hanging over the wall")
+	s.cell = Vector2i(4, 1)
+	for i in 30:
+		t += FRAME
+		stage.update(s, t, FRAME)
+	_check(stage._tags[m].get_meta("wanted"), "and a step on, when it can be seen, it has")
+	stage.free()
 
 
 ## The flat battle screen: the flash as a fight begins, mercy by the name, and what the dodge box shows.

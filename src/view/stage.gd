@@ -414,7 +414,7 @@ func _show_figure(figure: Node3D, tag: Label3D, f, cell: Vector2i, now: float) -
 	var to_you := _camera.position - figure.position
 	figure.rotation.y = atan2(to_you.x, to_you.z)
 	MonsterModel.pose(figure, now, 0.0)
-	tag.visible = Vision.reaches(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), cell)
+	tag.visible = Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), cell)
 
 
 ## Something stirring goes round and round where it waits, until you walk into it.
@@ -432,7 +432,7 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 	var stir: Node3D = _stirs[m]
 	stir.visible = true
 	stir.rotation.y = now * STIR_TURN
-	stir.get_child(0).visible = Vision.reaches(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), m.cell)
+	stir.get_child(0).visible = Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), m.cell)
 
 
 func _add_monster(m) -> void:
@@ -490,7 +490,7 @@ func _pick_tags(state) -> void:
 	for m in order:
 		var tag: Label3D = _tags[m]
 		tag.set_meta("wanted", false)
-		if m.is_gone() or m.cell == state.cell or _camera.is_position_behind(tag.position) or not Vision.reaches(state.floor_map, from, m.cell):
+		if m.is_gone() or m.cell == state.cell or _camera.is_position_behind(tag.position) or not Vision.sees_body(state.floor_map, from, m.cell):
 			continue
 		var at := project(tag.position, Vector2(get_viewport().size))
 		var rect := Rect2(at.x - tag.text.length() * 4.0, at.y - 8.0, tag.text.length() * 8.0, 8.0).grow(5.0)

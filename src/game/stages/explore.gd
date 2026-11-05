@@ -58,7 +58,8 @@ func _step(flow, backwards: bool) -> void:
 		_break_wall(flow, next)
 		return
 	if not s.floor_map.is_open(next):
-		flow.event("bump")
+		if not flow.repeating: # a key held against the wall lunges once, not at every repeat
+			flow.event("bump")
 		return
 	var monster = s.floor_map.monster_at(next)
 	if monster != null:

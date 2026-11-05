@@ -80,6 +80,7 @@ var slice_floor := false
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
 var _keys_back_at := -1.0 # keys do nothing until the clock says this, once a fight is over
+var repeating := false # the key being handled is one repeating by itself, not one just pressed
 var _held_over := false # a key still held from the fight stays dropped until something is pressed afresh
 
 
@@ -297,6 +298,7 @@ func press(key: String, held := false) -> void:
 		print_verbose("flow: %s dropped, the fight has only just ended" % key)
 		return
 	busy = true
+	repeating = held
 	await _stages[state.stage].handle(self, key)
 	busy = false
 
