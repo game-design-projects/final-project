@@ -23,6 +23,7 @@ const VARY := {
 	"tick": {"cents": 40, "gain": 0.1},
 	"stairs": {"cents": 50, "gain": 0.08},
 	"step": {"cents": 120, "gain": 0.12},
+	"creep": {"cents": 160, "gain": 0.15},
 }
 ## Voice limit: at most this many copies of one sound may start within POLY_WINDOW seconds of each other (a dodge round
 ## can land several hazards at once). The rest are dropped, and the ones that play are each a little quieter, so a
@@ -41,7 +42,7 @@ const ALIASES := {
 ## Rendered ahead of time, in this order, a few milliseconds per frame (voices depend on the monster and render when first needed).
 const PREWARM := [
 	"hit", "miss", "crit", "hurt", "kill", "bump", "tick", "slash", "stairs", "good", "bad", "death", "holy", "buff", "sad", "odd",
-	"join", "chime", "encounter", "boss", "flee", "step", "beat", "move", "pick", "mercy_refused", "shout",
+	"join", "chime", "encounter", "boss", "flee", "step", "alert", "creep", "beat", "move", "pick", "mercy_refused", "shout",
 ]
 const PREWARM_MS := 4.0 # per frame for background rendering...
 const URGENT_MS := 10.0 # ...and per frame while a sound is waiting for its render
@@ -88,7 +89,7 @@ static func recipes() -> Dictionary:
 			"voice_laugh": snd_voice_laugh, "voice_squeal": snd_voice_squeal, "voice_whimper": snd_voice_whimper,
 			"voice_sigh": snd_voice_sigh, "voice_rumble": snd_voice_rumble, "voice_zap": snd_voice_zap,
 			"voice_babble": snd_voice_babble,
-			"step": snd_step, "beat": snd_beat, "mercy_refused": snd_mercy_refused, "shout": snd_shout,
+			"step": snd_step, "alert": snd_alert, "creep": snd_creep, "beat": snd_beat, "mercy_refused": snd_mercy_refused, "shout": snd_shout,
 			"move": snd_move, "pick": snd_pick,
 		}
 	return _recipes
@@ -395,6 +396,17 @@ static func snd_flee(s, t, _o = {}):
 
 static func snd_bump(s, t, _o = {}):
 	s.tone(t, {f0 = 90, f1 = 60, dur = 0.12, vol = 0.4, room = 0.2})
+
+
+## A monster has seen you: two quick notes going up.
+static func snd_alert(s, t, _o = {}):
+	s.tone(t, {type = "square", f0 = 520, dur = 0.07, vol = 0.14, lp = [3000], room = 0.3})
+	s.tone(t + 0.08, {type = "square", f0 = 780, dur = 0.12, vol = 0.14, lp = [3000], room = 0.3})
+
+
+## A monster in sight has taken a step: soft, so one a step doesn't tire.
+static func snd_creep(s, t, _o = {}):
+	s.noise(t, {dur = 0.05, vol = 0.06, f0 = 500, f1 = 200, q = 1, room = 0.4})
 
 
 static func snd_stairs(s, t, _o = {}):

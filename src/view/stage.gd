@@ -38,6 +38,8 @@ const TAG_GAP := 0.12 # above the head
 const TAG_FADE_S := 0.12 # how long a tag takes to come and go
 const TRADER_LOOK := "bandit" # the model the trader wears, in gold
 const WALK_SNAP := 1.5 # a model further than this many cells from its monster goes there at once: nothing walks that far in a step
+const MARK_AHEAD := 0.75 # how far before a monster its arrow lies
+const MARK_Y := 0.03 # just over the floor
 const STIR_TURN := 1.6 # how fast something stirring goes round, in radians a second
 # the torches nearest the camera glow on the walls; each flickers on its own, in steps like the flames drawn on them
 const MAX_TORCHES := 10 # as in shaders/wire.gdshader
@@ -56,6 +58,7 @@ var _dungeon: MeshInstance3D
 var _stairs: MeshInstance3D
 var _stairs_slab: MeshInstance3D
 var _models := {} # Monster -> Node3D
+var _marks := {} # Monster -> the arrow on the floor for the way it last went, since its model always faces you
 var _tags := {} # Monster -> Label3D
 var _tag_light := {} # Monster -> 0..1, how far its tag has come in
 var _tag_key := []
@@ -171,6 +174,9 @@ func _load_floor(state) -> void:
 	for m in _models:
 		_models[m].queue_free()
 		_tags[m].queue_free()
+	for m in _marks:
+		_marks[m].queue_free()
+	_marks = {}
 	for m in _stirs:
 		_stirs[m].queue_free()
 	_stirs = {}
@@ -366,6 +372,8 @@ func _show_monsters(state, now: float, dt: float) -> void:
 				_models[m].visible = false
 				_tags[m].visible = false
 				_tag_light[m] = 0.0
+			if _marks.has(m):
+				_marks[m].visible = false
 			continue
 		if not _models.has(m):
 			_add_monster(m)
@@ -390,8 +398,30 @@ func _drop_the_replaced(f) -> void:
 			_tags[m].queue_free()
 			_models.erase(m)
 			_tags.erase(m)
+			if _marks.has(m):
+				_marks[m].queue_free()
+				_marks.erase(m)
 			_tag_light.erase(m)
 			_tag_key = []
+
+
+## The arrow on the floor at a monster's feet, pointing the way it went.
+func _mark_heading(m, way: Vector3) -> void:
+	if not _marks.has(m):
+		var shape := SurfaceTool.new()
+		shape.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for p in [Vector3(-0.28, 0, 0), Vector3(0, 0, 0.3), Vector3(0, 0, 0.1), Vector3(0, 0, 0.1), Vector3(0, 0, 0.3), Vector3(0.28, 0, 0)]:
+			shape.add_vertex(p)
+		var look := StandardMaterial3D.new()
+		look.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		look.cull_mode = BaseMaterial3D.CULL_DISABLED
+		look.albedo_color = Palette.monster(m)
+		var mark := MeshInstance3D.new()
+		mark.mesh = shape.commit()
+		mark.material_override = look
+		add_child(mark)
+		_marks[m] = mark
+	_marks[m].rotation.y = atan2(way.x, way.z)
 
 
 ## A model goes where its monster has gone at the pace you walk, with its name over it; a hunter's name says so.
@@ -400,8 +430,14 @@ func _walk_model(m, model: Node3D, dt: float) -> void:
 	var goal := DungeonMesh.center(m.cell)
 	if model.position != goal:
 		var far := model.position.distance_to(goal) > CELL * WALK_SNAP
+		if not far:
+			_mark_heading(m, (goal - model.position).normalized())
 		model.position = goal if far else model.position.move_toward(goal, dt * CELL * 1000.0 / STEP_MS)
 		tag.position = Vector3(model.position.x, tag.position.y, model.position.z)
+	if _marks.has(m):
+		var mark: MeshInstance3D = _marks[m]
+		mark.visible = true
+		mark.position = model.position + mark.basis.z * MARK_AHEAD + Vector3.UP * MARK_Y
 	var word: String = str(Roaming.table().tag) if m.hunting else _plain_tag(m)
 	if tag.text != word:
 		tag.text = word

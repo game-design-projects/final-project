@@ -115,9 +115,10 @@ func _monsters_move(flow) -> bool:
 		await flow.go("intro", {"foe": done.caught, "before": [State.sys_line(Roaming.table().caught % done.caught.name)]})
 		return true
 	if done.noticed.any(func(m): return s.in_sight.has(m.cell)):
-		flow.event("sound", {"name": "odd"})
+		flow.event("sound", {"name": "alert"})
 		flow.coach.say("hunted")
 	elif done.moved.any(func(m): return s.in_sight.has(m.cell)):
+		flow.event("sound", {"name": "creep"})
 		flow.coach.say("roaming")
 	return false
 

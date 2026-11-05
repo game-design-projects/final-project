@@ -103,6 +103,7 @@ func _models_follow_their_monsters() -> void:
 	for i in 20:
 		stage.update(s, FRAME * i, FRAME)
 	_check(model.position == goal, "it gets there within a step's time")
+	_check(stage._marks[m].visible and absf(angle_difference(stage._marks[m].rotation.y, atan2(FloorMap.DIRS[0].x, FloorMap.DIRS[0].y))) < 0.01, "and the arrow at its feet says which way it went")
 	_check(stage._tags[m].position == Vector3(goal.x, tag_y, goal.z), "and its name comes with it")
 	m.hunting = true
 	stage.update(s, 1.0, FRAME)
