@@ -531,6 +531,9 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.kind == "star":
 		_star(h)
 		return
+	if h.kind == "pad":
+		_pad(h)
+		return
 	if h.has("glyph") and icons() and not live:
 		_rays(h, col)
 	for k in h.cells:
@@ -609,6 +612,19 @@ func _star(h: Dictionary) -> void:
 		var a := TAU * i / 10.0 - PI / 2.0
 		pts.append(at + Vector2(cos(a), sin(a)) * (8.0 if i % 2 == 0 else 3.5))
 	draw_colored_polygon(pts, Palette.MERCY)
+
+
+## The dance's light: an outline closing in on its square, so you can see the beat coming, and full on the beat.
+func _pad(h: Dictionary) -> void:
+	if h.get("taken", false):
+		return
+	var cell := _cell_rect(h.at)
+	if clock_ms >= h.hit:
+		draw_rect(cell.grow(-1), Palette.MERCY)
+		return
+	var coming: float = clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)
+	draw_rect(cell.grow(-1), Color(Palette.MERCY, 0.2 * coming))
+	draw_rect(cell.grow((1.0 - coming) * cell.size.x * 0.35), Color(Palette.MERCY, coming), false, 2.0)
 
 
 ## The lantern, all through a shadow dodge: a soft glow and the small flame in it.

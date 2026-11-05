@@ -35,7 +35,7 @@ const FEATURES := {
 	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",
 	"piece-icons": "chess attacks show a piece's shape and lines to the squares it reaches, not a letter, and every attack's rule is in plain words",
 	"gentle-dodge": "dodges run slower, and their pace follows the foe's friendliness, the floor, how you are doing and the EASY DODGE setting",
-	"mini-games": "every third attack is a mini-game: fly through the gaps in the walls, or catch the falling stars",
+	"mini-games": "every third attack is a mini-game: fly through the gaps in the walls, catch the falling stars, or dance on the light to the beat",
 	"story": "a run opens with why you are here, each floor says who holds it, and the header counts the floors left",
 	"tutorial": "short tips the first time something comes up (remembered, and the TIPS setting skips them), and the first fights of a run go slower",
 	"walk-heal": "walking the halls slowly brings health back",

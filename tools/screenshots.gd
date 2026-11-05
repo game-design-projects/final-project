@@ -232,7 +232,7 @@ func _walk_and_fight() -> void:
 	s.max_hp = 9999 # the camera isn't here to survive, only to look
 	s.rotate_mini_games = false # each picture shows the attack it names
 	s.hp = 9999
-	for genre in ["bullet", "chess", "shadow", "gates", "stars", "rhythm"]:
+	for genre in ["bullet", "chess", "shadow", "gates", "stars", "dance", "rhythm"]:
 		m.genre = genre
 		if genre == "rhythm": # the last one shows the charms
 			s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]

@@ -17,6 +17,7 @@ const WARN_BANDIT_SCALE := 1.3 # the bandit's charm keeps warnings lit longer (n
 const MINI_GAMES := {
 	"bullet": preload("res://src/rules/minigames/goo.gd"),
 	"chess": preload("res://src/rules/minigames/chess.gd"),
+	"dance": preload("res://src/rules/minigames/dance.gd"),
 	"gates": preload("res://src/rules/minigames/gates.gd"),
 	"rhythm": preload("res://src/rules/minigames/rhythm.gd"),
 	"shadow": preload("res://src/rules/minigames/shadow.gd"),
@@ -31,6 +32,7 @@ var soul := Vector2i(3, 3)
 var hazards: Array = [] # {cells: {index: true}, warn, hit, end, kind, sounded, ...}
 var next_t := 0.0
 var beat := -1
+var pad := Vector2i(3, 3) # where the dance's light last was
 var blocked := {} # pillar cells in the shadow box
 var iframes := 0.0
 var shield := false # the slime's charm absorbs the first hit
@@ -84,7 +86,7 @@ func update(t: float, rng: Rng) -> Array:
 		if t >= h.hit and not h.sounded:
 			h.sounded = true
 			events.append({"type": "sound", "name": {"stomp": "hit", "chess": "slash", "light": "holy", "wall": "tick"}.get(h.kind, "")})
-		if h.kind == "star":
+		if h.kind == "star" or h.kind == "pad":
 			if t >= h.hit and t < h.end and h.cells.has(here) and not h.get("taken", false):
 				h.taken = true
 				events.append({"type": "star"})

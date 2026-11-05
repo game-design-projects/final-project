@@ -25,6 +25,11 @@
    "rule": "WALLS FLY IN. BE AT THE GAP WHEN ONE REACHES YOU",
    "plain": "WALLS FLY IN. BE AT THE GAP WHEN ONE REACHES YOU"
   },
+  "dance": {
+   "name": "DANCE",
+   "rule": "BE ON THE LIGHT WHEN THE BEAT LANDS: EACH HEALS 1",
+   "plain": "THE LIGHT MOVES ON EVERY BEAT. BE ON IT WHEN THE BEAT LANDS"
+  },
   "stars": {
    "name": "STARS",
    "rule": "CATCH THE STARS: EACH HEALS 1. KEEP OFF THE RED",
@@ -221,6 +226,7 @@
  },
  "mini_games": [
   "gates",
-  "stars"
+  "stars",
+  "dance"
  ]
 }
