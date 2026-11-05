@@ -59,6 +59,12 @@
    "rest": 6
   },
   {
+   "id": "market",
+   "label": "THE MARKET STAIR",
+   "sub": "A trader waits below, and the walk is no easier",
+   "shop": true
+  },
+  {
    "id": "territory",
    "label": "THE %s WARREN",
    "sub": "Every monster below is %s: make friends or enemies in bulk",

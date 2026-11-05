@@ -123,11 +123,12 @@ static func fights_required(f) -> int:
 
 ## The two ways down from floor `depth` of this run, from its seed, so a printed seed offers the same ones. Each is what `plan`
 ## takes, with its `path`, which picks the floor's seed, and its label and sub for the menu. The way to the last floor is one stair.
-static func paths(run_seed: int, depth: int) -> Array:
+## `traders` says whether a way with a trader may be offered (the features items and shop).
+static func paths(run_seed: int, depth: int, traders := true) -> Array:
 	if is_last(depth + 1):
 		return []
 	var rng := Rng.new(floor_seed(run_seed, depth, PATH_SEED))
-	var kinds: Array = Content.table("floors").paths.duplicate()
+	var kinds: Array = Content.table("floors").paths.filter(func(k): return traders or not k.get("shop", false))
 	var out := []
 	for i in PATHS_OFFERED:
 		var kind: Dictionary = kinds.pop_at(rng.int_range(0, kinds.size() - 1)).duplicate()

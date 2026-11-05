@@ -34,7 +34,7 @@ func enter(flow, _args: Dictionary) -> void:
 		_finish(flow, Texts.ending(s.tally, s.allies))
 	else:
 		s.say([State.sys_line(Texts.floor_done(s.depth)), State.sys_line(s.summary() + ".")])
-		_ways = Floors.paths(s.run_seed, s.depth) if flow.feature("branching") else []
+		_ways = Floors.paths(s.run_seed, s.depth, flow.feature("items") and flow.feature("shop")) if flow.feature("branching") else []
 		s.menu = []
 		for way in _ways:
 			s.menu.append({"label": way.label, "sub": way.sub})
