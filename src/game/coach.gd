@@ -57,7 +57,8 @@ func _on_stage(to: String) -> void:
 			if flow.feature("clans") and not flow.state.deeds.is_empty():
 				say("clans")
 		"menu":
-			say("menu")
+			if not say("menu") and flow.feature("heavy-strike"):
+				say("heavy")
 		"act":
 			say("act")
 		"fightbar":

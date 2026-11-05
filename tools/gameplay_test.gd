@@ -276,7 +276,7 @@ func _hover_and_tips(game) -> void:
 	var s = game.flow.state
 	var dock = game._dock
 	var rects: Array = dock.command_rects()
-	_check(rects.size() == 4, "the dock knows where its four commands are")
+	_check(rects.size() == s.menu.size() and rects.size() >= 4, "the dock knows where its commands are, and they all fit (%d)" % rects.size())
 	var picks := []
 	dock.hovered.connect(func(i): picks.append(i))
 	dock._gui_input(_move(rects[2].get_center()))

@@ -199,6 +199,10 @@ func _walk_and_fight() -> void:
 	await flow.press("1")
 	await _wait(0.5)
 	await _shot("06_strike_bar")
+	s.bar.heavy = true # how the same bar looks for HEAVY
+	await _wait(0.05)
+	await _shot("06b_heavy_bar")
+	s.bar.heavy = false
 	await flow.press("confirm")
 	await _wait(0.15)
 	await _shot("07_after_strike")

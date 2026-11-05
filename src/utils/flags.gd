@@ -60,6 +60,7 @@ const FEATURES := {
 	"boss-chase": "a champion you have seen comes after you, unless it is holding the stairs (boss-at-exit)",
 	"input-cooldown": "for a moment after a fight keys do nothing, and a key still held from it stays dropped until it is pressed again, so a mash can't walk you on",
 	"smooth-fight": "in a fight your soul glides between squares, and the battle screen fades back to the halls instead of cutting",
+	"heavy-strike": "HEAVY in a fight: a faster line and a smaller mark for a harder hit, which some monsters take worse than others, and a miss leaves you off balance",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

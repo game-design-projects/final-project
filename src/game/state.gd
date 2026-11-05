@@ -49,6 +49,7 @@ var reputation := {} # clan -> how it thinks of you, -100..100 (rules/clans.gd)
 var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest first
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
+var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
 
 # the fight
 var foe # Monster, or null when not in a fight
@@ -155,7 +156,7 @@ func to_dict() -> Dictionary:
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
 		"reputation": reputation.duplicate(), "deeds": deeds.duplicate(),
-		"items": items.duplicate(), "sharpened": sharpened,
+		"items": items.duplicate(), "sharpened": sharpened, "heavyKnown": heavy_known.keys(),
 	}
 
 
@@ -200,6 +201,9 @@ static func from_dict(d: Dictionary):
 		if Items.known(str(id)):
 			Items.carry(s, str(id))
 	s.sharpened = maxi(0, _int(d.sharpened)) if _is_num(d.get("sharpened")) else 0
+	for species in d.get("heavyKnown", []) if d.get("heavyKnown") is Array else []:
+		if Combat.HEAVY_WEAK.has(str(species)):
+			s.heavy_known[str(species)] = true
 	for a in d.allies.slice(0, Combat.PARTY_MAX):
 		var ally = Ally.from_dict(a)
 		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)

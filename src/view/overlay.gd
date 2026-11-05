@@ -5,6 +5,7 @@
 extends Control
 
 const Art = preload("res://src/view/art.gd")
+const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const Fonts = preload("res://src/view/fonts.gd")
@@ -28,6 +29,7 @@ const CHARM_USED := Color("#3a3a3a")
 const INTRO_FLASH_MS := 700.0
 const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pixels
 const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
+const STRIKE_BAR_H := 30.0
 const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
 const MOOD_STRONG := 60.0 # a meter this high names the mood
 const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
@@ -288,11 +290,13 @@ func soul_at() -> Vector2:
 	return _cell_rect(Dodge.index(state.dodge.soul.x, state.dodge.soul.y)).get_center()
 
 
-## Where the banner goes: above the dodge box in a dodge, else low on the picture, clear of the health bars and the popups.
+## Where the banner goes: above the dodge box or the strike bar when one is up, else low on the picture, clear of the health bars and the popups.
 func banner_rect() -> Rect2:
-	var y := 36.0 if state != null and state.dodge != null else H - BANNER_H - 8.0
+	var y := H - BANNER_H - 8.0
 	if not speech().is_empty():
 		y = SPEECH.position.y - BANNER_H - 4.0
+	if state != null and (state.dodge != null or state.bar != null):
+		y = 36.0
 	return Rect2((W - BANNER_W) / 2.0, y, BANNER_W, BANNER_H)
 
 
@@ -649,10 +653,19 @@ func _soul(run) -> void:
 
 # ---------------------------------------------------------------- the strike bar
 
+## Where the strike bar goes: above the speech box when the foe has said something.
+func strike_bar_rect() -> Rect2:
+	var y := SPEECH.position.y - STRIKE_BAR_H - 6.0 if not speech().is_empty() else 209.0
+	return Rect2(62.0, y, 324.0, STRIKE_BAR_H)
+
+
 func _strike_bar() -> void:
 	var bar = state.bar
-	var rect := Rect2(62.0, 209.0, 324.0, 30.0)
+	var rect := strike_bar_rect()
 	draw_rect(rect, Color(0, 0, 0, 0.7))
+	if bar.get("heavy", false):
+		var mark := rect.size.x * Combat.HEAVY_MISS_EDGE
+		draw_rect(Rect2(rect.get_center().x - mark / 2.0, rect.position.y, mark, rect.size.y), Color(Palette.WARN, 0.4))
 	draw_rect(Rect2(rect.position.x + rect.size.x * 0.46, rect.position.y, rect.size.x * 0.08, rect.size.y), Color(Palette.MERCY, 0.35))
 	draw_line(Vector2(rect.get_center().x, rect.position.y), Vector2(rect.get_center().x, rect.end.y), Palette.MERCY, 2.0)
 	var p := clampf((clock_ms - bar.t0) / bar.dur, 0.0, 1.0)

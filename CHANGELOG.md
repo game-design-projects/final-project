@@ -22,6 +22,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `secrets`: chests behind cracked walls that break when you walk into them, and pairs of pads that carry you across the floor.
 - `items`: things lie about on the floors, and ITEM in a fight heals, sharpens, slips away or gives a gift a monster may love.
 - `shop`: some floors have a trader who sells items for gold.
+- `heavy-strike`: HEAVY in a fight, a faster line and a smaller mark for a harder hit that rocks and dragons take badly and slimes and snakes barely feel; a miss leaves you off balance.
 - `lurkers`: something stirs in plain sight on a floor, never on the only way through: walk round it, or walk into it for a fight and its purse.
 - `npcs`: some floors have a monster with a request instead of a fight: fetch something, spare its kin, or get someone off the floor, and be paid for it.
 - `roaming`: monsters take a turn each step you take, as who they are and how they feel say, the map shows where you last saw them, and backing out of a fight makes one hold still for a few steps.

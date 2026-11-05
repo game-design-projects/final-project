@@ -57,6 +57,7 @@ func _run() -> void:
 	await _npcs()
 	await _roaming()
 	await _input_cooldown()
+	await _heavy_strike()
 	_finish()
 
 
@@ -319,7 +320,7 @@ func _story() -> void:
 
 
 func _tutorial() -> void:
-	var flow = _flow(33)
+	var flow = _flow(33, ["no-heavy-strike"])
 	await flow.new_run()
 	var s = flow.state
 	s.banner = null
@@ -342,7 +343,7 @@ func _tutorial() -> void:
 	flow.clock += 10000.0
 	await flow.press("1")
 	_check(not shown.has("strike"), "the TIPS setting skips them")
-	var later = _flow(34)
+	var later = _flow(34, ["no-heavy-strike"])
 	later.coach.seen = {"menu": true}
 	await later.new_run()
 	later.state.banner = null
@@ -1029,18 +1030,18 @@ func _item_fight(seed_value: int, words := []) -> Variant:
 func _items() -> void:
 	var flow = await _item_fight(51)
 	var s = flow.state
-	_check(s.menu.size() == 4, "with an empty bag the menu has its four commands")
+	_check(s.menu.all(func(i): return i.label != "ITEM"), "with an empty bag the menu has no ITEM")
 	s.items = ["sugar", "salve", "whetstone", "smoke"]
 	await flow.go("menu")
-	_check(s.menu.size() == 5 and s.menu[4].label == "ITEM" and s.menu[0].label == "FIGHT" and s.menu[3].label == "FLEE", "something in the bag adds ITEM, and the others keep their places")
-	await flow.press("5")
+	_check(s.menu.size() == 6 and s.menu[5].label == "ITEM" and s.menu[0].label == "FIGHT" and s.menu[3].label == "FLEE" and s.menu[4].label == "HEAVY", "something in the bag adds ITEM, and the others keep their places")
+	await flow.press("6")
 	_check(s.stage == "items" and s.menu.size() == 4, "ITEM opens the bag (%s)" % s.stage)
 	await flow.press("cancel")
 	_check(s.stage == "menu" and s.items.size() == 4, "and backing out uses nothing")
 	# a gift changes a recruit
 	var m = s.foe
 	var before: float = await flow.mind.mercy(m)
-	await flow.press("5")
+	await flow.press("6")
 	await flow.press("1")
 	var after: float = await flow.mind.mercy(m)
 	_check(after >= 0.5 and after > before + 0.2, "the gift a monster loves moves it most of the way to mercy (%.2f to %.2f)" % [before, after])
@@ -1050,7 +1051,7 @@ func _items() -> void:
 	other.state.items = ["ring"]
 	await other.go("menu")
 	var shrug_from: float = await other.mind.mercy(other.state.foe)
-	await other.press("5")
+	await other.press("6")
 	await other.press("1")
 	var shrug_to: float = await other.mind.mercy(other.state.foe)
 	_check(shrug_to - shrug_from < after - before, "a gift it doesn't care for does much less (%.2f to %.2f)" % [shrug_from, shrug_to])
@@ -1059,7 +1060,7 @@ func _items() -> void:
 	heal.state.items = ["salve"]
 	heal.state.hp = 3
 	await heal.go("menu")
-	await heal.press("5")
+	await heal.press("6")
 	await heal.press("1")
 	_check(heal.state.hp == 13 and heal.state.items.is_empty(), "a salve heals 10 (%d)" % heal.state.hp)
 	_check(heal.state.stage in ["wait", "menu"], "and takes your turn")
@@ -1067,7 +1068,7 @@ func _items() -> void:
 	var sharp = await _item_fight(53)
 	sharp.state.items = ["whetstone"]
 	await sharp.go("menu")
-	await sharp.press("5")
+	await sharp.press("6")
 	await sharp.press("1")
 	_check(sharp.state.stage == "menu" and sharp.state.sharpened == 6, "a whetstone is free, and sharpens the next strike")
 	sharp.state.foe.hp = 100
@@ -1085,7 +1086,7 @@ func _items() -> void:
 	var anger: float = away.state.foe.meters.anger
 	var foe = away.state.foe
 	await away.go("menu")
-	await away.press("5")
+	await away.press("6")
 	await away.press("1")
 	_check(away.state.stage == "explore" and away.state.gold == gold, "smoke leaves the fight at no cost")
 	_check(foe.meters.anger == anger, "and no grudge")
@@ -1093,7 +1094,7 @@ func _items() -> void:
 	champ.state.foe.boss = true
 	champ.state.items = ["smoke"]
 	await champ.go("menu")
-	await champ.press("5")
+	await champ.press("6")
 	await champ.press("1")
 	_check(champ.state.stage == "menu" and champ.state.items.size() == 1, "not from a champion, and it keeps the smoke")
 	# dying gives them back
@@ -1102,7 +1103,7 @@ func _items() -> void:
 	retry.state.encounter_start.items = ["salve"]
 	retry.state.encounter_start.sharpened = 0
 	await retry.go("menu")
-	await retry.press("5")
+	await retry.press("6")
 	await retry.press("1")
 	_check(retry.state.items.is_empty(), "(used)")
 	retry.state.stage = "dead"
@@ -1143,8 +1144,122 @@ func _items() -> void:
 	var slice_like = await _item_fight(59, ["no-items"])
 	slice_like.state.items = ["salve"]
 	await slice_like.go("menu")
-	_check(slice_like.state.menu.size() == 4, "and no ITEM, whatever a save carried")
+	_check(slice_like.state.menu.all(func(i): return i.label != "ITEM"), "and no ITEM, whatever a save carried")
 	_use()
+
+
+## A fight at the menu with `species`, its health raised so nothing ends it by accident.
+func _heavy_fight(seed_value: int, species: String, words := []) -> Variant:
+	var flow = _flow(seed_value, words)
+	var m = await _at_menu(flow, species)
+	m.max_hp = 200
+	m.hp = 200
+	flow.coach.enabled = false
+	flow.state.banner = null
+	return flow
+
+
+func _heavy_strike() -> void:
+	_heavy_trade()
+	# on the menu, after the four that keep their places
+	var flow = await _heavy_fight(61, "rock")
+	var s = flow.state
+	var m = s.foe
+	_check(s.menu.size() == 5 and s.menu[4].label == "HEAVY" and s.menu[3].label == "FLEE", "HEAVY comes after the other four (%s)" % str(s.menu.map(func(i): return i.label)))
+	var plain_dur: float = Combat.bar_ms(false)
+	await flow.press("5")
+	_check(s.stage == "fightbar" and s.bar.heavy and is_equal_approx(s.bar.dur, plain_dur * Combat.HEAVY_BAR_SCALE), "the line runs faster (%.0f ms)" % s.bar.dur)
+	_check(s.hint.contains("MARK"), "and the hint points at the mark (%s)" % s.hint)
+	# a landed blow: harder on a rock, and now you know
+	flow.clock = s.bar.t0 + s.bar.dur / 2.0
+	await flow.press("confirm")
+	var landed: Dictionary = Combat.heavy_strike(0.5, false, "rock", false)
+	_check(m.hp == 200 - landed.damage and landed.damage > Combat.strike(0.5, false, false).damage, "a heavy blow in the mark hits harder (%d)" % landed.damage)
+	_check(s.heavy_known.has("rock"), "the first one shows how the kind takes it")
+	_check(s.banner != null and str(s.banner.text).contains("do more"), "and says so (%s)" % str(s.banner))
+	_check(s.lines[0].text.contains("do more"), "in the log too, in case a tip holds the banner (%s)" % s.lines[0].text)
+	var known = await _heavy_fight(66, "rock")
+	known.state.heavy_known = s.heavy_known
+	await known.go("menu")
+	_check(known.state.menu[4].sub.contains("badly") and known.state.menu[4].get("gold", false), "from then on the menu says it (%s)" % known.state.menu[4].sub)
+	var back = State.from_dict(s.to_dict())
+	_check(back.heavy_known.has("rock"), "a save keeps what you found out")
+	var dict: Dictionary = s.to_dict()
+	dict.heavyKnown = ["rock", "nonsense", 3]
+	_check(State.from_dict(dict).heavy_known.keys() == ["rock"], "and what isn't a kind of monster doesn't load")
+	dict.erase("heavyKnown")
+	_check(State.from_dict(dict).heavy_known.is_empty(), "a save from before it knows nothing")
+	# a kind that takes it plainly has nothing to announce
+	var plain = await _heavy_fight(62, "bandit")
+	await plain.press("5")
+	plain.clock = plain.state.bar.t0 + plain.state.bar.dur / 2.0
+	await plain.press("confirm")
+	_check(plain.state.heavy_known.has("bandit") and (plain.state.banner == null or not str(plain.state.banner.text).contains("Heavy")), "a bandit takes it plainly, so nothing is announced")
+	# a blow outside the mark misses where FIGHT would have landed, and the next attack presses harder
+	var wide := 0.5 + Combat.HEAVY_MISS_EDGE # as far out as twice the edge: off the mark, on the bar
+	_check(Combat.heavy_strike(wide, false, "rock", false).miss and not Combat.strike(wide, false, false).miss, "off the mark is a miss, where FIGHT would land")
+	var pressures := []
+	for label in ["1", "5"]:
+		var swing = await _heavy_fight(63, "bandit")
+		await swing.press(label)
+		swing.clock = swing.state.bar.t0 + swing.state.bar.dur * (0.02 if label == "1" else 0.2)
+		await swing.press("confirm")
+		_check(swing.state.stage == "wait" and swing.state.foe.hp == 200, "a miss does nothing to it (%s)" % label)
+		swing.clock += Combat.WINDUP_MS + 1.0
+		await swing.tick(swing.clock)
+		pressures.append(swing.state.dodge.intensity)
+	_check(is_equal_approx(pressures[1] - pressures[0], Combat.dodge_intensity(Combat.HEAVY_MISS_PRESSURE, false) - Combat.dodge_intensity(0.0, false)), "a heavy miss leaves you off balance (%.2f against %.2f)" % [pressures[1], pressures[0]])
+	# what else adds to a strike adds to this one
+	_check(Combat.heavy_strike(0.5, false, "rock", true, 3).damage == landed.damage + Combat.HOARD_FIRE_BONUS + 3, "the charm, allies and a whetstone add to it")
+	_check(Combat.heavy_strike(0.5, true, "rock", false).damage < landed.damage, "and a champion takes less, as from any strike")
+	# the tip follows the menu's own
+	var told = _flow(67)
+	told.coach.seen = {"menu": true}
+	await told.new_run()
+	told.state.banner = null
+	await told.go("intro", {"foe": told.state.floor_map.monsters[0]})
+	await told.tick(told.clock + 1000.0)
+	_check(told.coach.seen.has("heavy"), "a tip tells of it once the menu's has been seen")
+	# off, and in the slice
+	var off = _flow(64, ["no-heavy-strike"])
+	await _at_menu(off, "rock")
+	_check(off.state.menu.size() == 4, "no-heavy-strike: the menu has its four commands")
+	var classic = _flow(65, ["classic"])
+	await _at_menu(classic, "rock")
+	_check(classic.state.menu.size() == 4, "classic: four too")
+	var slice = _flow(68, ["personality-slice"])
+	await slice.new_run()
+	await slice.tick(slice.clock + 5000.0)
+	_check(not slice.feature("heavy-strike"), "and the playtest slice stays as it was")
+	_use()
+
+
+## The trade is real: over the same timing, FIGHT and HEAVY compared by the damage you can expect. Timing error is normally spread,
+## in ms, since a faster line gives the same hand less room. Steady hands should want it against a rock and never against a slime,
+## a bandit should be about even, and an unsteady hand should stay with FIGHT.
+func _heavy_trade() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 35
+	var half: float = Combat.bar_ms(false) / 2.0
+	var mean := {}
+	for error_ms in [50.0, 80.0, 200.0]:
+		var row := {"quick": 0.0}
+		for species in Combat.HEAVY_WEAK:
+			row[species] = 0.0
+		for _i in 4000:
+			var e: float = rng.randfn(0.0, error_ms)
+			row.quick += Combat.strike(clampf(0.5 + e / half / 2.0, 0.0, 1.0), false, false).damage / 4000.0
+			for species in Combat.HEAVY_WEAK:
+				var x := clampf(0.5 + e / (half * Combat.HEAVY_BAR_SCALE) / 2.0, 0.0, 1.0)
+				row[species] += Combat.heavy_strike(x, false, species, false).damage / 4000.0
+		mean[error_ms] = row
+		print("heavy-strike: timing error %.0f ms, damage per swing: FIGHT %.1f, HEAVY %s" % [error_ms, row.quick, ", ".join(Combat.HEAVY_WEAK.keys().map(func(k): return "%s %.1f" % [k, row[k]]))])
+	_check(mean[50.0].rock > mean[50.0].quick * 1.3, "steady hands want it against a rock (%.1f against %.1f)" % [mean[50.0].rock, mean[50.0].quick])
+	_check(absf(mean[80.0].bandit - mean[80.0].quick) < mean[80.0].quick * 0.15, "against a bandit it is about even (%.1f against %.1f)" % [mean[80.0].bandit, mean[80.0].quick])
+	for error_ms in mean:
+		_check(mean[error_ms].slime < mean[error_ms].quick, "against a slime FIGHT is always better (%.0f ms: %.1f against %.1f)" % [error_ms, mean[error_ms].slime, mean[error_ms].quick])
+	for species in Combat.HEAVY_WEAK:
+		_check(mean[200.0][species] < mean[200.0].quick, "an unsteady hand stays with FIGHT against a %s (%.1f against %.1f)" % [species, mean[200.0][species], mean[200.0].quick])
 
 
 func _shop() -> void:

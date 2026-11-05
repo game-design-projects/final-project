@@ -730,6 +730,29 @@ func _held_key_waits_for_the_camera() -> void:
 
 ## The flat battle screen: the flash as a fight begins, mercy by the name, and what the dodge box shows.
 ## Your soul glides to its square, and the battle screen fades out as the fight ends.
+## The strike bar is what you are watching: nothing lies over it.
+func _strike_bar_stands_clear(s, m) -> void:
+	var overlay = Overlay.new()
+	overlay.state = s
+	var chat_was: bool = s.viewing("chat")
+	var stage_was: String = s.stage
+	var foe_was = s.foe
+	s.views["chat"] = true
+	s.foe = m
+	s.stage = "fightbar"
+	s.bar = {"t0": 0.0, "dur": 1000.0, "heavy": true}
+	s.banner = {"title": "TIP", "text": "words", "t0": 0.0, "ms": 1000.0}
+	s.lines = [State.speech(m.name, "words")]
+	_check(not overlay.speech().is_empty() and not overlay.strike_bar_rect().intersects(Overlay.SPEECH), "the bar stands above the foe's words")
+	_check(not overlay.strike_bar_rect().intersects(overlay.banner_rect()), "and a banner stands above the bar")
+	overlay.free()
+	s.views["chat"] = chat_was
+	s.stage = stage_was
+	s.foe = foe_was
+	s.bar = null
+	s.banner = null
+
+
 func _fight_eases(s, m) -> void:
 	var overlay = Overlay.new()
 	overlay.state = s
@@ -773,6 +796,7 @@ func _fight_staging() -> void:
 	overlay.state = s
 	var m = s.floor_map.monsters[0]
 	_fight_eases(s, m)
+	_strike_bar_stands_clear(s, m)
 	s.foe = m
 	s.stage = "intro"
 	overlay.intro_at = 1000.0

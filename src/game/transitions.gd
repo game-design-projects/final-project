@@ -7,7 +7,7 @@
 ##      ▼                 ▼        ▼      ▼
 ##     end            wait ─▶ dodge ─▶ dead
 ##   SPARE that lands goes from menu to ask (it asks to come along), and from there back to explore.
-##   ITEM goes from menu to items and on like an ACT; walking into a trader goes from explore to trade and back, and into a monster with a request to request and back.
+##   HEAVY goes from menu to fightbar as FIGHT does. ITEM goes from menu to items and on like an ACT; walking into a trader goes from explore to trade and back, and into a monster with a request to request and back.
 ##   A fight that ends (spared, slain, a cut paid, fled) goes from menu, act, talk or fightbar straight back to explore,
 ##   or, in the personality slice, on to the next intro.
 extends RefCounted

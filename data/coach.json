@@ -1,6 +1,7 @@
 {
  "tips": {
-  "menu": "Four choices. Try ACT first: see what it likes.",
+  "menu": "Try ACT first: see what it likes.",
+  "heavy": "HEAVY is a smaller mark and a harder hit. Some monsters take it badly.",
   "act": "CHECK is free. Everything else takes a turn.",
   "mercy": "The gold bar is its mercy odds. What you do moves them.",
   "spare": "Its name is gold: it will likely accept. Try SPARE.",
