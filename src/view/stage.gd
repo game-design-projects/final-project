@@ -36,6 +36,7 @@ const TAG_FONT_PX := 16
 const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels come out 8 view pixels tall: whole, so nearest stays sharp
 const TAG_GAP := 0.12 # above the head
 const TAG_FADE_S := 0.12 # how long a tag takes to come and go
+const TRADER_LOOK := "bandit" # the model the trader wears, in gold
 # the torches nearest the camera glow on the walls; each flickers on its own, in steps like the flames drawn on them
 const MAX_TORCHES := 10 # as in shaders/wire.gdshader
 const TORCH_REACH2 := 100.0 # world units, squared
@@ -59,7 +60,9 @@ var _tag_key := []
 var _floor_map = null
 var _floor_changes := 0 # the walls broken on it when it was built
 var _secrets: Node3D
-var _chests_built := -1
+var _secrets_built := -1 # how many chests and items it was built with
+var _trader: Node3D
+var _trader_tag: Label3D
 var _pos := Vector3.ZERO
 var _yaw := 0.0
 var _yaw_goal := 0.0 # where the camera is turning to, counted past a full circle so a held key keeps it turning one way
@@ -116,7 +119,7 @@ func update(state, now: float, dt: float) -> void:
 		return
 	if state.floor_map != _floor_map or state.floor_map.changes != _floor_changes:
 		_load_floor(state)
-	if state.floor_map.treasure.size() != _chests_built:
+	if state.floor_map.treasure.size() + state.floor_map.pickups.size() != _secrets_built:
 		_build_secrets()
 	_now = now
 	_move_camera(state, now)
@@ -184,6 +187,7 @@ func _load_floor(state) -> void:
 	_stairs_slab.position = DungeonMesh.center(_floor_map.stairs) + Vector3(0.0, SLAB_H / 2.0, 0.0)
 	add_child(_stairs_slab)
 	_build_secrets()
+	_build_trader()
 	var target := _camera_target(state.cell, state.facing)
 	_pos = target.pos
 	_yaw = target.yaw
@@ -201,7 +205,34 @@ func _build_secrets() -> void:
 		_secrets.queue_free()
 	_secrets = SecretProps.build(_floor_map, palette.wall, palette.accent)
 	add_child(_secrets)
-	_chests_built = _floor_map.treasure.size()
+	_secrets_built = _floor_map.treasure.size() + _floor_map.pickups.size()
+
+
+## The trader: a gold figure that turns to you, with a name shown while a line reaches it, like a monster's.
+func _build_trader() -> void:
+	if _trader != null:
+		_trader.queue_free()
+		_trader = null
+	if _floor_map.merchant.is_empty():
+		return
+	_trader = MonsterModel.build(TRADER_LOOK, Palette.MERCY)
+	_trader.position = DungeonMesh.center(_floor_map.merchant.cell)
+	add_child(_trader)
+	var tag := Label3D.new()
+	tag.text = "TRADER"
+	tag.font = Fonts.title()
+	tag.font_size = TAG_FONT_PX
+	tag.pixel_size = TAG_PIXEL_SIZE
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.fixed_size = true
+	tag.shaded = false
+	tag.no_depth_test = true
+	tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	tag.outline_size = 0
+	tag.modulate = Palette.MERCY
+	tag.position = Vector3(0.0, MonsterModel.top_of(_trader) + TAG_GAP, 0.0)
+	_trader.add_child(tag)
+	_trader_tag = tag
 
 
 ## Where the camera stands and looks from a cell.
@@ -294,6 +325,11 @@ static func _slab(color: Color) -> MeshInstance3D:
 
 
 func _show_monsters(state, now: float, dt: float) -> void:
+	if _trader != null:
+		var to_you := _camera.position - _trader.position
+		_trader.rotation.y = atan2(to_you.x, to_you.z)
+		MonsterModel.pose(_trader, now, 0.0)
+		_trader_tag.visible = Vision.reaches(state.floor_map, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), state.floor_map.merchant.cell)
 	_stairs_slab.visible = state.floor_map.monster_at(state.floor_map.stairs) != null
 	for m in state.floor_map.monsters:
 		var here: bool = not m.is_gone() and m.cell != state.cell

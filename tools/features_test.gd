@@ -18,6 +18,7 @@ const Monster = preload("res://src/rules/monster.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pace = preload("res://src/rules/pace.gd")
 const Hud = preload("res://src/view/hud.gd")
+const Items = preload("res://src/rules/items.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -48,6 +49,8 @@ func _run() -> void:
 	await _clans()
 	await _map_gen()
 	await _secrets()
+	await _items()
+	await _shop()
 	_finish()
 
 
@@ -1005,5 +1008,180 @@ func _secrets() -> void:
 	_check(h.treasure.is_empty() and h.teleports.is_empty() and _cracked_wall(h) == Vector2i(-1, -1), "no-secrets: nothing is hidden")
 	_check(not hidden.state.viewing("secrets"), "and the map's legend doesn't speak of it")
 	_check(Tips.map_blocks(true).size() == Tips.map_blocks().size() + 2, "with them, the legend names pads and chests")
+	_use()
+
+
+## A fight with the slime, standing at the menu.
+func _item_fight(seed_value: int, words := []) -> Variant:
+	var flow = _flow(seed_value, words)
+	await _at_menu(flow, "slime")
+	return flow
+
+
+func _items() -> void:
+	var flow = await _item_fight(51)
+	var s = flow.state
+	_check(s.menu.size() == 4, "with an empty bag the menu has its four commands")
+	s.items = ["sugar", "salve", "whetstone", "smoke"]
+	await flow.go("menu")
+	_check(s.menu.size() == 5 and s.menu[4].label == "ITEM" and s.menu[0].label == "FIGHT" and s.menu[3].label == "FLEE", "something in the bag adds ITEM, and the others keep their places")
+	await flow.press("5")
+	_check(s.stage == "items" and s.menu.size() == 4, "ITEM opens the bag (%s)" % s.stage)
+	await flow.press("cancel")
+	_check(s.stage == "menu" and s.items.size() == 4, "and backing out uses nothing")
+	# a gift changes a recruit
+	var m = s.foe
+	var before: float = await flow.mind.mercy(m)
+	await flow.press("5")
+	await flow.press("1")
+	var after: float = await flow.mind.mercy(m)
+	_check(after >= 0.5 and after > before + 0.2, "the gift a monster loves moves it most of the way to mercy (%.2f to %.2f)" % [before, after])
+	_check(not s.items.has("sugar"), "and is gone from the bag")
+	_check(s.stage in ["wait", "menu"], "and takes your turn (%s)" % s.stage)
+	var other = await _item_fight(51)
+	other.state.items = ["ring"]
+	await other.go("menu")
+	var shrug_from: float = await other.mind.mercy(other.state.foe)
+	await other.press("5")
+	await other.press("1")
+	var shrug_to: float = await other.mind.mercy(other.state.foe)
+	_check(shrug_to - shrug_from < after - before, "a gift it doesn't care for does much less (%.2f to %.2f)" % [shrug_from, shrug_to])
+	# a salve
+	var heal = await _item_fight(52)
+	heal.state.items = ["salve"]
+	heal.state.hp = 3
+	await heal.go("menu")
+	await heal.press("5")
+	await heal.press("1")
+	_check(heal.state.hp == 13 and heal.state.items.is_empty(), "a salve heals 10 (%d)" % heal.state.hp)
+	_check(heal.state.stage in ["wait", "menu"], "and takes your turn")
+	# a whetstone
+	var sharp = await _item_fight(53)
+	sharp.state.items = ["whetstone"]
+	await sharp.go("menu")
+	await sharp.press("5")
+	await sharp.press("1")
+	_check(sharp.state.stage == "menu" and sharp.state.sharpened == 6, "a whetstone is free, and sharpens the next strike")
+	sharp.state.foe.hp = 100
+	sharp.state.foe.max_hp = 100
+	await sharp.press("1")
+	_check(sharp.state.hint.contains("WHETTED +6"), "the bar says so")
+	sharp.clock = sharp.state.bar.t0 + sharp.state.bar.dur / 2.0
+	await sharp.press("confirm")
+	_check(sharp.state.foe.hp <= 100 - 14 - 6 + 5, "and the strike hits harder (%d left of 100)" % sharp.state.foe.hp)
+	_check(sharp.state.sharpened == 0, "once")
+	# smoke
+	var away = await _item_fight(54)
+	away.state.items = ["smoke"]
+	var gold: int = away.state.gold
+	var anger: float = away.state.foe.meters.anger
+	var foe = away.state.foe
+	await away.go("menu")
+	await away.press("5")
+	await away.press("1")
+	_check(away.state.stage == "explore" and away.state.gold == gold, "smoke leaves the fight at no cost")
+	_check(foe.meters.anger == anger, "and no grudge")
+	var champ = await _item_fight(55)
+	champ.state.foe.boss = true
+	champ.state.items = ["smoke"]
+	await champ.go("menu")
+	await champ.press("5")
+	await champ.press("1")
+	_check(champ.state.stage == "menu" and champ.state.items.size() == 1, "not from a champion, and it keeps the smoke")
+	# dying gives them back
+	var retry = await _item_fight(56)
+	retry.state.items = ["salve"]
+	retry.state.encounter_start.items = ["salve"]
+	retry.state.encounter_start.sharpened = 0
+	await retry.go("menu")
+	await retry.press("5")
+	await retry.press("1")
+	_check(retry.state.items.is_empty(), "(used)")
+	retry.state.stage = "dead"
+	await retry.encounter.retry_fight()
+	_check(retry.state.items == ["salve"], "trying the fight again gives back what it used (%s)" % [retry.state.items])
+	# on the floor
+	var walk = _flow(57)
+	await walk.new_run()
+	var ws = walk.state
+	var f = ws.floor_map
+	_check(f.pickups.size() == int(Items.table().pickups_per_floor), "a floor has things lying about (%d)" % f.pickups.size())
+	var thing: Dictionary = f.pickups[0]
+	ws.banner = null
+	_face(ws, thing.cell)
+	await walk.press("up")
+	_check(ws.items == [thing.item] and f.pickup_at(thing.cell) == "", "walking over one picks it up (%s)" % [ws.items])
+	_check(ws.banner != null, "and something on the picture says so")
+	ws.items = ["salve", "salve", "salve", "salve", "salve", "salve"]
+	var left: Dictionary = f.pickups[0]
+	_face(ws, left.cell)
+	await walk.press("up")
+	_check(ws.items.size() == 6 and f.pickup_at(left.cell) == left.item, "a full bag leaves it where it lies")
+	ws.items = ["salve"]
+	ws.sharpened = 4
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(ws.to_dict()))
+	saved.items = ["salve", "not a thing", 3]
+	var back = _flow(57)
+	await back.load_state(saved)
+	_check(back.state.items == ["salve"] and back.state.sharpened == 4, "the bag saves, and what isn't an item doesn't load (%s)" % [back.state.items])
+	var den: Dictionary = Floors.plan(2, {"only_species": "rock"})
+	den.items = true
+	_check(FloorGen.generate(Rng.new(5), den).pickups.any(func(p): return p.item == Items.gift_for("rock")), "a kind's own territory has the gift it loves")
+	for id in Items.table().items:
+		_check(Overlay.banner_fits(str(Items.info(id).sub)), "%s's line fits the banner" % id)
+	var none = _flow(58, ["no-items"])
+	await none.new_run()
+	_check(none.state.floor_map.pickups.is_empty() and none.state.floor_map.merchant.is_empty(), "no-items: nothing lies about")
+	var slice_like = await _item_fight(59, ["no-items"])
+	slice_like.state.items = ["salve"]
+	await slice_like.go("menu")
+	_check(slice_like.state.menu.size() == 4, "and no ITEM, whatever a save carried")
+	_use()
+
+
+func _shop() -> void:
+	var flow = _flow(61)
+	await flow.new_run()
+	var s = flow.state
+	_check(not Items.shop_on(1) and s.floor_map.merchant.is_empty(), "the first floor has no trader")
+	s.foe = null
+	await flow.next_floor()
+	var f = s.floor_map
+	_check(Items.shop_on(2) and not f.merchant.is_empty(), "the second has")
+	s.gold = 8
+	s.items = []
+	s.banner = null
+	_face(s, f.merchant.cell)
+	var stood: Vector2i = s.cell
+	await flow.press("up")
+	_check(s.stage == "trade" and s.cell == stood, "walking into the trader opens the shelf (%s)" % s.stage)
+	_check(s.menu.size() == f.merchant.stock.size() + 1 and s.menu[-1].label == "LEAVE", "its stock and a way out")
+	var id: String = f.merchant.stock[0]
+	var price := int(Items.info(id).price)
+	s.gold = price - 1
+	await flow.press("1")
+	_check(s.items.is_empty() and s.gold == price - 1 and s.lines[0].text.contains("costs"), "too dear: nothing changes, and it says why")
+	s.gold = price + 2
+	await flow.press("1")
+	_check(s.items == [id] and s.gold == 2 and not f.merchant.stock.has(id), "buying takes the gold, and it is off the shelf")
+	_check(s.stage == "trade", "and you are still at the shelf")
+	s.gold = 99
+	s.items = ["salve", "salve", "salve", "salve", "salve", "salve"]
+	var shelf: int = f.merchant.stock.size()
+	await flow.press("1")
+	_check(s.gold == 99 and f.merchant.stock.size() == shelf, "a full bag buys nothing")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	await flow.press("cancel")
+	_check(s.stage == "explore" and s.cell == stood, "ESC walks off")
+	var back = _flow(61)
+	await back.load_state(saved)
+	_check(back.state.floor_map.merchant.stock.size() == shelf, "what is sold stays sold in a save")
+	_check(f.in_the_way(f.merchant.cell), "routes go round the trader")
+	var closed = _flow(61, ["no-shop"])
+	await closed.new_run()
+	closed.state.foe = null
+	await closed.next_floor()
+	_check(closed.state.floor_map.merchant.is_empty(), "no-shop: no trader")
+	_check(not closed.state.floor_map.pickups.is_empty(), "though things still lie about")
 	_use()
 

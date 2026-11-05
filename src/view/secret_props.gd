@@ -1,5 +1,5 @@
-## What a floor hides, once you can see it: the pads, rings of light on the floor, and the chests. Built from the floor's lists, so
-## building it again is how a chest that was taken goes away.
+## What a floor hides, once you can see it: the pads, rings of light on the floor, the chests, and things lying about. Built from the
+## floor's lists, so building it again is how a chest that was taken goes away.
 extends RefCounted
 
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
@@ -22,6 +22,8 @@ static func build(floor_map, wall_color: Color, accent: Color) -> Node3D:
 		_pad(b, DungeonMesh.center(t.b), accent)
 	for t in floor_map.treasure:
 		_chest(b, DungeonMesh.center(t.cell), wall_color, accent)
+	for p in floor_map.pickups:
+		_sack(b, DungeonMesh.center(p.cell), wall_color, accent)
 	if not b.is_empty():
 		var shapes := MeshInstance3D.new()
 		shapes.name = "Secrets"
@@ -30,6 +32,12 @@ static func build(floor_map, wall_color: Color, accent: Color) -> Node3D:
 		shapes.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(shapes)
 	return root
+
+
+## A small sack with a bright tie, sat on the floor.
+static func _sack(b: MeshKit.Builder, mid: Vector3, wall_color: Color, accent: Color) -> void:
+	b.sphere(Transform3D(Basis(), mid + Vector3(0, 0.2, 0)), Vector3(0.24, 0.2, 0.24), MeshKit.color(wall_color), 10, 6)
+	b.box(Transform3D(Basis(), mid + Vector3(0, 0.42, 0)), Vector3(0.14, 0.06, 0.14), MeshKit.color(accent, true))
 
 
 static func _pad(b: MeshKit.Builder, mid: Vector3, accent: Color) -> void:

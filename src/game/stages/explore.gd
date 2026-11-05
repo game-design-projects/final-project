@@ -5,6 +5,7 @@ extends "res://src/game/stages/stage.gd"
 
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Items = preload("res://src/rules/items.gd")
 const State = preload("res://src/game/state.gd")
 
 const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · I INFO · ESC MENU"
@@ -50,6 +51,9 @@ func _step(flow, backwards: bool) -> void:
 	if monster != null:
 		await flow.go("intro", {"foe": monster})
 		return
+	if s.floor_map.merchant_at(next):
+		await flow.go("trade")
+		return
 	s.cell = next
 	s.visited[next] = true
 	s.look()
@@ -83,6 +87,18 @@ func _find_secrets(flow) -> void:
 		s.say([State.sys_line(Floors.secret_line("chest") % gold)])
 		print("explore: a chest at %s, %d gold" % [s.cell, gold])
 		flow.event("sound", {"name": "good"})
+	var found: String = s.floor_map.pickup_at(s.cell)
+	if found != "":
+		var name := Items.label(found)
+		if Items.carry(s, found):
+			s.floor_map.remove_pickup(s.cell)
+			s.say([State.sys_line(Items.line("found") % name)])
+			if not flow.coach.say("item"):
+				flow.announce(name, str(Items.info(found).sub))
+			print("explore: found %s at %s" % [found, s.cell])
+			flow.event("sound", {"name": "good"})
+		else:
+			s.say([State.sys_line(Items.line("full") % name)])
 	var there = s.floor_map.pad_partner(s.cell)
 	if there != null:
 		print("explore: pad from %s to %s" % [s.cell, there])

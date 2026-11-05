@@ -255,7 +255,7 @@ func _process(dt: float) -> void:
 	_stage.calm = Settings.get_value("calm")
 	_stage.update(s, _clock_ms / 1000.0, dt)
 	_overlay.clock_ms = _clock_ms
-	_automap.visible = s.floor_map != null and s.stage in ["explore", "end"]
+	_automap.visible = s.floor_map != null and s.stage in ["explore", "end", "trade"]
 	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
 	_postfx.update(dt)

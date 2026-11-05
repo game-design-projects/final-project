@@ -8,6 +8,7 @@ const Grid = preload("res://src/rules/maps/grid.gd")
 
 const PAD_NEAR := [[0.1, 0.35], [0.03, 0.5]] # where the pads go, as shares of the walk from the start to the far end of the floor, and where if not there
 const PAD_FAR := [[0.6, 0.9], [0.5, 0.98]]
+const TRADER_AT := [[0.3, 0.7], [0.1, 0.95]]
 const SAFE_TRIES := 40
 const MIN_FROM_START := 3
 
@@ -126,6 +127,28 @@ static func place_pads(rng, f, walk: Dictionary, hall: Vector2i, params: Diction
 		f.teleports.append({"a": a, "b": b})
 
 
+## A spot for the trader, who stands in the way as a pad does, or null.
+static func place_trader(rng, f, walk: Dictionary, hall: Vector2i) -> Variant:
+	return _pad_in(rng, f, walk, hall, TRADER_AT, walk.dist[walk.farthest], f.reserved())
+
+
+## A place for something to lie about: the end of a corridor if there is one, where only someone looking would go. Or null.
+static func quiet_spot(rng, f, walk: Dictionary, hall: Vector2i) -> Variant:
+	var taken: Dictionary = f.reserved()
+	var ends := []
+	var others := []
+	for c: Vector2i in walk.order:
+		if taken.has(c) or c == f.stairs or c == f.start or Grid.in_hall(c, hall) or walk.dist[c] < MIN_FROM_START:
+			continue
+		if _open_sides(f, c).size() == 1:
+			ends.append(c)
+		else:
+			others.append(c)
+	if not ends.is_empty():
+		return rng.pick(ends)
+	return rng.pick(others) if not others.is_empty() else null
+
+
 ## A spot for a pad in the first of these stretches of the walk that has one.
 static func _pad_in(rng, f, walk: Dictionary, hall: Vector2i, shares: Array, longest: int, blocked: Dictionary) -> Variant:
 	for share in shares:
@@ -141,7 +164,7 @@ static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, lo
 	var others := []
 	for c: Vector2i in walk.order:
 		var d: float = float(walk.dist[c]) / maxi(1, longest)
-		if d < share[0] or d > share[1] or c == f.stairs or c == f.start or Grid.in_hall(c, hall) or blocked.has(c) or _by_a_cracked_wall(f, c):
+		if d < share[0] or d > share[1] or c == f.stairs or c == f.start or Grid.in_hall(c, hall) or blocked.has(c) or _beside_a_secret(f, c, blocked):
 			continue
 		if _open_sides(f, c).size() == 1:
 			ends.append(c)
@@ -154,10 +177,10 @@ static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, lo
 	return null
 
 
-## A pad here would carry you off before you could reach the wall.
-static func _by_a_cracked_wall(f, c: Vector2i) -> bool:
+## Something here could stand between you and the cracked wall or the pad next to it.
+static func _beside_a_secret(f, c: Vector2i, blocked: Dictionary) -> bool:
 	for d in FloorMap.DIRS:
-		if f.is_cracked(c + d):
+		if f.is_cracked(c + d) or blocked.has(c + d):
 			return true
 	return false
 

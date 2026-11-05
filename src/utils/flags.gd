@@ -52,6 +52,8 @@ const FEATURES := {
 	"party-aid": "each ally adds to your strikes, and two or more take the edge off every hit",
 	"map-gen": "floors come in biomes with their own generator, size, colours and monsters, and grow as you go down, with a scrolling automap",
 	"secrets": "floors hide chests behind cracked walls, which break when you walk into them, and pads that carry you across the floor",
+	"items": "floors have things lying about, and ITEM in a fight heals, sharpens, slips away or gives a gift a monster may love",
+	"shop": "some floors have a trader who sells items for gold",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 }
 

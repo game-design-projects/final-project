@@ -23,7 +23,7 @@ const H := 288.0
 const FOE_RECT := Rect2(110, 20, 228, 258)
 const AUTOMAP_MARGIN := 10.0 # screen pixels from the picture's corner, as gameplay.gd places it
 ## The stages in which the foe's card is worth reading: the fight waits on you.
-const CARD_STAGES := ["intro", "menu", "act", "talk"]
+const CARD_STAGES := ["intro", "menu", "act", "items", "talk"]
 const CHAT_SHOWN := 8
 const MIND_ROWS_SHOWN := 2 # the card shows the last answers; the debug panel all of them
 
@@ -163,14 +163,14 @@ func _allowed(key: String) -> bool:
 	if key == "foe":
 		return state.foe != null and state.stage in CARD_STAGES
 	if key == "map":
-		return state.stage in ["explore", "end"]
+		return state.stage in ["explore", "end", "trade"]
 	if key == "chat":
 		return state.viewing("chat") and not state.chat.is_empty() and state.stage in CARD_STAGES
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
 		var i := int(key.substr(7))
-		return state.stage in ["menu", "act"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
+		return state.stage in ["menu", "act", "items", "trade"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
 	return false
 
 
@@ -187,7 +187,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
-		return map_blocks(state.viewing("secrets"))
+		return map_blocks(state.viewing("secrets"), state.viewing("items"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -265,7 +265,7 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(secrets := false) -> Array:
+static func map_blocks(secrets := false, items := false) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -277,6 +277,9 @@ static func map_blocks(secrets := false) -> Array:
 	if secrets:
 		out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
 		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
+	if items:
+		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
+		out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
 	return out
 
 

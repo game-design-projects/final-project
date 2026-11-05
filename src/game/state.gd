@@ -8,6 +8,7 @@ const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
+const Items = preload("res://src/rules/items.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
@@ -44,6 +45,8 @@ var allies: Array = [] # Ally
 var tally := {"spared": 0, "slain": 0, "fled": 0, "recruited": 0, "left": 0}
 var reputation := {} # clan -> how it thinks of you, -100..100 (rules/clans.gd)
 var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest first
+var items: Array = [] # item ids in the bag (rules/items.gd)
+var sharpened := 0 # what a whetstone adds to your next strike that lands
 
 # the fight
 var foe # Monster, or null when not in a fight
@@ -140,6 +143,7 @@ func to_dict() -> Dictionary:
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
 		"reputation": reputation.duplicate(), "deeds": deeds.duplicate(),
+		"items": items.duplicate(), "sharpened": sharpened,
 	}
 
 
@@ -180,6 +184,10 @@ static func from_dict(d: Dictionary):
 	for deed in d.get("deeds", []).slice(-Clans.DEEDS_MAX):
 		if Clans.is_clan(str(deed.get("clan", ""))):
 			s.deeds.append({"clan": str(deed.clan), "species": str(deed.get("species", "")), "who": str(deed.get("who", "")), "deed": str(deed.get("deed", ""))})
+	for id in d.get("items", []) if d.get("items") is Array else []:
+		if Items.known(str(id)):
+			Items.carry(s, str(id))
+	s.sharpened = maxi(0, _int(d.sharpened)) if _is_num(d.get("sharpened")) else 0
 	for a in d.allies.slice(0, Combat.PARTY_MAX):
 		var ally = Ally.from_dict(a)
 		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)
@@ -254,6 +262,14 @@ static func _floor_problem(f) -> String:
 	if f.has("teleports"):
 		if not f.teleports is Array or f.teleports.any(func(t): return not t is Dictionary or not _is_cell(t.get("a")) or not _is_cell(t.get("b")) or not _open(f, _cell(t.a)) or not _open(f, _cell(t.b))):
 			return "the floor's pads are not a list of pairs of open cells"
+	if f.has("pickups"):
+		if not f.pickups is Array or f.pickups.any(func(p): return not p is Dictionary or not _is_cell(p.get("cell")) or not _open(f, _cell(p.cell)) or not Items.known(str(p.get("item", "")))):
+			return "the floor's items are not a list of open cells with known items"
+	if f.has("merchant") and not f.merchant is Dictionary:
+		return "the floor's trader is not a record"
+	if f.has("merchant") and not f.merchant.is_empty():
+		if not _is_cell(f.merchant.get("cell")) or not _open(f, _cell(f.merchant.cell)) or not f.merchant.get("stock") is Array or f.merchant.stock.any(func(id): return not Items.known(str(id))):
+			return "the floor's trader is not on an open cell with known stock"
 	if not f.get("monsters") is Array:
 		return "the floor's monsters are not a list"
 	for m in f.monsters:

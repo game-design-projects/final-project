@@ -6,6 +6,7 @@ extends RefCounted
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
+const Items = preload("res://src/rules/items.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Secrets = preload("res://src/rules/secrets.gd")
@@ -42,8 +43,17 @@ static func generate(rng: Rng, plan := {}):
 	f.stairs = walk.farthest
 	if not secrets.is_empty():
 		Secrets.place_pads(rng, f, walk, hall, secrets)
-	f.monsters = _place_monsters(rng, walk, hall, plan, f.pads())
-	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, (Time.get_ticks_usec() - t0) / 1000])
+	if plan.get("shop", false):
+		var cell: Variant = Secrets.place_trader(rng, f, walk, hall)
+		if cell != null:
+			f.merchant = {"cell": cell, "stock": Items.stock(rng, plan)}
+	if plan.get("items", false):
+		for item in Items.floor_finds(rng, plan):
+			var cell: Variant = Secrets.quiet_spot(rng, f, walk, hall)
+			if cell != null:
+				f.pickups.append({"cell": cell, "item": item})
+	f.monsters = _place_monsters(rng, walk, hall, plan, f.reserved())
+	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
 	return f
 
 

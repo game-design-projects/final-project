@@ -49,6 +49,8 @@ func _plan(biome: Dictionary, depth: int) -> Dictionary:
 	plan.biome = Floors.sized(biome, depth)
 	plan.secrets = Floors.secrets(plan.biome)
 	plan.boss_at_exit = true
+	plan.items = true
+	plan.shop = true
 	return plan
 
 
@@ -115,6 +117,45 @@ func _walk_through(biome: Dictionary) -> void:
 				break
 		await _wait(0.4)
 		await _shot("%s_5_pad" % biome.id)
+	if not f.pickups.is_empty():
+		_look_at(s, f, f.pickups[0].cell)
+		await _wait(0.4)
+		await _shot("%s_6_item" % biome.id)
+	if not f.merchant.is_empty():
+		_look_at(s, f, f.merchant.cell)
+		await _wait(0.4)
+		await _shot("%s_7_trader" % biome.id)
+		for i in 4:
+			if f.merchant.cell == s.cell + FloorMap.DIRS[i]:
+				s.facing = i
+		_put(s, f.merchant.cell - FloorMap.DIRS[s.facing], s.facing)
+		s.banner = null
+		await flow.press("up")
+		await _wait(0.4)
+		await _shot("%s_8_shelf" % biome.id)
+		await flow.press("cancel")
+	s.items = ["salve", "sugar", "smoke"]
+	await flow.go("intro", {"foe": f.monsters[0]})
+	await _wait(1.4)
+	await _shot("%s_9_fight_menu" % biome.id)
+	await flow.press("5")
+	await _wait(0.4)
+	await _shot("%s_9b_bag" % biome.id)
+	await flow.press("cancel")
+	await flow.press("4")
+	await _wait(0.4)
+
+
+## Stand a step or two off a cell, looking at it.
+func _look_at(s, f, cell: Vector2i) -> void:
+	for steps in [2, 1]:
+		for i in 4:
+			var ok := true
+			for n in range(1, steps + 1):
+				ok = ok and f.is_open(cell - FloorMap.DIRS[i] * n)
+			if ok:
+				_put(s, cell - FloorMap.DIRS[i] * steps, i)
+				return
 
 
 ## Stand in the widest place on the floor and look about, and let the automap fill in.

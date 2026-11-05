@@ -278,6 +278,18 @@ func leave_fight(lines: Array) -> void:
 	await flow.go("explore", {"lines": lines})
 
 
+## Out of the fight with nothing owed: no gold, no grudge, and it heals up as if you were never there.
+func slip_away(m, line: String) -> void:
+	var s = flow.state
+	s.tally.fled += 1
+	flow.event("sound", {"name": "flee"})
+	judge("flee")
+	flow.end_slice()
+	m.hp = m.max_hp
+	print("encounter: slipped away from %s" % m.name)
+	await flow.go("explore", {"lines": [State.sys_line(line)] + _take_notes()})
+
+
 ## A fair cut of gold to stand down (bandits and snakes). `label` names the offer; `words` is what was read from a typed one.
 func offer_cut(m, label: String, words = null) -> void:
 	var s = flow.state
@@ -306,6 +318,8 @@ func retry_fight() -> void:
 	s.floor_map.monsters[s.floor_map.monsters.find(s.foe)] = fresh
 	s.hp = s.max_hp
 	s.gold = snap.gold
+	s.items = snap.get("items", []).duplicate()
+	s.sharpened = snap.get("sharpened", 0)
 	s.allies = snap.allies.map(func(a): return Ally.from_dict(a))
 	s.tally = snap.tally.duplicate()
 	pending_notes = []

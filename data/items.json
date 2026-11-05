@@ -1,0 +1,32 @@
+{
+ "carry": 6,
+ "pickups_per_floor": 2,
+ "shop_floors": [2, 4],
+ "stock": 4,
+ "gift": {"loved_friendliness": 28, "loved_calm": 16, "other_friendliness": 6},
+ "lines": {
+  "found": "You found %s.",
+  "full": "%s lies here, but your bag is full.",
+  "hello": "A trader has made a home of this cell. It has things, and it wants gold.",
+  "bought": "You buy %s. %d gold left.",
+  "poor": "%s costs %d gold. You have %d.",
+  "bag_full": "Your bag is full.",
+  "sold_out": "Nothing left to sell. The trader shrugs.",
+  "bye": "The trader goes back to counting.",
+  "healed": "You use %s: %d health back.",
+  "sharpened": "You work the %s along your edge. Your next strike hits %d harder.",
+  "escaped": "You throw %s and walk out of the smoke. %s never saw which way you went.",
+  "gift": "You give %s to %s.",
+  "loved": "It is exactly what it wanted."
+ },
+ "items": {
+  "salve": {"label": "SALVE", "kind": "heal", "amount": 10, "price": 6, "weight": 3, "sub": "Heals 10. Takes your turn."},
+  "whetstone": {"label": "WHETSTONE", "kind": "sharpen", "amount": 6, "price": 5, "weight": 2, "sub": "Your next strike hits 6 harder. Free to use."},
+  "smoke": {"label": "SMOKE", "kind": "escape", "price": 4, "weight": 2, "sub": "Leave a fight at no cost and no grudge. Not a champion's."},
+  "sugar": {"label": "SUGAR LUMP", "kind": "gift", "loves": "slime", "price": 7, "weight": 2, "sub": "A gift. Slimes adore it; anyone else only shrugs."},
+  "ring": {"label": "STOLEN RING", "kind": "gift", "loves": "bandit", "price": 7, "weight": 2, "sub": "A gift. Bandits adore it; anyone else only shrugs."},
+  "egg": {"label": "WARM EGG", "kind": "gift", "loves": "snake", "price": 7, "weight": 2, "sub": "A gift. Snakes adore it; anyone else only shrugs."},
+  "moss": {"label": "OLD MOSS", "kind": "gift", "loves": "rock", "price": 7, "weight": 2, "sub": "A gift. Rocks adore it; anyone else only shrugs."},
+  "ember": {"label": "LAST EMBER", "kind": "gift", "loves": "dragon", "price": 12, "weight": 1, "sub": "A gift. Champions adore it; anyone else only shrugs."}
+ }
+}

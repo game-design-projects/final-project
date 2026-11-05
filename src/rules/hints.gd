@@ -111,7 +111,7 @@ static func first_step_toward(floor_map, from: Vector2i, to: Vector2i) -> String
 		head += 1
 		for i in 4:
 			var next: Vector2i = at + FloorMap.DIRS[i]
-			if not floor_map.is_open(next) or first.has(next) or (next != to and floor_map.pad_partner(next) != null):
+			if not floor_map.is_open(next) or first.has(next) or (next != to and floor_map.in_the_way(next)):
 				continue
 			first[next] = i if at == from else first[at]
 			if next == to:

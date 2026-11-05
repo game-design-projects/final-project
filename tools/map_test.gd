@@ -13,6 +13,7 @@ const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Items = preload("res://src/rules/items.gd")
 const Materials = preload("res://src/view/materials.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -46,6 +47,8 @@ func _plan(biome: Dictionary, depth: int, boss_at_exit := true) -> Dictionary:
 	plan.biome = Floors.sized(biome, depth)
 	plan.secrets = Floors.secrets(plan.biome)
 	plan.boss_at_exit = boss_at_exit
+	plan.items = true
+	plan.shop = true
 	return plan
 
 
@@ -90,6 +93,8 @@ func _walkable(f, breaking := false) -> Dictionary:
 	for t in f.teleports:
 		pads[t.a] = true
 		pads[t.b] = true
+	if not f.merchant.is_empty():
+		pads[f.merchant.cell] = true
 	var dist := {f.start: 0}
 	var queue: Array = [f.start]
 	var head := 0
@@ -130,8 +135,8 @@ func _thousand_floors(biome: Dictionary) -> void:
 				note.call("a monster out of reach")
 			if not f.is_open(m.cell):
 				note.call("a monster in a wall")
-			if f.pad_partner(m.cell) != null:
-				note.call("a monster on a pad")
+			if f.reserved().has(m.cell):
+				note.call("a monster on a pad, an item or the trader")
 		if f.monsters.size() != f.monsters.filter(func(m): return f.monsters.filter(func(o): return o.cell == m.cell).size() == 1).size():
 			note.call("two monsters in one cell")
 		var open := 0
@@ -141,7 +146,7 @@ func _thousand_floors(biome: Dictionary) -> void:
 				var c := Vector2i(x, y)
 				if f.is_open(c):
 					open += 1
-					if not dist.has(c) and f.pad_partner(c) == null and not f.treasure.any(func(t): return t.cell == c):
+					if not dist.has(c) and not f.in_the_way(c) and not f.treasure.any(func(t): return t.cell == c):
 						note.call("open floor out of reach")
 				if f.is_cracked(c):
 					cracked.append(c)
@@ -166,6 +171,15 @@ func _thousand_floors(biome: Dictionary) -> void:
 					note.call("a pad in the wrong place")
 				if not FloorMap.DIRS.any(func(d): return dist.has(end + d)):
 					note.call("a pad nobody can walk up to")
+		for p in f.pickups:
+			if not dist.has(p.cell):
+				note.call("an item out of reach")
+		if f.pickups.size() != int(Items.table().pickups_per_floor):
+			note.call("the wrong number of items")
+		if f.merchant.is_empty() or f.merchant.stock.size() != int(Items.table().stock):
+			note.call("no trader with a full shelf")
+		elif not FloorMap.DIRS.any(func(d): return dist.has(f.merchant.cell + d)):
+			note.call("a trader nobody can walk up to")
 		if i < SAME_SEED_CHECKS:
 			var again = FloorGen.generate(Rng.new(i * 13 + 1), _plan(biome, depth))
 			if JSON.stringify(again.to_dict()) != JSON.stringify(f.to_dict()):
@@ -249,6 +263,11 @@ func _save_keeps_the_secrets() -> void:
 		func(d): d.floor.teleports = [{"a": [0, 0], "b": [1, 1]}],
 		func(d): d.floor.teleports = [{"a": [1, 1]}],
 		func(d): d.floor.biome = 4,
+		func(d): d.floor.pickups = [{"cell": [0, 0], "item": "salve"}],
+		func(d): d.floor.pickups = [{"cell": [1, 1], "item": "nothing"}],
+		func(d): d.floor.merchant = {"cell": [0, 0], "stock": []},
+		func(d): d.floor.merchant = {"cell": [1, 1], "stock": ["nothing"]},
+		func(d): d.floor.merchant = 3,
 	]:
 		var wrong: Dictionary = saved.duplicate(true)
 		bad.call(wrong)
@@ -257,6 +276,10 @@ func _save_keeps_the_secrets() -> void:
 	old.floor.erase("treasure")
 	old.floor.erase("teleports")
 	old.floor.erase("biome")
+	old.floor.erase("pickups")
+	old.floor.erase("merchant")
+	old.erase("items")
+	old.erase("sharpened")
 	var loaded = State.from_dict(old)
 	_check(loaded != null and loaded.floor_map.treasure.is_empty() and loaded.floor_map.biome == "", "a save from before the secrets still loads")
 

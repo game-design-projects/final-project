@@ -119,13 +119,18 @@ func secret_marks() -> Array:
 	for t in f.treasure:
 		if state.seen.has(t.cell) and _in_window(t.cell):
 			out.append({"rect": Rect2(Vector2(t.cell) * s + Vector2.ONE * 2.0, Vector2.ONE * (s - 4.0)), "color": Palette.MERCY})
+	for p in f.pickups:
+		if state.seen.has(p.cell) and _in_window(p.cell):
+			out.append({"rect": Rect2(Vector2(p.cell) * s + Vector2.ONE * 2.0, Vector2.ONE * (s - 4.0)), "color": Palette.MERCY})
+	if not f.merchant.is_empty() and state.seen.has(f.merchant.cell) and _in_window(f.merchant.cell):
+		out.append({"rect": Rect2(Vector2(f.merchant.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.INK})
 	return out
 
 
 func _process(_dt: float) -> void:
 	if state == null or state.floor_map == null:
 		return
-	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.changes]
+	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes]
 	if key != _drawn_key:
 		_drawn_key = key
 		queue_redraw()

@@ -16,6 +16,8 @@ var seed_value := 0
 var biome := "" # its id in data/biomes.json, "" for a floor with none
 var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find
 var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
+var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
+var merchant := {} # {cell: Vector2i, stock: [item id]}, or empty when no trader is here
 var changes := 0 # how many walls have been broken, for whoever built something from the grid
 
 
@@ -49,13 +51,38 @@ func pad_partner(c: Vector2i):
 	return null
 
 
-## The pads' cells, as a set.
-func pads() -> Dictionary:
+## The cells a monster may not stand in, as a set.
+func reserved() -> Dictionary:
 	var out := {}
 	for t in teleports:
 		out[t.a] = true
 		out[t.b] = true
+	for p in pickups:
+		out[p.cell] = true
+	if not merchant.is_empty():
+		out[merchant.cell] = true
 	return out
+
+
+## Whether stepping into this cell would take you somewhere other than through it (a pad, a trader), so a route goes round it.
+func in_the_way(c: Vector2i) -> bool:
+	return pad_partner(c) != null or merchant_at(c)
+
+
+func merchant_at(c: Vector2i) -> bool:
+	return not merchant.is_empty() and merchant.cell == c
+
+
+## What lies in this cell, or "".
+func pickup_at(c: Vector2i) -> String:
+	for p in pickups:
+		if p.cell == c:
+			return p.item
+	return ""
+
+
+func remove_pickup(c: Vector2i) -> void:
+	pickups = pickups.filter(func(p): return p.cell != c)
 
 
 ## Opens the chest in this cell if there is one: its gold, or 0.
@@ -97,6 +124,8 @@ func to_dict() -> Dictionary:
 		"biome": biome,
 		"treasure": treasure.map(func(t): return {"cell": [t.cell.x, t.cell.y], "gold": t.gold}),
 		"teleports": teleports.map(func(t): return {"a": [t.a.x, t.a.y], "b": [t.b.x, t.b.y]}),
+		"pickups": pickups.map(func(p): return {"cell": [p.cell.x, p.cell.y], "item": p.item}),
+		"merchant": {} if merchant.is_empty() else {"cell": [merchant.cell.x, merchant.cell.y], "stock": merchant.stock.duplicate()},
 	}
 
 
@@ -113,6 +142,10 @@ static func from_dict(d: Dictionary, monster_script):
 	f.biome = str(d.get("biome", ""))
 	f.treasure = d.get("treasure", []).map(func(t): return {"cell": _cell(t.cell), "gold": int(t.gold)})
 	f.teleports = d.get("teleports", []).map(func(t): return {"a": _cell(t.a), "b": _cell(t.b)})
+	f.pickups = d.get("pickups", []).map(func(p): return {"cell": _cell(p.cell), "item": str(p.item)})
+	var trader: Dictionary = d.get("merchant", {})
+	if not trader.is_empty():
+		f.merchant = {"cell": _cell(trader.cell), "stock": trader.stock.map(func(id): return str(id))}
 	return f
 
 

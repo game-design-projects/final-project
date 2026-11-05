@@ -20,6 +20,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - `clans`: monsters belong to clans that remember your deeds, later ones say so and start in a different mood, and Jev is told the history.
 - `map-gen`: floors come in three biomes with their own generator (maze, authored chunks, caves), size up to 31x31, colours and monsters, with a scrolling automap.
 - `secrets`: chests behind cracked walls that break when you walk into them, and pairs of pads that carry you across the floor.
+- `items`: things lie about on the floors, and ITEM in a fight heals, sharpens, slips away or gives a gift a monster may love.
+- `shop`: some floors have a trader who sells items for gold.
 - `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.
 - `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
 
