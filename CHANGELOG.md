@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- `tools/music/hum-theme/`: an exploring loop and a combat loop on a hummed theme, with their source, MIDI and previews; not in the game yet (refs #49).
 - Feature flags for all new game features, on by default: `no-<name>` or `<name>=off` turns one off, and `classic` turns them all off.
 - `real-floors`: the stairs lead to the next floor and carry over HP, gold, allies and the tally, and the run ends at the last floor.
 - `piece-icons`, `gentle-dodge` and `mini-games`: chess attacks show a piece's shape and reach, dodges run slower and adapt, and every third attack is a mini-game.
