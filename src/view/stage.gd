@@ -50,6 +50,20 @@ var palette := {}
 var calm := false # the `calm` setting: a softer lunge
 var _decor: Node3D
 var _torches: Array = [] # {"pos": Vector3, "seed": float}, the floor's
+# One timestamp texel per cell, uploaded only on steps or exploration changes. UV2 keeps
+# shared wall boundaries assigned to their owning open cell without rounding seams.
+@export_range(0.01, 2.0) var reveal_seconds := 0.45
+@export_range(0.0, 0.5) var reveal_stagger := 0.1
+@export_range(0.0, 0.5) var reveal_wall_delay := 0.04
+@export_range(0.0, 0.5) var reveal_ceiling_delay := 0.03
+@export_range(0.0, 6.0) var reveal_intensity := 3.0
+@export_range(0.01, 0.4) var reveal_panel_inset := 0.14
+var _reveal_image: Image
+var _reveal_texture: ImageTexture
+var _reveal_seen := {}
+var _reveal_key := []
+var _reveal_cell := Vector2i.ZERO
+var _flat_mat: ShaderMaterial
 var _wall_mat: ShaderMaterial
 var _flicker_key := []
 
@@ -132,10 +146,50 @@ func update(state, now: float, dt: float) -> void:
 	if state.floor_map.treasure.size() + state.floor_map.pickups.size() != _secrets_built:
 		_build_secrets()
 	_now = now
+	_update_reveal(state, now)
 	_move_camera(state, now)
 	if is_visible_in_tree():
 		_flicker(now)
 		_show_monsters(state, now, dt)
+
+
+func _update_reveal(state, now: float) -> void:
+	var enabled: bool = state.viewing("dungeon-reveal")
+	var moved: bool = state.cell != _reveal_cell
+	_reveal_cell = state.cell
+	var key := [state, state.cell, state.seen.size(), enabled, is_visible_in_tree()]
+	if key != _reveal_key:
+		_reveal_key = key
+		var fresh := []
+		for c in state.seen:
+			if not _reveal_seen.has(c):
+				fresh.append(c)
+		# Every successful step replays the visible corridor, including explored cells.
+		# Stationary frames, bumps and returning from menus do not restart the wave.
+		if moved:
+			for c in state.in_sight:
+				if not fresh.has(c):
+					fresh.append(c)
+			for c in Vision.ahead(state.floor_map, state.cell, state.facing):
+				if not fresh.has(c):
+					fresh.append(c)
+		fresh.sort_custom(func(a, b): return a.distance_squared_to(state.cell) < b.distance_squared_to(state.cell))
+		var near := 0.0 if fresh.is_empty() else float(fresh.front().distance_to(state.cell))
+		for c in fresh:
+			_reveal_seen[c] = true
+			var delay: float = reveal_stagger * (c.distance_to(state.cell) - near)
+			var start: float = now + delay if enabled and is_visible_in_tree() else -1000.0
+			_reveal_image.set_pixel(c.x, c.y, Color(start, 0, 0))
+		if not fresh.is_empty():
+			_reveal_texture.update(_reveal_image)
+	for mat in [_wall_mat, _flat_mat]:
+		mat.set_shader_parameter("reveal_enabled", enabled)
+		mat.set_shader_parameter("reveal_now", now)
+		mat.set_shader_parameter("reveal_seconds", reveal_seconds)
+		mat.set_shader_parameter("reveal_wall_delay", reveal_wall_delay)
+		mat.set_shader_parameter("reveal_ceiling_delay", reveal_ceiling_delay)
+		mat.set_shader_parameter("reveal_panel_inset", reveal_panel_inset)
+		mat.set_shader_parameter("reveal_intensity", reveal_intensity * (0.5 if calm else 1.0))
 
 
 ## The torches nearest the camera glow on the walls this frame; worked out again only when one could have changed.
@@ -164,6 +218,13 @@ func _flicker(now: float) -> void:
 
 func _load_floor(state) -> void:
 	var t0 := Time.get_ticks_usec()
+	if _floor_map != state.floor_map:
+		_reveal_cell = state.cell
+		_reveal_seen = state.seen.duplicate()
+		_reveal_image = Image.create(state.floor_map.size, state.floor_map.size, false, Image.FORMAT_RF)
+		_reveal_image.fill(Color(-1000.0, 0, 0))
+		_reveal_texture = ImageTexture.create_from_image(_reveal_image)
+	_reveal_key = []
 	_floor_map = state.floor_map
 	_floor_changes = _floor_map.changes
 	palette = Palette.for_run(state.palette_id)
@@ -187,7 +248,10 @@ func _load_floor(state) -> void:
 	_flicker_key = []
 	_dungeon = MeshInstance3D.new()
 	_wall_mat = Materials.wire(0, palette.wall, palette.accent)
-	_dungeon.mesh = DungeonMesh.build(_floor_map, _wall_mat, Materials.wire(1, palette.wall, palette.accent))
+	_flat_mat = Materials.wire(1, palette.wall, palette.accent)
+	for mat in [_wall_mat, _flat_mat]:
+		mat.set_shader_parameter("reveal_times", _reveal_texture)
+	_dungeon.mesh = DungeonMesh.build(_floor_map, _wall_mat, _flat_mat)
 	add_child(_dungeon)
 	_torches = []
 	_decor = Decor.build(_floor_map, palette.wall, palette.accent, _torches)

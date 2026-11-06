@@ -41,6 +41,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `flicker_check` | Which pixels of a monster blink as it stands there, and how much its lit area jumps gliding (`only=<species>`) |
 | `far_check` | Every species at every distance down the longest line of each floor, and across floors: is it seen, and is a name ever over nothing |
 | `hold_check` | Each arrow held in the real game scene: cells, turns, bumps, whether the camera turned back, the slowest frame |
+| `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
 | `screenshots`, `camera_shots`, `model_shots`, `map_shots` | Pictures to look at |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 
@@ -98,3 +99,42 @@ npm ci --prefix tools/godot-mcp
 
 Claude Code asks once whether to trust the project's MCP servers; approve `godot`. Codex loads `.codex/config.toml` only once the project is trusted (it asks on the first start here); `codex mcp list` shows the server, and it forwards `GODOT_PATH` when that is set. The server's own dependencies carry known `npm audit` advisories (an old pinned MCP SDK); it only talks to the agent over stdio, and nothing of it ships in a build.
 
+
+## Dungeon reveal tuning
+
+`src/view/stage.gd` exposes the panel choreography (seconds):
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `reveal_stagger` | 0.100 | Delay per cell of distance from the nearest new cell |
+| `reveal_wall_delay` | 0.040 | Floor to walls |
+| `reveal_ceiling_delay` | 0.030 | Walls to ceiling |
+| `reveal_seconds` | 0.450 | Each surface's afterglow decay |
+| `reveal_intensity` | 3.0 | Peak exposure, compressed before LDR clipping; halved in calm mode |
+| `reveal_panel_inset` | 0.14 | Black border as a fraction of each face |
+
+The opaque dungeon shader draws filled rectangular panels on existing faces only,
+using face UVs and cell addresses in UV2. Floor, walls and ceiling activate separately.
+The original wire appearance returns as the panels decay. Existing bloom/CRT stays
+in charge of the glow; monsters, hazards and props retain their own depth and materials.
+Stair holes remain holes. `no-dungeon-reveal` and `classic` restore the original output.
+
+A small RF texture stores start times, uploaded only on steps or exploration changes;
+frames update uniforms, never geometry. The stage compares `state.seen` with its
+prior snapshot for steps and turns. Every successful step replays all currently
+visible corridor cells, including explored cells and backtracking. Stationary frames and wall bumps do not restart
+the wave; turns still reveal newly discovered cells. Initial/save views start
+settled, and wall breaks preserve reveal history on the same floor.
+
+```bash
+godot --path . -s res://tools/reveal_shots.gd -- nosave nosound out=/tmp/dungeon-reveal
+godot --path . -s res://tools/panel_reveal_demo.gd -- nosave nosound out=/tmp/panel-reveal
+ffmpeg -y -framerate 60 -i /tmp/panel-reveal/frames/%04d.png -c:v libx264 -pix_fmt yuv420p /tmp/panel-reveal/reveal.mp4
+```
+
+The deterministic demo uses the actual Stage, camera (FOV 68, eye 0.85), dungeon
+mesh and postfx in a 13-cell straight corridor. It captures before, floor, walls,
+ceiling, cells 2/3, settled, a monster/hazard readability frame and 150 frames at
+60 fps, plus three rapid steps through explored cells and backtracking/bump checks.
+The visibility batch is explicitly supplied by the fixture to show the
+full corridor; normal play continues using its existing visibility rules.
