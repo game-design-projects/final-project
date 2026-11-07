@@ -36,7 +36,7 @@ godot --path . -- motif=3                         # one of them
 godot --path . -- no-motifs                       # without them
 ```
 
-The feature `motifs` is on by default and does nothing unless those files are there: `build/` is ignored by git and left out of every export. Each motif plays once, then a rest of 4 to 8 seconds, then 25 to 35 seconds of `ambient.ogg`, and the log prints `music: motif N of 5` as each one starts. A fight or a sting takes it off. Still open for the team: which sections to keep, where they fit, and from Abdulla the source, the soundfont and its license. Whatever stays goes through `tools/music/`, `assets/CREDITS.txt` and `tools/audio_test.gd`, and this section goes away.
+The feature `motifs` is on by default and does nothing unless those files are there: `build/` is ignored by git and left out of every export. Each motif plays once, then a rest of 4 to 8 seconds, then 25 to 35 seconds of `ambient.ogg`, and the log prints `music: motif N of 5` as each one starts. A fight or a sting takes it off. Still open for the team: which sections to keep, where they fit, and from Abdulla the source, the soundfont and its license. Update: two finished loops on a hummed theme, an exploring loop (88 BPM) and a combat loop (176 BPM), are in [tools/music/hum-theme/](../tools/music/hum-theme/README.md) with their source and soundfont license (GeneralUser GS, free for commercial use); they are not wired into the game yet. Whatever stays goes through `tools/music/`, `assets/CREDITS.txt` and `tools/audio_test.gd`, and this section goes away.
 
 ## Sound effects
 
