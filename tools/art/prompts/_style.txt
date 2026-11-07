@@ -1,0 +1,4 @@
+Use case: stylized-concept
+Asset type: game art for a CRT wireframe dungeon crawler. A script cuts this image into cells and tints them in the game, so it must stay clean and uniform.
+Style/medium: thin, confident, slightly wobbly hand-drawn white line art on a pure black background (#000000), like phosphor on an old vector monitor. Uniform line weight of about 6 pixels at this image size. White lines only; everything inside an outline stays pure black unless the brief says "solid white".
+Avoid: colour, grey fills, shading, gradients, glow halo, scanlines, drop shadows, background texture, grid lines, cell borders, labels, numbers, letters, watermarks, a frame round the image.

@@ -1,0 +1,552 @@
+{
+ "slime": {
+  "file": "res://assets/art/slime.png",
+  "size": [
+   1104,
+   1284
+  ],
+  "cell": [
+   170,
+   147
+  ],
+  "pad": 12,
+  "feet": [
+   101.15,
+   143.08
+  ],
+  "body_h": 76.2,
+  "world_h": 0.72,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "angry": {
+    "row": 4,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "hurt": {
+    "row": 5,
+    "count": 6,
+    "fps": 11,
+    "loop": false
+   },
+   "lunge": {
+    "row": 6,
+    "count": 6,
+    "fps": 12,
+    "loop": false
+   },
+   "hollow": {
+    "row": 7,
+    "count": 6,
+    "fps": 3,
+    "loop": false
+   }
+  }
+ },
+ "bandit": {
+  "file": "res://assets/art/bandit.png",
+  "size": [
+   1104,
+   1332
+  ],
+  "cell": [
+   170,
+   153
+  ],
+  "pad": 12,
+  "feet": [
+   101.64,
+   149.02
+  ],
+  "body_h": 120.8,
+  "world_h": 1.05,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "angry": {
+    "row": 4,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "hurt": {
+    "row": 5,
+    "count": 6,
+    "fps": 11,
+    "loop": false
+   },
+   "lunge": {
+    "row": 6,
+    "count": 6,
+    "fps": 12,
+    "loop": false
+   },
+   "hollow": {
+    "row": 7,
+    "count": 6,
+    "fps": 3,
+    "loop": false
+   }
+  }
+ },
+ "snake": {
+  "file": "res://assets/art/snake.png",
+  "size": [
+   1098,
+   1468
+  ],
+  "cell": [
+   169,
+   170
+  ],
+  "pad": 12,
+  "feet": [
+   95.99,
+   164.14
+  ],
+  "body_h": 117.2,
+  "world_h": 1.1,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "angry": {
+    "row": 4,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "hurt": {
+    "row": 5,
+    "count": 6,
+    "fps": 11,
+    "loop": false
+   },
+   "lunge": {
+    "row": 6,
+    "count": 6,
+    "fps": 12,
+    "loop": false
+   },
+   "hollow": {
+    "row": 7,
+    "count": 6,
+    "fps": 3,
+    "loop": false
+   }
+  }
+ },
+ "rock": {
+  "file": "res://assets/art/rock.png",
+  "size": [
+   1104,
+   1308
+  ],
+  "cell": [
+   170,
+   150
+  ],
+  "pad": 12,
+  "feet": [
+   83.05,
+   145.99
+  ],
+  "body_h": 88.9,
+  "world_h": 1.05,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "angry": {
+    "row": 4,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "hurt": {
+    "row": 5,
+    "count": 6,
+    "fps": 11,
+    "loop": false
+   },
+   "lunge": {
+    "row": 6,
+    "count": 6,
+    "fps": 12,
+    "loop": false
+   },
+   "hollow": {
+    "row": 7,
+    "count": 6,
+    "fps": 3,
+    "loop": false
+   }
+  }
+ },
+ "dragon": {
+  "file": "res://assets/art/dragon.png",
+  "size": [
+   1104,
+   1260
+  ],
+  "cell": [
+   170,
+   144
+  ],
+  "pad": 12,
+  "feet": [
+   93.6,
+   140.23
+  ],
+  "body_h": 112.5,
+  "world_h": 1.15,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "angry": {
+    "row": 4,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "hurt": {
+    "row": 5,
+    "count": 6,
+    "fps": 11,
+    "loop": false
+   },
+   "lunge": {
+    "row": 6,
+    "count": 6,
+    "fps": 12,
+    "loop": false
+   },
+   "hollow": {
+    "row": 7,
+    "count": 6,
+    "fps": 3,
+    "loop": false
+   }
+  }
+ },
+ "witch": {
+  "file": "res://assets/art/witch.png",
+  "size": [
+   1104,
+   1412
+  ],
+  "cell": [
+   170,
+   163
+  ],
+  "pad": 12,
+  "feet": [
+   91.35,
+   158.71
+  ],
+  "body_h": 130.5,
+  "world_h": 0.98,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   },
+   "angry": {
+    "row": 4,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "hurt": {
+    "row": 5,
+    "count": 6,
+    "fps": 11,
+    "loop": false
+   },
+   "lunge": {
+    "row": 6,
+    "count": 6,
+    "fps": 12,
+    "loop": false
+   },
+   "hollow": {
+    "row": 7,
+    "count": 6,
+    "fps": 3,
+    "loop": false
+   }
+  }
+ },
+ "trader": {
+  "file": "res://assets/art/trader.png",
+  "size": [
+   1104,
+   676
+  ],
+  "cell": [
+   170,
+   154
+  ],
+  "pad": 12,
+  "feet": [
+   107.78,
+   150.28
+  ],
+  "body_h": 117.0,
+  "world_h": 1.05,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   },
+   "hop": {
+    "row": 1,
+    "count": 6,
+    "fps": 14,
+    "loop": false
+   },
+   "happy": {
+    "row": 2,
+    "count": 6,
+    "fps": 9,
+    "loop": false
+   },
+   "scared": {
+    "row": 3,
+    "count": 6,
+    "fps": 10,
+    "loop": false
+   }
+  }
+ },
+ "decor": {
+  "file": "res://assets/art/decor.png",
+  "size": [
+   1084,
+   720
+  ],
+  "cols": 4,
+  "rows": 3,
+  "cell": [
+   256,
+   224
+  ],
+  "pad": 12,
+  "feet": [
+   128.0,
+   111.79746835443038
+  ],
+  "body_h": 129.6,
+  "world_h": 1.0,
+  "frames": [
+   "torch",
+   "chains",
+   "banner",
+   "crack",
+   "window",
+   "skull",
+   "skull_nod",
+   "skull_hollow",
+   "guilty",
+   "fissure",
+   "moss",
+   "bat"
+  ]
+ },
+ "flame": {
+  "file": "res://assets/art/flame.png",
+  "size": [
+   428,
+   292
+  ],
+  "cols": 4,
+  "rows": 2,
+  "cell": [
+   92,
+   128
+  ],
+  "pad": 12,
+  "feet": [
+   46.0,
+   126.4
+  ],
+  "body_h": 120.8,
+  "world_h": 1.0,
+  "frames": [
+   "f1",
+   "f2",
+   "f3",
+   "f4",
+   "f5",
+   "f6",
+   "f7",
+   "f8"
+  ]
+ },
+ "props": {
+  "file": "res://assets/art/props.png",
+  "size": [
+   572,
+   393
+  ],
+  "cols": 4,
+  "rows": 3,
+  "cell": [
+   128,
+   115
+  ],
+  "pad": 12,
+  "feet": [
+   64.0,
+   57.68421052631579
+  ],
+  "body_h": 101.5,
+  "world_h": 1.0,
+  "frames": [
+   "chest",
+   "sack",
+   "ration",
+   "heart",
+   "heart_empty",
+   "coin",
+   "say_heart",
+   "say_alert",
+   "say_quiet",
+   "say_what",
+   "sparkle",
+   "crown"
+  ]
+ }
+}

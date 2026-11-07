@@ -1,0 +1,3 @@
+Primary request: a landscape 3:2 animation sheet, 4 columns by 2 rows (8 cells), one looping torch flame, the same flame licking and swaying from frame to frame, the same size and with its base on the same point in every cell.
+The flame is SOLID WHITE, a chunky rounded hand-drawn flame shape with two or three licking tongues at the top and one small black teardrop cut out of its upper part. The lower half of the flame is plain unbroken solid white, wide enough for two small eyes to sit on it later. No outline around it, no sparks, no handle, no bowl.
+Generous black padding round every flame, nothing touching a neighbouring cell. Frames go in order and must loop smoothly from frame 8 back to frame 1.
