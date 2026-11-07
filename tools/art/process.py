@@ -249,6 +249,7 @@ def process(name: str, spec: dict) -> dict:
     atlas = np.zeros(((dst_h + PAD) * rows + PAD, (dst_w + PAD) * cols + PAD, 4), dtype=np.float32)
     atlas[..., :3] = 1.0
     previews = {}
+    bounds = {}
     for i, f in enumerate(kept):
         canvas = np.zeros((src_h, src_w, 4), dtype=np.float32)
         ox = int(round(left + 3 - f["feet"][0]))
@@ -262,6 +263,9 @@ def process(name: str, spec: dict) -> dict:
         canvas[ty0:ty1, tx0:tx1] = prem[ty0 - oy : ty1 - oy, tx0 - ox : tx1 - ox]
         small = fit(canvas, (dst_w, dst_h))
         previews[f["frame"]] = small
+        # where the ink is in its cell, so a thing can stand on the floor whatever empty space its drawing has under it
+        bx0, by0, bx1, by1 = f["box"]
+        bounds[f["frame"]] = [round((bx0 + ox) * k, 1), round((by0 + oy) * k, 1), round((bx1 - bx0) * k, 1), round((by1 - by0) * k, 1)]
         ax = PAD + (i % cols) * (dst_w + PAD)
         ay = PAD + (i // cols) * (dst_h + PAD)
         atlas[ay : ay + dst_h, ax : ax + dst_w] = to_atlas_pixels(small)
@@ -283,7 +287,18 @@ def process(name: str, spec: dict) -> dict:
         "body_h": round(float(body_h), 1),
         "world_h": spec.get("world_h", 1.0),
         "frames": frames,
+        "bounds": bounds,
     }
+
+
+def process_plain(name: str, spec: dict) -> dict:
+    """A whole picture with nothing to cut: 8-bit grey at the width the game wants."""
+    image = Image.open(SOURCE / f"{name}.png").convert("L")
+    height = round(image.height * spec["width"] / image.width)
+    out = ROOT / "assets" / "art" / f"{name}.png"
+    image.resize((spec["width"], height), Image.LANCZOS).save(out, optimize=True)
+    print(f"  {out.relative_to(ROOT)}: {spec['width']}x{height}, {out.stat().st_size // 1024} KB")
+    return {"file": f"res://assets/art/{name}.png", "size": [spec["width"], height]}
 
 
 def write_gif(name: str, spec: dict, previews: dict) -> None:
@@ -317,7 +332,7 @@ def main() -> None:
         if not (SOURCE / f"{name}.png").exists():
             print(f"  skipped: no {SOURCE.relative_to(ROOT)}/{name}.png")
             continue
-        meta[name] = process(name, spec)
+        meta[name] = process_plain(name, spec) if spec.get("plain") else process(name, spec)
     META.write_text(json.dumps(meta, indent=1) + "\n")
     print(f"{META.relative_to(ROOT)}: {len(meta)} sheets")
 

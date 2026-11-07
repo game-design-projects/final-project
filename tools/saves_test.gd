@@ -80,7 +80,7 @@ func _nosave_in_memory() -> void:
 func _state_is_checked() -> void:
 	var flow := Flow.new(Rng.new(5), LocalMind.new())
 	await flow.new_run()
-	flow.state.allies.append(load("res://src/game/ally.gd").make("slime", "GLOP", 70.0))
+	flow.state.allies = [load("res://src/game/ally.gd").make("slime", "GLOP", 70.0)]
 	var good: Dictionary = flow.state.to_dict()
 	var back = State.from_dict(good.duplicate(true))
 	_check(back != null and back.cell == flow.state.cell and back.hp == 20 and back.allies.size() == 1 and back.floor_map.monsters.size() == flow.state.floor_map.monsters.size(), "a state written by the game is read back")

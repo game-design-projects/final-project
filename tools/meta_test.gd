@@ -295,6 +295,7 @@ func _camp() -> void:
 	var flow = _flow(5)
 	await flow.new_run()
 	var s = flow.state
+	s.allies = []
 	s.items = [Survival.RATION, Survival.RATION]
 	s.hunger = 80.0
 	s.hp = 5

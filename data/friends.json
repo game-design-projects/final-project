@@ -1,0 +1,19 @@
+{
+ "witch": {
+  "label": "little witch",
+  "color": "#8fe8d8",
+  "name": "Wick",
+  "nature": "A very small witch who lights the torches down here. She has been alone a long time and decided you looked cold.",
+  "likes": ["kindness", "anyone who stops to talk", "the torches being lit"],
+  "dislikes": ["killing", "cruelty", "being left in the dark"],
+  "values": "Wants you to get out, and wants you to still be someone worth getting out. Leaves if you stop being that.",
+  "lines": {},
+  "reactions": {
+   "approve": ["*a small hop* ...good.", "*taps your boot with her hat* I saw that."],
+   "neutral": ["*adjusts her enormous hat*"],
+   "disapprove": ["*looks at the floor for a while*", "...that one had a name, you know."],
+   "leave": ["*blows out the nearest torch and doesn't look back*"],
+   "betray": ["*looks at you, and then not at you*"]
+  }
+ }
+}

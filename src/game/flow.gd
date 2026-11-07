@@ -6,7 +6,9 @@
 ## input is dropped while one is still working (`busy`).
 extends RefCounted
 
+const Ally = preload("res://src/game/ally.gd")
 const Coach = preload("res://src/game/coach.gd")
+const Content = preload("res://src/rules/content.gd")
 const Trophies = preload("res://src/game/trophies.gd")
 const Dice = preload("res://src/utils/dice.gd")
 const Encounter = preload("res://src/game/encounter.gd")
@@ -24,10 +26,15 @@ const Texts = preload("res://src/game/texts.gd")
 const Survival = preload("res://src/rules/survival.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 const Vision = preload("res://src/rules/vision.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
 const BANNER_MS := 3000.0
+const WICK_LOYALTY := 75.0
+const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
+const WICK_BANNER_MS := 4500.0
+const WARMTH_TITLE := "THE HALLS"
 const WALK_HEAL_STEPS := 6
 const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
@@ -79,6 +86,7 @@ var slice_floor := false
 
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
+var _wick_comes := false # a new run: she is on her way, and her words wait for the ones up now
 var _keys_back_at := -1.0 # keys do nothing until the clock says this, once a fight is over
 var repeating := false # the key being handled is one repeating by itself, not one just pressed
 var _held_over := false # a key still held from the fight stays dropped until something is pressed afresh
@@ -113,6 +121,8 @@ func new_run() -> void:
 	_apply_features()
 	if feature("legacy"):
 		Legacy.apply(state, legacy_ranks)
+	if feature("wick"):
+		_meet_wick()
 	_make_floor()
 	encounter.pending_notes = []
 	encounter.pending_rows = []
@@ -122,8 +132,27 @@ func new_run() -> void:
 	if _telling_story():
 		var premise: Dictionary = Floors.premise()
 		lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
-		announce(premise.title, premise.door if feature("last-door") else premise.banner, STORY_BANNER_MS)
+		announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
+	if feature("wick"):
+		_wick_comes = true
 	await go("explore", {"lines": lines})
+
+
+## She reaches you as the words about the door fade: alone, and then not.
+func _wick_arrives() -> void:
+	if not _wick_comes or banner_up() or not state.has_ally("witch"):
+		return
+	_wick_comes = false
+	var friend: Dictionary = Floors.friend()
+	announce(friend.title, friend.line, WICK_BANNER_MS)
+	state.say(state.lines.slice(-1) + [State.sys_line(friend.joined)]) # the log has room for two
+
+
+## Your first friend: she is in the party from the first moment, and leaves the way any of them does.
+func _meet_wick() -> void:
+	var wick: Dictionary = Content.table("friends").witch
+	state.allies.append(Ally.make("witch", str(wick.name), WICK_LOYALTY))
+	print("flow: Wick joins, loyalty %.0f" % WICK_LOYALTY)
 
 
 ## Take the stairs: the next floor of this run, keeping health, gold, allies and the tally, with a rest on the way down. `way` is
@@ -221,6 +250,7 @@ func _make_floor(way := {}) -> void:
 
 ## Continue a saved state (from State.to_dict). False, and nothing changes, if it isn't one of ours.
 func load_state(saved: Dictionary) -> bool:
+	_wick_comes = false
 	var loaded = State.from_dict(saved)
 	if loaded == null:
 		return false
@@ -271,6 +301,24 @@ func go(to: String, args := {}) -> void:
 	print("flow: %s -> %s" % [from if from != "" else "start", to])
 	event("stage", {"from": from, "to": to})
 	await _stages[to].enter(self, args)
+	if to == "explore":
+		_note_warmth()
+
+
+## The halls have changed their mind about you: say so on the way back from whatever did it.
+func _note_warmth() -> void:
+	if not feature("warmth"):
+		return
+	var now := Warmth.level(Warmth.of(state))
+	var was: int = state.warmth_level
+	state.warmth_level = now
+	if was < 0 or was == now:
+		return
+	print("flow: warmth %s -> %s (%.2f)" % [Warmth.level_id(was), Warmth.level_id(now), Warmth.of(state)])
+	event("warmth", {"from": was, "to": now})
+	var said := Warmth.line(was, now)
+	if said != "" and not banner_up():
+		announce(WARMTH_TITLE, said)
 
 
 ## Put a moment worth stopping for on the picture: a banner that fades by itself.
@@ -343,6 +391,7 @@ func submit_text(text: String) -> void:
 
 func tick(t: float) -> void:
 	clock = t
+	_wick_arrives()
 	if busy or state.stage == "":
 		return
 	busy = true

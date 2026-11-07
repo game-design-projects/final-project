@@ -201,7 +201,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	var line = null
 	var rows := []
 	if how == "spared" and allow_join:
-		var room: bool = s.allies.size() < Combat.PARTY_MAX
+		var room: bool = s.party_size() < Combat.PARTY_MAX
 		var wants: float = await flow.mind.join(m) if room else 0.0
 		joined = Odds.succeeds(flow.dice, wants)
 		rows.append({"id": "join", "label": "DOES IT WANT TO COME ALONG?" if room else "DOES IT WANT TO COME ALONG? (PARTY FULL)", "answer": wants, "picked": joined})

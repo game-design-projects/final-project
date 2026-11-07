@@ -3,6 +3,7 @@
 extends RefCounted
 
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
+const Figure = preload("res://src/view/figure.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Materials = preload("res://src/view/materials.gd")
 const MeshKit = preload("res://src/view/mesh_kit.gd")
@@ -10,6 +11,8 @@ const MeshKit = preload("res://src/view/mesh_kit.gd")
 const PAD_RINGS := [[0.42, 0.04], [0.26, 0.03], [0.1, 0.1]] # half width and thickness of each ring, in cells
 const LIFT := 0.012 # how far a ring sits off the floor, so the two don't flicker into each other
 const CHEST := Vector3(0.9, 0.42, 0.6)
+const DRAWN_CHEST := 0.56 # how tall the drawings stand, for the feature hand-drawn
+const DRAWN_SACK := 0.44
 const LID_H := 0.16
 const STIR_MOTES := 18
 const STIR_RADIUS := 0.26
@@ -18,16 +21,22 @@ const STIR_MOTE := 0.07
 
 
 ## A node holding them all, or an empty one for a floor that hides nothing.
-static func build(floor_map, wall_color: Color, accent: Color) -> Node3D:
+static func build(floor_map, wall_color: Color, accent: Color, drawn := false) -> Node3D:
 	var root := Node3D.new()
 	var b := MeshKit.Builder.new()
 	for t in floor_map.teleports:
 		_pad(b, DungeonMesh.center(t.a), accent)
 		_pad(b, DungeonMesh.center(t.b), accent)
 	for t in floor_map.treasure:
-		_chest(b, DungeonMesh.center(t.cell), wall_color, accent)
+		if drawn:
+			_standing(root, "chest", accent, DRAWN_CHEST, t.cell)
+		else:
+			_chest(b, DungeonMesh.center(t.cell), wall_color, accent)
 	for p in floor_map.pickups:
-		_sack(b, DungeonMesh.center(p.cell), wall_color, accent)
+		if drawn:
+			_standing(root, "sack", wall_color, DRAWN_SACK, p.cell)
+		else:
+			_sack(b, DungeonMesh.center(p.cell), wall_color, accent)
 	if not b.is_empty():
 		var shapes := MeshInstance3D.new()
 		shapes.name = "Secrets"
@@ -36,6 +45,13 @@ static func build(floor_map, wall_color: Color, accent: Color) -> Node3D:
 		shapes.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(shapes)
 	return root
+
+
+## A drawing that stands in its cell and turns to you (the stage turns it).
+static func _standing(root: Node3D, drawing: String, tint: Color, height: float, cell: Vector2i) -> void:
+	var out: Node3D = Figure.prop("props", drawing, tint, height)
+	out.position = DungeonMesh.center(cell)
+	root.add_child(out)
 
 
 ## What you see of something stirring: motes going round a pillar of air, in a node of their own, which the stage turns.

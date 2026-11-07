@@ -28,6 +28,7 @@ const Settings = preload("res://src/menu/settings.gd")
 const StageScript = preload("res://src/view/stage.gd")
 const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 
 const MENU_SCENE := "res://src/menu/main_menu.tscn"
 const VIEW_W := 448
@@ -36,6 +37,8 @@ const WIDEST := 2.4 # with wide-view the picture follows the panel's shape up to
 const WIDTH_STEP := 16 # and its width moves in steps this big, so a line more or less in the dock doesn't remake the picture
 const FRAME_MARGIN := 8
 const FRAME_PAD_X := 14 # between the white frame and what is inside it, left and right
+const FRAME_ROUND := 10 # hand-drawn, the frame has soft corners and the run's wall colour, dimmed
+const FRAME_DIM := 0.28
 
 
 ## How wide the picture is, in its pixels, to fill a panel this shape with wide-view on. Its height stays VIEW_H.
@@ -69,6 +72,8 @@ var _clock_ms := 0.0
 var _viewport: SubViewport
 var _stage
 var _frame: Control
+var _frame_box: StyleBoxFlat
+var _rule: ColorRect
 var _overlay
 var _automap
 var _postfx
@@ -186,6 +191,7 @@ func _build_screen() -> void:
 	box.content_margin_right = FRAME_PAD_X
 	box.content_margin_top = 10
 	box.content_margin_bottom = 10
+	_frame_box = box
 	crt.add_theme_stylebox_override("panel", box)
 	margin.add_child(crt)
 	var column := VBoxContainer.new()
@@ -197,6 +203,7 @@ func _build_screen() -> void:
 	_header.custom_minimum_size = Vector2(0, 14)
 	column.add_child(_header)
 	var rule := ColorRect.new()
+	_rule = rule
 	rule.color = Palette.INK
 	rule.custom_minimum_size = Vector2(0, 2)
 	column.add_child(rule)
@@ -275,13 +282,17 @@ func _process(dt: float) -> void:
 	_clock_ms += dt * 1000.0
 	flow.tick(_clock_ms)
 	var s = flow.state
-	_stage.visible = not _overlay.in_fight()
+	var fighting: bool = _overlay.in_fight()
+	_stage.visible = not fighting or _overlay.drawn_foe() # drawn, a fight has the halls dimmed behind it
+	_stage.off_set = s.foe if fighting else null
 	_stage.calm = Settings.get_value("calm")
 	_stage.update(s, _clock_ms / 1000.0, dt)
 	_overlay.clock_ms = _clock_ms
 	_automap.visible = s.floor_map != null and s.stage in ["explore", "end", "trade", "request", "camp"]
 	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
+	if s.viewing("warmth"):
+		_postfx.set_warmth(Warmth.of(s))
 	_postfx.update(dt)
 
 
@@ -424,6 +435,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_fit_picture()
 			_bind_views()
 			_fresh_floor = data.how in ["new", "floor"] and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
+			if data.how == "new":
+				_stage.play_opening(now)
 		"stage":
 			if data.to == "explore":
 				_postfx.set_accent(Palette.for_run(s.palette_id).accent) # back from a fight, the monster's colour goes
@@ -559,12 +572,22 @@ func _load_slot(slot: String) -> void:
 
 ## The views read the flow's current state; a new floor or a loaded save replaces it (`state_replaced`), so they are pointed at it again.
 func _bind_views() -> void:
+	_dress_frame()
 	_header.state = flow.state
 	_status.state = flow.state
 	_dock.state = flow.state
 	_overlay.state = flow.state
 	_automap.state = flow.state
 	_tips.state = flow.state
+
+
+## Hand-drawn, the frame round everything is the colour of this run's walls, with soft corners, instead of plain white.
+func _dress_frame() -> void:
+	var drawn: bool = flow.state.viewing("hand-drawn")
+	var line: Color = Palette.for_run(flow.state.palette_id).wall.darkened(FRAME_DIM) if drawn else Palette.INK
+	_frame_box.border_color = line
+	_frame_box.set_corner_radius_all(FRAME_ROUND if drawn else 0)
+	_rule.color = line
 
 
 func _autosave() -> void:

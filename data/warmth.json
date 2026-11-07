@@ -1,0 +1,19 @@
+{
+ "start": 0.6,
+ "deeds": {
+  "spared": 0.05,
+  "recruited": 0.06,
+  "slain": -0.1,
+  "left": -0.06,
+  "butchered": -0.22,
+  "left_behind": -0.12,
+  "meals": -0.06
+ },
+ "levels": [
+  {"id": "cold", "from": 0.0, "up": "", "down": "The last torch goes out behind its own flame. Nothing down here has a face any more."},
+  {"id": "shut", "from": 0.1, "up": "One torch opens an eye, and shuts it again when you look.", "down": "The torches have shut their eyes as you go by."},
+  {"id": "wary", "from": 0.28, "up": "The torches look at you again, sidelong.", "down": "The torches look away from you."},
+  {"id": "kind", "from": 0.46, "up": "The torches turn back to you.", "down": "The torches stop leaning your way."},
+  {"id": "beloved", "from": 0.74, "up": "The torches lean in as you pass. They seem glad.", "down": ""}
+ ]
+}

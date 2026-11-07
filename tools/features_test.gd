@@ -34,7 +34,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
 
-const BASE := ["nosave", "nosound"]
+const BASE := ["nosave", "nosound", "no-wick"] # she has a test of her own; every other check starts alone
 
 
 func _name() -> String:
@@ -83,7 +83,7 @@ func _use(words := []) -> void:
 
 
 func _flags() -> void:
-	_use()
+	Flags.set_args(PackedStringArray(["nosave", "nosound"])) # without BASE's no-wick
 	_check(Flags.FEATURES.keys().all(func(f): return Flags.enabled(f)), "every feature is on by default")
 	for f in Flags.FEATURES:
 		_use(["no-" + f])
@@ -92,7 +92,7 @@ func _flags() -> void:
 		_check(not Flags.enabled(f), "%s=off turns it off" % f)
 		_use(["classic"])
 		_check(not Flags.enabled(f), "classic turns %s off" % f)
-		_use(["classic", f])
+		Flags.set_args(PackedStringArray(["nosave", "nosound", "classic", f]))
 		_check(Flags.enabled(f), "classic %s brings it back" % f)
 	_use()
 

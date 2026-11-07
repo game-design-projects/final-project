@@ -311,8 +311,11 @@ func _stage_wears_the_look() -> void:
 	var stage = _stage_for(s)
 	stage.update(s, 0.0, FRAME)
 	var m = s.floor_map.monsters.filter(func(x): return stage._models.has(x)).front()
-	var wanted: Array = MonsterModel._parts_of(m.species, Palette.monster(m), s.viewing("sprite-look"))
-	_check(stage._models[m].get_node("Rig").get_child(0).mesh == wanted[0][1], "the set shows the look the game asks for (sprite-look %s)" % s.viewing("sprite-look"))
+	if s.viewing("hand-drawn"):
+		_check(stage._models[m].get_meta("species") == m.species and stage._models[m].sheet == m.species, "the set shows its drawing (hand-drawn)")
+	else:
+		var wanted: Array = MonsterModel._parts_of(m.species, Palette.monster(m), s.viewing("sprite-look"))
+		_check(stage._models[m].get_node("Rig").get_child(0).mesh == wanted[0][1], "the set shows the look the game asks for (sprite-look %s)" % s.viewing("sprite-look"))
 	stage.free()
 
 
@@ -626,7 +629,9 @@ func _the_set_has_its_parts() -> void:
 	_check(Decor.placements(f) == Decor.placements(f), "a floor is decorated the same every time")
 	# a decoration is a real shape, off the wall, and fades like the walls' lines; a torch has a flame and lights the wall
 	var props: MeshInstance3D = stage._decor.get_node("Props")
-	_check(props.mesh.surface_get_array_index_len(0) / 3 > 1000, "decorations are real 3D shapes (%d triangles)" % (props.mesh.surface_get_array_index_len(0) / 3))
+	var shapes: int = props.mesh.surface_get_array_index_len(0) / 3
+	var least := 2 * Decor.placements(f).size() if s.viewing("hand-drawn") else 1000
+	_check(shapes >= least, "decorations are all there: drawings when hand-drawn, or else real 3D shapes (%d triangles)" % shapes)
 	_check(is_equal_approx(props.material_override.get_shader_parameter("fade_floor"), 0.15), "they fade with distance like the walls")
 	var torches := Decor.placements(f).filter(func(p): return p.kind == "torch").size()
 	_check(stage._torches.size() == torches and torches > 0, "every torch is known to the stage (%d)" % torches)

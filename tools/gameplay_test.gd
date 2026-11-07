@@ -81,7 +81,7 @@ func _wide_view(game) -> void:
 	_check(absf(shown - game._room.size.x / game._room.size.y) < 0.06, "with no black on either side (%.2f in a panel of %.2f)" % [shown, game._room.size.x / game._room.size.y])
 	var extra: float = (want - 448) / 2.0
 	_check(game._overlay.extra_x == extra and game._overlay.position.x == extra, "the overlay keeps the middle")
-	_check(game._overlay._whole_picture().size.x == want and game._overlay._whole_picture().position.x == -extra, "and its black and flashes reach the edges")
+	_check(game._overlay.whole_picture().size.x == want and game._overlay.whole_picture().position.x == -extra, "and its black and flashes reach the edges")
 	_check(game._in_picture(game._picture.size / 2.0).is_equal_approx(Vector2(224, 144)), "the middle of the picture is the middle of the overlay")
 	var k: float = game._tips.size.x / 448.0
 	_check(absf(game._tips.size.y / 288.0 - k) < 0.02, "the tips keep 448:288 too (%s)" % game._tips.size)
@@ -359,6 +359,7 @@ func _hover_and_tips(game) -> void:
 	_check(tips.shown() == "", "a second click closes it")
 	# the info key
 	s.chat = [] # the talk so far has a card too, once there is talk (features_test)
+	s.allies = [] # she has a card too, once she is there
 	game._unhandled_input(_key(KEY_I, {}, 105))
 	_check(tips.shown() == "foe", "I shows the foe's card from the keyboard")
 	game._unhandled_input(_key(KEY_I, {}, 105))

@@ -57,6 +57,7 @@ var butchered: Array = [] # {species, name}: the friends who went into the bag
 var meals := 0 # how many bowls you have fed the others
 var left_behind: Array = [] # the names of the friends left at a gate's chain
 var found_out := false # one of them worked it out
+var warmth_level := -1 # the level of warmth last noted on the walk (rules/warmth.gd), -1 until then; worked out again on a load, not saved
 
 # the fight
 var foe # Monster, or null when not in a fight
@@ -72,6 +73,11 @@ var menu: Array = [] # [{label, sub, gold}]
 var selected := 0
 var hint := "" # the key hints for this stage
 var mind_rows: Array = [] # what the mind answered last, [{id, label, answer}], for the debug panel and tooltips
+
+
+## How many of the party count against its limit: a friend who isn't a monster takes nobody's place.
+func party_size() -> int:
+	return allies.filter(func(a): return not Content.table("friends").has(a.species)).size()
 
 
 func has_ally(species: String) -> bool:
@@ -224,10 +230,12 @@ static func from_dict(d: Dictionary):
 	for b in d.get("butchered", []) if d.get("butchered") is Array else []:
 		if b is Dictionary and b.get("species") is String and b.get("name") is String:
 			s.butchered.append({"species": b.species, "name": b.name})
-	for a in d.allies.slice(0, Combat.PARTY_MAX):
+	for a in d.allies:
 		var ally = Ally.from_dict(a)
 		ally.loyalty = clampf(ally.loyalty, 0.0, 100.0)
 		s.allies.append(ally)
+		if s.party_size() > Combat.PARTY_MAX: # a friend who isn't a monster (data/friends.json) doesn't count
+			s.allies.pop_back()
 	return s
 
 
@@ -261,7 +269,7 @@ static func _problem(d: Dictionary) -> String:
 	if not d.allies is Array:
 		return "'allies' is not a list"
 	for a in d.allies:
-		if not a is Dictionary or not Content.table("species").has(str(a.get("species", ""))) or not _is_num(a.get("loyalty", 60.0)):
+		if not a is Dictionary or not Content.is_species(str(a.get("species", ""))) or not _is_num(a.get("loyalty", 60.0)):
 			return "an ally is not a known one"
 	if d.has("reputation") and (not d.reputation is Dictionary or d.reputation.values().any(func(v): return not _is_num(v))):
 		return "'reputation' is not a record of numbers"

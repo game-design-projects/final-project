@@ -18,6 +18,7 @@ uniform float pulse = 0.0;                          // 0..1, a beat that decays
 uniform float hurt_level = 0.0;                     // 1 right after a hit, decays
 uniform vec4 flash = vec4(0.0);                     // rgb, strength
 uniform float split = 0.35;                         // the colour split, in source pixels
+uniform float warmth = 1.0;                         // how warm the halls are (rules/warmth.gd): the cold drains the colour toward a thin blue-grey
 
 // Nearest-neighbour pixels with only their edges blended, so the picture scaled to any size keeps crisp pixels without
 // shimmering
@@ -61,6 +62,9 @@ void fragment() {
 	// shadows lifted toward the accent: the dark is this run's dark, not flat black
 	float luma = dot(col, vec3(0.299, 0.587, 0.114));
 	col += accent * 0.025 * (1.0 - smoothstep(0.0, 0.35, luma));
+
+	// the halls going cold take the colour with them, a little at a time
+	col = mix(vec3(luma) * vec3(0.9, 0.96, 1.08), col, mix(0.35, 1.0, smoothstep(0.0, 0.46, warmth)));
 
 	// danger drains the colour (red holds on longest) and closes in a pulsing red edge
 	float edge = smoothstep(0.36, 0.8, length(from_center * vec2(1.2, 1.0)));

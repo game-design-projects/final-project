@@ -31,10 +31,18 @@ static func table(name: String) -> Dictionary:
 ## One species' entry, e.g. species("slime").label. Empty (and an error) for an id nobody defined.
 static func species(id: String) -> Dictionary:
 	var all := table("species")
-	if not all.has(id):
-		push_error("content: no species '%s'" % id)
-		return {}
-	return all[id]
+	if all.has(id):
+		return all[id]
+	var friends := table("friends")
+	if friends.has(id):
+		return friends[id]
+	push_error("content: no species '%s'" % id)
+	return {}
+
+
+## Whether an id names a monster or a friend who isn't one (data/friends.json): what a save may say an ally is.
+static func is_species(id: String) -> bool:
+	return table("species").has(id) or table("friends").has(id)
 
 
 ## "hi {name}" with {"name": "Drip"} -> "hi Drip". A {key} that isn't in vars stays as written.

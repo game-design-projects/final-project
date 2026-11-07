@@ -85,6 +85,11 @@ static func premise() -> Dictionary:
 	return Content.table("floors").premise
 
 
+## How your first friend arrives.
+static func friend() -> Dictionary:
+	return Content.table("floors").friend
+
+
 ## What beating or winning over a champion gives, {max_hp, heal}.
 static func boss_reward() -> Dictionary:
 	return Content.table("floors").boss_reward

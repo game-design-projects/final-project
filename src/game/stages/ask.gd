@@ -18,7 +18,7 @@ var _room := false
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
-	_room = s.allies.size() < Combat.PARTY_MAX
+	_room = s.party_size() < Combat.PARTY_MAX
 	_wants = await flow.mind.join(m)
 	var charm: Dictionary = Content.table("encounter").charms[m.species]
 	var gift: Dictionary = Allies.gift(m.species)
@@ -30,7 +30,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.say(lines)
 	s.menu = [{"label": "GO IN PEACE", "sub": Texts.gift_tip(gift)}]
 	if _room:
-		s.menu.push_front({"label": "COME ALONG", "sub": "%s: %s. %s" % [charm.name, charm.text, Texts.party_tip(s.allies.size())]})
+		s.menu.push_front({"label": "COME ALONG", "sub": "%s: %s. %s" % [charm.name, charm.text, Texts.party_tip(s.party_size())]})
 	s.hint = "ENTER ANSWER · 1-%d" % s.menu.size()
 	s.mind_rows = [{"id": "join", "label": "DOES IT WANT TO COME ALONG?", "answer": _wants}] + flow.encounter.pending_rows
 	flow.encounter.pending_rows = []
