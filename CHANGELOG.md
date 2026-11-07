@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-07
+
 ### Added
 - Feature flags for all new game features, on by default: `no-<name>` or `<name>=off` turns one off, and `classic` turns them all off.
 - `real-floors`: the stairs lead to the next floor and carry over HP, gold, allies and the tally, and the run ends at the last floor.
@@ -45,7 +47,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - `smooth-fight`: your soul glides between squares in a fight, and the battle screen fades back to the halls.
 - `tools/map_test.gd` checks 1000 floors per generator and logs what big floors cost, and `tools/map_shots.gd` takes pictures of them.
 - `tools/features_test.gd` checks each feature, `tools/run_tests.sh` runs the suites with and without the features, and `tools/sim_recruit.gd` measures recruiting against killing.
-
 - `tools/flicker_check.gd` measures flicker in the models frame by frame on the GPU, per species and distance, and marks the blinking pixels on a picture.
 
 ### Changed
@@ -320,8 +321,9 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - Music cues for good news, both quoting the same melody: a bright 8-bit fanfare when you go down the stairs, and a short victory jingle when you win a fight.
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
-<!-- No v0.5.3 or v0.6.0 tag exists yet, so those two versions have no compare link; add them when the tags are cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.6.1...main
+<!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.7.0...main
+[0.7.0]: https://github.com/game-design-projects/final-project/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/game-design-projects/final-project/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/game-design-projects/final-project/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/game-design-projects/final-project/compare/v0.5.1...v0.5.2
