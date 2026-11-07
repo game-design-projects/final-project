@@ -30,6 +30,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
 | `map_test` | The floor generators, biomes and chunks, and what sight costs on a big floor |
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, and a save without any of them |
+| `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game; with `classic`, that none of it is on |
 | `features_test` | Each feature with its flag on and off (it switches them itself) |
 
 `tools/run_tests.sh [on|classic|both]` runs them all, plays whole games in each mode, and with the features on plays five games without a strike.
@@ -59,6 +60,27 @@ Every game feature since 0.6.1 has a flag, on by default. `FEATURES` in `src/uti
 A new feature goes in `FEATURES`, is read with `flow.feature(name)`, and if the view has to know, in `flow.VIEW_FEATURES` (the view reads `state.viewing(name)`). A save keeps working with any of them off.
 
 `motifs` is the one exception to shipping: Abdulla's motifs aren't in the repo. See [AUDIO.md](AUDIO.md).
+
+## The art
+
+The drawings come from Codex's image generation (`codex exec` on a ChatGPT login, no API key), and everything in the game is cut from them by a script. [ART.md](ART.md) says what they are for.
+
+```bash
+tools/art/generate.sh decor                         # one sheet from tools/art/prompts/, into tools/art/raw/ (gitignored, numbered, never overwritten)
+tools/art/animate.sh witch set1 tools/art/source/witch.png  # a figure's 6x4 sheet of continuous frames, drawn from a reference
+tools/art/keep.sh decor 2                           # promote that take to tools/art/source/ as 8-bit grey
+uv run --script tools/art/process.py [name]         # cut sheets into assets/art/ and data/sprites.json, and write GIFs to docs/art/
+godot --headless --path . --import                  # a new PNG needs importing; set mipmaps/generate=true in its .import
+```
+
+`process.py` prints how much each frame moves from the one before it and marks a jump: read that before looking at the GIF. A figure's silhouette (the alpha of its atlas) is worked out by flood fill, so a drawing with an open outline shows through; the script warns.
+
+`tools/art_shots.gd` records the look in motion on a fixed clock, however slow the machine (it needs a window, so it goes to n8):
+
+```bash
+godot --path . --fixed-fps 20 -s res://tools/art_shots.gd -- out=/some/dir seed=7 [only=menu,opening,walk,fight,warmth]
+tools/art/reels.sh /some/dir docs/art/game 20       # its clips as GIFs
+```
 
 ## The Worker (Jev)
 

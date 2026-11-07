@@ -26,6 +26,8 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 
 **The stairs** offer two ways down to compare, chosen from the seed: a steep stair (tougher monsters, more gold), a quiet one (fewer monsters, a longer rest), a market stair (a trader below) or a warren (every monster below is one kind). On the third stairs a gate drops unless someone holds its chain and stays: hold it yourself for 10 HP, or leave a friend behind, which the others see. The last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending.
 
+**The halls answer what you do.** Spare monsters and the corridor warms: torches grow eyes, turn to you and lean in as you pass, skulls nod, and a cracked wall that gives is a guilty smile. Kill and they look away, then shut their eyes; faces go blank one monster at a time, champions last, and at the bottom the set is cold wire. Eating or abandoning a friend costs more than a kill. Nothing here changes a number: it is how the place feels about you. See [ART.md](ART.md).
+
 ## Fights
 
 - **FIGHT** is a timing bar: strike when the line crosses the middle. A hit sours the monster's mood.
@@ -72,6 +74,8 @@ Every monster has a species' tastes, its own traits and a motive, and meters for
 Monsters think through one interface (`src/mind/`): local rules, a seeded random mind (`mock`), or Jev through the proxy, falling back to the local rules whenever it can't answer.
 
 ## Allies
+
+**Wick** finds you first. A run opens with a very small witch hopping down the corridor to hand you a heart; she lights the torches down here, and she walks with you from then on. She takes nobody's place in the party, adds no strength, and leaves the way any friend does: you can drive her off, leave her at the gate or put her in the bag.
 
 Up to three spared monsters travel with you, and each gives a passive charm. Each also adds to your strikes, and two or more take the edge off every hit.
 

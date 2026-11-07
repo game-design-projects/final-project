@@ -1,6 +1,6 @@
 ## Renders the drawn look in motion, for docs/art and for looking at: a run's first moment, a walk past a torch, a fight, and the same spot at every
 ## warmth. It needs a real window and a fixed clock, so what it records is smooth however slow the machine (see DEVELOPMENT.md):
-##   godot --path . --fixed-fps 20 -s res://tools/art_shots.gd -- out=/some/dir seed=7 [only=opening,walk,fight,warmth]
+##   godot --path . --fixed-fps 20 -s res://tools/art_shots.gd -- out=/some/dir seed=7 [only=menu,opening,walk,fight,warmth]
 ## Each clip is a numbered run of PNGs in out/<clip>/; tools/art/reels.sh makes them GIFs. Nothing reaches the player's saves.
 extends SceneTree
 
@@ -26,6 +26,15 @@ func _wanted(clip: String) -> bool:
 
 
 func _go() -> void:
+	if _wanted("menu"):
+		var menu = load("res://src/menu/main_menu.tscn").instantiate()
+		root.add_child(menu)
+		await _frames(30)
+		await _shot("menu")
+		menu.free()
+	if _only.size() == 1 and _only[0] == "menu":
+		quit()
+		return
 	var scene = load("res://src/gameplay/gameplay.tscn").instantiate()
 	scene.request = {"kind": "new"}
 	root.add_child(scene)

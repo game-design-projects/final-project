@@ -7,7 +7,7 @@ mkdir -p "$out"
 for clip in "$from"/*/; do
 	name=$(basename "$clip")
 	ffmpeg -y -v error -framerate "$fps" -i "$clip/%04d.png" \
-		-vf "crop=iw-44:ih*0.665:22:ih*0.062,fps=15,scale=560:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=48:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+		-vf "crop=iw-44:ih*0.665:22:ih*0.062,fps=12,scale=448:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=32:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle" \
 		"$out/$name.gif"
 	ls -la "$out/$name.gif"
 done

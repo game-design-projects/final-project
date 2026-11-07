@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
+- `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.
+- `wick`: a run opens with a very small witch hopping down the corridor to hand you a heart; she is your first friend, and can be lost like any other.
+- Fights now show the halls dimmed behind the monster.
+- `tools/art/`: the pipeline that generates sheets with Codex and cuts them into atlases and GIFs; `tools/art_shots.gd` records the look in motion on a fixed clock.
+- `tools/art_test.gd`: atlases, figure animation, warmth, moods, wall art and Wick.
+
 ## [0.7.0] - 2026-11-07
 
 ### Added
