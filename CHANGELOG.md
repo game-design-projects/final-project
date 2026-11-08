@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Walking and camp keep the same picture and dock size when opening or closing the camp menu.
 
 ### Fixed
+- Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added

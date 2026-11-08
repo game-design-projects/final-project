@@ -49,7 +49,7 @@ rather than elapsed time or enemy attack completions.
 
 Species behaviors are in data/moods.json: companionship, bargaining, questioning,
 drowsiness and provocation. Cues explicitly announce bounded pressure shifts
-(-0.45 to +0.3, final pressure clamped to 0–3), with no extra turns or network calls.
+(-0.45 to +0.3, monster pressure clamped to 0–3 before the heavy-miss penalty), with no extra turns or network calls.
 Jev receives the temporary state and existing interaction memory. Local play applies
 the same authoritative pressure modifier. No additional negotiation, trust or
 recruitment modifier is implemented in this first slice.

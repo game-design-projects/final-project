@@ -132,7 +132,9 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 		var cue := Moods.advance(flow.state.foe, flow.dice)
 		if cue != "":
 			lines.append(State.sys_line(cue))
-		decision.pressure = clampf(float(decision.pressure) + Moods.shift(flow.state.foe, "pressure"), 0.0, 3.0)
+		# Mood bounds apply to the monster; missing a heavy strike still adds its full penalty.
+		var bonus := float(decision.get("pressure_bonus", 0.0))
+		decision.pressure = clampf(float(decision.pressure) - bonus + Moods.shift(flow.state.foe, "pressure"), 0.0, 3.0) + bonus
 	if decision.get("note", "") != "" and not lines.is_empty():
 		lines[0].text += " " + decision.note
 	lines = lines + _take_notes()
