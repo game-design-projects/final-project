@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
+- Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
 - `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.
 - `wick`: a run opens with a very small witch hopping down the corridor to hand you a heart; she is your first friend, and can be lost like any other.

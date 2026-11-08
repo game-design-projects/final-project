@@ -30,3 +30,31 @@ For **5–8 participants**, record the first choice at each bandit, whether they
 With Godot 4.7.2 on PATH, `godot --headless --path . -s res://tools/autoplay.gd` plays five whole games to the stairs with random choices on ordinary floors, not the slice (add `-- seed=7042 mock` for one seed with the seeded mind). It shows that a run can be finished, not that the slice is fair: standing still through attacks can kill the player, dodge movement and combat timing change the outcome, and defeating VEX at normal HP has not been established.
 
 For a facilitated session, start a fresh command for each of 5–8 participants. Give them the controls and goal, but do not explain the personalities. Ask them to try the fair-cut route and then a route of their own, including retry if they die. Record actions, HP, gold, deaths, and their interpretation before asking the questions above. Do not coach dodge movement until after observing the first attempt; note whether they flee or defeat VEX and whether they can continue exploring.
+
+## Dynamic moods (initial slice)
+
+Launch an ordinary encounter with `godot --path . -- meet=bandit seed=7042 nosave nosound`.
+Do not use personality-slice: its reference outcomes deliberately disable this feature.
+Resolve several actions and read the log before dodging. Jumpy bandits tend to watch
+the exit; proud ones challenge you. Comfort or peace can calm either after the
+two-action minimum cooldown. Low HP or high fear overrides pride.
+
+Stable traits, taste and motives remain unchanged. Temporary mood, immediate goal,
+elapsed resolution count and next opportunity are stored on the monster and included
+in its existing save/retry snapshot. Opportunities occur every 2–4 resolved player
+actions; important actions can trigger one after two actions. CHECK, menus, typing,
+pausing and animation frames do not advance this counter. Repeated states emit no
+additional cue. This counts player-action resolutions, including pacified rounds,
+rather than elapsed time or enemy attack completions.
+
+Species behaviors are in data/moods.json: companionship, bargaining, questioning,
+drowsiness and provocation. Cues explicitly announce bounded pressure shifts
+(-0.45 to +0.3, final pressure clamped to 0–3), with no extra turns or network calls.
+Jev receives the temporary state and existing interaction memory. Local play applies
+the same authoritative pressure modifier. No additional negotiation, trust or
+recruitment modifier is implemented in this first slice.
+
+Run tools/moods_test.gd, tools/slice_test.gd and tools/rules_test.gd with
+`-- nosave nosound`. Disable with no-dynamic-moods or classic.
+The unit test covers snapshot restoration, not a full interactive death/retry.
+Visual readability and balance still need human playtesting.
