@@ -144,7 +144,8 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 		if attack != null:
 			lines.append(attack)
 	flow.state.say(lines)
-	await flow.go("wait", {"pressure": decision.pressure})
+	var foe_spoke: bool = lines.any(func(line): return line.kind == "say" and line.who == flow.state.foe.name)
+	await flow.go("wait", {"pressure": decision.pressure, "prompt": foe_spoke and flow.feature("ambush-prompt")})
 
 
 ## What the monster says about what was just done to it, in its own words (reveal): null when it has no strong opinion.

@@ -28,12 +28,45 @@ func enter(flow, _args: Dictionary) -> void:
 	if flow.feature("heavy-strike"):
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
-	if flow.feature("items") and not s.items.is_empty():
-		s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size()})
-	s.hint = "UP / DOWN CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
+	if flow.feature("items") and (flow.feature("combat-grid") or not s.items.is_empty()):
+		s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
+	s.hint = ("ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" if flow.feature("combat-grid") else "UP / DOWN CHOOSE · ENTER PICK · 1-%d · I INFO") % s.menu.size()
+
+
+func handle(flow, key: String) -> void:
+	if key.length() == 1 and key >= "1" and key <= "9":
+		var index := int(key) - 1
+		if index < flow.state.menu.size() and flow.state.menu[index].get("disabled", false):
+			return
+	if not flow.feature("combat-grid") or not key in ["up", "down", "left", "right"]:
+		await super.handle(flow, key)
+		return
+	var s = flow.state
+	var n: int = s.menu.size()
+	if n == 0:
+		return
+	var old: int = s.selected
+	var col: int = old % 3
+	var row: int = old / 3
+	if key == "left" or key == "right":
+		var row_size: int = mini(3, n - row * 3)
+		var step := -1 if key == "left" else 1
+		for offset in range(1, row_size + 1):
+			var candidate := row * 3 + posmod(col + step * offset, row_size)
+			if not s.menu[candidate].get("disabled", false):
+				s.selected = candidate
+				break
+	else:
+		var other: int = old + (3 if row == 0 else -3)
+		if other < n and not s.menu[other].get("disabled", false):
+			s.selected = other
+	if s.selected != old:
+		flow.event("menu_move")
 
 
 func pick(flow, index: int) -> void:
+	if flow.state.menu[index].get("disabled", false):
+		return
 	match index:
 		FIGHT:
 			await flow.go("fightbar")

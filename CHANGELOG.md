@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- Combat commands fill a larger three-column grid, with bigger labels and directional navigation.
+- ITEM remains visible but disabled when the bag is empty.
+- Enemy dialogue waits for a key or tap before combat continues.
+- Confirming enemy dialogue starts the attack immediately.
+
 ### Added
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
 - `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.

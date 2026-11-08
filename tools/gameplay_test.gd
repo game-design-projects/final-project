@@ -47,6 +47,7 @@ func _run() -> void:
 	await _autosave(game)
 	await _pause_menu(game)
 	await _keys(game)
+	await _ambush_prompt(game)
 	await _mouse(game)
 	await _hover_and_tips(game)
 	await _thinking(game)
@@ -58,6 +59,26 @@ func _run() -> void:
 	await process_frame
 	await _pad_and_debug()
 	_finish()
+
+
+func _ambush_prompt(game) -> void:
+	await game.flow.new_run()
+	var flow = game.flow
+	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0], "ambush": true})
+	await flow.tick(flow.clock + 5000.0)
+	_check(flow.state.stage == "intro", "enemy-first dialogue stays until a key is pressed")
+	game._unhandled_input(_key(KEY_I, {}, 105))
+	await process_frame
+	_check(flow.state.stage == "dodge", "the info key immediately starts the enemy-first fight")
+	await flow.new_run()
+	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
+	await flow.press("confirm")
+	await flow.encounter.after_player([], {"pacified": false, "pressure": 1.0})
+	await flow.tick(flow.clock + 5000.0)
+	_check(flow.state.stage == "wait" and flow.state.hint == "ANY KEY CONTINUE", "enemy attack dialogue stays until confirmed")
+	await flow.press("confirm")
+	_check(flow.state.stage == "dodge", "confirmation immediately starts the enemy attack")
+	await flow.new_run()
 
 
 ## The picture follows the panel's shape, and what lies over it and points at it follows the picture.
@@ -317,6 +338,18 @@ func _hover_and_tips(game) -> void:
 	var dock = game._dock
 	var rects: Array = dock.command_rects()
 	_check(rects.size() == s.menu.size() and rects.size() >= 4, "the dock knows where its commands are, and they all fit (%d)" % rects.size())
+	if game.flow.feature("combat-grid"):
+		if rects.size() == 6 and s.menu[5].get("disabled", false):
+			_check(dock._command_at(rects[5].get_center()) == -1, "an empty ITEM button cannot be hovered or clicked")
+		_check(rects[0].position.y == rects[2].position.y and rects[3].position.y > rects[0].position.y and rects[3].position.x == rects[0].position.x, "combat commands occupy three columns")
+		s.selected = 0
+		game._unhandled_input(_key(KEY_S, {}, 115))
+		_check(s.selected == 3, "S moves down a row")
+		game._unhandled_input(_key(KEY_W, {}, 119))
+		game._unhandled_input(_key(KEY_D, {}, 100))
+		_check(s.selected == 1, "W moves up and D moves right")
+		game._unhandled_input(_key(KEY_A, {}, 97))
+		_check(s.selected == 0, "A moves left")
 	var picks := []
 	dock.hovered.connect(func(i): picks.append(i))
 	dock._gui_input(_move(rects[2].get_center()))
@@ -466,13 +499,14 @@ func _sub_text_wraps(game) -> void:
 	_check(longest > 900.0 and longest < 1100.0, "SPARE's help is about 980 px wide at the dock's font (%d)" % longest)
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
-	_check(not dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, Hud.DOCK_H), "in a wide window it is one line and the dock keeps its height")
+	var dock_height: float = Hud.DOCK_H + (Hud.GRID_SLOT_H - Hud.SLOT_H if game.flow.feature("combat-grid") else 0.0)
+	_check(not dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "in a wide window it is one line and the dock keeps its height")
 	dock.size = Vector2(800, 200)
 	dock._process(0.0)
-	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, Hud.DOCK_H + Hud.SUB_LINE_H), "in a narrow one it wraps and the dock is a line taller")
+	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height + Hud.SUB_LINE_H), "in a narrow one it wraps and the dock is a line taller")
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
-	_check(is_equal_approx(dock.custom_minimum_size.y, Hud.DOCK_H), "and goes back when the window is wide again")
+	_check(is_equal_approx(dock.custom_minimum_size.y, dock_height), "and goes back when the window is wide again")
 	dock.free()
 
 
@@ -502,7 +536,9 @@ func _start_is_guarded(game) -> void:
 	_check(not flow.busy, "and input is free again when it is done")
 	flow.tick(flow.clock + 100000.0)
 	await create_timer(0.4).timeout
-	_check(flow.state.stage == "menu", "after that the intro runs its course")
+	_check(flow.state.stage == "intro" and flow.state.hint == "ANY KEY CONTINUE", "the greeting stays until confirmed")
+	await flow.press("confirm")
+	_check(flow.state.stage == "menu", "confirmation opens the fight menu")
 	flow.mind = real
 	await game.flow.new_run()
 

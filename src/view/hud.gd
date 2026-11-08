@@ -28,6 +28,7 @@ const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
 const THINKING_AFTER_MS := 250 # a question out this long shows as "thinking"; a quick answer doesn't flicker it
 const SAY_BUTTON := -2 # what `_hover_at` says over the talk box's button
 const BUTTON_H := 34.0
+const GRID_SLOT_H := 98.0
 const GAP := 6.0
 const DOCK_H := LOG_H + SLOT_H + KEYS_H + GAP * 2.0
 
@@ -90,7 +91,7 @@ func _process(dt: float) -> void:
 	if part == Part.STATUS and state != null:
 		_watch_health(dt)
 	if part == Part.DOCK and state != null and size.x > 0.0:
-		var want := DOCK_H + (SUB_LINE_H if _sub_wraps() else 0.0) # the picture gives way for a second line of help, only when one is needed
+		var want := DOCK_H + (_slot_height() - SLOT_H) + (SUB_LINE_H if _sub_wraps() else 0.0)
 		if absf(custom_minimum_size.y - want) > 0.5:
 			custom_minimum_size.y = want
 	queue_redraw()
@@ -151,21 +152,30 @@ func _hover_at(at: Vector2) -> int:
 func _command_at(at: Vector2) -> int:
 	var rects := command_rects()
 	for i in rects.size():
-		if rects[i].has_point(at):
+		if rects[i].has_point(at) and not state.menu[i].get("disabled", false):
 			return i
 	return -1
 
 
-## Where each command of the menu is, in the dock's own pixels: up to four across, a second row after that. Only the ones that fit.
+func _grid() -> bool:
+	return state != null and state.stage == "menu" and state.viewing("combat-grid")
+
+
+func _slot_height() -> float:
+	return GRID_SLOT_H if _grid() else SLOT_H
+
+
+## Where each command of the menu is, in the dock's own pixels.
 func command_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if state == null or state.stage == "talk" or state.menu.is_empty():
 		return out
-	var slot := Rect2(0, LOG_H + GAP, size.x, SLOT_H)
-	var cols := clampi(state.menu.size(), 1, 4)
+	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
+	var cols := 3 if _grid() else clampi(state.menu.size(), 1, 4)
+	var button_h := (GRID_SLOT_H - GAP) / 2.0 if _grid() else BUTTON_H
 	var w := (slot.size.x - GAP * (cols - 1)) / cols
 	for i in state.menu.size():
-		var r := Rect2(slot.position + Vector2((i % cols) * (w + GAP), floori(float(i) / cols) * (BUTTON_H + GAP)), Vector2(w, BUTTON_H))
+		var r := Rect2(slot.position + Vector2((i % cols) * (w + GAP), floori(float(i) / cols) * (button_h + GAP)), Vector2(w, button_h))
 		if r.end.y > slot.end.y + 1.0:
 			break
 		out.append(r)
@@ -284,12 +294,12 @@ static func hp_color(frac: float) -> Color:
 
 func _dock() -> void:
 	_log(Rect2(0, 0, size.x, LOG_H))
-	var slot := Rect2(0, LOG_H + GAP, size.x, SLOT_H)
+	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	if state.stage == "talk":
 		_talk_row(slot)
 	else:
 		_commands(slot)
-	_keys(Rect2(0, LOG_H + SLOT_H + GAP * 2.0, size.x, KEYS_H))
+	_keys(Rect2(0, LOG_H + _slot_height() + GAP * 2.0, size.x, KEYS_H))
 
 
 ## A log line's speaker, as drawn in front of its text: "ROOK: ", or nothing for a line of the game's own.
@@ -359,13 +369,15 @@ func _commands(_slot: Rect2) -> void:
 		var r: Rect2 = rects[i]
 		var picked_one: bool = i == state.selected
 		var gold: bool = items[i].get("gold", false)
+		var disabled: bool = items[i].get("disabled", false)
 		draw_rect(r, Color.BLACK)
 		draw_rect(r.grow(-1.0), Palette.INK if picked_one or i == _hover else Palette.FAINT, false, 2.0)
-		var base := r.position + Vector2(12.0, BUTTON_H * 0.5 + 4.0)
+		var base := r.position + Vector2(12.0, r.size.y * 0.5 + (6.0 if _grid() else 4.0))
 		if picked_one:
 			draw_colored_polygon([base + Vector2(0, -8), base + Vector2(8, -4), base + Vector2(0, 0)], Palette.YOU)
-		_text(_title, str(i + 1), base + Vector2(14, 0), 9, Palette.DIM)
-		_text(_title, items[i].label, base + Vector2(14 + 18, 0), 9, Palette.MERCY if gold else Palette.INK)
+		var px := 14 if _grid() else 9
+		_text(_title, str(i + 1), base + Vector2(14, 0), px, Palette.FAINT if disabled else Palette.DIM)
+		_text(_title, items[i].label, base + Vector2(14 + (24 if _grid() else 18), 0), px, Palette.FAINT if disabled else (Palette.MERCY if gold else Palette.INK))
 
 
 func _talk_row(slot: Rect2) -> void:
