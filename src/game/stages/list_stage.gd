@@ -8,6 +8,21 @@ func handle(flow, key: String) -> void:
 	var n: int = s.menu.size()
 	if n == 0:
 		return
+	if (flow.feature("combat-grid") if s.stage == "menu" else flow.feature("choice-grid")) and key in ["up", "down", "left", "right"]:
+		var old: int = s.selected
+		var cols := mini(3, n)
+		var row: int = old / cols
+		var col: int = old % cols
+		if key in ["left", "right"]:
+			var row_size := mini(cols, n - row * cols)
+			s.selected = row * cols + posmod(col + (-1 if key == "left" else 1), row_size)
+		else:
+			var other: int = old + (-cols if key == "up" else cols)
+			if other >= 0 and other < n:
+				s.selected = other
+		if s.selected != old:
+			flow.event("menu_move")
+		return
 	match key:
 		"up", "left":
 			s.selected = posmod(s.selected - 1, n)

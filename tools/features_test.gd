@@ -179,6 +179,8 @@ func _at_menu(flow, species := "slime") -> Variant:
 		m = s.floor_map.monsters[0]
 	await flow.go("intro", {"foe": m})
 	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro" and s.hint == "ANY KEY CONTINUE":
+		await flow.press("confirm")
 	return m
 
 
@@ -343,6 +345,7 @@ func _tutorial() -> void:
 	var m = s.floor_map.monsters[0]
 	await flow.go("intro", {"foe": m})
 	await flow.tick(flow.clock + 1000.0)
+	await flow.press("confirm")
 	_check(shown == ["menu"] and s.banner.title == "TIP", "the first menu brings up one tip (%s)" % str(shown))
 	await flow.press("2")
 	_check(shown == ["menu"], "a tip waits while another is showing")
@@ -647,7 +650,9 @@ func _late_decisions() -> void:
 		_check(caught and s.stage == "intro" and s.foe == m, "a monster next to you catches you (%s)" % str(words))
 		await flow.tick(flow.clock + 5000.0)
 		var first: bool = words.is_empty()
-		_check(s.stage == ("wait" if first else "menu"), "%s (%s)" % ["and strikes first" if first else "no-ambush: you still go first", s.stage])
+		_check(s.stage == "intro" and s.hint == "ANY KEY CONTINUE", "the greeting waits for a key")
+		await flow.press("right")
+		_check(s.stage == ("dodge" if first else "menu"), "%s (%s)" % ["and strikes first" if first else "no-ambush: you still go first", s.stage])
 		_check(s.lines.any(func(l): return l.text.contains("strikes first")) == first, "and the log says which")
 	# the toll
 	var toll: Dictionary = Floors.toll()
@@ -756,6 +761,7 @@ func _gate() -> void:
 	var hp: int = s.max_hp
 	s.hp = 5
 	await flow.tick(flow.clock + 1000.0)
+	await flow.press("confirm")
 	await flow.encounter.defeat(boss, "slain")
 	_check(s.max_hp == hp + Floors.boss_reward().max_hp and s.hp == 5 + Floors.boss_reward().heal, "beating a champion leaves you stronger (%d/%d)" % [s.hp, s.max_hp])
 	_check(s.banner != null and s.banner.text.contains("stronger"), "and says so")
@@ -827,10 +833,12 @@ func _clans() -> void:
 	# heard once: meeting it again changes nothing, trying again after dying starts from the same place
 	var friendly: float = later.meters.friendliness
 	await flow.tick(flow.clock + 1000.0)
+	await flow.press("confirm")
 	await flow.go("explore", {"lines": []})
 	await flow.go("intro", {"foe": later})
 	_check(s.stage == "intro" and s.foe == later and is_equal_approx(later.meters.friendliness, friendly), "a monster hears the same news once")
 	await flow.tick(flow.clock + 1000.0)
+	await flow.press("confirm")
 	await flow.encounter.retry_fight()
 	var again = s.foe
 	_check(s.stage == "intro" and again != later, "the fight starts over (%s)" % s.stage)
@@ -1214,7 +1222,17 @@ func _item_fight(seed_value: int, words := []) -> Variant:
 func _items() -> void:
 	var flow = await _item_fight(51)
 	var s = flow.state
-	_check(s.menu.all(func(i): return i.label != "ITEM"), "with an empty bag the menu has no ITEM")
+	_check(s.menu.size() == 6 and s.menu[5].label == "ITEM" and s.menu[5].disabled, "an empty bag leaves ITEM visible and disabled")
+	s.selected = 4
+	await flow.press("right")
+	_check(s.selected == 3, "moving right skips disabled ITEM")
+	await flow.press("left")
+	_check(s.selected == 4, "moving left skips disabled ITEM")
+	s.selected = 2
+	await flow.press("down")
+	await flow.press("6")
+	flow.select(5)
+	_check(s.stage == "menu" and s.selected == 2, "down, the digit and pointer selection cannot select disabled ITEM")
 	s.items = ["sugar", "salve", "whetstone", "smoke"]
 	await flow.go("menu")
 	_check(s.menu.size() == 6 and s.menu[5].label == "ITEM" and s.menu[0].label == "FIGHT" and s.menu[3].label == "FLEE" and s.menu[4].label == "HEAVY", "something in the bag adds ITEM, and the others keep their places")
@@ -1374,7 +1392,7 @@ func _heavy_strike() -> void:
 	var flow = await _heavy_fight(61, "rock")
 	var s = flow.state
 	var m = s.foe
-	_check(s.menu.size() == 5 and s.menu[4].label == "HEAVY" and s.menu[3].label == "FLEE", "HEAVY comes after the other four (%s)" % str(s.menu.map(func(i): return i.label)))
+	_check(s.menu.size() == 6 and s.menu[4].label == "HEAVY" and s.menu[3].label == "FLEE", "HEAVY comes after the other four (%s)" % str(s.menu.map(func(i): return i.label)))
 	var plain_dur: float = Combat.bar_ms(false)
 	await flow.press("5")
 	_check(s.stage == "fightbar" and s.bar.heavy and is_equal_approx(s.bar.dur, plain_dur * Combat.HEAVY_BAR_SCALE), "the line runs faster (%.0f ms)" % s.bar.dur)
@@ -1414,6 +1432,8 @@ func _heavy_strike() -> void:
 		swing.clock = swing.state.bar.t0 + swing.state.bar.dur * (0.02 if label == "1" else 0.2)
 		await swing.press("confirm")
 		_check(swing.state.stage == "wait" and swing.state.foe.hp == 200, "a miss does nothing to it (%s)" % label)
+		if swing.state.hint == "ANY KEY CONTINUE":
+			await swing.press("confirm")
 		swing.clock += Combat.WINDUP_MS + 1.0
 		await swing.tick(swing.clock)
 		pressures.append(swing.state.dodge.intensity)
@@ -1428,11 +1448,12 @@ func _heavy_strike() -> void:
 	told.state.banner = null
 	await told.go("intro", {"foe": told.state.floor_map.monsters[0]})
 	await told.tick(told.clock + 1000.0)
+	await told.press("confirm")
 	_check(told.coach.seen.has("heavy"), "a tip tells of it once the menu's has been seen")
 	# off, and in the slice
 	var off = _flow(64, ["no-heavy-strike"])
 	await _at_menu(off, "rock")
-	_check(off.state.menu.size() == 4, "no-heavy-strike: the menu has its four commands")
+	_check(off.state.menu.size() == 5 and off.state.menu[4].label == "ITEM" and off.state.menu[4].disabled, "no-heavy-strike: the four commands and disabled ITEM remain")
 	var classic = _flow(65, ["classic"])
 	await _at_menu(classic, "rock")
 	_check(classic.state.menu.size() == 4, "classic: four too")
@@ -1862,7 +1883,11 @@ func _roaming() -> void:
 		await walk.tick(walk.clock + 300.0)
 	_check(frozen == wf.monsters.map(func(o): return o.cell) and wf.steps == fight_steps, "nobody moves during a fight")
 	# backing away
+	if ws.stage == "intro":
+		await walk.press("confirm")
 	while ws.stage != "menu":
+		if ws.hint == "ANY KEY CONTINUE":
+			await walk.press("confirm")
 		await walk.tick(walk.clock + 500.0)
 	await walk.press("4")
 	_check(ws.stage == "explore" and foe.hold == int(t.flee_hold), "backing out of the fight (%s), it holds still (%d)" % [ws.stage, foe.hold])

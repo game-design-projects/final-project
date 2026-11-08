@@ -334,7 +334,9 @@ func _menu_keys_tick() -> void:
 	var f := _fake(audio)
 	flow.happened.connect(audio._on_event)
 	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
-	var clock := 0.0
+	var clock: float = flow.clock
+	if flow.state.hint == "ANY KEY CONTINUE":
+		await flow.press("confirm") # queue the greeting's confirmation; ticking below runs its input buffer
 	for i in 100:
 		if flow.state.stage == "menu":
 			break
@@ -347,6 +349,11 @@ func _menu_keys_tick() -> void:
 	await flow.press("up")
 	_check(heard == ["menu_move", "menu_move"], "up and down in the fight menu announce a cursor move (%s)" % [heard])
 	_check(f[0].played == ["move", "move"], "...and the audio plays move for each (%s)" % [f[0].played])
+	heard.clear()
+	f[0].clear()
+	await flow.press("right")
+	await flow.press("left")
+	_check(heard == ["menu_move", "menu_move"] and f[0].played == ["move", "move"], "left and right also play a cursor move (%s, %s)" % [heard, f[0].played])
 	heard.clear()
 	await flow.press("2")
 	_check(heard.has("menu_pick"), "a digit announces a pick (%s)" % [heard])

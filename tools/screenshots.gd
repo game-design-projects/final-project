@@ -206,6 +206,8 @@ func _walk_and_fight() -> void:
 	await flow.go("intro", {"foe": m})
 	await _wait(0.4)
 	await _shot("03_intro")
+	if s.hint == "ANY KEY CONTINUE":
+		await flow.press("confirm")
 	await _wait(0.9)
 	await _shot("04_menu")
 	await _tooltips()

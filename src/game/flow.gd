@@ -29,7 +29,7 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
+const VIEW_FEATURES := ["piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger", "hand-drawn", "warmth", "wick", "combat-grid", "choice-grid"]
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -38,6 +38,7 @@ const WARMTH_TITLE := "THE HALLS"
 const WALK_HEAL_STEPS := 6
 const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
+const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
 
 const STAGES := {
@@ -340,7 +341,11 @@ func event(name: String, data := {}) -> void:
 
 ## `held` says it is a key repeating by itself, not one just pressed.
 func press(key: String, held := false) -> void:
-	if busy or state.stage == "":
+	if busy:
+		if not held and state.stage == "intro" and state.hint == "ANY KEY CONTINUE":
+			_stages["intro"].queue_continue()
+		return
+	if state.stage == "":
 		return
 	if _keys_dropped(held):
 		print_verbose("flow: %s dropped, the fight has only just ended" % key)
@@ -374,7 +379,7 @@ func exclusive(action: Callable) -> void:
 ## The pointer is over command `index` of the menu: it becomes the picked one, as if the arrows had moved there. Nothing
 ## else happens, so hovering never does anything the player didn't ask for.
 func select(index: int) -> void:
-	if state.stage in ["", "talk"] or index < 0 or index >= state.menu.size() or index == state.selected:
+	if state.stage in ["", "talk"] or index < 0 or index >= state.menu.size() or index == state.selected or state.menu[index].get("disabled", false):
 		return
 	state.selected = index
 	print_verbose("flow: %s -> command %d picked by the pointer" % [state.stage, index])

@@ -254,6 +254,7 @@ func _build_screen() -> void:
 	_dock.said.connect(func(text): flow.submit_text(text))
 	_dock.cancelled.connect(func(): _press("cancel"))
 	_dock.hovered.connect(_on_dock_hover)
+	_dock.page_selected.connect(func(i): flow.select(i))
 	column.add_child(_dock)
 	_pad = Pad.new()
 	_pad.visible = DisplayServer.is_touchscreen_available() or Flags.on("pad")
@@ -314,6 +315,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return # a held arrow repeats once the camera has arrived; acting on every repeat would run ahead of it
 	if event.meta_pressed or event.ctrl_pressed or event.alt_pressed:
 		return
+	if flow.state.stage in ["intro", "wait"] and flow.state.hint == "ANY KEY CONTINUE" and (starts_run(event) or event.keycode == KEY_ESCAPE):
+		_press("confirm")
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode == INFO_KEY:
 		if not event.echo:
 			_tips.cycle()
@@ -367,7 +372,7 @@ func _on_picture_input(event: InputEvent) -> void:
 		return
 	if _on_title:
 		_begin()
-	elif flow.state.stage == "fightbar":
+	elif flow.state.stage == "fightbar" or (flow.state.stage in ["intro", "wait"] and flow.state.hint == "ANY KEY CONTINUE"):
 		_press("confirm")
 	else:
 		_tips.tap(_in_picture(event.position))

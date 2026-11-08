@@ -313,6 +313,7 @@ func _camp() -> void:
 	s.hunger = 80.0
 	await flow.go("intro", {"foe": s.floor_map.monsters[0]})
 	await flow.tick(flow.clock + 1000.0)
+	await flow.press("confirm")
 	var at: int = s.menu.map(func(i): return i.label).find("ITEM")
 	_check(at >= 0, "food counts as something to use in a fight")
 	await flow.press(str(at + 1))
