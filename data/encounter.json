@@ -142,6 +142,7 @@
   ]
  },
  "charms": {
+  "witch": {"name": "KINDLING", "text": "she keeps the torches lit, and they watch for you"},
   "slime": {
    "name": "BOUNCY",
    "text": "absorbs the first hit of every fight"
@@ -164,6 +165,7 @@
   }
  },
  "ally_approval": {
+  "witch": {"slay": -1.5, "slay_begging": -3, "spare": 2, "flee": 0, "insult": -1, "threat": -1, "kindness": 1, "joke": 1, "noise": 0},
   "slime": {
    "slay": -2,
    "slay_begging": -3,
@@ -218,6 +220,7 @@
   "bandit": [{"label": "TREAT IT AS AN EQUAL", "intent": "courage"}]
  },
  "gifts": {
+  "witch": {"gold": 0, "heal": 2},
   "slime": {"gold": 2, "heal": 4},
   "bandit": {"gold": 5, "heal": 1},
   "snake": {"gold": 3, "heal": 2},

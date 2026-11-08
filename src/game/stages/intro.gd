@@ -1,4 +1,4 @@
-## A fight begins: the monster says its piece and tells you how it fights, then the menu opens by itself. `before` is what
+## A fight begins: the monster says its piece and tells you how it fights. `before` is what
 ## the log said as the last fight ended (the personality slice goes straight from one fight to the next); only the line that
 ## says how it ended is kept, because the log holds three lines and the greeting and the fight rule must both show.
 ## A snapshot is taken so dying can try this fight again.
@@ -10,12 +10,15 @@ const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
 var _ambush := false # it caught you, and strikes first (the feature ambush)
+var _continue_at := 0.0
+var _queued := false
 
 
 func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	var m = args.foe
 	_ambush = args.get("ambush", false)
+	_queued = false
 	s.foe = m
 	m.spoke = false
 	s.menu = []
@@ -38,14 +41,36 @@ func enter(flow, args: Dictionary) -> void:
 	var greeting = flow.encounter.greeting(m)
 	if greeting != null:
 		lines.append(greeting)
+		if flow.feature("ambush-prompt"):
+			s.hint = "ANY KEY CONTINUE"
 	lines.append(State.sys_line(rule))
 	s.say(lines)
 	var mercy: float = await flow.mind.mercy(m)
 	flow.encounter.known_mercy = mercy
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
+	_continue_at = flow.clock + (flow.DIALOGUE_BUFFER_MS if flow.feature("dialogue-buffer") else 0.0)
 	print("intro: %s (%s) %s" % [m.name, m.species, "BOSS" if m.boss else ""])
 
 
 func tick(flow, _t: float) -> void:
-	if flow.stage_ms() >= Combat.INTRO_MS:
+	if _queued and flow.clock >= _continue_at:
+		await _continue(flow)
+	elif flow.state.hint != "ANY KEY CONTINUE" and flow.stage_ms() >= Combat.INTRO_MS:
 		await flow.go("wait" if _ambush else "menu")
+
+
+func handle(flow, _key: String) -> void:
+	if flow.state.hint == "ANY KEY CONTINUE":
+		if flow.clock < _continue_at:
+			_queued = true
+		else:
+			await _continue(flow)
+
+
+func queue_continue() -> void:
+	_queued = true
+
+
+func _continue(flow) -> void:
+	_queued = false
+	await flow.go("dodge" if _ambush else "menu", {"pressure": 1.0} if _ambush else {})

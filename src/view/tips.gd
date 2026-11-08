@@ -14,6 +14,7 @@ const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Fonts = preload("res://src/view/fonts.gd")
+const Sprites = preload("res://src/view/sprites.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 
@@ -406,7 +407,7 @@ func _update_chips() -> void:
 		_chips = []
 		for i in state.allies.size():
 			var chip := Chip.new()
-			chip.setup(state.allies[i])
+			chip.setup(state.allies[i], state.viewing("hand-drawn"))
 			chip.hovered.connect(hover_chip.bind(i))
 			chip.tapped.connect(toggle.bind("ally%d" % i))
 			add_child(chip)
@@ -420,6 +421,8 @@ func _update_chips() -> void:
 class Chip:
 	extends Control
 
+	const FACE_H := 11.0
+
 	signal hovered(on: bool)
 	signal tapped
 
@@ -427,6 +430,7 @@ class Chip:
 	var label := ""
 	var warn := false
 	var k := 1.0
+	var face := "" # whose small drawing stands for the dot (the feature hand-drawn)
 
 	var _title: Font = Fonts.title()
 
@@ -436,10 +440,12 @@ class Chip:
 		mouse_entered.connect(func(): hovered.emit(true))
 		mouse_exited.connect(func(): hovered.emit(false))
 
-	func setup(a) -> void:
+	func setup(a, drawn := false) -> void:
 		dot = Color(Content.species(a.species).color)
 		label = a.charm().name
 		warn = a.loyalty < Allies.LEAVE_BELOW
+		face = a.species if drawn and Sprites.has(a.species) else ""
+		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if face != "" else CanvasItem.TEXTURE_FILTER_PARENT_NODE
 
 	## Chip number `i` from the bottom, at scale `k` (the picture's size over 448).
 	func place(i: int, scale_k: float, extra_x: float) -> void:
@@ -457,8 +463,19 @@ class Chip:
 	func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
 		draw_rect(Rect2(Vector2.ZERO, size / k), Color(0.0, 0.0, 0.0, 0.85)) # a wall line crossing the name would hide it
-		draw_circle(Vector2(5.0, 6.0), 3.5, dot)
+		if face != "":
+			_draw_face()
+		else:
+			draw_circle(Vector2(5.0, 6.0), 3.5, dot)
 		draw_string(_title, Vector2(13.0, 9.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 7, Palette.WARN if warn else Palette.DIM)
+
+	## Its whole small body, standing in the chip: a little over its height, so a hat may lean out of the box.
+	func _draw_face() -> void:
+		var sheet: Dictionary = Sprites.sheet(face)
+		var shrink: float = FACE_H / float(sheet.body_h)
+		var cell := Vector2(sheet.cell[0], sheet.cell[1]) * shrink
+		var feet := Sprites.feet(face) * shrink
+		draw_texture_rect_region(Sprites.texture(face), Rect2(Vector2(5.5, 11.5) - feet, cell), Sprites.frame_rect(face, "idle", 0), Palette.DIM if warn else dot)
 
 
 ## A card: a dark box with a white border, drawn from `blocks` (see `foe_blocks`), above everything else.

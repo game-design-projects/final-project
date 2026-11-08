@@ -4,9 +4,28 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- Combat commands fill a larger three-column grid, with bigger labels and directional navigation.
+- ITEM remains visible but disabled when the bag is empty.
+- Enemy dialogue waits for a key or tap before combat continues.
+- Confirming enemy dialogue starts the attack immediately.
+- Enemy dialogue queues early confirmation for 0.3 seconds, and the opening speech box keeps its size when the combat menu appears.
+- The combat picture and dock keep their size throughout a fight, including attacks and dodges.
+- Camp and other in-game choice menus use larger grid buttons with directional navigation.
+- Walking and camp keep the same picture and dock size when opening or closing the camp menu.
+
+### Fixed
+- Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
+
 ### Added
 - `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling on every successful step, including explored corridors, at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
 - `tools/reveal_shots.gd`: stepping and turning captures with exploration lifecycle checks; `tools/panel_reveal_demo.gd` captures a deterministic corridor, 60 fps animation, and monster/hazard readability.
+- `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
+- `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.
+- `wick`: a run opens with a very small witch hopping down the corridor to hand you a heart; she is your first friend, and can be lost like any other.
+- Fights now show the halls dimmed behind the monster.
+- `tools/art/`: the pipeline that generates sheets with Codex and cuts them into atlases and GIFs; `tools/art_shots.gd` records the look in motion on a fixed clock.
+- `tools/art_test.gd`: atlases, figure animation, warmth, moods, wall art and Wick.
 
 ## [0.7.0] - 2026-11-07
 

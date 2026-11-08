@@ -1,12 +1,12 @@
 # Donjon
 
-![Donjon: a wireframe corridor with a slime waiting down it](docs/donjon-cover.png)
+![Donjon: a very small witch offers you a heart in a hand-drawn corridor](docs/donjon-cover.png)
 
-A wireframe dungeon crawler with Undertale-style fights. The dungeon is a real 3D set drawn as glowing line art, and you can talk to the monsters: each one has a personality, feels something about what you do, and may spare you, join you or turn on you.
+A hand-drawn dungeon crawler with Undertale-style fights. The dungeon is a real 3D set drawn in glowing line art, and you can talk to the monsters: each one has a personality, feels something about what you do, and may spare you, join you or turn on you. The cute is something you can keep and something you can break: the halls warm to you if you are kind, and go back to cold wire if you are not.
 
 Donjon is a Godot 4.7 project (GDScript) for the browser, Windows, macOS and Linux. Changes are in [CHANGELOG.md](CHANGELOG.md).
 
-**Docs:** [The game](docs/GAME.md) · [Development](docs/DEVELOPMENT.md) · [Music and voices](docs/AUDIO.md) · [Architecture](docs/ARCHITECTURE.md) · [Personality playtest](docs/PERSONALITY_PLAYTEST.md). Agents working here: start with [AGENTS.md](AGENTS.md).
+**Docs:** [The game](docs/GAME.md) · [The art](docs/ART.md) · [Development](docs/DEVELOPMENT.md) · [Music and voices](docs/AUDIO.md) · [Architecture](docs/ARCHITECTURE.md) · [Personality playtest](docs/PERSONALITY_PLAYTEST.md). Agents working here: start with [AGENTS.md](AGENTS.md).
 
 ## Run it
 

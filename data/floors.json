@@ -84,5 +84,10 @@
    "sub": "Every monster below is %s: make friends or enemies in bulk",
    "territory": true
   }
- ]
+ ],
+ "friend": {
+  "title": "WICK",
+  "line": "A very small witch hops up and hands you a heart. She lights the torches here.",
+  "joined": "She has decided to come with you."
+ }
 }

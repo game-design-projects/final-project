@@ -83,6 +83,9 @@ func _press_something(flow) -> void:
 		return
 	var s = flow.state
 	match s.stage:
+		"intro", "wait":
+			if s.hint == "ANY KEY CONTINUE":
+				await flow.press("confirm")
 		"explore":
 			if flow.feature("hunger") and Survival.stage_of(s.hunger) != "" and s.items.any(func(id): return str(Items.info(id).kind) == "food"):
 				await flow.press("confirm")

@@ -1,0 +1,14 @@
+Primary request: a landscape 3:2 sheet, 4 columns by 3 rows (12 cells), of separate things hung on a dungeon wall, each drawn dead flat from the front, centred in its cell with generous padding, nothing touching a neighbouring cell. Every outline fully closed. Cute and hand-made rather than grim.
+The 12 cells, left to right, top to bottom:
+1 torch: a simple iron wall bracket with a small round bowl on top. No flame, the bowl is empty.
+2 chains: two short chains hanging side by side from two wall rings, each ending in a small hook, drawn link by link.
+3 banner: a small tattered cloth banner on a short rod, with a notched hem and one small outlined heart on the cloth.
+4 crack: a thin branching hairline crack, open lines only.
+5 window: a small arched window with three vertical bars and a thick stone sill. Behind the bars a small crescent moon with one closed sleepy eye.
+6 skull awake: a round arched niche with a stone ledge, on the ledge a small round cute skull with two solid white pill eyes, no teeth.
+7 skull nodding: exactly the same niche and skull as cell 6, the skull tilted forward with eyes as two upward arcs (like ^ ^).
+8 skull hollow: exactly the same niche and skull as cell 6, the eye sockets two empty outlined rings.
+9 guilty crack: a big jagged crack across the cell whose bends form a wide sheepish wobbly smile, with two tiny solid eyes above it looking off to the side, as if it has been caught hiding something.
+10 plain fissure: exactly the same jagged crack as cell 9 with no eyes.
+11 moss: a small clump of moss and two tiny round mushrooms growing out of a wall joint.
+12 bat: a tiny sleeping bat hanging upside down from a hook, wings wrapped round itself, eyes two short flat lines.

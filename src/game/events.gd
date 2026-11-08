@@ -28,6 +28,7 @@ const FIELDS := {
 	"recruited": ["species"],
 	"ally_left": ["species"],
 	"shout": ["text", "species", "boss"], # a monster says a line
+	"warmth": ["from", "to"], # the halls moved to another level of how they feel about you (rules/warmth.gd)
 	"dead": [],
 	"coach": ["id"], # a first-time tip went up
 	"stairs": [], # reached the stairs

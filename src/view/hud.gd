@@ -14,6 +14,7 @@ enum Part { HEADER, STATUS, DOCK }
 
 signal picked(index: int) ## a command was clicked
 signal hovered(index: int) ## the pointer is over this command (-1: it left the commands)
+signal page_selected(index: int) ## show the page containing this command
 signal said(text: String) ## a line was typed (Enter or the SAY IT button)
 signal cancelled ## Esc in the talk box
 
@@ -27,7 +28,10 @@ static var large_text := false # the TEXT SIZE setting (the scene keeps this up 
 const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
 const THINKING_AFTER_MS := 250 # a question out this long shows as "thinking"; a quick answer doesn't flicker it
 const SAY_BUTTON := -2 # what `_hover_at` says over the talk box's button
+const PAGE_BACK := -3
+const PAGE_NEXT := -4
 const BUTTON_H := 34.0
+const GRID_SLOT_H := 98.0
 const GAP := 6.0
 const DOCK_H := LOG_H + SLOT_H + KEYS_H + GAP * 2.0
 
@@ -90,7 +94,8 @@ func _process(dt: float) -> void:
 	if part == Part.STATUS and state != null:
 		_watch_health(dt)
 	if part == Part.DOCK and state != null and size.x > 0.0:
-		var want := DOCK_H + (SUB_LINE_H if _sub_wraps() else 0.0) # the picture gives way for a second line of help, only when one is needed
+		var reserve_help := _fixed_layout()
+		var want := DOCK_H + (_slot_height() - SLOT_H) + (SUB_LINE_H if reserve_help or _sub_wraps() else 0.0)
 		if absf(custom_minimum_size.y - want) > 0.5:
 			custom_minimum_size.y = want
 	queue_redraw()
@@ -125,6 +130,11 @@ func _gui_input(event: InputEvent) -> void:
 		if _say_button.has_point(event.position):
 			_submit(_talk.text)
 		return
+	var page := _page_at(event.position)
+	if page != -1:
+		var first := _first_grid_row(3) * 3
+		page_selected.emit(maxi(0, first - 6) if page == PAGE_BACK else first + 6)
+		return
 	var i := _command_at(event.position)
 	if i >= 0:
 		picked.emit(i)
@@ -145,27 +155,68 @@ func _set_hover(at: int) -> void:
 func _hover_at(at: Vector2) -> int:
 	if state.stage == "talk":
 		return SAY_BUTTON if _say_button.has_point(at) else -1
+	var page := _page_at(at)
+	if page != -1:
+		return page
 	return _command_at(at)
 
 
 func _command_at(at: Vector2) -> int:
 	var rects := command_rects()
 	for i in rects.size():
-		if rects[i].has_point(at):
+		if rects[i].has_point(at) and not state.menu[i].get("disabled", false):
 			return i
 	return -1
 
 
-## Where each command of the menu is, in the dock's own pixels: up to four across, a second row after that. Only the ones that fit.
+func _grid() -> bool:
+	return state != null and not state.menu.is_empty() and ((state.stage == "menu" and state.viewing("combat-grid")) or (state.stage in ["act", "items", "ask", "dead", "camp", "trade", "request", "end"] and state.viewing("choice-grid")))
+
+
+## Reserve the same space while walking and in menus, so opening a grid never resizes the picture.
+func _fixed_layout() -> bool:
+	return state != null and (state.viewing("combat-grid") or state.viewing("choice-grid"))
+
+
+func _slot_height() -> float:
+	return GRID_SLOT_H if _fixed_layout() else SLOT_H
+
+
+func _first_grid_row(cols: int) -> int:
+	return (int(state.selected / cols) / 2) * 2
+
+
+func _page_rect(next: bool) -> Rect2:
+	return Rect2(size.x - (43.0 if next else 87.0), LOG_H + _slot_height() + GAP * 2.0 - 4.0, 40.0, 20.0)
+
+
+func _page_at(at: Vector2) -> int:
+	if not _grid() or state.menu.size() <= 6:
+		return -1
+	var first := _first_grid_row(3) * 3
+	if first > 0 and _page_rect(false).has_point(at):
+		return PAGE_BACK
+	if first + 6 < state.menu.size() and _page_rect(true).has_point(at):
+		return PAGE_NEXT
+	return -1
+
+
+## Where each command of the menu is, in the dock's own pixels.
 func command_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if state == null or state.stage == "talk" or state.menu.is_empty():
 		return out
-	var slot := Rect2(0, LOG_H + GAP, size.x, SLOT_H)
-	var cols := clampi(state.menu.size(), 1, 4)
+	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
+	var cols := mini(3, state.menu.size()) if _grid() else clampi(state.menu.size(), 1, 4)
+	var button_h := (GRID_SLOT_H - GAP) / 2.0 if _grid() else BUTTON_H
 	var w := (slot.size.x - GAP * (cols - 1)) / cols
+	var first_row := _first_grid_row(cols) if _grid() else 0
 	for i in state.menu.size():
-		var r := Rect2(slot.position + Vector2((i % cols) * (w + GAP), floori(float(i) / cols) * (BUTTON_H + GAP)), Vector2(w, BUTTON_H))
+		var row := floori(float(i) / cols) - first_row
+		if _grid() and (row < 0 or row >= 2):
+			out.append(Rect2())
+			continue
+		var r := Rect2(slot.position + Vector2((i % cols) * (w + GAP), row * (button_h + GAP)), Vector2(w, button_h))
 		if r.end.y > slot.end.y + 1.0:
 			break
 		out.append(r)
@@ -284,12 +335,12 @@ static func hp_color(frac: float) -> Color:
 
 func _dock() -> void:
 	_log(Rect2(0, 0, size.x, LOG_H))
-	var slot := Rect2(0, LOG_H + GAP, size.x, SLOT_H)
+	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	if state.stage == "talk":
 		_talk_row(slot)
 	else:
 		_commands(slot)
-	_keys(Rect2(0, LOG_H + SLOT_H + GAP * 2.0, size.x, KEYS_H))
+	_keys(Rect2(0, LOG_H + _slot_height() + GAP * 2.0, size.x, KEYS_H))
 
 
 ## A log line's speaker, as drawn in front of its text: "ROOK: ", or nothing for a line of the game's own.
@@ -357,15 +408,23 @@ func _commands(_slot: Rect2) -> void:
 	var rects := command_rects()
 	for i in rects.size():
 		var r: Rect2 = rects[i]
+		if not r.has_area():
+			continue
 		var picked_one: bool = i == state.selected
 		var gold: bool = items[i].get("gold", false)
+		var disabled: bool = items[i].get("disabled", false)
 		draw_rect(r, Color.BLACK)
 		draw_rect(r.grow(-1.0), Palette.INK if picked_one or i == _hover else Palette.FAINT, false, 2.0)
-		var base := r.position + Vector2(12.0, BUTTON_H * 0.5 + 4.0)
+		var base := r.position + Vector2(12.0, r.size.y * 0.5 + (6.0 if _grid() else 4.0))
 		if picked_one:
 			draw_colored_polygon([base + Vector2(0, -8), base + Vector2(8, -4), base + Vector2(0, 0)], Palette.YOU)
-		_text(_title, str(i + 1), base + Vector2(14, 0), 9, Palette.DIM)
-		_text(_title, items[i].label, base + Vector2(14 + 18, 0), 9, Palette.MERCY if gold else Palette.INK)
+		var px := 14 if _grid() else 9
+		if _grid():
+			while px > 8 and _title.get_string_size(str(items[i].label), HORIZONTAL_ALIGNMENT_LEFT, -1, px).x > r.size.x - 55.0:
+				px -= 1
+		_text(_title, str(i + 1), base + Vector2(14, 0), px, Palette.FAINT if disabled else Palette.DIM)
+		var label_at := base + Vector2(14 + (24 if _grid() else 18), 0)
+		_text(_title, items[i].label, label_at, px, Palette.FAINT if disabled else (Palette.MERCY if gold else Palette.INK), HORIZONTAL_ALIGNMENT_LEFT, r.end.x - label_at.x - 6.0)
 
 
 func _talk_row(slot: Rect2) -> void:
@@ -384,7 +443,12 @@ func _talk_row(slot: Rect2) -> void:
 func _keys(area: Rect2) -> void:
 	var x := 0.0
 	var y := area.position.y + 9.0
-	for segment in state.hint.split(" · "):
+	var hint: String = state.hint
+	if _grid() and state.stage != "menu":
+		hint = "ARROWS / WASD CHOOSE · " + hint
+	if _grid() and state.menu.size() > 6:
+		hint = "ARROWS / WASD · ENTER PICK"
+	for segment in hint.split(" · "):
 		var key := ""
 		for name in KEY_NAMES:
 			if segment.begins_with(name) and name.length() > key.length():
@@ -399,6 +463,13 @@ func _keys(area: Rect2) -> void:
 	var sub := sub_text()
 	if sub != "":
 		draw_multiline_string(_body, Vector2(0, y + 18.0), sub, HORIZONTAL_ALIGNMENT_LEFT, size.x, 17, 2, Palette.DIM)
+	if _grid() and state.menu.size() > 6:
+		var first := _first_grid_row(3) * 3
+		for next in [false, true]:
+			var available: bool = first + 6 < state.menu.size() if next else first > 0
+			var r := _page_rect(next)
+			draw_rect(r, Palette.FAINT, false, 1.0)
+			_text(_title, ">" if next else "<", r.position + Vector2(0, 14), 9, Palette.INK if available else Palette.FAINT, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
 
 
 ## What the picked command does, for the line under the key hints ("" when there is nothing to say).

@@ -1,0 +1,14 @@
+Primary request: a landscape 3:2 sheet, 4 columns by 3 rows (12 cells), of separate game items, each drawn from the front, centred in its cell with generous padding, nothing touching a neighbouring cell. Every outline fully closed. Cute and chunky.
+The 12 cells, left to right, top to bottom:
+1 chest: a chunky closed treasure chest with a domed lid, metal bands and a heart-shaped clasp.
+2 sack: a small round tied sack with a bow at the neck.
+3 ration: a small wrapped loaf of bread tied with string.
+4 heart: one solid white heart, chunky, like a big pixel-free sticker.
+5 heart outline: the same heart as cell 4, outline only, empty inside.
+6 coin: one round coin with a small star stamped on it.
+7 speech bubble heart: a small rounded speech bubble with a tail at its lower left, one solid white heart inside.
+8 speech bubble alert: the same bubble, one solid exclamation mark inside.
+9 speech bubble quiet: the same bubble, three solid dots inside.
+10 speech bubble question: the same bubble, one solid question mark inside.
+11 sparkle: one four-pointed sparkle star, solid white.
+12 crown: a tiny three-pointed crown, outline only, with a small heart on the front.

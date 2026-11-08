@@ -30,7 +30,7 @@ static func earned_by(event: String, data: Dictionary, state) -> Array:
 			out.append("words")
 		"recruited":
 			out.append("friend")
-			if state.allies.size() >= Combat.PARTY_MAX:
+			if state.party_size() >= Combat.PARTY_MAX:
 				out.append("party")
 			if state.foe != null and state.foe.boss:
 				out.append("champion_won")

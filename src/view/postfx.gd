@@ -97,6 +97,11 @@ func set_danger(amount: float) -> void:
 	material.set_shader_parameter("danger", clampf(amount, 0.0, 1.0))
 
 
+## How warm the halls are, 0..1 (rules/warmth.gd); 1 leaves the colours alone.
+func set_warmth(amount: float) -> void:
+	material.set_shader_parameter("warmth", amount)
+
+
 func set_accent(color: Color) -> void:
 	material.set_shader_parameter("accent", Vector3(color.r, color.g, color.b))
 

@@ -144,7 +144,8 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 		if attack != null:
 			lines.append(attack)
 	flow.state.say(lines)
-	await flow.go("wait", {"pressure": decision.pressure})
+	var foe_spoke: bool = lines.any(func(line): return line.kind == "say" and line.who == flow.state.foe.name)
+	await flow.go("wait", {"pressure": decision.pressure, "prompt": foe_spoke and flow.feature("ambush-prompt")})
 
 
 ## What the monster says about what was just done to it, in its own words (reveal): null when it has no strong opinion.
@@ -201,7 +202,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	var line = null
 	var rows := []
 	if how == "spared" and allow_join:
-		var room: bool = s.allies.size() < Combat.PARTY_MAX
+		var room: bool = s.party_size() < Combat.PARTY_MAX
 		var wants: float = await flow.mind.join(m) if room else 0.0
 		joined = Odds.succeeds(flow.dice, wants)
 		rows.append({"id": "join", "label": "DOES IT WANT TO COME ALONG?" if room else "DOES IT WANT TO COME ALONG? (PARTY FULL)", "answer": wants, "picked": joined})

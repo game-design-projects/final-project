@@ -5,9 +5,11 @@
 extends Control
 
 const Art = preload("res://src/view/art.gd")
+const BattleArt = preload("res://src/view/battle_art.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
+const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 
@@ -68,6 +70,7 @@ var intro_strength := 0.5
 
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
+var _art: BattleArt # what is drawn behind this layer: the monster, the title picture
 var _popups: Array = [] # [{text, color, at, born}]
 var extra_x := 0.0 # how much wider the picture is than this layer, on each side (wide-view)
 var _words := "" # what you last typed, on its way to the monster
@@ -80,6 +83,24 @@ var _lantern_glow: GradientTexture2D
 var _soul_shown = null # where your soul is drawn now (smooth-fight), null to start at its square
 var _was_fighting := false
 var _left_fight_at := -1e9
+
+
+func _ready() -> void:
+	_art = BattleArt.new()
+	_art.overlay = self
+	add_child(_art)
+
+
+## Whether the monster in this fight is the drawing (battle_art.gd), with the halls dimmed behind it, rather than line art on black.
+func drawn_foe() -> bool:
+	return state != null and state.foe != null and state.viewing("hand-drawn") and BattleArt.can_draw(state.foe.species)
+
+
+## How a deed landed, for as long as that shows: "" otherwise.
+func emote_tone() -> String:
+	if _emote.is_empty() or clock_ms - _emote.born >= EMOTE_MS:
+		return ""
+	return str(_emote.tone)
 
 
 ## True while the flat battle screen is showing (the 3D set is hidden behind it).
@@ -273,7 +294,7 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
 	var fade := leave_fade()
 	if fade > 0.0:
-		draw_rect(_whole_picture(), Color(0, 0, 0, fade))
+		draw_rect(whole_picture(), Color(0, 0, 0, fade))
 	for p in _popups:
 		var age: float = (clock_ms - p.born) / 900.0
 		var col: Color = p.color
@@ -294,7 +315,7 @@ func soul_at() -> Vector2:
 
 
 ## The whole picture in this layer's coordinates: the layer keeps its 448 x 288 in the middle of a picture that may be wider.
-func _whole_picture() -> Rect2:
+func whole_picture() -> Rect2:
 	return Rect2(-extra_x, 0.0, W + extra_x * 2.0, H)
 
 
@@ -333,7 +354,10 @@ func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := H
 
 ## A receding corridor, the name in its box, what the game is, a blinking prompt, and how to leave.
 func _title_screen() -> void:
-	draw_rect(_whole_picture(), Color.BLACK)
+	if Flags.enabled("hand-drawn"):
+		_drawn_title_screen()
+		return
+	draw_rect(whole_picture(), Color.BLACK)
 	for f in TITLE_FRAMES:
 		var size_at := (Vector2(W, H) - Vector2(8, 8)) * float(f)
 		draw_rect(Rect2((Vector2(W, H) - size_at) / 2.0, size_at).abs(), Palette.INK, false, 2.0)
@@ -347,6 +371,16 @@ func _title_screen() -> void:
 	_text(_title, "ESC: MENU", Vector2(0, H * 0.82), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_CENTER, W)
 
 
+## The picture of the halls and of her is behind this (battle_art.gd): the name sits over the top of it, where the corridor is empty.
+func _drawn_title_screen() -> void:
+	_text(_title, "DONJON", Vector2(0, H * 0.2), 28, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
+	_text(_title, "GENRE HALLS", Vector2(0, H * 0.28), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
+	draw_rect(Rect2(0.0, H * 0.88, W, H * 0.12), Color(0.0, 0.0, 0.0, 0.75))
+	if title_prompt_on():
+		_text(_title, "PRESS ANY KEY", Vector2(0, H * 0.93), 9, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
+	_text(_title, "ESC: MENU", Vector2(0, H * 0.98), 6, Palette.DIM, HORIZONTAL_ALIGNMENT_CENTER, W)
+
+
 ## Whether the blinking prompt shows this moment.
 func title_prompt_on() -> bool:
 	return floori(clock_ms / TITLE_BLINK_MS) % 2 == 0
@@ -357,13 +391,14 @@ func title_prompt_on() -> bool:
 func _battle() -> void:
 	var m = state.foe
 	var color := Palette.monster(m)
-	draw_rect(_whole_picture(), Color.BLACK)
 	var small: bool = state.dodge != null
-	var hurt := 1.0 if clock_ms < hurt_until else 0.0
-	if small:
-		Art.draw(self, m.species, clock_ms, color, W / 2.0, 76.0, 0.27, hurt)
-	else:
-		Art.draw(self, m.species, clock_ms, color, W / 2.0, 270.0, 0.85, hurt)
+	if not drawn_foe():
+		draw_rect(whole_picture(), Color.BLACK)
+		var hurt := 1.0 if clock_ms < hurt_until else 0.0
+		if small:
+			Art.draw(self, m.species, clock_ms, color, W / 2.0, 76.0, 0.27, hurt)
+		else:
+			Art.draw(self, m.species, clock_ms, color, W / 2.0, 270.0, 0.85, hurt)
 	_name_and_health(m)
 	_bubble(Vector2(W / 2.0 + 36.0, 28.0) if small else Vector2(W / 2.0 + 74.0, 72.0))
 	_speech_box()
@@ -375,7 +410,7 @@ func _battle() -> void:
 		_strike_bar()
 	var flash := intro_flash()
 	if flash > 0.0:
-		draw_rect(_whole_picture(), Color(1, 1, 1, flash))
+		draw_rect(whole_picture(), Color(1, 1, 1, flash))
 
 
 ## Where the foe's health bar goes: over its head when it fills the picture, up in the corner while it is small over the dodge box.
@@ -460,6 +495,8 @@ func _bubble(at: Vector2) -> void:
 	var b := bubble()
 	if b.is_empty():
 		return
+	if drawn_foe() and (b.has("tone") or str(b.text).begins_with(".")):
+		return # a drawing floats over its head instead (battle_art.gd)
 	var w: float = 70.0 if b.has("text") else 26.0
 	var rect := Rect2(at - Vector2(0.0, 22.0), Vector2(w, 22.0))
 	var ink: Color = Palette.MERCY if b.has("text") else _tone_color(b.tone)
@@ -493,10 +530,10 @@ func _mood_glyph(tone: String, c: Vector2, ink: Color) -> void:
 func _flashes() -> void:
 	var run = state.dodge
 	if clock_ms - run.block_flash < 160.0:
-		draw_rect(_whole_picture(), Color(Palette.YOU, 0.22))
+		draw_rect(whole_picture(), Color(Palette.YOU, 0.22))
 		_text(_title, "BOUNCY! THE SLIME TAKES THE HIT", Vector2(0, BOX_Y - 8.0), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
 	if clock_ms - run.hit_flash < 120.0:
-		draw_rect(_whole_picture(), Color(Palette.WARN, 0.25))
+		draw_rect(whole_picture(), Color(Palette.WARN, 0.25))
 
 
 # ---------------------------------------------------------------- the dodge box
@@ -504,6 +541,8 @@ func _flashes() -> void:
 func _dodge_box(accent: Color) -> void:
 	var run = state.dodge
 	var box := Rect2(BOX_X, BOX_Y, Dodge.COLS * BOX_CELL, Dodge.ROWS * BOX_CELL)
+	if drawn_foe():
+		draw_rect(box, Color.BLACK) # the halls behind it must not read as squares
 	for k in Dodge.COLS * Dodge.ROWS:
 		if run.blocked.has(k):
 			draw_rect(_cell_rect(k).grow(-2), PILLAR)
@@ -655,8 +694,8 @@ func _charms() -> void:
 	_text(_title, "CHARMS", Vector2(12, BOX_Y + 8.0), 7, Palette.DIM)
 	for row in rows:
 		_text(_title, row.name, Vector2(12, row.y), 7, row.color)
-	if state.viewing("party-aid"):
-		_text(_title, "+%d STRIKE" % rows.size(), Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 4.0), 6, Palette.DIM)
+	if state.viewing("party-aid") and state.party_size() > 0: # a friend who isn't a monster lends no strength
+		_text(_title, "+%d STRIKE" % state.party_size(), Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 4.0), 6, Palette.DIM)
 		if state.dodge.guard > 0:
 			_text(_title, "-%d HURT" % state.dodge.guard, Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 14.0), 6, Palette.DIM)
 

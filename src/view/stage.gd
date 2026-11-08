@@ -3,6 +3,10 @@
 ## small SubViewport and shown through the post-processing pass. Walls hide what stands behind them: the depth buffer decides
 ## what shows, so nothing pops in or out as you turn. Fights are the flat battle screen, with the set hidden behind it.
 ##
+## With the feature hand-drawn the same set is drawn by hand: the walls have their stones, the monsters are figures with faces that
+## hop (figure.gd), what hangs on the walls is flat drawings (wall_art.gd), and in a fight the set stays on, dimmed, behind the monster.
+## How warm the halls are (rules/warmth.gd) runs through all of it; at the coldest the set is the wire it started as.
+##
 ## Moving eases: when the party's cell or facing changes, the camera glides (a step) or swings (a turn) to its new spot in a
 ## fixed time, and `bump` lunges it at a wall and back. A new floor, or a change made while the set is hidden, puts it there
 ## at once.
@@ -10,9 +14,15 @@ extends Node3D
 
 const Decor = preload("res://src/view/decor.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
+const Figure = preload("res://src/view/figure.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Materials = preload("res://src/view/materials.gd")
 const MonsterModel = preload("res://src/view/monster_model.gd")
+const Moods = preload("res://src/rules/moods.gd")
+const Opening = preload("res://src/view/opening.gd")
+const Sprites = preload("res://src/view/sprites.gd")
+const WallArt = preload("res://src/view/wall_art.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 const Content = preload("res://src/rules/content.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -37,6 +47,10 @@ const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels c
 const TAG_GAP := 0.12 # above the head
 const TAG_FADE_S := 0.12 # how long a tag takes to come and go
 const TRADER_LOOK := "bandit" # the model the trader wears, in gold
+const TRADER_SHEET := "trader" # the figure drawn for him
+const HOP_GLIDE_MS := 240.0 # how long a drawn figure takes over a cell: it hops, so a little longer than a step
+const WARMTH_EASE := 0.3 # how fast the walls catch up with how warm the halls are, per second
+const OPENING_AFTER_S := 1.1 # she sets out once the words about the door have been read a little
 const WALK_SNAP := 1.5 # a model further than this many cells from its monster goes there at once: nothing walks that far in a step
 const MARK_AHEAD := 0.75 # how far before a monster its arrow lies
 const MARK_Y := 0.03 # just over the floor
@@ -78,6 +92,16 @@ var _tag_light := {} # Monster -> 0..1, how far its tag has come in
 var _tag_key := []
 var _floor_map = null
 var _like_sprite := false # the models take the shape of the fight sprites (sprite-look)
+var _hand_drawn := false # the feature hand-drawn
+var _warmth := 1.0 # how warm the halls are, 0..1, and which level that is
+var _warmth_level := -1
+var _warmth_shown := 1.0 # what the walls show: it follows
+var _felt := {} # Monster -> {cell, hunting}: what its figure last reacted to
+var _opening: Node3D # the run's first moment (opening.gd), while it lasts
+var _opening_at := -1.0 # when it starts, in seconds; below 0 there is none waiting
+var _opening_key := [] # where you stood and looked when it started
+## The monster the battle screen is showing, so the set doesn't show it too.
+var off_set = null
 var _floor_changes := 0 # the walls broken on it when it was built
 var _secrets: Node3D
 var _secrets_built := -1 # how many chests and items it was built with
@@ -141,6 +165,7 @@ func update(state, now: float, dt: float) -> void:
 	if state.floor_map == null:
 		return
 	_like_sprite = state.viewing("sprite-look")
+	_hand_drawn = state.viewing("hand-drawn")
 	if state.floor_map != _floor_map or state.floor_map.changes != _floor_changes:
 		_load_floor(state)
 	if state.floor_map.treasure.size() + state.floor_map.pickups.size() != _secrets_built:
@@ -149,8 +174,34 @@ func update(state, now: float, dt: float) -> void:
 	_update_reveal(state, now)
 	_move_camera(state, now)
 	if is_visible_in_tree():
+		_follow_warmth(state, dt)
 		_flicker(now)
 		_show_monsters(state, now, dt)
+		_show_props()
+		_show_opening(state, now)
+
+
+## How warm the halls are now: what the set shows. With warmth off they keep the warmth a run starts with.
+func _warmth_now(state) -> float:
+	return Warmth.of(state) if state.viewing("warmth") else float(Warmth.table().start)
+
+
+## The walls drift to how warm the halls are; what hangs on them changes when the level does.
+func _follow_warmth(state, dt: float) -> void:
+	if not _hand_drawn:
+		return
+	_warmth = _warmth_now(state)
+	if _warmth_shown != _warmth:
+		_warmth_shown = move_toward(_warmth_shown, _warmth, dt * WARMTH_EASE)
+		_show_warmth()
+	if Warmth.level(_warmth) != _warmth_level:
+		print("stage: warmth level %d -> %d" % [_warmth_level, Warmth.level(_warmth)])
+		_build_decor()
+
+
+func _show_warmth() -> void:
+	_wall_mat.set_shader_parameter("warmth", _warmth_shown)
+	_flat_mat.set_shader_parameter("warmth", _warmth_shown)
 
 
 func _update_reveal(state, now: float) -> void:
@@ -231,7 +282,6 @@ func _load_floor(state) -> void:
 	if _dungeon != null:
 		_dungeon.queue_free()
 		_stairs.queue_free()
-		_decor.queue_free()
 	for m in _models:
 		_models[m].queue_free()
 		_tags[m].queue_free()
@@ -245,7 +295,7 @@ func _load_floor(state) -> void:
 	_tags = {}
 	_tag_light = {}
 	_tag_key = []
-	_flicker_key = []
+	_felt = {}
 	_dungeon = MeshInstance3D.new()
 	_wall_mat = Materials.wire(0, palette.wall, palette.accent)
 	_flat_mat = Materials.wire(1, palette.wall, palette.accent)
@@ -253,9 +303,13 @@ func _load_floor(state) -> void:
 		mat.set_shader_parameter("reveal_times", _reveal_texture)
 	_dungeon.mesh = DungeonMesh.build(_floor_map, _wall_mat, _flat_mat)
 	add_child(_dungeon)
-	_torches = []
-	_decor = Decor.build(_floor_map, palette.wall, palette.accent, _torches)
-	add_child(_decor)
+	if _hand_drawn:
+		_warmth = _warmth_now(state)
+		_warmth_shown = _warmth
+		_wall_mat.set_shader_parameter("drawn", 1.0)
+		_flat_mat.set_shader_parameter("drawn", 1.0)
+		_show_warmth()
+	_build_decor()
 	_stairs = MeshInstance3D.new()
 	_stairs.mesh = DungeonMesh.stairwell(palette.accent)
 	_stairs.material_override = Materials.prop()
@@ -280,10 +334,24 @@ func _load_floor(state) -> void:
 	print("stage: built the %dx%d floor, %d torches, in %d ms" % [_floor_map.size, _floor_map.size, _torches.size(), (Time.get_ticks_usec() - t0) / 1000])
 
 
+## What hangs on the walls: built again when the floor or, hand-drawn, how warm the halls are changes.
+func _build_decor() -> void:
+	if _decor != null:
+		_decor.queue_free()
+	_torches = []
+	_flicker_key = []
+	if _hand_drawn:
+		_warmth_level = Warmth.level(_warmth)
+		_decor = WallArt.build(_floor_map, palette.wall, palette.accent, _torches, _warmth_level)
+	else:
+		_decor = Decor.build(_floor_map, palette.wall, palette.accent, _torches)
+	add_child(_decor)
+
+
 func _build_secrets() -> void:
 	if _secrets != null:
 		_secrets.queue_free()
-	_secrets = SecretProps.build(_floor_map, palette.wall, palette.accent)
+	_secrets = SecretProps.build(_floor_map, palette.wall, palette.accent, _hand_drawn)
 	add_child(_secrets)
 	_secrets_built = _floor_map.treasure.size() + _floor_map.pickups.size()
 
@@ -296,20 +364,31 @@ func _build_trader() -> void:
 	_trader = null
 	_quester = null
 	if not _floor_map.merchant.is_empty():
-		_trader = _figure(TRADER_LOOK, Palette.MERCY, _floor_map.merchant.cell)
-		_trader_tag = _name_tag("TRADER", Palette.MERCY, MonsterModel.top_of(_trader))
+		_trader = _figure(TRADER_SHEET if _hand_drawn else TRADER_LOOK, Palette.MERCY, _floor_map.merchant.cell)
+		_trader_tag = _name_tag("TRADER", Palette.MERCY, _top_of(_trader))
 		_trader.add_child(_trader_tag)
 	if not _floor_map.quester.is_empty():
 		_quester = _figure(_floor_map.quester.species, Palette.YOU, _floor_map.quester.cell)
-		_quester_tag = _name_tag(str(Requests.table().tag), Palette.YOU, MonsterModel.top_of(_quester))
+		_quester_tag = _name_tag(str(Requests.table().tag), Palette.YOU, _top_of(_quester))
 		_quester.add_child(_quester_tag)
 
 
 func _figure(look: String, color: Color, cell: Vector2i) -> Node3D:
-	var out := MonsterModel.build(look, color, _like_sprite)
+	var out := _body(look, color, cell.x * 31 + cell.y)
 	out.position = DungeonMesh.center(cell)
 	add_child(out)
 	return out
+
+
+## What stands for something: its drawing, hand-drawn, or else its model.
+func _body(look: String, color: Color, seed_value: int) -> Node3D:
+	if _hand_drawn and Sprites.has(look):
+		return Figure.make(look, color, seed_value)
+	return MonsterModel.build(look, color, _like_sprite)
+
+
+static func _top_of(body: Node3D) -> float:
+	return body.top() if body is Figure else MonsterModel.top_of(body)
 
 
 ## A name over something, drawn over walls: it is shown only while a line reaches what it names.
@@ -429,7 +508,7 @@ func _show_monsters(state, now: float, dt: float) -> void:
 			_show_figure(_quester, _quester_tag, state.floor_map, state.floor_map.quester.cell, now)
 	_stairs_slab.visible = state.floor_map.monster_at(state.floor_map.stairs) != null
 	for m in state.floor_map.monsters:
-		var here: bool = not m.is_gone() and m.cell != state.cell
+		var here: bool = not m.is_gone() and m.cell != state.cell and m != off_set
 		_show_stir(m, here and m.lurking, state.floor_map, now)
 		if not here or m.lurking:
 			if _models.has(m):
@@ -447,9 +526,55 @@ func _show_monsters(state, now: float, dt: float) -> void:
 		var to_camera := _camera.position - model.position
 		model.rotation.y = atan2(to_camera.x, to_camera.z)
 		var since: float = now - _hit_at.get(m, -10.0)
-		MonsterModel.flash(model, clampf(1.0 - since / FLASH_S, 0.0, 1.0))
-		MonsterModel.pose(model, now, clampf(1.0 - since / 0.4, 0.0, 1.0))
+		if model is Figure:
+			_feel(m, model, state, now)
+			model.flash(clampf(1.0 - since / FLASH_S, 0.0, 1.0))
+			model.pose(now)
+		else:
+			MonsterModel.flash(model, clampf(1.0 - since / FLASH_S, 0.0, 1.0))
+			MonsterModel.pose(model, now, clampf(1.0 - since / 0.4, 0.0, 1.0))
 	_show_tags(state, dt)
+
+
+## What a figure's face shows: how it feels, or nothing at all once the halls have gone cold enough for it. Being after you is a start first.
+func _feel(m, figure: Node3D, state, now: float) -> void:
+	var was: Dictionary = _felt.get(m, {"cell": m.cell, "hunting": m.hunting})
+	if m.hunting and not was.hunting:
+		figure.anim.notice(now)
+	if m.cell != was.cell:
+		figure.anim.hop(now)
+	_felt[m] = {"cell": m.cell, "hunting": m.hunting}
+	var blank: bool = state.viewing("warmth") and Moods.hollow(m, _warmth)
+	figure.anim.set_mood("hollow" if blank else Moods.of(m), now)
+
+
+## Chests and sacks turn to you.
+func _show_props() -> void:
+	if not _hand_drawn or _secrets == null:
+		return
+	for part in _secrets.get_children():
+		if part is Figure:
+			var to_you: Vector3 = _camera.position - part.position
+			part.rotation.y = atan2(to_you.x, to_you.z)
+
+
+## A new run: she comes hopping, from down the corridor you are looking along.
+func play_opening(now: float) -> void:
+	_opening_at = now + OPENING_AFTER_S
+
+
+func _show_opening(state, now: float) -> void:
+	if _opening_at >= 0.0 and now >= _opening_at and _opening == null:
+		_opening_at = -1.0
+		if state.viewing("wick") and state.has_ally(Opening.SHEET) and state.stage == "explore":
+			_opening = Opening.begin(state.floor_map, state.cell, state.facing, Color(Content.species(Opening.SHEET).color), now)
+			add_child(_opening)
+			_opening_key = [state.cell, state.quarter_turns, state.floor_map]
+	if _opening != null:
+		var moved: bool = _opening_key != [state.cell, state.quarter_turns, state.floor_map] or state.stage != "explore"
+		if not _opening.tick(now, _camera.position, moved):
+			_opening.queue_free()
+			_opening = null
 
 
 ## A fight tried again has a fresh monster in the list (Encounter.retry_fight): the one it replaced must not go on standing there.
@@ -466,6 +591,7 @@ func _drop_the_replaced(f) -> void:
 				_marks[m].queue_free()
 				_marks.erase(m)
 			_tag_light.erase(m)
+			_felt.erase(m)
 			_tag_key = []
 
 
@@ -496,7 +622,7 @@ func _walk_model(m, model: Node3D, dt: float) -> void:
 		var far := model.position.distance_to(goal) > CELL * WALK_SNAP
 		if not far:
 			_mark_heading(m, (goal - model.position).normalized())
-		model.position = goal if far else model.position.move_toward(goal, dt * CELL * 1000.0 / STEP_MS)
+		model.position = goal if far else model.position.move_toward(goal, dt * _walk_speed(model, goal))
 		tag.position = Vector3(model.position.x, tag.position.y, model.position.z)
 	if _marks.has(m):
 		var mark: MeshInstance3D = _marks[m]
@@ -510,10 +636,20 @@ func _walk_model(m, model: Node3D, dt: float) -> void:
 		_tag_key = []
 
 
+## World units a second. A figure hops, so it takes its time over a cell, and hurries when more than one is left: it never falls behind.
+func _walk_speed(model: Node3D, goal: Vector3) -> float:
+	if model is Figure:
+		return CELL * 1000.0 / HOP_GLIDE_MS * maxf(1.0, model.position.distance_to(goal) / CELL)
+	return CELL * 1000.0 / STEP_MS
+
+
 func _show_figure(figure: Node3D, tag: Label3D, f, cell: Vector2i, now: float) -> void:
 	var to_you := _camera.position - figure.position
 	figure.rotation.y = atan2(to_you.x, to_you.z)
-	MonsterModel.pose(figure, now, 0.0)
+	if figure is Figure:
+		figure.pose(now)
+	else:
+		MonsterModel.pose(figure, now, 0.0)
 	tag.visible = Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), cell)
 
 
@@ -536,7 +672,7 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 
 
 func _add_monster(m) -> void:
-	var model := MonsterModel.build(m.species, Palette.monster(m), _like_sprite)
+	var model := _body(m.species, Palette.monster(m), str(m.name).hash())
 	model.position = DungeonMesh.center(m.cell)
 	add_child(model)
 	_models[m] = model
@@ -553,7 +689,7 @@ func _add_monster(m) -> void:
 	tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	tag.outline_size = 0
 	tag.modulate = Palette.monster(m)
-	tag.position = model.position + Vector3(0.0, MonsterModel.top_of(model) + TAG_GAP, 0.0)
+	tag.position = model.position + Vector3(0.0, _top_of(model) + TAG_GAP, 0.0)
 	add_child(tag)
 	_tags[m] = tag
 	_tag_light[m] = 0.0
@@ -567,6 +703,10 @@ static func _plain_tag(m) -> String:
 ## Which tags show: its monster is in a straight line of open floor from the camera, and it doesn't overlap a nearer tag. The
 ## tags then ease in and out and fade with distance, like the lines.
 func _show_tags(state, dt: float) -> void:
+	if off_set != null: # the battle screen is up: its names are the ones that count
+		for tag in _tags.values():
+			tag.visible = false
+		return
 	var key := [_pos, _yaw, state.floor_map.monsters_left(), state.floor_map.steps]
 	if key != _tag_key:
 		_tag_key = key
@@ -597,3 +737,12 @@ func _pick_tags(state) -> void:
 		if not placed.any(func(r): return r.intersects(rect)):
 			placed.append(rect)
 			tag.set_meta("wanted", true)
+			_first_sight(m)
+
+
+## The first time a line reaches it, a drawn monster looks up.
+func _first_sight(m) -> void:
+	var model: Node3D = _models[m]
+	if model is Figure and not model.has_meta("seen"):
+		model.set_meta("seen", true)
+		model.anim.notice(_now)

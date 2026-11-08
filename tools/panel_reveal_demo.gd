@@ -92,7 +92,7 @@ func _run() -> void:
 	check(classic.get_data() == shots.settled.get_data(), "settled picture exactly matches disabled effect")
 	state.views["dungeon-reveal"] = true
 	# 60 fps, with half-second lead-in and a settled tail.
-	for frame in 150:
+	for frame in (150 if Flags.value("frames", "on") != "off" else 0):
 		var img := await capture(9.5 + frame / 60.0)
 		img.save_png(out + "/frames/%04d.png" % frame)
 	check(stage._dungeon.mesh == mesh, "animation never rebuilds mesh")

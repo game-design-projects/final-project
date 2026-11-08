@@ -17,7 +17,7 @@ const ALLOWED := {
 	"": ["explore"], # a new run or a loaded one
 	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
 	"camp": ["explore"],
-	"intro": ["menu", "wait"], # wait: a monster that caught you strikes first
+	"intro": ["menu", "wait", "dodge"], # a monster that caught you strikes first
 	"menu": ["act", "items", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
 	"items": ["menu", "wait", "explore", "intro"],
 	"trade": ["explore"],

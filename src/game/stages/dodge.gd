@@ -20,7 +20,7 @@ func enter(flow, args: Dictionary) -> void:
 	var genre: String = flow.encounter.foe_genre(m)
 	var pace := 1.0
 	if flow.feature("gentle-dodge"):
-		pace = Pace.of(m, s.depth, s.struggle, s.allies.size(), flow.easy_dodge)
+		pace = Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
 		if flow.feature("tutorial") and flow.coach.enabled: # the TIPS setting: someone who knows the game gets no slow start either
 			pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
 		print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size()])

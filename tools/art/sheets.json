@@ -1,0 +1,192 @@
+{
+ "_figure": {
+  "cell_px": 170,
+  "sets": {
+   "set1": {
+    "cols": 6,
+    "rows": 4,
+    "anims": [
+     "idle",
+     "hop",
+     "happy",
+     "scared"
+    ]
+   },
+   "set2": {
+    "cols": 6,
+    "rows": 4,
+    "anims": [
+     "angry",
+     "hurt",
+     "lunge",
+     "hollow"
+    ]
+   }
+  },
+  "anims": {
+   "idle": {
+    "fps": 5,
+    "loop": true,
+    "pin": "xy"
+   },
+   "hop": {
+    "fps": 14,
+    "pin": "x",
+    "jump": 0.85
+   },
+   "happy": {
+    "fps": 9
+   },
+   "scared": {
+    "fps": 10
+   },
+   "angry": {
+    "fps": 9
+   },
+   "hurt": {
+    "fps": 11,
+    "jump": 0.75
+   },
+   "lunge": {
+    "fps": 12,
+    "jump": 0.85
+   },
+   "hollow": {
+    "fps": 3,
+    "pin": "xy"
+   }
+  }
+ },
+ "slime": {
+  "figure": true,
+  "world_h": 0.72,
+  "tint": "#ff8a1f"
+ },
+ "bandit": {
+  "figure": true,
+  "world_h": 1.05,
+  "tint": "#ff5a5a"
+ },
+ "snake": {
+  "figure": true,
+  "world_h": 1.1,
+  "tint": "#7be08a"
+ },
+ "rock": {
+  "figure": true,
+  "world_h": 1.05,
+  "tint": "#b9b0a4"
+ },
+ "dragon": {
+  "figure": true,
+  "world_h": 1.15,
+  "tint": "#ffd84a"
+ },
+ "witch": {
+  "figure": true,
+  "world_h": 0.98,
+  "tint": "#8fe8d8"
+ },
+ "trader": {
+  "figure": true,
+  "world_h": 1.05,
+  "tint": "#ffd27a"
+ },
+ "decor": {
+  "cols": 4,
+  "rows": 3,
+  "cell_px": 256,
+  "feet": "middle",
+  "closed": false,
+  "frames": [
+   "torch",
+   "chains",
+   "banner",
+   "crack",
+   "window",
+   "skull",
+   "skull_nod",
+   "skull_hollow",
+   "guilty",
+   "fissure",
+   "moss",
+   "bat"
+  ]
+ },
+ "flame": {
+  "cols": 4,
+  "rows": 2,
+  "cell_px": 128,
+  "closed": false,
+  "tint": "#8fe8d8",
+  "frames": [
+   "f1",
+   "f2",
+   "f3",
+   "f4",
+   "f5",
+   "f6",
+   "f7",
+   "f8"
+  ],
+  "gif": [
+   [
+    "f1",
+    80
+   ],
+   [
+    "f2",
+    80
+   ],
+   [
+    "f3",
+    80
+   ],
+   [
+    "f4",
+    80
+   ],
+   [
+    "f5",
+    80
+   ],
+   [
+    "f6",
+    80
+   ],
+   [
+    "f7",
+    80
+   ],
+   [
+    "f8",
+    80
+   ]
+  ]
+ },
+ "props": {
+  "cols": 4,
+  "rows": 3,
+  "cell_px": 128,
+  "feet": "middle",
+  "closed": false,
+  "frames": [
+   "chest",
+   "sack",
+   "ration",
+   "heart",
+   "heart_empty",
+   "coin",
+   "say_heart",
+   "say_alert",
+   "say_quiet",
+   "say_what",
+   "sparkle",
+   "crown"
+  ]
+ },
+ "keyart": {
+  "plain": true,
+  "width": 1024
+ }
+}

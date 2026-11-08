@@ -56,6 +56,7 @@ static func start(flow) -> void:
 		return
 	var s = flow.state
 	s.gold = GOLD
+	s.allies = []
 	flow.slice_floor = true
 	var monsters: Array = s.floor_map.monsters
 	for i in FOES.size():

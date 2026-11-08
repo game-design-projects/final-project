@@ -1,0 +1,16 @@
+Primary request: a landscape 3:2 sprite sheet, 4 columns by 3 rows (12 cells), of ONE chibi character, the same character in every cell at the same size and with the same line weight.
+Character proportions: cute, chibi, big head on a tiny body. Eyes are the only face: two glowing pill-shaped eyes and NO mouth, unless a cell below changes them. Friendly and funny rather than frightening.
+Every outline of the body must be fully closed with no gaps. Nothing may touch or cross into a neighbouring cell. Leave generous black padding around every pose, and centre each pose in its cell with its feet on the same line across a row.
+The 12 cells, left to right, top to bottom:
+1 calm: at rest, two upright solid white pill eyes
+2 blink: exactly the same pose as cell 1, eyes closed as two short flat lines
+3 happy: eyes are two upward arcs (like ^ ^), body tilted slightly, one small outlined heart floating above
+4 angry: eyes are two short slanted lines (like \ /), puffed up bigger, one exclamation mark above
+5 scared: two tiny dot eyes, shrunken low to the ground, short zigzag tremble marks on both sides
+6 surprised: two wide ring eyes, three short lines radiating above the head
+7 hurt: eyes squeezed shut (like > <), knocked over to one side, two small impact stars
+8 hollow: exactly the same pose as cell 1 but with NO eyes and NO face at all, completely blank
+9 squash: pressed flat and wide against the ground, about to hop, calm pill eyes
+10 stretch: stretched tall and thin in mid-air, calm pill eyes, three short speed lines under it
+11 land: flattened a little, eyes squeezed shut, one small dust puff at each side
+12 lunge: leaning hard forward to attack, angry slanted eyes, two short action lines behind it

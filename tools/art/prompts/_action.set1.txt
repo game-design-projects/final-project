@@ -1,0 +1,5 @@
+Layout: a landscape 3:2 sheet, 6 columns by 4 rows, 24 frames in equal cells. Each row is its own short animation that starts from the same resting pose as the first frame.
+Row 1, breathing and a blink, looping: 1 rest. 2 very slightly taller. 3 taller. 4 very slightly taller. 5 eyes half closed. 6 eyes shut as short flat lines.
+Row 2, a small hop, looping: 1 rest. 2 crouched, squashed flat and wide. 3 springing up, stretched thin. 4 top of the hop, off the ground. 5 touching down, squashed wide. 6 rebounding, nearly at rest.
+Row 3, noticing you and getting happy: 1 rest. 2 eyes wide, three tiny lines start above the head. 3 tilting a little, the lines full size. 4 tilted more, eyes starting to curve. 5 eyes are upward arcs, a tiny outlined heart above. 6 eyes are upward arcs, the heart full size.
+Row 4, getting frightened: 1 rest. 2 eyes smaller, shrinking down a little. 3 shrinking lower, eyes smaller. 4 low to the ground, tiny dot eyes. 5 the same, trembling a little to the left, short zigzag marks at the sides. 6 the same, trembling a little to the right.
