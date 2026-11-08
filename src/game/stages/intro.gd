@@ -10,12 +10,15 @@ const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
 var _ambush := false # it caught you, and strikes first (the feature ambush)
+var _continue_at := 0.0
+var _queued := false
 
 
 func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	var m = args.foe
 	_ambush = args.get("ambush", false)
+	_queued = false
 	s.foe = m
 	m.spoke = false
 	s.menu = []
@@ -45,14 +48,29 @@ func enter(flow, args: Dictionary) -> void:
 	var mercy: float = await flow.mind.mercy(m)
 	flow.encounter.known_mercy = mercy
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
+	_continue_at = flow.clock + (flow.DIALOGUE_BUFFER_MS if flow.feature("dialogue-buffer") else 0.0)
 	print("intro: %s (%s) %s" % [m.name, m.species, "BOSS" if m.boss else ""])
 
 
 func tick(flow, _t: float) -> void:
-	if flow.state.hint != "ANY KEY CONTINUE" and flow.stage_ms() >= Combat.INTRO_MS:
+	if _queued and flow.clock >= _continue_at:
+		await _continue(flow)
+	elif flow.state.hint != "ANY KEY CONTINUE" and flow.stage_ms() >= Combat.INTRO_MS:
 		await flow.go("wait" if _ambush else "menu")
 
 
 func handle(flow, _key: String) -> void:
 	if flow.state.hint == "ANY KEY CONTINUE":
-		await flow.go("dodge" if _ambush else "menu", {"pressure": 1.0} if _ambush else {})
+		if flow.clock < _continue_at:
+			_queued = true
+		else:
+			await _continue(flow)
+
+
+func queue_continue() -> void:
+	_queued = true
+
+
+func _continue(flow) -> void:
+	_queued = false
+	await flow.go("dodge" if _ambush else "menu", {"pressure": 1.0} if _ambush else {})

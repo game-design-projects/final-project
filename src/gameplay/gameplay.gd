@@ -254,6 +254,7 @@ func _build_screen() -> void:
 	_dock.said.connect(func(text): flow.submit_text(text))
 	_dock.cancelled.connect(func(): _press("cancel"))
 	_dock.hovered.connect(_on_dock_hover)
+	_dock.page_selected.connect(func(i): flow.select(i))
 	column.add_child(_dock)
 	_pad = Pad.new()
 	_pad.visible = DisplayServer.is_touchscreen_available() or Flags.on("pad")

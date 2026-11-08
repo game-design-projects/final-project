@@ -9,6 +9,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - ITEM remains visible but disabled when the bag is empty.
 - Enemy dialogue waits for a key or tap before combat continues.
 - Confirming enemy dialogue starts the attack immediately.
+- Enemy dialogue queues early confirmation for 0.3 seconds, and the opening speech box keeps its size when the combat menu appears.
+- The combat picture and dock keep their size throughout a fight, including attacks and dodges.
+- Camp and other in-game choice menus use larger grid buttons with directional navigation.
+- Walking and camp keep the same picture and dock size when opening or closing the camp menu.
 
 ### Added
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.

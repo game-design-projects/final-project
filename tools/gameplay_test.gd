@@ -48,6 +48,9 @@ func _run() -> void:
 	await _pause_menu(game)
 	await _keys(game)
 	await _ambush_prompt(game)
+	await _dialogue_buffer(game)
+	await _combat_layout(game)
+	await _camp_grid(game)
 	await _mouse(game)
 	await _hover_and_tips(game)
 	await _thinking(game)
@@ -79,6 +82,93 @@ func _ambush_prompt(game) -> void:
 	await flow.press("confirm")
 	_check(flow.state.stage == "dodge", "confirmation immediately starts the enemy attack")
 	await flow.new_run()
+
+
+func _dialogue_buffer(game) -> void:
+	await game.flow.new_run()
+	var flow = game.flow
+	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
+	var start: float = flow.clock
+	game._dock._process(0.0)
+	var intro_height: float = game._dock.custom_minimum_size.y
+	await flow.press("confirm")
+	await flow.tick(start + 299.0)
+	_check(flow.state.stage == "intro", "an early key is queued for at least 300 ms")
+	await flow.tick(start + 300.0)
+	game._dock._process(0.0)
+	_check(flow.state.stage == "menu" and game._dock.custom_minimum_size.y == intro_height, "the queued key opens the menu at 300 ms without changing the picture size")
+	await flow.encounter.after_player([], {"pacified": false, "pressure": 1.0})
+	start = flow.clock
+	await flow.press("confirm")
+	await flow.tick(start + 299.0)
+	_check(flow.state.stage == "wait", "an early key also waits for attack dialogue")
+	await flow.tick(start + 300.0)
+	_check(flow.state.stage == "dodge", "the queued key starts the attack at 300 ms")
+	await flow.new_run()
+
+
+func _camp_grid(game) -> void:
+	if not game.flow.feature("choice-grid"):
+		return
+	await game.flow.new_run()
+	var s = game.flow.state
+	var Ally = load("res://src/game/ally.gd")
+	s.allies = [Ally.make("slime", "GLOP", 80.0), Ally.make("rock", "STONE", 80.0), Ally.make("snake", "SNAKE", 80.0)]
+	s.items = ["ration", "roast"]
+	await process_frame
+	await process_frame
+	var picture_size: Vector2 = game._picture.size
+	var dock_height: float = game._dock.custom_minimum_size.y
+	await game.flow.go("camp")
+	await process_frame
+	await process_frame
+	var dock = game._dock
+	_check(game._picture.size.is_equal_approx(picture_size) and is_equal_approx(dock.custom_minimum_size.y, dock_height), "opening camp keeps the walking picture and dock the same size")
+	var rects: Array = dock.command_rects()
+	_check(s.menu.size() == 9 and rects.size() == 9 and rects[0].has_area() and not rects[6].has_area(), "camp shows six large buttons with further choices on the next page")
+	dock._gui_input(_click(dock._page_rect(true).get_center()))
+	_check(s.selected == 6 and dock.command_rects()[6].has_area(), "the next-page button makes further camp choices available to the mouse")
+	dock._gui_input(_click(dock._page_rect(false).get_center()))
+	_check(s.selected == 0, "the previous-page button returns to the first choices")
+	game._unhandled_input(_key(KEY_S, {}, 115))
+	_check(s.selected == 3, "S moves down the camp grid")
+	game._unhandled_input(_key(KEY_S, {}, 115))
+	rects = dock.command_rects()
+	_check(s.selected == 6 and rects[6].has_area() and not rects[0].has_area(), "moving down reveals the remaining camp choices")
+	game._unhandled_input(_key(KEY_D, {}, 100))
+	game._unhandled_input(_key(KEY_A, {}, 97))
+	_check(s.selected == 6, "A and D move across the camp grid")
+	dock._gui_input(_click(rects[8].get_center()))
+	await process_frame
+	await process_frame
+	_check(s.stage == "explore", "a button on the second page can be clicked to leave camp")
+	_check(game._picture.size.is_equal_approx(picture_size) and is_equal_approx(dock.custom_minimum_size.y, dock_height), "leaving camp keeps the picture and dock the same size")
+	await game.flow.new_run()
+
+
+func _combat_layout(game) -> void:
+	if not game.flow.feature("combat-grid"):
+		return
+	await _fight(game)
+	await process_frame
+	await process_frame
+	var dock_height: float = game._dock.custom_minimum_size.y
+	var picture_size: Vector2 = game._picture.size
+	var stages := ["fightbar", "wait", "dodge", "menu", "act", "talk"]
+	var stable := true
+	for stage in stages:
+		await game.flow.go(stage)
+		await process_frame
+		await process_frame
+		stable = stable and is_equal_approx(game._dock.custom_minimum_size.y, dock_height) and game._picture.size.is_equal_approx(picture_size)
+	_check(stable, "the dock and picture keep their size through combat stages")
+	var s = game.flow.state
+	for stage in ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]:
+		s.stage = stage
+		game._dock._process(0.0)
+		stable = stable and is_equal_approx(game._dock.custom_minimum_size.y, dock_height)
+	_check(stable, "every fight stage reserves the same dock height")
+	await game.flow.new_run()
 
 
 ## The picture follows the panel's shape, and what lies over it and points at it follows the picture.
@@ -499,11 +589,12 @@ func _sub_text_wraps(game) -> void:
 	_check(longest > 900.0 and longest < 1100.0, "SPARE's help is about 980 px wide at the dock's font (%d)" % longest)
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
-	var dock_height: float = Hud.DOCK_H + (Hud.GRID_SLOT_H - Hud.SLOT_H if game.flow.feature("combat-grid") else 0.0)
+	var grid: bool = game.flow.feature("combat-grid")
+	var dock_height: float = Hud.DOCK_H + (Hud.GRID_SLOT_H - Hud.SLOT_H + Hud.SUB_LINE_H if grid else 0.0)
 	_check(not dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "in a wide window it is one line and the dock keeps its height")
 	dock.size = Vector2(800, 200)
 	dock._process(0.0)
-	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height + Hud.SUB_LINE_H), "in a narrow one it wraps and the dock is a line taller")
+	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height + (0.0 if grid else Hud.SUB_LINE_H)), "in a narrow one there is room for the wrapped help")
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
 	_check(is_equal_approx(dock.custom_minimum_size.y, dock_height), "and goes back when the window is wide again")
