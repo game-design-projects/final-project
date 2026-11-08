@@ -14,6 +14,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - Camp and other in-game choice menus use larger grid buttons with directional navigation.
 - Walking and camp keep the same picture and dock size when opening or closing the camp menu.
 
+### Fixed
+- Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
+
 ### Added
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
 - `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.

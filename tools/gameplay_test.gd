@@ -69,6 +69,12 @@ func _ambush_prompt(game) -> void:
 	var flow = game.flow
 	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0], "ambush": true})
 	await flow.tick(flow.clock + 5000.0)
+	if not flow.feature("ambush-prompt"):
+		_check(flow.state.stage == "wait", "without the dialogue prompt an enemy-first fight starts automatically")
+		await flow.tick(flow.clock + 5000.0)
+		_check(flow.state.stage == "dodge", "the enemy attack follows its normal windup")
+		await flow.new_run()
+		return
 	_check(flow.state.stage == "intro", "enemy-first dialogue stays until a key is pressed")
 	game._unhandled_input(_key(KEY_I, {}, 105))
 	await process_frame
@@ -85,6 +91,8 @@ func _ambush_prompt(game) -> void:
 
 
 func _dialogue_buffer(game) -> void:
+	if not game.flow.feature("ambush-prompt") or not game.flow.feature("dialogue-buffer"):
+		return
 	await game.flow.new_run()
 	var flow = game.flow
 	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
@@ -627,9 +635,12 @@ func _start_is_guarded(game) -> void:
 	_check(not flow.busy, "and input is free again when it is done")
 	flow.tick(flow.clock + 100000.0)
 	await create_timer(0.4).timeout
-	_check(flow.state.stage == "intro" and flow.state.hint == "ANY KEY CONTINUE", "the greeting stays until confirmed")
-	await flow.press("confirm")
-	_check(flow.state.stage == "menu", "confirmation opens the fight menu")
+	if flow.feature("ambush-prompt"):
+		_check(flow.state.stage == "intro" and flow.state.hint == "ANY KEY CONTINUE", "the greeting stays until confirmed")
+		await flow.press("confirm")
+		_check(flow.state.stage == "menu", "confirmation opens the fight menu")
+	else:
+		_check(flow.state.stage == "menu", "without the prompt, the intro opens the fight menu automatically")
 	flow.mind = real
 	await game.flow.new_run()
 
