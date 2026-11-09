@@ -322,4 +322,6 @@ func _intro_film() -> void:
 	while Time.get_ticks_msec() - t0 < 3000 and player.stream_position < 1.0:
 		await process_frame
 	_check(absf(player.get_stream_length() - 15.07) < 0.2 and player.stream_position >= 1.0, "it is 15 seconds long and plays (%.1f s in)" % player.stream_position)
+	_check(IntroCg.FADE_IN_S + IntroCg.FADE_OUT_S < player.get_stream_length() / 4.0, "it fades in and out over a small part of its length, not a cut either end")
+	_check(IntroCg.SKIP_FADE_S < IntroCg.FADE_OUT_S, "a skip leaves faster than the film's own end")
 	player.queue_free()

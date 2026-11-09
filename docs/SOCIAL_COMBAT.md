@@ -1,6 +1,6 @@
 # Monster-initiated dialogue
 
-Implemented on `feat/monster-initiated-dialogue`, starting with main `fcaad51` and merging PR #55 head `5bcd342`. The newer opening film, practice floor and opt-in skill combat remain in the branch. The mood expression API is unchanged.
+Implemented on `feat/monster-initiated-dialogue`, starting with main `fcaad51`, merging PR #55 head `5bcd342`, then integrating main `8f71d21`. The newer opening film, practice floor and opt-in skill combat remain in the branch. The mood expression API is unchanged.
 
 A monster has a reason to ask, waits for a combat decision boundary, and offers three species-specific strategies. Read its visible mood and individual behavioural clue before choosing. Responses spend one full action; Ignore immediately expires the offer and keeps the action. Custom text previews one of the same three strategies, including its cost, and requires confirmation. Unrecognised text spends nothing. Ordinary ACT → SAY SOMETHING is separate and still works.
 

@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Changed
+- The opening film no longer cuts in or out: the menu goes to black, the film rises out of it with its sound, goes back into black over its last moments, and the run rises out of that. A key press leaves in a third of a second.
+- The opening film is graded toward the halls (colour pulled down to bone-white lines on black, a soft glow, faint scanlines, darker corners), and it is 1.5 MB smaller.
 - Combat commands fill a larger three-column grid, with bigger labels and directional navigation.
 - ITEM remains visible but disabled when the bag is empty.
 - Enemy dialogue waits for a key or tap before combat continues.
@@ -29,7 +31,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `tutorial-floor`: a first run starts on a short practice floor above B1F (a salve, a small shy slime to learn sparing on, the stairs down); on by default, once per profile, skipped with TIPS off, `floor=N` or `meet=`.
 - Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
 - `skill-combat`, off unless named: SKILLS replaces FIGHT and HEAVY with STRIKE, DEFEND and SLAM. Skills cost energy (2 a turn), SLAM cools down a turn and bruises, DEFEND's block soaks hits in the dodge, and none asks for timing.
-- `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling on every successful step, including explored corridors, at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
+- `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling over cells seen for the first time (a wall already shown stays settled as you walk past it, so stepping doesn't flash every wall), at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
 - `tools/reveal_shots.gd`: stepping and turning captures with exploration lifecycle checks; `tools/panel_reveal_demo.gd` captures a deterministic corridor, 60 fps animation, and monster/hazard readability.
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
 - `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.

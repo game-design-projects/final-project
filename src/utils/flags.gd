@@ -38,7 +38,7 @@ const KNOWN := {
 const FEATURES := {
 	"initiated-dialogue": "monsters offer contextual, action-costing social choices at safe combat boundaries",
 	"dynamic-moods": "contextual monster intentions and restrained autonomous behavior",
-	"dungeon-reveal": "solid floor, wall and ceiling light panels cascade through visible corridors on every step",
+	"dungeon-reveal": "solid floor, wall and ceiling light panels cascade over each cell the first time you see it",
 	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",
 	"piece-icons": "chess attacks show a piece's shape and lines to the squares it reaches, not a letter, and every attack's rule is in plain words",
 	"gentle-dodge": "dodges run slower, and their pace follows the foe's friendliness, the floor, how you are doing and the EASY DODGE setting",
