@@ -141,6 +141,7 @@ func _start_request() -> void:
 			push_warning("gameplay: that save can't be loaded, starting a new run")
 			await flow.new_run()
 	else:
+		flow.film_seen = request.get("cg", "") == "whole"
 		await flow.new_run(_practice_due())
 
 
@@ -446,7 +447,10 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_bind_views()
 			_fresh_floor = data.how in ["new", "floor"] and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
 			if data.how == "new":
-				_stage.play_opening(now)
+				if flow.film_seen:
+					print("gameplay: the opening film showed Wick, she doesn't hop in again")
+				else:
+					_stage.play_opening(now)
 		"stage":
 			if data.to == "explore":
 				_postfx.set_accent(Palette.for_run(s.palette_id).accent) # back from a fight, the monster's colour goes

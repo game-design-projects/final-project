@@ -1,6 +1,6 @@
 # 开场视频：Seedance prompt（issue #56）
 
-这段视频是开场过场的**参考**，不是成品：Steven 用它给队友看“被拉进 donjon 领域”大概是什么感觉。游戏里真正的开场由引擎画（`src/view/opening.gd`，`wick` 开关），视频里的文字、画面比例和细节都以引擎为准。
+这段视频最初是开场过场的**参考**。第三次生成的结果现在就是游戏的开场影片：`tools/intro_video.sh` 把它转成 `assets/video/intro.ogv`，NEW GAME 之后播放（`intro-cg` 开关，`src/menu/intro_cg.gd`），看完后接练习层，由 Wick 教（`docs/GAME.md`）。重新生成之后用同一个脚本替换文件即可。
 
 ## 它要讲清楚的三件事（来自 #56）
 

@@ -92,6 +92,8 @@ var slice_floor := false
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
 var _wick_comes := false # a new run: she is on her way, and her words wait for the ones up now
+var film_seen := false # the opening film (menu/intro_cg.gd) showed her to the end: she needn't hop in again, and her words follow it
+var _teach_walk := false # on the practice floor: Wick says how to walk once her welcome is gone
 var _keys_back_at := -1.0 # keys do nothing until the clock says this, once a fight is over
 var repeating := false # the key being handled is one repeating by itself, not one just pressed
 var _held_over := false # a key still held from the fight stays dropped until something is pressed afresh
@@ -145,6 +147,7 @@ func new_run(practice := false) -> void:
 		announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
 	if feature("wick"):
 		_wick_comes = true
+		_teach_walk = state.practice
 	await go("explore", {"lines": lines})
 
 
@@ -165,8 +168,19 @@ func _wick_arrives() -> void:
 		return
 	_wick_comes = false
 	var friend: Dictionary = Floors.friend()
-	announce(friend.title, friend.line, WICK_BANNER_MS)
+	announce(friend.title, friend.line_film if film_seen else friend.line, WICK_BANNER_MS)
+	film_seen = false
 	state.say(state.lines.slice(-1) + [State.sys_line(friend.joined)]) # the log has room for two
+
+
+## On the practice floor she is the one who teaches: first how to walk, as soon as her welcome is gone (the tips after it come from
+## coach.gd, in her voice).
+func _wick_teaches() -> void:
+	if not _teach_walk or banner_up() or _wick_comes:
+		return
+	_teach_walk = false
+	if state.practice:
+		coach.say("walk")
 
 
 ## Your first friend: she is in the party from the first moment, and leaves the way any of them does.
@@ -427,6 +441,7 @@ func submit_text(text: String) -> void:
 func tick(t: float) -> void:
 	clock = t
 	_wick_arrives()
+	_wick_teaches()
 	if busy or state.stage == "":
 		return
 	busy = true

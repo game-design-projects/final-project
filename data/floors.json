@@ -115,6 +115,7 @@
  "friend": {
   "title": "WICK",
   "line": "A very small witch hops up and hands you a heart. She lights the torches here.",
-  "joined": "She has decided to come with you."
+  "joined": "She has decided to come with you.",
+  "line_film": "That was Wick. She lights the torches here."
  }
 }

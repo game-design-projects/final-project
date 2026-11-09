@@ -47,6 +47,7 @@ func _run() -> void:
 	_flags()
 	await _real_floors()
 	await _practice()
+	await _practice_wick()
 	await _dodges()
 	await _recruiting()
 	await _story()
@@ -310,6 +311,48 @@ func _practice() -> void:
 		flow = _flow(12, words)
 		await flow.new_run(true)
 		_check(not flow.state.practice and not flow.coach.seen.has(flow.PRACTICE_SEEN), "%s: no practice floor" % " ".join(words))
+	_use()
+
+
+## On the practice floor Wick is the one who teaches: her welcome (after the opening film, the words that follow it), then how to
+## walk, then the tips in her voice; on a real floor the tips are tips again.
+func _practice_wick() -> void:
+	Flags.set_args(PackedStringArray(["nosave", "nosound"])) # with her: BASE's no-wick is off for this one
+	var coach: Dictionary = Content.table("coach")
+	var friend := Floors.friend()
+	for words in [coach.tips.walk, friend.line_film] + coach.wick.values():
+		_check(Overlay.banner_fits(str(words)), "'%s' fits the banner" % words)
+	_check(coach.wick.keys().all(func(id): return coach.tips.has(id)), "every tip she words her own way has a plain one too")
+	for film in [true, false]:
+		var flow = Flow.new(Rng.new(12), LocalMind.new())
+		flow.film_seen = film
+		await flow.new_run(true)
+		var seen := []
+		var t: float = flow.clock
+		for i in 80:
+			t += 250.0
+			await flow.tick(t)
+			var b = flow.state.banner
+			if b != null and (seen.is_empty() or seen.back() != [b.title, b.text]):
+				seen.append([b.title, b.text])
+		var texts: Array = seen.map(func(x): return x[1])
+		var welcome: String = friend.line_film if film else friend.line
+		_check(texts.has(welcome), "film seen %s: her welcome is the one that fits (%s)" % [film, texts])
+		_check(texts.has(str(coach.wick.walk)) and texts.find(str(coach.wick.walk)) > texts.find(welcome), "then she says how to walk, after her welcome")
+		_check(seen.filter(func(x): return x[1] == str(coach.wick.walk)).all(func(x): return x[0] == str(friend.title)), "and it is signed WICK")
+		_check(not flow.film_seen, "the film's word is used up")
+		flow.state.banner = null
+		_check(flow.coach.say("item") and flow.state.banner.title == str(friend.title) and flow.state.banner.text == str(coach.wick.item), "on the practice floor a tip comes from her")
+		flow.state.practice = false
+		flow.state.banner = null
+		_check(flow.coach.say("act") and flow.state.banner.title == "TIP" and flow.state.banner.text == str(coach.tips.act), "and from the next floor it is a tip again")
+	var quiet = Flow.new(Rng.new(12), LocalMind.new())
+	await quiet.new_run(false)
+	var t2: float = quiet.clock
+	for i in 80:
+		t2 += 250.0
+		await quiet.tick(t2)
+	_check(not quiet.coach.seen.has("walk"), "off the practice floor she doesn't teach walking")
 	_use()
 
 
