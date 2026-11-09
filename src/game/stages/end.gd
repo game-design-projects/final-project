@@ -6,6 +6,7 @@ extends "res://src/game/stages/list_stage.gd"
 
 const Floors = preload("res://src/rules/floors.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
+const Practice = preload("res://src/rules/practice.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
 const Texts = preload("res://src/game/texts.gd")
@@ -22,7 +23,7 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.foe = null
 	flow.event("stairs")
-	s.run_over = not flow.feature("real-floors") or Floors.is_last(s.depth)
+	s.run_over = not s.practice and (not flow.feature("real-floors") or Floors.is_last(s.depth))
 	_at_door = false
 	_at_toll = false
 	_ways = []
@@ -34,6 +35,10 @@ func enter(flow, _args: Dictionary) -> void:
 		print("end: the Last Door stays shut, no allies")
 	elif s.run_over:
 		_finish(flow, Texts.ending(s.tally, s.allies))
+	elif s.practice:
+		s.say([State.sys_line(Practice.line("done"))])
+		s.menu = [{"label": "GO DOWN", "sub": Practice.line("down_sub")}, {"label": "MAIN MENU", "sub": ""}]
+		print("end: the practice floor done")
 	elif flow.feature("toll") and s.depth == int(Floors.toll().depth) and not s.allies.is_empty():
 		_ask_toll(flow)
 	else:

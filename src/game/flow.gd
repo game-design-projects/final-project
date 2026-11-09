@@ -19,6 +19,7 @@ const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
 const PersonalitySlice = preload("res://src/game/personality_slice.gd")
+const Practice = preload("res://src/rules/practice.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
@@ -41,6 +42,7 @@ const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "skills", "talk",
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
+const PRACTICE_SEEN := "practice" # its id among the tips seen
 
 const STAGES := {
 	"explore": preload("res://src/game/stages/explore.gd"),
@@ -114,13 +116,18 @@ func feature(name: String) -> bool:
 	return Flags.enabled(name) and not slice_floor and not PersonalitySlice.pending()
 
 
-## A fresh run: a new floor, standing at its start.
-func new_run() -> void:
+## A fresh run: a new floor, standing at its start. With `practice` (the scene asks for it until it has been played once) and
+## the feature tutorial-floor, the run starts on the practice floor above B1F (rules/practice.gd).
+func new_run(practice := false) -> void:
 	await _leave_current()
 	_forget_slice()
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.run_seed = rng.seed_value
+	state.practice = practice and practice_allowed()
+	if state.practice:
+		coach.seen[PRACTICE_SEEN] = true
+		event("coach", {"id": PRACTICE_SEEN}) # the scene remembers it with the tips, so SHOW THE TIPS AGAIN brings it back
 	_apply_features()
 	if feature("legacy"):
 		Legacy.apply(state, legacy_ranks)
@@ -139,6 +146,11 @@ func new_run() -> void:
 	if feature("wick"):
 		_wick_comes = true
 	await go("explore", {"lines": lines})
+
+
+## Whether a run may start on the practice floor: it needs floors to go down to, and a run told to start deeper skips it.
+func practice_allowed() -> bool:
+	return feature("tutorial-floor") and feature("real-floors") and Flags.value("floor") == ""
 
 
 ## She reaches you as the words about the door fade: alone, and then not.
@@ -162,7 +174,11 @@ func _meet_wick() -> void:
 ## which way down was chosen (Floors.paths), if there was a choice.
 func next_floor(way := {}) -> void:
 	await _leave_current()
-	state.depth = mini(state.depth + 1, State.DEPTH_MAX)
+	if state.practice: # its stairs lead to B1F, and the run starts there whole
+		state.practice = false
+		state.hp = state.max_hp
+	else:
+		state.depth = mini(state.depth + 1, State.DEPTH_MAX)
 	state.foe = null
 	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal() + int(way.get("rest", 0)))
 	state.gold += int(way.get("gold", 0))
@@ -215,6 +231,8 @@ func _telling_story() -> bool:
 ## What the log says on arriving on this floor.
 func _arrival() -> Array:
 	var lines := []
+	if state.practice:
+		return [State.sys_line(Practice.line("line"))]
 	if _telling_story():
 		lines.append(State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion)))
 	else:
@@ -228,7 +246,9 @@ func _arrival() -> Array:
 ## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
 ## generator as it always was, so old seeds make the same floor.
 func _make_floor(way := {}) -> void:
-	if feature("real-floors"):
+	if state.practice:
+		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)), feature("items"))
+	elif feature("real-floors"):
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
 		plan.boss_at_exit = feature("boss-at-exit")
