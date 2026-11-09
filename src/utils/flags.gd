@@ -24,6 +24,7 @@ const KNOWN := {
 	"nosfx": "no sound effects and no monster voices (the music still plays)",
 	"nomusic": "no music (the effects and voices still play)",
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
+	"frames": "frames=off: skip animation frame exports in tools/panel_reveal_demo.gd",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
 	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
@@ -32,6 +33,7 @@ const KNOWN := {
 
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.
 const FEATURES := {
+	"dungeon-reveal": "solid floor, wall and ceiling light panels cascade through visible corridors on every step",
 	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",
 	"piece-icons": "chess attacks show a piece's shape and lines to the squares it reaches, not a letter, and every attack's rule is in plain words",
 	"gentle-dodge": "dodges run slower, and their pace follows the foe's friendliness, the floor, how you are doing and the EASY DODGE setting",
