@@ -468,6 +468,17 @@ func _tutorial() -> void:
 	flow.state.banner = null
 	flow.coach._on_stage("menu")
 	_check(flow.coach.seen.has("flee"), "FLEE gets a tip too")
+	# a foe that meets you with its face already gone (warmth) gets a tip saying why, or it reads like a drawing that lost its eyes
+	for words in [[], ["no-warmth"]]:
+		for slain in [0, 6]:
+			flow = _flow(38, words)
+			await flow.new_run()
+			flow.state.banner = null
+			flow.state.tally.slain = slain
+			var plain = flow.state.floor_map.monsters.filter(func(m): return not m.boss)[0]
+			await flow.go("intro", {"foe": plain})
+			var want: bool = slain > 0 and words.is_empty()
+			_check(flow.coach.seen.has("blank") == want, "%s, %d slain: %s" % [" ".join(words) if not words.is_empty() else "warmth", slain, "a blank face is explained" if want else "no word of blank faces"])
 	# the TIPS setting skips the slow start as well: only the first fights' pace knows about it
 	var paces := {}
 	for tips in [true, false]:

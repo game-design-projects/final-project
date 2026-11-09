@@ -5,6 +5,8 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Moods = preload("res://src/rules/moods.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 
 const TIP_MS := 4200.0
 const SPARE_AT := 0.5
@@ -49,6 +51,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"encounter":
 			if data.boss:
 				say("boss")
+			if _blank(flow.state.foe):
+				say("blank")
 
 
 func _on_stage(to: String) -> void:
@@ -71,3 +75,9 @@ func _on_stage(to: String) -> void:
 			say("ask")
 		"dead":
 			say("dead")
+
+
+## Whether this foe meets you with its face already gone (the warmth's blank faces, drawn only by hand-drawn): that reads like the drawing
+## lost its eyes unless something says why.
+func _blank(m) -> bool:
+	return m != null and flow.feature("warmth") and flow.feature("hand-drawn") and Moods.hollow(m, Warmth.of(flow.state))
