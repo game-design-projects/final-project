@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Changed
+- The opening film no longer cuts in or out: the menu goes to black, the film rises out of it with its sound, goes back into black over its last moments, and the run rises out of that. A key press leaves in a third of a second.
+- The opening film is graded toward the halls (colour pulled down to bone-white lines on black, a soft glow, faint scanlines, darker corners), and it is 1.5 MB smaller.
 - Combat commands fill a larger three-column grid, with bigger labels and directional navigation.
 - ITEM remains visible but disabled when the bag is empty.
 - Enemy dialogue waits for a key or tap before combat continues.
