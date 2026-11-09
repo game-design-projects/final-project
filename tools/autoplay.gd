@@ -3,6 +3,7 @@
 ## random) while the clock runs in 16 ms frames. Nothing is saved or shown; it prints one line per game.
 ##   godot --headless --path . -s res://tools/autoplay.gd                  seeds 1..5, the local mind
 ##   godot --headless --path . -s res://tools/autoplay.gd -- seed=7 mock    one seed, the seeded random mind
+##   godot --headless --path . -s res://tools/autoplay.gd -- practice       each game starts on the practice floor
 ## Exit code 0 when every game reached the stairs, 1 otherwise.
 extends SceneTree
 
@@ -57,7 +58,7 @@ func _play(seed_value: int) -> bool:
 	_met_floor = 1
 	_met_before = 0
 	flow.happened.connect(func(name, _data): _event_counts[name] = _event_counts.get(name, 0) + 1)
-	await flow.new_run()
+	await flow.new_run(Flags.on("practice"))
 	var t := 0.0
 	var frames := 0
 	var left := false

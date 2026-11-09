@@ -141,7 +141,12 @@ func _start_request() -> void:
 			push_warning("gameplay: that save can't be loaded, starting a new run")
 			await flow.new_run()
 	else:
-		await flow.new_run()
+		await flow.new_run(_practice_due())
+
+
+## The practice floor comes with the tips, until it has been played once (stages/end.gd reaches B1F from it).
+func _practice_due() -> bool:
+	return Settings.get_value("tips") and not flow.coach.seen.has(flow.PRACTICE_SEEN)
 
 
 ## Handle the testing flags `meet=<species>` and `personality-slice`. It runs as an exclusive action: a tick must not run a

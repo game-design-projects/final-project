@@ -21,6 +21,7 @@ const Gates = preload("res://src/rules/minigames/gates.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pace = preload("res://src/rules/pace.gd")
+const Practice = preload("res://src/rules/practice.gd")
 const Hud = preload("res://src/view/hud.gd")
 const Items = preload("res://src/rules/items.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
@@ -45,6 +46,7 @@ func _name() -> String:
 func _run() -> void:
 	_flags()
 	await _real_floors()
+	await _practice()
 	await _dodges()
 	await _recruiting()
 	await _story()
@@ -252,6 +254,62 @@ func _real_floors() -> void:
 	var kept = classic.state
 	await classic.press("1")
 	_check(classic.state != kept and classic.state.depth == 1, "classic: NEW FLOOR starts over")
+	_use()
+
+
+## The practice floor before B1F (tutorial-floor): asked for by a first run, and then a run like any other from B1F.
+func _practice() -> void:
+	var flow = _flow(12)
+	await flow.new_run()
+	_check(not flow.state.practice and flow.state.floor_map.monsters.back().boss, "a run starts on B1F unless the practice floor is asked for")
+	flow = _flow(12)
+	await flow.new_run(true)
+	var s = flow.state
+	var f = s.floor_map
+	_check(s.practice and s.depth == 1 and flow.coach.seen.has(flow.PRACTICE_SEEN), "asked for, the run starts on the practice floor, and it counts as seen")
+	_check(f.monsters.size() == 1 and not f.monsters[0].boss and f.monsters[0].species == "slime" and f.monsters[0].max_hp == int(Practice.table().foe.hp), "one small slime and no champion")
+	_check(f.is_open(f.start) and f.is_open(f.stairs) and f.start != f.stairs, "its start and stairs are open cells")
+	_check(f.pickups.size() == 1 and f.pickups[0].item == str(Practice.table().item), "something to pick up on the way")
+	_check(s.cell == f.start and f.is_open(f.start + FloorMap.DIRS[s.facing]), "you start facing down the corridor")
+	_check(s.lines.any(func(l): return l.text == Practice.line("line")), "the log says where you are")
+	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and it fits a narrow log")
+	var saved = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	_check(saved != null and saved.practice and saved.floor_map.size == f.size, "a save made on it loads back on it")
+	var old: Dictionary = s.to_dict()
+	old.erase("practice")
+	_check(not State.from_dict(JSON.parse_string(JSON.stringify(old))).practice, "and an old save, with no word of it, is on a real floor")
+	var mercy: float = await flow.mind.mercy(f.monsters[0])
+	_check(mercy > 0.2 and mercy < 0.5, "the slime is shy, not yet ready to be spared (%.2f)" % mercy)
+	var met = _flow(12)
+	await met.new_run(true)
+	met.state.banner = null
+	await met.go("intro", {"foe": met.state.floor_map.monsters[0]})
+	_check(met.coach.seen.has("shy") and met.state.banner != null and met.state.banner.text == str(Content.table("coach").tips.shy), "meeting it, a tip says to ACT and SPARE")
+	_check(Hud.log_fits([State.sys_line(str(Content.table("coach").tips.shy))], 760.0) == 1, "and the tip is short")
+	_use()
+	f.monsters[0].gone = "spared" # the fight is any fight's; this is about the way through
+	var walked := 0
+	while s.stage == "explore" and walked < 40:
+		if not f.is_open(s.cell + FloorMap.DIRS[s.facing]):
+			await flow.press("right")
+		else:
+			await flow.press("up")
+			walked += 1
+	_check(s.stage == "end" and not s.run_over, "the corridor leads to its stairs (%s after %d steps)" % [s.stage, walked])
+	_check(s.items.has(str(Practice.table().item)), "picking up what lay on the way")
+	_check(s.menu.size() == 2 and s.menu[0].label == "GO DOWN" and s.menu[0].sub == Practice.line("down_sub"), "its stairs offer only the way to B1F")
+	s.hp = 3
+	await flow.press("1")
+	_check(s.stage == "explore" and not s.practice and s.depth == 1 and s.floor_map.monsters.back().boss, "and lead to B1F with its champion")
+	_check(s.hp == s.max_hp, "rested")
+	var plain = _flow(12)
+	await plain.new_run()
+	_check(s.floor_map.grid == plain.state.floor_map.grid, "the same B1F the seed makes without it")
+	_check(s.lines[0].text.begins_with("B1F"), "and it is named as usual (%s)" % s.lines[0].text)
+	for words in [["no-tutorial-floor"], ["no-real-floors"], ["floor=3"], ["classic"]]:
+		flow = _flow(12, words)
+		await flow.new_run(true)
+		_check(not flow.state.practice and not flow.coach.seen.has(flow.PRACTICE_SEEN), "%s: no practice floor" % " ".join(words))
 	_use()
 
 

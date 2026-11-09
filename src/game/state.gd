@@ -21,6 +21,7 @@ const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' larges
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
+var practice := false # on the practice floor above B1F (the feature tutorial-floor); depth stays 1 until its stairs
 var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
 var steps := 0 # how far the party has walked this run
 var chat: Array = [] # {who, text}: everything said this run, oldest first, up to CHAT_MAX
@@ -177,6 +178,8 @@ func to_dict() -> Dictionary:
 		"items": items.duplicate(), "sharpened": sharpened, "heavyKnown": heavy_known.keys(),
 		"hunger": hunger, "starvedSteps": starved_steps, "butchered": butchered.duplicate(true), "leftBehind": left_behind.duplicate(), "meals": meals, "foundOut": found_out,
 	}
+	if practice:
+		out.practice = true # only then, so a save from any other floor reads as it always did
 	if not skills.is_empty(): # a save made without skill-combat stays as it was
 		out.skills = skills.duplicate()
 	return out
@@ -192,6 +195,7 @@ static func from_dict(d: Dictionary):
 		return null
 	var s = new()
 	s.depth = clampi(_int(d.get("depth", 1)), 1, DEPTH_MAX)
+	s.practice = d.get("practice") == true
 	s.run_seed = maxi(0, _int(d.runSeed)) if _is_num(d.get("runSeed")) else s.floor_map_seed(d)
 	s.floor_map = FloorMap.from_dict(d.floor, Monster)
 	# a save from before palettes were saved wears the colours its floor's seed would pick

@@ -51,6 +51,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"encounter":
 			if data.boss:
 				say("boss")
+			if flow.state.practice:
+				say("shy")
 			if _blank(flow.state.foe):
 				say("blank")
 

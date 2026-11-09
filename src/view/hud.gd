@@ -8,6 +8,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
 
 enum Part { HEADER, STATUS, DOCK }
@@ -263,6 +264,8 @@ func _header() -> void:
 		where = "%s ENCOUNTER" % Content.table("encounter").genres[genre].name
 	var y := size.y * 0.5 + 4.0
 	var floor_name: String = "B%dF OF %d " % [state.depth, state.floors_of] if state.floors_of > 0 else "B%dF " % state.depth
+	if state.practice:
+		floor_name = Practice.line("header") + " "
 	_text(_title, floor_name, Vector2(0, y), 9, Palette.DIM)
 	_text(_title, where, Vector2(_title.get_string_size(floor_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, y), 9, Palette.INK)
 	var spared: int = state.tally.spared
