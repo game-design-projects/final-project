@@ -24,6 +24,7 @@ var _player: VideoStreamPlayer
 var _veil: ColorRect
 var _hint: Label
 var _age := 0.0
+var _reached := 0.0 # how far into the film it got: a stream that has finished reads 0 again
 var _leaving := false
 
 
@@ -56,10 +57,11 @@ func _ready() -> void:
 	_hint.add_theme_font_override("font", Fonts.title())
 	_hint.add_theme_font_size_override("font_size", 10)
 	_hint.add_theme_color_override("font_color", Palette.DIM)
-	_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_hint.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_hint.position = Vector2(-16, -28)
+	_hint.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_hint.offset_right = -16.0
+	_hint.offset_bottom = -14.0
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_hint.modulate.a = 0.0
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
@@ -82,7 +84,8 @@ func _process(delta: float) -> void:
 	if _leaving:
 		return
 	_hint.modulate.a = clampf((_age - HINT_AFTER_S) / HINT_FADE_S, 0.0, 1.0)
-	if _age > START_WATCHDOG_S and _player.stream_position <= 0.0:
+	_reached = maxf(_reached, _player.stream_position)
+	if _age > START_WATCHDOG_S and _reached <= 0.0:
 		push_warning("intro_cg: nothing played after %.0f s, going on to the run" % START_WATCHDOG_S)
 		_leave(false)
 
@@ -103,9 +106,8 @@ func _leave(whole: bool) -> void:
 	if _leaving:
 		return
 	_leaving = true
-	var at: float = _player.stream_position if _player != null else 0.0
-	print("intro_cg: %s at %.1f s" % ["watched to the end" if whole else "skipped", at])
-	Session.cg_played(whole and at > 0.0)
+	print("intro_cg: %s, %.1f s in" % ["watched to the end" if whole else "skipped", _reached])
+	Session.cg_played(whole and _reached > 0.0)
 	var fade := create_tween().set_parallel(true)
 	fade.tween_property(_veil, "color:a", 1.0, FADE_OUT_S)
 	if _player != null:

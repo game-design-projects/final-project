@@ -28,9 +28,9 @@ func _run() -> void:
 	Session.start_new()
 	var film = load("res://src/menu/intro_cg.tscn").instantiate()
 	root.add_child(film)
-	var film_id := film.get_instance_id()
+	var film_id: int = film.get_instance_id()
 	current_scene = film # so that its change_scene_to_file replaces it
-	if Flags.on("skip"):
+	if "skip=1" in OS.get_cmdline_user_args():
 		await create_timer(1.0).timeout
 		await _shot("film_skipping")
 		var key := InputEventKey.new()
