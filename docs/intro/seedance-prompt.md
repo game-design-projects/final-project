@@ -43,22 +43,56 @@ Seedance 2.x 的参考图模式里按顺序叫 `@Image1`…`@Image5`；上传顺
 ```
 15 seconds, 3 shots, 16:9 (keep everything important inside the centre 14:9), 24fps.
 
-STYLE: 2D hand-drawn line animation in the exact look of @Image1. Wobbly hand-inked WHITE lines about 2px wide on pure black. Every body and object is a solid black silhouette with a thin outline, so it hides whatever is behind it. No fills, no gradients, no shading, no photoreal lighting. The picture is shown on an old vector monitor: soft phosphor glow around bright lines, very faint horizontal scanlines, dark vignette, crisp chunky pixel edges (a 448x288 image scaled up, not smoothed). Colour exists only as tinted lines: cream stone lines (#e8e2d0), amber torch flames and embers (#ffb347), gold chest and hearts (#ffd27a), mint-teal for the little witch (#8fe8d8). Cute, spooky and a bit wacky, like a Goosebumps cover, never horror, no blood.
+STYLE: 2D hand-drawn line animation in the exact look of @Image1. Wobbly hand-inked WHITE lines about 2px wide on pure black. Every body and object is a solid black silhouette with a thin outline, so it hides whatever is behind it. The background is pure black in every shot, in every room. Walls, floors, ceilings, slabs, windows and every other object are never filled with colour, cream, beige or mint: they stay black with a coloured outline, and only the outline colour changes. No fills, no gradients, no shading, no photoreal lighting. The picture is shown on an old vector monitor: soft phosphor glow around bright lines, very faint horizontal scanlines, dark vignette, crisp chunky pixel edges (a 448x288 image scaled up, not smoothed). Colour exists only as tinted lines: cream stone lines (#e8e2d0), amber torch flames and embers (#ffb347), gold chest and hearts (#ffd27a), mint-teal for the little witch (#8fe8d8). Cute, spooky and a bit wacky, like a Goosebumps cover, never horror, no blood.
 
 POV: first person throughout. The viewer is a person whose face is never seen. Only their two small hands may appear, drawn as black-filled shapes with a white outline, as sleeves with no skin detail. No face, no body, no reflection of the person.
 
-SHOT 1 (0-4s). Black void. The treasure chest from @Image2 sits in the middle, drawn in gold line, a heart-shaped lock on its front. Two small hands reach in from the bottom of the frame and lift the lid. The lid yawns open like a sleepy mouth and the heart lock gives a slow wink. Inside there is no treasure: the inside is a long corridor in perspective drawn in white lines, the corridor of @Image1, tiny and far away. The corridor lines stretch toward the camera, tugging the view in. A small amber ember (#ffb347) floats up off the hands and stays in frame.
+SHOT 1 (0-4s). Black void. The treasure chest from @Image2 sits in the middle, drawn in gold line, a heart-shaped lock on its front. Two small hands, each about a sixth of the frame wide, reach in from the bottom corners and take the lid by its edges. The lid swings up on its hinge until it stands wide open, like a sleepy mouth yawning, and the heart lock gives a slow wink. Inside there is no treasure: the inside is a long corridor in perspective drawn in white lines, the corridor of @Image1, tiny and far away. The corridor lines stretch toward the camera, tugging the view in. A small amber ember (#ffb347) floats up off the hands and stays in frame.
 
-SHOT 2 (4-10s). The camera is pulled into the chest and falls down the corridor, fast and smooth. The corridor comes apart into stone slabs, arched windows, torches, hanging chains and doors, and they slide, flip and re-deal like a deck of cards being shuffled, three times. Each re-deal builds a different corridor and changes the line colour of the stone: cream, then cyan (#8fd3e8), then moss green (#9ed36b), then violet (#b79cf0). The amber ember stays with the camera through every shuffle and is never shuffled away. Passing gags drawn like @Image5: a barred arched window with a sleeping moon, a skull in a window that nods at the camera, a hanging bat that opens one eye as the camera falls past, a heart banner that flaps.
+SHOT 2 (4-10s). The camera is pulled into the chest and falls down the corridor, fast and smooth. The corridor comes apart into stone slabs, arched windows, torches, hanging chains and doors, and they slide, flip and re-deal like a deck of cards being shuffled, three times. Each re-deal builds a different corridor on the same black, and only the colour of the white line work changes: cream, then cyan (#8fd3e8), then moss green (#9ed36b), then violet (#b79cf0). The slabs must be seen to detach, slide and flip, not to cross-fade from one room into the next. The amber ember stays with the camera through every shuffle and is never shuffled away. Passing gags drawn like @Image5: a barred arched window with a sleeping moon, a skull in a window that nods at the camera, a bat hanging upside down from a ceiling hook that opens one eye as the camera falls past, a heart banner that flaps. Show at least the skull, the bat and the banner, each small and drawn in outline only.
 
-SHOT 3 (10-15s). The shuffling settles. The camera lands with a small squash and bounce in a straight stone corridor, cream lines, the view of @Image1. The torches on the walls light one at a time down the corridor, whoomph, whoomph, and each flame grows two small eyes and turns to look at the camera, leaning toward it. Far down the corridor a very small witch, as in @Image3 (huge pointed hat, short scarf, two tall pill-shaped eyes, no mouth, mint-teal line), comes hopping toward the camera in squashy little hops. She stops, waves, and a small heart pops above her head like @Image4. Hold the final composition for the last 1.5 seconds: centred corridor, torches left and right, the witch in the middle, matching @Image1.
+SHOT 3 (10-15s). The shuffling settles. The camera lands with a small squash and bounce in a straight stone corridor, cream lines, the view of @Image1. The torches on the walls light one at a time down the corridor, whoomph, whoomph, and each flame grows two tiny solid black dot eyes, like the little witch's: no white eyeballs, no pupils, no googly eyes. Each flame turns to look at the camera, leaning toward it. Far down the corridor a very small witch, as in @Image3 (huge pointed hat, short scarf, two tall pill-shaped eyes, no mouth, mint-teal line), comes hopping toward the camera in squashy little hops. She stops, waves, and a small heart pops above her head like @Image4. Hold the final composition for the last 1.5 seconds: centred corridor, torches left and right, the witch in the middle, matching @Image1.
 
 CAMERA: smooth, no shake, no cuts inside a shot, a hard cut between shots.
 
 AUDIO: a slow music-box melody over a soft church-organ drone with a few harpsichord notes, one distant tubular bell at the start of shot 2. Sound effects: a wooden chest creak, a soft whoosh, stone slabs clacking like shuffled cards, a small boing for each hop, a tiny pop for the heart. No voice, no dialogue.
 
-AVOID: any text, letters, captions or logos; any visible face or body of the viewer; photorealism, 3D shading, colour fills, gore, jump scares, extra characters, a second witch, a dragon.
+AVOID: any text, letters, captions or logos; any visible face or body of the viewer; photorealism, 3D shading, coloured or beige wall fills, paper or cel-shaded textures, soft coloured vignette blobs, black outlines drawn on light fills, gore, jump scares, extra characters, a second witch, a dragon.
 ```
+
+## 第一次生成的结果（Dreamina，854×480，60fps，15 秒）
+
+| 镜头 | 结果 |
+| --- | --- |
+| 1 宝箱（0–4s） | 对。金色线宝箱、爱心锁，箱盖打开，里面是远处的走廊，琥珀色火星升起。手是黑底白边的卡通手，但是托着箱子，箱盖自己开，没有“两只手掀盖” |
+| 2 洗牌（4–10s） | 偏了。火星一路跟着，窗、锁链、骷髅窗都出现；但墙被填成米黄、青、绿、蓝绿、紫的色块，带泛黄的暗角和粗黑描边，是另一种卡通上色画风；房间之间是渐变过渡，看不出石板拆开再翻牌；蝙蝠、爱心旗、月亮窗没出现 |
+| 3 落地（10–15s） | 对，几乎就是 `keyart.png`。白线黑底，火把长了眼睛，Wick 青色线，从远处蹦近、挥手、头上冒心 |
+
+另外：左上角有 “AI” 水印，分辨率只有 480p；音轨有，没有听内容；镜头之间没有硬切，是连续的。
+
+结论：镜头 1 和 3 可以当参考，镜头 2 是 prompt 没压住的地方。上面的 prompt 已按这次的结果改成第二版：明说“墙永远是黑的，只有线的颜色变”、“石板要看得见拆开翻牌，不要渐变”、“至少出现骷髅、蝙蝠、爱心旗”，并把彩色墙面、纸质 / 赛璐珞质感、彩色暗角、浅色底的黑描边写进 AVOID。水印和分辨率换 720p 以上的无水印档位解决。
+
+### 第二次生成（第二版 prompt，同样 480p）
+
+| 镜头 | 结果 |
+| --- | --- |
+| 1 宝箱 | 好一半。纯黑底、金色线。但箱盖没有掀开：走廊从箱子正面“透”出来；两只手画得太大，是两坨黑色大手套 |
+| 2 洗牌 | 好。背景一直是黑的，线的颜色依次是白、青、绿、紫；奶白色石板飞散再重组，看得见洗牌；火星一路跟着；骷髅、爱心旗、蝙蝠、锁链、月亮窗都出现了。还有毛病：飞散的石板是奶白实心块，绿色那格是一整块薄荷绿实心的拱窗，骷髅太大，蝙蝠是躺着的不是倒挂 |
+| 3 落地 | 好，白线黑底，Wick 青色线，蹦近、挥手、冒心。火把的眼睛变成了带眼白的“googly eyes”，游戏里是火苗上两颗小黑点 |
+
+没看到水印；分辨率仍是 854×480。
+
+第三版 prompt 针对这几处：所有物体“黑底加彩色描边，不填色”；手缩小、从两个下角抓盒盖边，盖子绕铰链完全立起；火把眼睛写成“两颗实心黑点，不要眼白、不要瞳孔”；蝙蝠“倒挂在天花板钩子上”；骷髅、蝙蝠、旗都“小一点，只画轮廓”。
+
+### 第三次生成（第三版 prompt，同样 480p）
+
+| 镜头 | 结果 |
+| --- | --- |
+| 1 宝箱 | 对。手只剩白色轮廓，箱盖绕铰链完全立起，里面是走廊，火星升起 |
+| 2 洗牌 | 基本对。黑底，线色依次是青、绿、紫，没有实心墙面了；窗、锁链、倒挂的蝙蝠、爱心旗、骷髅都出现了。剩下的：骷髅、蝙蝠、旗是单色实心块，不是“黑底加描边”；“拆开翻牌”变成了镜头翻滚，只有青色那段能看出翻动，没有石板飞散 |
+| 3 落地 | 对。火把的眼睛是两颗小黑点，和游戏一致；Wick 青线、蹦近、挥手、冒心。约 11 秒时远处地面有一小团白色涂鸦，是生成的杂点 |
+
+结论：第三版可以当给队友看的参考，不再为它改 prompt。真要接进游戏时只当分镜用：镜头 1 和 2 重画成几张定格（#56 的 “a few drawn frames”），镜头 3 由 `opening.gd` 来做。如果还要再出一版，只改一处：把 “each small and drawn in outline only” 换成 “black body with a coloured outline, exactly like @Image5”。
 
 ## 用法和取舍
 
