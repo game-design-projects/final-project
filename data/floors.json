@@ -35,6 +35,29 @@
   "door": "It only opens for someone who is not alone.",
   "line": "You robbed the Hoard. It threw you down here, five floors above the Last Door."
  },
+ "practice": {
+  "layout": [
+   "#########",
+   "#......>#",
+   "#.#######",
+   "#M#######",
+   "#.#######",
+   "#.#######",
+   "#I#######",
+   "#S#######",
+   "#########"
+  ],
+  "foe": {
+   "species": "slime",
+   "genre": "bullet",
+   "hp": 12
+  },
+  "item": "salve",
+  "line": "A quiet landing above B1F: one slime, then the stairs down.",
+  "done": "That was the landing. B1F is below, and the run starts there.",
+  "down_sub": "To B1F, where the run starts",
+  "header": "PRACTICE"
+ },
  "toll": {
   "depth": 3,
   "hp": 10,

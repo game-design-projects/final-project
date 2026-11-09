@@ -64,6 +64,17 @@ if [ "$mode" = both ] || [ "$mode" = on ]; then
 	if [ "$code" != 0 ]; then
 		failed=1
 	fi
+	# A first run, which starts on the practice floor and has to get from it to the end like any other.
+	log="$OUT/on-practice.log"
+	code=0
+	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound practice >"$log" 2>&1 || code=$?
+	if ! grep -qE '^autoplay: 5 of 5' "$log"; then
+		code=1
+	fi
+	echo "on practice: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo 'no verdict')"
+	if [ "$code" != 0 ]; then
+		failed=1
+	fi
 fi
 if [ "$mode" = both ] || [ "$mode" = classic ]; then
 	run_mode classic classic
