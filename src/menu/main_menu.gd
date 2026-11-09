@@ -4,6 +4,7 @@ extends Control
 
 const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
+const IntroCg = preload("res://src/menu/intro_cg.gd")
 const Menus = preload("res://src/menu/menus.gd")
 const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const MenuWick = preload("res://src/menu/menu_wick.gd")
@@ -16,6 +17,7 @@ const Settings = preload("res://src/menu/settings.gd")
 const State = preload("res://src/game/state.gd")
 
 const GAMEPLAY := "res://src/gameplay/gameplay.tscn"
+const INTRO_CG := "res://src/menu/intro_cg.tscn"
 const KEYART_TINT := Color("#d8cfb8") # the first run's wall colour, about: bone, not white
 const KEYART_DIM := 0.58 # the picture behind the page, so the page reads first
 
@@ -80,7 +82,7 @@ func _reopen() -> void:
 
 func _new_game() -> void:
 	print("menu: new game")
-	_start(Session.start_new)
+	_start(Session.start_new, true)
 
 
 func _load_slot(slot: String) -> void:
@@ -93,6 +95,10 @@ func _load_slot(slot: String) -> void:
 	_start(Session.start_load.bind(state))
 
 
-func _start(hand_over: Callable) -> void:
+## Hand the request over and change scene: to the gameplay, or, for a new game when the film is wanted, to the film first (it goes on to
+## the gameplay itself).
+func _start(hand_over: Callable, new_game := false) -> void:
 	hand_over.call()
-	get_tree().change_scene_to_file.call_deferred(GAMEPLAY)
+	var film := new_game and IntroCg.wanted()
+	print("menu: %s" % ("the opening film first" if film else "straight to the run"))
+	get_tree().change_scene_to_file.call_deferred(INTRO_CG if film else GAMEPLAY)

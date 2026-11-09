@@ -8,7 +8,7 @@
 
 | 模块 | 做什么 | 数据从哪来 → 到哪去 |
 | --- | --- | --- |
-| `menu` | 主菜单、设置、存档页面（暂停菜单复用同一套页面） | → `gameplay`（经 `session` 交请求） |
+| `menu` | 主菜单、设置、存档页面（暂停菜单复用同一套页面）、NEW GAME 之后的开场影片（`intro_cg`） | → `gameplay`（经 `session` 交请求） |
 | `gameplay` | 一局游戏的场景：把 `game` `view` `audio` `mind` 接起来、读输入、暂停、自动存档 | `menu` → 它 → `game` |
 | `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，`classic` 用 `monster_model` `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
 | `audio` | 声音：合成音效（`sfx` `synth`）、音乐（`music`）、怪物录音和合成嗓音（`voices` `shout`）、总线（`mix`） | `assets` `flags` `game`（事件）→ `audio` |

@@ -85,6 +85,7 @@ const FEATURES := {
 	"hand-drawn": "the halls are drawn by hand: brick and flagstone lines, torches with eyes, and the monsters' faces and hops, walking and fighting",
 	"warmth": "the halls answer what you do: torches look at you, look away, then shut their eyes, and faces go blank as you kill, until the set is cold wire",
 	"wick": "a run opens with a very small witch hopping out of the dark to hand you a heart, and she is your first friend until you lose her",
+	"intro-cg": "NEW GAME opens with a short film (a chest, the halls reshuffling, a very small witch waving) before the first run; any key skips it, and only the menu's NEW GAME plays it",
 	"text-size": "a TEXT SIZE setting: the log and the speech box write larger wherever they still fit",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
 	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",

@@ -302,7 +302,7 @@ func _wall_art_answers_the_warmth() -> void:
 
 func _wick() -> void:
 	var friend := Floors.friend()
-	_check(Overlay.banner_fits(friend.line), "her words fit the banner")
+	_check(Overlay.banner_fits(friend.line) and Overlay.banner_fits(friend.line_film), "her words, and the ones after the opening film, fit the banner")
 	var flow = _flow(5)
 	await flow.new_run()
 	var s = flow.state

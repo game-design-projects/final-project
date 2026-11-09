@@ -41,6 +41,8 @@ Hold to talk (desktop builds): the speech is recognised on your own machine, not
   Licensed by NVIDIA Corporation under the NVIDIA Open Model License
   (https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/).
 
+Opening film (assets/video/intro.ogv): generated with ByteDance's Seedance video model through Dreamina, from reference crops of the game's own drawings and a text prompt (docs/intro/seedance-prompt.md), then re-encoded to Ogg Theora.
+
 Rules inspired by the Dungeons & Dragons 5th Edition System Reference Document.
 
 Fonts (assets/fonts/):
