@@ -11,6 +11,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Items = preload("res://src/rules/items.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Requests = preload("res://src/rules/requests.gd")
+const Skills = preload("res://src/rules/skills.gd")
 const Survival = preload("res://src/rules/survival.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
@@ -51,6 +52,7 @@ var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
+var skills: Array = [] # the skills held (rules/skills.gd), with the feature skill-combat; empty without it
 var hunger := 0.0 # 0 fed .. rules/survival.gd's starving_at
 var starved_steps := 0 # steps walked starving
 var butchered: Array = [] # {species, name}: the friends who went into the bag
@@ -63,6 +65,7 @@ var warmth_level := -1 # the level of warmth last noted on the walk (rules/warmt
 var foe # Monster, or null when not in a fight
 var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
+var skill_fight = null # this fight's energy, cooldowns, block and bruises (Skills.new_fight), with the feature skill-combat; null without it
 var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
 var rotate_mini_games := false # every third attack is a mini-game (the feature mini-games)
 var encounter_start := {} # snapshot (foe, purse, tally, party) taken when a fight begins, to try it again after dying; a retry starts at full HP
@@ -166,7 +169,7 @@ func to_dict() -> Dictionary:
 	var seen_cells := []
 	for c in seen:
 		seen_cells.append([c.x, c.y])
-	return {
+	var out := {
 		"depth": depth, "runSeed": run_seed, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
 		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
@@ -174,6 +177,9 @@ func to_dict() -> Dictionary:
 		"items": items.duplicate(), "sharpened": sharpened, "heavyKnown": heavy_known.keys(),
 		"hunger": hunger, "starvedSteps": starved_steps, "butchered": butchered.duplicate(true), "leftBehind": left_behind.duplicate(), "meals": meals, "foundOut": found_out,
 	}
+	if not skills.is_empty(): # a save made without skill-combat stays as it was
+		out.skills = skills.duplicate()
+	return out
 
 
 ## A saved state, or null when `d` isn't one of ours or can't be played (nothing is changed then). A save is data from outside
@@ -217,6 +223,8 @@ static func from_dict(d: Dictionary):
 		if Items.known(str(id)):
 			Items.carry(s, str(id))
 	s.sharpened = maxi(0, _int(d.sharpened)) if _is_num(d.get("sharpened")) else 0
+	for id in d.get("skills", []) if d.get("skills") is Array else []:
+		Skills.learn(s.skills, str(id))
 	for species in d.get("heavyKnown", []) if d.get("heavyKnown") is Array else []:
 		if Combat.HEAVY_WEAK.has(str(species)):
 			s.heavy_known[str(species)] = true

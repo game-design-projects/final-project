@@ -19,6 +19,7 @@
   "request": "That one isn't here to fight. Walk up and hear what it wants.",
   "hungry": "You are hungry. ENTER makes camp, if you have anything to eat.",
   "boss": "Champions change attack every turn. They can be won over too.",
+  "skills": "Skills cost energy, which comes back each turn. END TURN when you're done.",
   "blank": "Its face is gone: down here, every kill is heard. Spare some and faces come back."
  }
 }

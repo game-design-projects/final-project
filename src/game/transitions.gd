@@ -8,7 +8,7 @@
 ##     end            wait ─▶ dodge ─▶ dead
 ##   Enter on the walk sits you down: explore to camp and back.
 ##   SPARE that lands goes from menu to ask (it asks to come along), and from there back to explore.
-##   HEAVY goes from menu to fightbar as FIGHT does. ITEM goes from menu to items and on like an ACT; walking into a trader goes from explore to trade and back, and into a monster with a request to request and back.
+##   HEAVY goes from menu to fightbar as FIGHT does. With skill-combat, SKILLS goes from menu to skills and on like an ACT. ITEM goes from menu to items and on like an ACT; walking into a trader goes from explore to trade and back, and into a monster with a request to request and back.
 ##   A fight that ends (spared, slain, a cut paid, fled) goes from menu, act, talk or fightbar straight back to explore,
 ##   or, in the personality slice, on to the next intro.
 extends RefCounted
@@ -18,8 +18,9 @@ const ALLOWED := {
 	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
 	"camp": ["explore"],
 	"intro": ["menu", "wait", "dodge"], # a monster that caught you strikes first
-	"menu": ["act", "items", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
+	"menu": ["act", "items", "skills", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
 	"items": ["menu", "wait", "explore", "intro"],
+	"skills": ["menu", "wait", "explore", "intro"], # skill-combat: back, its attack, or the fight is over
 	"trade": ["explore"],
 	"request": ["explore"],
 	"ask": ["explore", "intro"],
