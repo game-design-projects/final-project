@@ -193,6 +193,15 @@ func _practice() -> void:
 	var old: Dictionary = s.to_dict()
 	old.erase("practice")
 	_check(not State.from_dict(JSON.parse_string(JSON.stringify(old))).practice, "and an old save, with no word of it, is on a real floor")
+	var mercy: float = await flow.mind.mercy(f.monsters[0])
+	_check(mercy > 0.2 and mercy < 0.5, "the slime is shy, not yet ready to be spared (%.2f)" % mercy)
+	var met = _flow(12)
+	await met.new_run(true)
+	met.state.banner = null
+	await met.go("intro", {"foe": met.state.floor_map.monsters[0]})
+	_check(met.coach.seen.has("shy") and met.state.banner != null and met.state.banner.text == str(Content.table("coach").tips.shy), "meeting it, a tip says to ACT and SPARE")
+	_check(Hud.log_fits([State.sys_line(str(Content.table("coach").tips.shy))], 760.0) == 1, "and the tip is short")
+	_use()
 	f.monsters[0].gone = "spared" # the fight is any fight's; this is about the way through
 	var walked := 0
 	while s.stage == "explore" and walked < 40:

@@ -49,6 +49,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"encounter":
 			if data.boss:
 				say("boss")
+			if flow.state.practice:
+				say("shy")
 
 
 func _on_stage(to: String) -> void:

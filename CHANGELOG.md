@@ -18,7 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
-- `tutorial-floor`: a first run starts on a short practice floor above B1F, one corridor with a salve to pick up, a small slime and the stairs down to B1F. It comes with the TIPS setting, only once (SHOW THE TIPS AGAIN brings it back), and not with `floor=N`; `tools/autoplay.gd -- practice` plays it.
+- `tutorial-floor`: a first run starts on a short practice floor above B1F, one corridor with a salve to pick up, a small shy slime to learn sparing on (the old 2D guided first fight, redone with a tip and nothing locked) and the stairs down to B1F. It comes with the TIPS setting, only once (SHOW THE TIPS AGAIN brings it back), and not with `floor=N`; `tools/autoplay.gd -- practice` plays it.
 - `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling on every successful step, including explored corridors, at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
 - `tools/reveal_shots.gd`: stepping and turning captures with exploration lifecycle checks; `tools/panel_reveal_demo.gd` captures a deterministic corridor, 60 fps animation, and monster/hazard readability.
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.

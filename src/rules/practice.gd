@@ -1,6 +1,7 @@
 ## The practice floor before B1F (the feature tutorial-floor): one corridor drawn by hand in data/floors.json, so it is the
-## same every time. You learn to walk and turn, pick something up, meet one small slime, and find the stairs. No champion
-## guards it. `#` is wall, `.` open, `S` the start, `I` the item, `M` the monster, `>` the stairs.
+## same every time. You learn to walk and turn, pick something up, meet one small shy slime, and find the stairs. No champion
+## guards it. The slime is the guided first fight of the old 2D tips, redone here: it starts near enough to friendly that a
+## kind ACT or two makes SPARE likely, and a tip says so; nothing is locked. `#` is wall, `.` open, `S` the start, `I` the item, `M` the monster, `>` the stairs.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -37,7 +38,10 @@ static func make(rng: Rng, items: bool):
 					if items:
 						f.pickups.append({"cell": c, "item": str(t.item)})
 				"M":
-					f.monsters.append(Monster.make(rng, t.foe, c))
+					var m = Monster.make(rng, t.foe, c)
+					for meter in t.meters: # shy, not hostile: the first fight is the one to learn sparing on
+						m.meters[meter] = float(t.meters[meter])
+					f.monsters.append(m)
 		f.grid.append(row)
 	return f
 
