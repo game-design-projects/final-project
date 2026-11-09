@@ -23,7 +23,7 @@ Suggested session, without a reading timer:
 
 Use SHOW A CLEVER TRICK against the Bandits and STAND YOUR GROUND against Cinder to reach the offers without an ordinary paid ACT truce. A Dragon soothed with flattery may no longer want a contest until you show bravery or attack.
 
-Three normal hits leave the first four demo monsters alive after two turns. The demo guarantees the first eligible opportunity at turn 2; ordinary games use the configurable scheduler. No real-time countdown runs in the popup or custom input. Keyboard: arrows/WASD, Enter, 1–5, Esc. Mouse: click a choice; custom text has a Preview button. Esc from typing goes back to choices; Esc there ignores.
+Two ordinary hits leave the first four demo monsters alive for the turn-2 opportunity. The demo guarantees the first eligible opportunity at turn 2; ordinary games use the configurable scheduler. No real-time countdown runs in the popup or custom input. Keyboard: arrows/WASD, Enter, 1–5, Esc. Mouse: click a choice; custom text has a Preview button. Esc from typing goes back to choices; Esc there ignores.
 
 ## Gameplay effects
 
@@ -86,3 +86,37 @@ For a human comparison, alternate the enabled/disabled order between players. Af
 `social_offer` and `social_reply` events include the monster, turn, goal, validated choice, paid cost and consequence. `debug` logs them; ordinary logs also print the offered goal and resolved choice. No human sessions have been conducted as part of this implementation. Assess the 5–7 minute duration, balance and enjoyment with people before treating the initial tuning as final.
 
 Current scope: one authored event family per species, three bounded strategies per popup, and per-monster memory within a run. Custom wording does not create a fourth mechanical solution. Recruitment uses the existing party and loyalty system; allies do not acquire a separate dialogue-memory model. There is no cross-run social reputation beyond the game's existing progression.
+
+
+## Files changed
+
+The implementation and its integration points (Godot UID sidecars accompany the new scripts):
+
+| Area | Files |
+| --- | --- |
+| Rules and event content | `data/social.json`, `src/rules/social.gd`, `src/rules/monster.gd` |
+| Flow and combat | `src/game/stages/social.gd`, `intro.gd`, `menu.gd`, `fightbar.gd`, `skills.gd`, `dodge.gd`; `src/game/encounter.gd`, `flow.gd`, `state.gd`, `transitions.gd`, `events.gd` |
+| Popup and scene input | `src/view/social_popup.gd`, `hud.gd`, `overlay.gd`; `src/gameplay/gameplay.gd` |
+| Determinism and feature switches | `src/utils/dice.gd`, `src/utils/flags.gd` |
+| Demo entry and cast | `src/game/social_demo.gd`, `src/menu/main_menu.gd` |
+| Checks and captures | `tools/social_test.gd`, `moods_test.gd`, `features_test.gd`, `autoplay.gd`, `screenshots.gd`, `run_tests.sh`; `.github/workflows/ci.yml` |
+| Documentation | `CHANGELOG.md`, `docs/DEVELOPMENT.md`, this guide |
+
+PR #55 also contributes `data/moods.json`, `src/rules/moods.gd`, mood serialization and Jev context, `docs/PERSONALITY_PLAYTEST.md`, and its pressure fix. The merged upstream film/reveal changes are retained intact.
+
+
+## Validation results
+
+Verified locally with Godot 4.7.2 after merging main `8f71d21`. Every game-running command used `nosave`; the audio suite ran with sound setup enabled.
+
+| Check | Actual result |
+| --- | --- |
+| Project import and `git diff --check` | Passed; no script/parse errors |
+| New social suite | 160 checks passed; 4 additional classic checks passed |
+| Full suite matrix | 14 suites with features on, 13 in classic; all 27 passed |
+| Autoplay, seeds 1–5 | Normal, mock, pacifist, practice, skill-combat, classic, and feature-disabled: 35/35 games reached the stairs |
+| Peaceful autoplay | All five completed with zero kills |
+| Controlled five-encounter demo | Completes enabled and disabled; 5 initiated offers versus 0; jumpy and proud Bandits respond differently to the same challenge |
+| Actual rendered UI | Seven screenshots captured and inspected, including custom input/preview, Bandit and Slime consequences, and an 840×640 window |
+
+The full suite matrix covers rules, gameplay/UI, original personality slice, menus, saves, network fallback, view, audio, maps, meta progression, art, features, moods, and social combat. Godot still reports ObjectDB/resource warnings at process shutdown; these runs all returned exit 0 and printed their passing verdicts. No human enjoyment scores or live Jev-service results are claimed.
