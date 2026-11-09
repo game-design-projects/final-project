@@ -6,6 +6,8 @@ extends "res://src/game/stages/stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const SocialDemo = preload("res://src/game/social_demo.gd")
+const Social = preload("res://src/rules/social.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
@@ -23,10 +25,16 @@ func enter(flow, args: Dictionary) -> void:
 	s.foe = m
 	s.skill_fight = Skills.new_fight() if flow.feature("skill-combat") else null
 	m.spoke = false
+	s.social_offer = {}
+	s.social_typing = false
+	s.social_note = ""
+	if flow.feature("initiated-dialogue"):
+		Social.begin(m, s, flow.dice)
+		SocialDemo.tune(m)
 	s.menu = []
 	s.hint = ""
 	s.encounter_start = {
-		"foe": m.to_dict(), "gold": s.gold, "tally": s.tally.duplicate(), "items": s.items.duplicate(), "sharpened": s.sharpened,
+		"recent_social": s.recent_social, "foe": m.to_dict(), "gold": s.gold, "tally": s.tally.duplicate(), "items": s.items.duplicate(), "sharpened": s.sharpened,
 		"allies": s.allies.map(func(a): return a.to_dict()),
 	}
 	flow.event("encounter", {"boss": m.boss})

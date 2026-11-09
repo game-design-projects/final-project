@@ -178,6 +178,8 @@ func _through_dodge(flow) -> void:
 	s.max_hp = 999
 	s.hp = 999
 	for i in 400:
+		if s.stage == "social":
+			await flow.press("cancel") # keep the action while testing the underlying skill turn
 		if s.stage == "menu":
 			return
 		if s.stage == "wait" and s.hint == "ANY KEY CONTINUE":

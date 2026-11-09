@@ -8,12 +8,14 @@ const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
+const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Moods = preload("res://src/rules/moods.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
+const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -55,17 +57,27 @@ static func _spoken(a_name: String) -> String:
 ## `m` meets you, having heard what you did to its clan. Its mood has moved by the time this returns. The line it says about
 ## it, or its usual greeting when it has heard nothing new.
 func greeting(m):
+	var memory = null
+	if flow.feature("initiated-dialogue"):
+		var remembered := ""
+		if m.social.get("betrayed", false):
+			remembered = "I remember your broken promise. Keep that weapon away."
+		elif m.social.get("promise", false):
+			remembered = "You promised not to hurt me. I remember."
+		if remembered != "":
+			flow.event("shout", {"text": remembered, "species": m.species, "boss": m.boss})
+			memory = State.speech(m.name, remembered)
 	if not flow.feature("clans"):
-		return foe_line(m, "converse")
+		return memory if memory != null else foe_line(m, "converse")
 	var news: Dictionary = Clans.hear(m, flow.state)
 	if news.is_empty():
-		return foe_line(m, "converse")
+		return memory if memory != null else foe_line(m, "converse")
 	flow.event("word_spread", {"clan": news.clan, "tone": news.tone})
 	if flow.feature("mood-cues"):
 		flow.event("mood", {"tone": news.tone})
 	if not flow.banner_up():
 		flow.announce("WORD HAS SPREAD", Clans.news(news))
-	return foe_line(m, news.kind, news.who)
+	return memory if memory != null else foe_line(m, news.kind, news.who)
 
 
 func spareable(m) -> bool:
@@ -137,6 +149,10 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 		# Mood bounds apply to the monster; missing a heavy strike still adds its full penalty.
 		var bonus := float(decision.get("pressure_bonus", 0.0))
 		decision.pressure = clampf(float(decision.pressure) - bonus + Moods.shift(flow.state.foe, "pressure"), 0.0, 3.0) + bonus
+	if flow.feature("initiated-dialogue"):
+		Social.observe(flow.state.foe, flow.state, flow.dice, 1.0 if Flags.on("social-demo") else -1.0)
+		if not decision.pacified:
+			decision.pressure = Social.pressure(flow.state.foe, float(decision.pressure))
 	if decision.get("note", "") != "" and not lines.is_empty():
 		lines[0].text += " " + decision.note
 	lines = lines + _take_notes()
@@ -345,6 +361,7 @@ func retry_fight() -> void:
 	s.floor_map.monsters[s.floor_map.monsters.find(s.foe)] = fresh
 	s.hp = s.max_hp
 	s.gold = snap.gold
+	s.recent_social = str(snap.get("recent_social", ""))
 	s.items = snap.get("items", []).duplicate()
 	s.sharpened = snap.get("sharpened", 0)
 	s.allies = snap.allies.map(func(a): return Ally.from_dict(a))

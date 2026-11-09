@@ -21,7 +21,7 @@ const BOX_CELL := 28.0
 const BOX_X := (W - Dodge.COLS * BOX_CELL) / 2.0
 const BOX_Y := 82.0
 
-const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
+const FIGHT_STAGES := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 const HEALTH_OK := Color("#9ed36b")
 const LANTERN := Color("#fff3b0")
 const GRID := Color("#1c1c20")

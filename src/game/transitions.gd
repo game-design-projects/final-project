@@ -18,7 +18,8 @@ const ALLOWED := {
 	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
 	"camp": ["explore"],
 	"intro": ["menu", "wait", "dodge"], # a monster that caught you strikes first
-	"menu": ["act", "items", "skills", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
+	"social": ["menu", "wait", "explore", "intro"],
+	"menu": ["social", "act", "items", "skills", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
 	"items": ["menu", "wait", "explore", "intro"],
 	"skills": ["menu", "wait", "explore", "intro"], # skill-combat: back, its attack, or the fight is over
 	"trade": ["explore"],

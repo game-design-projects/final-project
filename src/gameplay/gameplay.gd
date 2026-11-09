@@ -14,6 +14,8 @@ const Menus = preload("res://src/menu/menus.gd")
 const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const Network = preload("res://src/network/network.gd")
+const SocialDemo = preload("res://src/game/social_demo.gd")
+const SocialPopup = preload("res://src/view/social_popup.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pad = preload("res://src/view/pad.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -83,6 +85,7 @@ var _aspect: AspectRatioContainer
 var _header
 var _status
 var _dock
+var _social: Control
 var _pause: MenuPanel
 var _tips
 var _pad
@@ -99,7 +102,7 @@ func _ready() -> void:
 	_build_screen()
 	var slice := PersonalitySlice.pending()
 	_rng = Rng.new(PersonalitySlice.seed_value()) if slice else Rng.new()
-	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), slice))
+	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), slice or Flags.on("social-demo")))
 	audio = Audio.new()
 	add_child(audio)
 	audio.bind(flow)
@@ -116,7 +119,7 @@ func _ready() -> void:
 	_bind_views()
 	if _debug:
 		print("gameplay: debug on, the foe's mind panel stays open and every game event is logged")
-	if request.is_empty() and Flags.value("meet") == "" and not slice:
+	if request.is_empty() and Flags.value("meet") == "" and not slice and not Flags.on("social-demo"):
 		_on_title = true
 		_overlay.title_card = true
 		_tips.visible = false
@@ -153,6 +156,9 @@ func _practice_due() -> bool:
 ## Handle the testing flags `meet=<species>` and `personality-slice`. It runs as an exclusive action: a tick must not run a
 ## stage's own tick while the mind is still answering the stage's `enter`.
 func _after_start() -> void:
+	if Flags.on("social-demo") and request.get("kind", "new") == "new":
+		await SocialDemo.start(flow)
+		return
 	if PersonalitySlice.pending() and request.get("kind", "new") == "new":
 		await PersonalitySlice.start(flow)
 		return
@@ -268,6 +274,12 @@ func _build_screen() -> void:
 	_pad.repeated.connect(_on_pad_repeat)
 	column.add_child(_pad)
 
+	_social = SocialPopup.new()
+	_social.hovered.connect(func(i): flow.select(i))
+	_social.picked.connect(func(i): _press(str(i + 1)))
+	_social.said.connect(func(text): flow.submit_text(text))
+	_social.cancelled.connect(func(): _press("cancel"))
+	add_child(_social)
 	_pause = MenuPanel.new()
 	_pause.visible = false
 	_pause.backdrop = 0.85
@@ -551,10 +563,12 @@ func _open_pause() -> void:
 		ctx["quit"] = func(): get_tree().quit()
 	_pause.open(func(): return Menus.pause(_pause, ctx))
 	_pause.visible = true
+	_social.suspended = true
 	print("gameplay: paused")
 
 
 func _resume() -> void:
+	_social.suspended = false
 	_pause.visible = false
 	_tips.visible = true
 	_dock.set_talking(flow.state.stage == "talk")
@@ -590,6 +604,7 @@ func _bind_views() -> void:
 	_header.state = flow.state
 	_status.state = flow.state
 	_dock.state = flow.state
+	_social.state = flow.state
 	_overlay.state = flow.state
 	_automap.state = flow.state
 	_tips.state = flow.state

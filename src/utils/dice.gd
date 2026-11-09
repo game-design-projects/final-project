@@ -49,3 +49,9 @@ func real() -> float:
 func int_between(a: int, b: int) -> int:
 	assert(a <= b, "dice: int_between(%d, %d) has no numbers in it" % [a, b])
 	return a + int(real() * (b - a + 1))
+
+
+## A reproducible draw for a saved context (social scheduling), independent of animation timing and earlier rolls.
+## It still goes through this flow's dice and honours the personality slice's pin.
+func keyed(seed_value: int) -> float:
+	return _pinned if _has_pin else Rng.new(seed_value).real()

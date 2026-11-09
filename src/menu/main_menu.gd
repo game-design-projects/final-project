@@ -35,7 +35,7 @@ func _ready() -> void:
 	var drawn := Flags.enabled("hand-drawn")
 	if drawn:
 		add_child(_keyart())
-	if Flags.value("meet") != "" or PersonalitySlice.pending():
+	if Flags.value("meet") != "" or PersonalitySlice.pending() or Flags.on("social-demo"):
 		print("menu: straight to a fight (flag)")
 		_start(Session.start_new)
 		return

@@ -106,6 +106,9 @@ func _press_something(flow) -> void:
 				if s.stage == "menu" and Flags.on("pacifist"):
 					pool = [3] if s.menu[2].get("gold", false) else [2]
 				await flow.press(str(_autopilot.pick(pool)))
+		"social":
+			# The peaceful pilot preserves recruitment; normal play samples real responses and Ignore.
+			await flow.press("5" if Flags.on("pacifist") else str(_autopilot.pick([1, 2, 3, 5])))
 		"skills":
 			if _autopilot.chance(0.08): # skill-combat: any skill that can be used now, END TURN once none can
 				var ready := range(1, s.menu.size()).filter(func(i): return not s.menu[i - 1].get("disabled", false))

@@ -1,0 +1,113 @@
+{
+  "chance": 0.65,
+  "cooldown": 2,
+  "memory_max": 8,
+  "cost": 6,
+  "events": {
+    "bandit": {
+      "goal": "buy safety without losing face",
+      "speech": "Hold it. Six gold and we both walk away. Or do you think I am bluffing?",
+      "choices": [
+        [
+          "pay",
+          "PAY 6 GOLD",
+          "A paid truce; champions only pause."
+        ],
+        [
+          "bluff",
+          "CALL THE BLUFF",
+          "A nervous foe may hesitate; a confident one presses harder."
+        ],
+        [
+          "challenge",
+          "CHALLENGE",
+          "Gain a strike opening, but pride can make the next attack fierce."
+        ]
+      ]
+    },
+    "slime": {
+      "goal": "feel safe with someone",
+      "speech": "Everyone leaves. Will you stay a little? Please do not hurt me.",
+      "choices": [
+        [
+          "comfort",
+          "REASSURE",
+          "Softer attacks for two turns; the fight continues."
+        ],
+        [
+          "promise",
+          "PROMISE NO HARM",
+          "It holds back and offers mercy. Hitting it breaks your promise."
+        ],
+        [
+          "reject",
+          "REJECT",
+          "Gain an opening against its hurt surprise; expect a panicked attack."
+        ]
+      ]
+    },
+    "snake": {
+      "goal": "exchange useful knowledge",
+      "speech": "I know the route to the stairs. Tell me: have you spared anyone on this floor?",
+      "choices": [
+        [
+          "truth",
+          "TELL THE TRUTH",
+          "Trade your record for a real route clue; it learns about you."
+        ],
+        [
+          "lie",
+          "DENY ANY MERCY",
+          "Keep your reputation hidden. It can catch lies only about things it witnessed."
+        ],
+        [
+          "proof",
+          "REQUEST PROOF",
+          "Pay 2 gold for the route and a gentler next attack."
+        ]
+      ]
+    },
+    "rock": {
+      "goal": "rest without being struck",
+      "speech": "Stillness. One quiet breath together, or are you going to strike while I rest?",
+      "choices": [
+        [
+          "wait",
+          "REST TOGETHER",
+          "Recover 3 HP; it recovers 4 HP too. Neither attacks this turn."
+        ],
+        [
+          "respect",
+          "KEEP WATCH",
+          "Give up your attack; its next two attacks soften and mercy grows."
+        ],
+        [
+          "exploit",
+          "EXPLOIT THE PAUSE",
+          "Gain +5 on your next hit; its next attack grows stronger."
+        ]
+      ]
+    },
+    "dragon": {
+      "goal": "test a worthy rival",
+      "speech": "Endure my next onslaught and earn eight gold. Will you face the fire?",
+      "choices": [
+        [
+          "accept",
+          "ACCEPT THE TRIAL",
+          "A fierce dragon attack now. Survive for 8 gold and an opening."
+        ],
+        [
+          "stakes",
+          "LOWER THE STAKES",
+          "A firm attack now; survive for 3 gold. No opening."
+        ],
+        [
+          "flatter",
+          "PRAISE ITS MIGHT",
+          "Skip this attack, but heal its pride and 6 HP. No reward."
+        ]
+      ]
+    }
+  }
+}

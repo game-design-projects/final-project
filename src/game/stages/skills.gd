@@ -5,6 +5,7 @@ extends "res://src/game/stages/list_stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
 const Skills = preload("res://src/rules/skills.gd")
+const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -43,12 +44,15 @@ func pick(flow, index: int) -> void:
 	var attacks: bool = Skills.damage(f, id, m.boss) > 0
 	var bonus := 0
 	if attacks:
-		bonus = (Combat.party_aid(s.party_size()) if flow.feature("party-aid") else 0) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
+		bonus = (Social.strike_bonus(m) if flow.feature("initiated-dialogue") else 0) + (Combat.party_aid(s.party_size()) if flow.feature("party-aid") else 0) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
 	var did: Dictionary = Skills.use(f, id, m.boss, bonus)
 	print("skills: %s on %s: %s, %d energy left" % [id, m.name, did, f.energy])
 	var words := []
 	if did.damage > 0:
 		s.sharpened = 0
+		var betrayal := Social.hit(m) if flow.feature("initiated-dialogue") else ""
+		if betrayal != "":
+			words.append(betrayal)
 		m.hp = maxi(0, m.hp - did.damage)
 		flow.event("strike", {"damage": did.damage, "crit": false})
 		Combat.apply_hit_to_mood(m)
@@ -82,6 +86,8 @@ func _end_turn(flow) -> void:
 		return
 	var begging: bool = await flow.encounter.spareable(m)
 	var decision: Dictionary = await flow.encounter.decide(m, "fight", "YOU HIT IT")
+	if flow.feature("initiated-dialogue") and m.social.get("betrayed", false):
+		decision.pacified = false
 	if begging:
 		flow.encounter.judge("slay_begging")
 	var line := "%s %s" % [Skills.line("turn") % f.dealt, Texts.foe_feels(m, decision.feeling)]

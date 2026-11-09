@@ -20,6 +20,8 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 
 | Script | Checks |
 | --- | --- |
+| `social_test` | Contextual monster offers, personality outcomes, combat/resources, safe popup, custom text, saves/retry and classic |
+| `moods_test` | Seeded dynamic moods, pressure and old-save defaults |
 | `gameplay_test` | Flow, stages, tooltips, mouse and touch input, views after a new floor or a load |
 | `menu_test` | Menu pages and their keys, the opening film is there and plays |
 | `saves_test` | Save slots, `nosave`, refusing a bad save |
@@ -174,3 +176,7 @@ ceiling, cells 2/3, settled, a monster/hazard readability frame and 150 frames a
 Pass `frames=off` to run the demo assertions and still captures without writing the 150 animation frames.
 The visibility batch is explicitly supplied by the fixture to show the
 full corridor; normal play continues using its existing visibility rules.
+
+## Social-combat playtest
+
+`godot --path . -- social-demo seed=7042 nosave no-tutorial` starts five deterministic encounters. Append `no-initiated-dialogue` for comparison. See [SOCIAL_COMBAT.md](SOCIAL_COMBAT.md) for the 5–7 minute protocol, exact tradeoffs and screenshot command.

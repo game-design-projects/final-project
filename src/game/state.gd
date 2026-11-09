@@ -69,6 +69,10 @@ var bar = null # {t0, dur} while the strike bar sweeps
 var skill_fight = null # this fight's energy, cooldowns, block and bruises (Skills.new_fight), with the feature skill-combat; null without it
 var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
 var rotate_mini_games := false # every third attack is a mini-game (the feature mini-games)
+var social_offer := {} # only the social stage owns this popup
+var social_typing := false
+var social_note := ""
+var recent_social := "" # last species to offer, to space repeated topics
 var encounter_start := {} # snapshot (foe, purse, tally, party) taken when a fight begins, to try it again after dying; a retry starts at full HP
 
 # what the screen shows
@@ -172,7 +176,7 @@ func to_dict() -> Dictionary:
 		seen_cells.append([c.x, c.y])
 	var out := {
 		"depth": depth, "runSeed": run_seed, "palette": palette_id, "floor": floor_map.to_dict(), "cell": [cell.x, cell.y], "facing": facing, "visited": visited_cells, "seen": seen_cells,
-		"hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
+		"recentSocial": recent_social, "hp": hp, "maxHp": max_hp, "gold": gold, "tally": tally.duplicate(),
 		"allies": allies.map(func(a): return a.to_dict()), "chat": chat.duplicate(),
 		"reputation": reputation.duplicate(), "deeds": deeds.duplicate(),
 		"items": items.duplicate(), "sharpened": sharpened, "heavyKnown": heavy_known.keys(),
@@ -212,6 +216,7 @@ static func from_dict(d: Dictionary):
 	s.max_hp = maxi(1, _int(d.maxHp))
 	s.hp = clampi(_int(d.hp), 1, s.max_hp)
 	s.gold = maxi(0, _int(d.gold))
+	s.recent_social = str(d.get("recentSocial", ""))
 	for k in s.tally:
 		s.tally[k] = maxi(0, _int(d.tally.get(k, 0)))
 	for c in d.get("chat", []) if d.get("chat") is Array else []:
@@ -357,6 +362,19 @@ static func _monster_problem(m, f: Dictionary) -> String:
 			return "a monster's '%s' is not a number" % key
 	if m.has("meters") and (not m.meters is Dictionary or m.meters.values().any(func(v): return not _is_num(v))):
 		return "a monster's meters are not a record of numbers"
+	for key in ["mood", "social"]:
+		if m.has(key) and not m[key] is Dictionary:
+			return "a monster's %s is not a record" % key
+	if m.has("social"):
+		var social: Dictionary = m.social
+		for key in ["used", "promise", "betrayed", "pending", "was_low", "words_asked"]:
+			if social.has(key) and not social[key] is bool:
+				return "social %s is not a boolean" % key
+		if social.has("history") and (not social.history is Array or social.history.any(func(v): return not v is Dictionary)):
+			return "social history is not a list of records"
+		for key in ["rounds", "due", "checked", "seed", "pressure", "soft_turns", "opening", "trial"]:
+			if social.has(key) and not _is_num(social[key]):
+				return "social %s is not a number" % key
 	if m.has("checks") and not _is_num(m.checks):
 		return "a monster's 'checks' is not a number"
 	if m.has("tried") and not m.tried is Dictionary:
