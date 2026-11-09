@@ -71,6 +71,11 @@ if [ "$mode" = both ] || [ "$mode" = on ]; then
 	if ! grep -qE '^autoplay: 5 of 5' "$log"; then
 		code=1
 	fi
+	# reaching the end proves little: each of the 5 games must also have started on the practice floor and left it by its stairs
+	if [ "$(grep -c 'flow: new run, seed [0-9]*, on the practice floor' "$log" || true)" != 5 ] || [ "$(grep -c 'end: the practice floor done' "$log" || true)" != 5 ]; then
+		echo "on practice: not every game played the practice floor"
+		code=1
+	fi
 	echo "on practice: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo 'no verdict')"
 	if [ "$code" != 0 ]; then
 		failed=1

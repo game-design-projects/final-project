@@ -136,7 +136,7 @@ func new_run(practice := false) -> void:
 	_make_floor()
 	encounter.pending_notes = []
 	encounter.pending_rows = []
-	print("flow: new run, seed %d" % rng.seed_value)
+	print("flow: new run, seed %d%s" % [rng.seed_value, ", on the practice floor" if state.practice else ""])
 	event("state_replaced", {"how": "new"})
 	var lines := _arrival()
 	if _telling_story():
@@ -148,9 +148,15 @@ func new_run(practice := false) -> void:
 	await go("explore", {"lines": lines})
 
 
-## Whether a run may start on the practice floor: it needs floors to go down to, and a run told to start deeper skips it.
+## Whether a run may start on the practice floor: it needs floors to go down to and the tips to teach it, and a run told to start
+## deeper (`floor=N`) or to meet a given species (`meet=`) skips it.
 func practice_allowed() -> bool:
-	return feature("tutorial-floor") and feature("real-floors") and Flags.value("floor") == ""
+	if not (feature("tutorial-floor") and feature("real-floors") and feature("tutorial")):
+		return false
+	if Flags.value("floor") != "" or Flags.value("meet") != "":
+		print("flow: no practice floor, the flags ask for another start")
+		return false
+	return true
 
 
 ## She reaches you as the words about the door fade: alone, and then not.

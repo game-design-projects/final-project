@@ -306,7 +306,7 @@ func _practice() -> void:
 	await plain.new_run()
 	_check(s.floor_map.grid == plain.state.floor_map.grid, "the same B1F the seed makes without it")
 	_check(s.lines[0].text.begins_with("B1F"), "and it is named as usual (%s)" % s.lines[0].text)
-	for words in [["no-tutorial-floor"], ["no-real-floors"], ["floor=3"], ["classic"]]:
+	for words in [["no-tutorial-floor"], ["no-real-floors"], ["floor=3"], ["meet=slime"], ["no-tutorial"], ["classic"]]:
 		flow = _flow(12, words)
 		await flow.new_run(true)
 		_check(not flow.state.practice and not flow.coach.seen.has(flow.PRACTICE_SEEN), "%s: no practice floor" % " ".join(words))

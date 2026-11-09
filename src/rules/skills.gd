@@ -93,7 +93,7 @@ static func sub(f: Dictionary, id: String) -> String:
 	if int(s.cost) > int(f.energy):
 		return "%s · not enough energy left" % cost
 	var cd := int(s.get("cooldown", 0))
-	return "%s · %s%s" % [cost, str(s.text), " · cools down %d turn%s" % [cd, "" if cd == 1 else "s"] if cd > 0 else ""]
+	return "%s · %s%s" % [cost, Content.fill(str(s.text), s), " · cools down %d turn%s" % [cd, "" if cd == 1 else "s"] if cd > 0 else ""]
 
 
 ## What an attack skill does to this foe: its damage (scaled for a champion), plus how bruised the foe is, plus `bonus` (allies, a

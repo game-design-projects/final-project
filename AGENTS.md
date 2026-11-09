@@ -21,7 +21,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). No `class_name`: modules are u
 - Don't name a static function `reload` on a script: it shadows `Script.reload()` and wipes static variables.
 - A new sound name needs a recipe in `src/audio/sfx.gd`; `tools/audio_test.gd` scans for this.
 - Tests can't judge how it looks or sounds. Take screenshots with `tools/screenshots.gd` and read them; `tools/flicker_check.gd`, `tools/far_check.gd` and `tools/hold_check.gd` measure the real picture and the real scene.
-- Every game feature has a flag in `FEATURES` in `src/utils/flags.gd`, on by default. `classic` must stay the game without them, and an old save must still load.
+- Every game feature has a flag in `FEATURES` in `src/utils/flags.gd`, on by default (the few in `OPT_IN` are off unless named, see docs/DEVELOPMENT.md). `classic` must stay the game without them, and an old save must still load.
 - A `-s` tool script can't `preload` anything that uses the `Store` autoload (`src/menu/progress.gd`): `load()` it at run time.
 - The art is cut by `tools/art/process.py`: change a source sheet or `tools/art/sheets.json` and run it, rather than editing `assets/art/*.png` or `data/sprites.json` by hand. See [docs/ART.md](docs/ART.md).
 - A SubViewport in a tool needs `await process_frame` and then `RenderingServer.force_draw()`: transforms only flush in the main loop, and a hidden window never fires `frame_post_draw`.
