@@ -9,6 +9,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Moods = preload("res://src/rules/moods.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -129,6 +130,13 @@ func _mercy_moved(mercy: float) -> String:
 func after_player(lines: Array, decision: Dictionary, show_attack_line := true) -> void:
 	if flow.state.skill_fight != null:
 		flow.state.skill_fight.turn_over = true # the next menu is a new turn (skill-combat)
+	if flow.feature("dynamic-moods"):
+		var cue := Moods.advance(flow.state.foe, flow.dice)
+		if cue != "":
+			lines.append(State.sys_line(cue))
+		# Mood bounds apply to the monster; missing a heavy strike still adds its full penalty.
+		var bonus := float(decision.get("pressure_bonus", 0.0))
+		decision.pressure = clampf(float(decision.pressure) - bonus + Moods.shift(flow.state.foe, "pressure"), 0.0, 3.0) + bonus
 	if decision.get("note", "") != "" and not lines.is_empty():
 		lines[0].text += " " + decision.note
 	lines = lines + _take_notes()

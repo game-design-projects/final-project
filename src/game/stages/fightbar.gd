@@ -49,6 +49,7 @@ func _strike(flow, t: float) -> void:
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")
 		if heavy:
+			swung.pressure_bonus = Combat.HEAVY_MISS_PRESSURE
 			swung.pressure += Combat.HEAVY_MISS_PRESSURE
 		await flow.encounter.after_player([State.sys_line("%s %s is %s." % [Texts.HEAVY_MISS if heavy else Texts.miss(), m.name, swung.feeling.label])], swung)
 		return

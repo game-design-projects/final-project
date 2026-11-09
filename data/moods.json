@@ -1,0 +1,42 @@
+{
+  "watchful": {
+    "goal": "escape danger",
+    "cue": "keeps glancing toward the exit; its attacks become cautious.",
+    "pressure": -0.45
+  },
+  "confident": {
+    "goal": "prove superiority",
+    "cue": "raises its chin and challenges you; its attacks become firmer.",
+    "pressure": 0.3
+  },
+  "calm": {
+    "goal": "reach an agreement",
+    "cue": "lowers its guard, giving you breathing room.",
+    "pressure": -0.3
+  },
+  "slime": {
+    "goal": "companionship",
+    "cue": "copies your stance, leaving more room between attacks.",
+    "pressure": -0.3
+  },
+  "bandit": {
+    "goal": "earn gold",
+    "cue": "gestures at your purse: a fair cut might end this. Its blade slows.",
+    "pressure": -0.3
+  },
+  "snake": {
+    "goal": "learn a secret",
+    "cue": "asks what brought you here, pausing between strikes.",
+    "pressure": -0.3
+  },
+  "rock": {
+    "goal": "quiet",
+    "cue": "asks for quiet; its heavy movements grow drowsy.",
+    "pressure": -0.4
+  },
+  "dragon": {
+    "goal": "find a worthy rival",
+    "cue": "yawns, then dares you to stand your ground. Its attacks grow firmer.",
+    "pressure": 0.3
+  }
+}
