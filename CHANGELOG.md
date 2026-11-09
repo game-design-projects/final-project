@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
+- `skill-combat`, off unless named: SKILLS replaces FIGHT and HEAVY with STRIKE, DEFEND and SLAM. Skills cost energy (2 a turn), SLAM cools down a turn and bruises, DEFEND's block soaks hits in the dodge, and none asks for timing.
 - `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling on every successful step, including explored corridors, at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
 - `tools/reveal_shots.gd`: stepping and turning captures with exploration lifecycle checks; `tools/panel_reveal_demo.gd` captures a deterministic corridor, 60 fps animation, and monster/hazard readability.
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.

@@ -6,6 +6,7 @@
 ##
 ## The game's features are declared in FEATURES and are on unless switched off: `no-<name>` or `<name>=off` turns one off,
 ## `classic` turns them all off (`classic <name>` then brings that one back), which is the game as it was before they came.
+## The few in OPT_IN are the exception: experiments that replace part of the game, off unless named (`skill-combat`).
 extends RefCounted
 
 ## name -> what it does. Add a line here when a feature gets a switch.
@@ -84,7 +85,12 @@ const FEATURES := {
 	"wick": "a run opens with a very small witch hopping out of the dark to hand you a heart, and she is your first friend until you lose her",
 	"text-size": "a TEXT SIZE setting: the log and the speech box write larger wherever they still fit",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
+	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",
 }
+
+## Features that are off unless named on the command line (`skill-combat`, or `classic skill-combat`): experiments that replace part
+## of the game, to be tried beside it rather than in place of it.
+const OPT_IN := ["skill-combat"]
 
 const OFF_WORDS := ["off", "0", "false", "no"]
 
@@ -112,7 +118,8 @@ static func value(name: String, default := "") -> String:
 	return v if v != "" else default
 
 
-## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>`, `<name>=off` or `classic`.
+## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>`, `<name>=off` or `classic`. One in OPT_IN is on
+## only when named.
 static func enabled(name: String) -> bool:
 	if not FEATURES.has(name):
 		push_error("flags: '%s' is not a declared feature (see Flags.FEATURES)" % name)
@@ -122,6 +129,8 @@ static func enabled(name: String) -> bool:
 		return false
 	if all.has(name):
 		return not str(all[name]) in OFF_WORDS
+	if OPT_IN.has(name):
+		return false
 	return not all.has("classic")
 
 

@@ -24,7 +24,7 @@ const H := 288.0
 const FOE_RECT := Rect2(110, 20, 228, 258)
 const AUTOMAP_MARGIN := 10.0 # screen pixels from the picture's corner, as gameplay.gd places it
 ## The stages in which the foe's card is worth reading: the fight waits on you.
-const CARD_STAGES := ["intro", "menu", "act", "items", "talk"]
+const CARD_STAGES := ["intro", "menu", "act", "items", "skills", "talk"]
 const CHAT_SHOWN := 8
 const MIND_ROWS_SHOWN := 2 # the card shows the last answers; the debug panel all of them
 
@@ -172,7 +172,7 @@ func _allowed(key: String) -> bool:
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
 		var i := int(key.substr(7))
-		return state.stage in ["menu", "act", "items", "trade", "request", "camp"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
+		return state.stage in ["menu", "act", "items", "skills", "trade", "request", "camp"] and i < state.menu.size() and str(state.menu[i].get("sub", "")) != ""
 	return false
 
 
