@@ -36,7 +36,7 @@
 | `4_wick_heart.png` | 第 3 镜 | Wick 笑眼加爱心 |
 | `5_wall_things.png` | 第 2 镜 | 月亮铁窗、点头骷髅、倒挂蝙蝠、爱心旗 |
 
-Seedance 2.x 的参考图模式里按顺序叫 `@Image1`…`@Image5`；上传顺序必须和上表一致。首尾帧模式不能同时带参考图：那就只上传 `2_chest.png` 做首帧、`1_corridor_keyart.png` 做尾帧，把下面 prompt 里的 `@Image…` 换成文字描述。
+参考图模式里按顺序叫 `@Image1`…`@Image5`（Dreamina 上实测有效）；上传顺序必须和上表一致。第三方资料称首尾帧模式不能同时带参考图（没验证）：那就只上传 `2_chest.png` 做首帧、`1_corridor_keyart.png` 做尾帧，把下面 prompt 里的 `@Image…` 换成文字描述。
 
 ## Prompt（英文，直接粘贴）
 
@@ -96,7 +96,7 @@ AVOID: any text, letters, captions or logos; any visible face or body of the vie
 
 ## 用法和取舍
 
-- **时长**：15 秒在 Seedance 2.0 和 2.5 都能一次出（2.5 单次最长 30 秒）。想要更长就把第 2 镜拆成两段分别生成再剪。
+- **时长**：15 秒、3 个镜头已在 Dreamina 上一次生成成功（三次都是），`@Image1`…`@Image5` 的参考图引用也生效。更长的单次时长（第三方资料称 Seedance 2.5 最长 30 秒）没对照官方文档，没用过；想要更长就把第 2 镜拆成两段分别生成再剪。
 - **一致性**：Wick 和宝箱靠 `@Image` 锁形状；换参考图要整套重生成，别在两次生成之间换图。
 - **文字**：视频不出字。开场字幕（`premise.line` 和 “It only opens for someone who is not alone.”）由引擎用 PressStart2P 叠，AI 视频生成不出可读的像素字。
 - **和引擎开场的衔接**：引擎的开场（`opening.gif`）从一条空走廊和标题字开始，Wick 才从远处蹦来递心，所以视频第 3 镜和它是同一件事。真接进游戏时，视频只用到第 2 镜落地、火把点亮为止，之后交给 `opening.gd`。视频的最后一帧（Wick 已在走廊中央）是 `keyart.png` 的构图，只给队友看用。

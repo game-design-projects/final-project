@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Walking and camp keep the same picture and dock size when opening or closing the camp menu.
 
 ### Fixed
+- The opening film plays as loud as the game's music (it was about 7 LU quieter).
 - `meet=<species>` and `no-tutorial` no longer start a run on the practice floor, where they had no effect.
 - The HEAVY tip no longer shows with `skill-combat`, which hides HEAVY; skill descriptions take their numbers from `data/skills.json`.
 - A monster whose face goes blank as you meet it (`warmth`, after a few kills) no longer looks like a drawing that lost its eyes: the first time, a tip says the halls heard every kill and that sparing brings faces back.

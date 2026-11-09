@@ -83,7 +83,7 @@ godot --headless --path . --import                  # a new PNG needs importing;
 NEW GAME plays `assets/video/intro.ogv` (the feature `intro-cg`; `src/menu/intro_cg.gd`) before the run. Godot plays Ogg Theora only, so a rendered mp4 is re-encoded by a script; the prompt it came from, and what each render got right and wrong, are in [intro/seedance-prompt.md](intro/seedance-prompt.md).
 
 ```bash
-tools/intro_video.sh path/to/render.mp4            # mp4 -> assets/video/intro.ogv (30 fps, Theora q7, Vorbis; about 5 MB)
+tools/intro_video.sh path/to/render.mp4            # mp4 -> assets/video/intro.ogv (30 fps, Theora q7, Vorbis at the loudness of the music; about 5 MB)
 godot --path . -s res://tools/cg_shots.gd -- out=/some/dir [skip=1]   # pictures of the film and the run's first seconds (needs a window: n8)
 ```
 
