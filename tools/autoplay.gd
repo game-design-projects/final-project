@@ -106,6 +106,10 @@ func _press_something(flow) -> void:
 				if s.stage == "menu" and Flags.on("pacifist"):
 					pool = [3] if s.menu[2].get("gold", false) else [2]
 				await flow.press(str(_autopilot.pick(pool)))
+		"skills":
+			if _autopilot.chance(0.08): # skill-combat: any skill that can be used now, END TURN once none can
+				var ready := range(1, s.menu.size()).filter(func(i): return not s.menu[i - 1].get("disabled", false))
+				await flow.press(str(_autopilot.pick(ready) if not ready.is_empty() else s.menu.size()))
 		"ask":
 			await flow.press("1") # COME ALONG, or GO IN PEACE with a full party
 		"end":

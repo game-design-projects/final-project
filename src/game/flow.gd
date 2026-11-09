@@ -22,6 +22,7 @@ const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Survival = preload("res://src/rules/survival.gd")
@@ -37,7 +38,7 @@ const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on h
 const WICK_BANNER_MS := 4500.0
 const WARMTH_TITLE := "THE HALLS"
 const WALK_HEAL_STEPS := 6
-const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "talk", "fightbar", "wait", "dodge", "dead"]
+const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
@@ -50,6 +51,7 @@ const STAGES := {
 	"ask": preload("res://src/game/stages/ask.gd"),
 	"act": preload("res://src/game/stages/act.gd"),
 	"items": preload("res://src/game/stages/items.gd"),
+	"skills": preload("res://src/game/stages/skills.gd"),
 	"trade": preload("res://src/game/stages/trade.gd"),
 	"camp": preload("res://src/game/stages/camp.gd"),
 	"request": preload("res://src/game/stages/request.gd"),
@@ -213,6 +215,8 @@ func _apply_features() -> void:
 	_place_camera()
 	for name in VIEW_FEATURES:
 		state.views[name] = feature(name)
+	if feature("skill-combat") and state.skills.is_empty(): # a new run, or a save from before: the starting skills
+		state.skills = Skills.start()
 
 
 func _place_camera() -> void:

@@ -58,6 +58,8 @@ Flags change one run. From source they go after `--`; the list with descriptions
 
 Every game feature since 0.6.1 has a flag, on by default. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off, and `classic` turns them all off.
 
+The exception is `OPT_IN`: experiments that replace part of the game and are tried beside it, off unless named. Today that is `skill-combat` (`godot --path . -- skill-combat`, or `?skill-combat` on the web build): SKILLS takes FIGHT's place. Its numbers are in `data/skills.json`.
+
 A new feature goes in `FEATURES`, is read with `flow.feature(name)`, and if the view has to know, in `flow.VIEW_FEATURES` (the view reads `state.viewing(name)`). A save keeps working with any of them off.
 
 `motifs` is the one exception to shipping: Abdulla's motifs aren't in the repo. See [AUDIO.md](AUDIO.md).

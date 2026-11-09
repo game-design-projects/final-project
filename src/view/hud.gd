@@ -171,7 +171,7 @@ func _command_at(at: Vector2) -> int:
 
 
 func _grid() -> bool:
-	return state != null and not state.menu.is_empty() and ((state.stage == "menu" and state.viewing("combat-grid")) or (state.stage in ["act", "items", "ask", "dead", "camp", "trade", "request", "end"] and state.viewing("choice-grid")))
+	return state != null and not state.menu.is_empty() and ((state.stage == "menu" and state.viewing("combat-grid")) or (state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end"] and state.viewing("choice-grid")))
 
 
 ## Reserve the same space while walking and in menus, so opening a grid never resizes the picture.
@@ -477,14 +477,14 @@ func _keys(area: Rect2) -> void:
 
 ## What the picked command does, for the line under the key hints ("" when there is nothing to say).
 func sub_text() -> String:
-	if state == null or not state.stage in ["menu", "act"] or state.menu.is_empty():
+	if state == null or not state.stage in ["menu", "act", "skills"] or state.menu.is_empty():
 		return ""
 	return str(state.menu[clampi(state.selected, 0, state.menu.size() - 1)].get("sub", ""))
 
 
 ## Does any command's help in this menu run past the dock's width (a narrow window)? Then the dock has room for a second line.
 func _sub_wraps() -> bool:
-	if not state.stage in ["menu", "act"]:
+	if not state.stage in ["menu", "act", "skills"]:
 		return false
 	for item in state.menu:
 		if _body.get_string_size(str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x > size.x:

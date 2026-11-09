@@ -75,6 +75,17 @@ if [ "$mode" = both ] || [ "$mode" = on ]; then
 	if [ "$code" != 0 ]; then
 		failed=1
 	fi
+	# skill-combat is off unless named: play it through too.
+	log="$OUT/on-skill-combat.log"
+	code=0
+	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound skill-combat >"$log" 2>&1 || code=$?
+	if ! grep -qE '^autoplay: 5 of 5' "$log"; then
+		code=1
+	fi
+	echo "on skill-combat: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo 'no verdict')"
+	if [ "$code" != 0 ]; then
+		failed=1
+	fi
 fi
 if [ "$mode" = both ] || [ "$mode" = classic ]; then
 	run_mode classic classic
