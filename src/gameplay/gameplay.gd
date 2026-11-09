@@ -34,6 +34,8 @@ const MENU_SCENE := "res://src/menu/main_menu.tscn"
 const VIEW_W := 448
 const VIEW_H := 288
 const WIDEST := 2.4 # with wide-view the picture follows the panel's shape up to this: FOV 68 is its height, so its width grows with it
+const FILM_RISE_S := 0.9 # the run comes up out of the opening film's black this slowly when the film played to its end
+const FILM_RISE_SKIPPED_S := 0.35 # and this quickly when a key skipped it
 const WIDTH_STEP := 16 # and its width moves in steps this big, so a line more or less in the dock doesn't remake the picture
 const FRAME_MARGIN := 8
 const FRAME_PAD_X := 14 # between the white frame and what is inside it, left and right
@@ -114,6 +116,8 @@ func _ready() -> void:
 	_tips.debug = _debug
 	_tips.mind_label = flow.mind.label()
 	_bind_views()
+	if request.get("cg", "") != "":
+		_rise_from_film()
 	if _debug:
 		print("gameplay: debug on, the foe's mind panel stays open and every game event is logged")
 	if request.is_empty() and Flags.value("meet") == "" and not slice:
@@ -124,6 +128,21 @@ func _ready() -> void:
 		flow.state.hint = "ANY KEY START"
 		return
 	await _begin()
+
+
+## The opening film ended on black (menu/intro_cg.gd): the run comes up out of it, over as long as the film took to go (a skipped
+## film left quickly, so this is quick too).
+func _rise_from_film() -> void:
+	var veil := ColorRect.new()
+	veil.color = Color.BLACK
+	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(veil)
+	var seconds := FILM_RISE_S if request.cg == "whole" else FILM_RISE_SKIPPED_S
+	var rise := create_tween()
+	rise.tween_property(veil, "color:a", 0.0, seconds)
+	rise.finished.connect(veil.queue_free)
+	print("gameplay: the run rises out of black after the film (%s, %.2f s)" % [request.cg, seconds])
 
 
 ## Start the run the request asks for (a new one, or a saved one).

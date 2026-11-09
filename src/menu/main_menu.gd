@@ -20,6 +20,9 @@ const GAMEPLAY := "res://src/gameplay/gameplay.tscn"
 const INTRO_CG := "res://src/menu/intro_cg.tscn"
 const KEYART_TINT := Color("#d8cfb8") # the first run's wall colour, about: bone, not white
 const KEYART_DIM := 0.58 # the picture behind the page, so the page reads first
+const FILM_FADE_S := 0.45 # the menu goes to black before the film, which comes up out of black
+
+var _starting := false # NEW GAME or a slot was chosen: a second press can't hand over twice
 
 var panel: MenuPanel
 
@@ -98,7 +101,19 @@ func _load_slot(slot: String) -> void:
 ## Hand the request over and change scene: to the gameplay, or, for a new game when the film is wanted, to the film first (it goes on to
 ## the gameplay itself).
 func _start(hand_over: Callable, new_game := false) -> void:
+	if _starting:
+		return
+	_starting = true
 	hand_over.call()
 	var film := new_game and IntroCg.wanted()
 	print("menu: %s" % ("the opening film first" if film else "straight to the run"))
+	if film:
+		var veil := ColorRect.new()
+		veil.color = Color(0, 0, 0, 0)
+		veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+		veil.mouse_filter = Control.MOUSE_FILTER_STOP # nothing on the page can be pressed while it goes dark
+		add_child(veil)
+		var fade := create_tween()
+		fade.tween_property(veil, "color:a", 1.0, FILM_FADE_S)
+		await fade.finished
 	get_tree().change_scene_to_file.call_deferred(INTRO_CG if film else GAMEPLAY)

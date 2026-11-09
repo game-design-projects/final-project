@@ -17,7 +17,9 @@ const ASPECT := 854.0 / 480.0 # the film's shape; it is shown whole, with black 
 const SKIP_GUARD_S := 0.5 # the key that chose NEW GAME can't be the one that skips it
 const HINT_AFTER_S := 1.2
 const HINT_FADE_S := 0.6
-const FADE_OUT_S := 0.35
+const FADE_IN_S := 0.9 # it comes up out of black, picture and sound together
+const FADE_OUT_S := 0.9 # and goes back into it over the film's last moments, so the run can rise out of black too
+const SKIP_FADE_S := 0.35 # a key press can't wait that long
 const START_WATCHDOG_S := 3.0 # no picture by then (a decoder that can't read it): go on without it
 
 var _player: VideoStreamPlayer
@@ -26,6 +28,7 @@ var _hint: Label
 var _age := 0.0
 var _reached := 0.0 # how far into the film it got: a stream that has finished reads 0 again
 var _leaving := false
+var _rise: Tween # the fade in, while it runs
 
 
 ## Whether NEW GAME should play the film: the feature is on, the file is there, and there is a screen to show it on.
@@ -75,7 +78,12 @@ func _ready() -> void:
 		_leave(false)
 		return
 	_player.finished.connect(func(): _leave(true))
+	_veil.color.a = 1.0
+	_player.volume_db = -40.0
 	_player.play()
+	_rise = create_tween().set_parallel(true)
+	_rise.tween_property(_veil, "color:a", 0.0, FADE_IN_S)
+	_rise.tween_property(_player, "volume_db", 0.0, FADE_IN_S)
 	print("intro_cg: playing (%.1f s)" % _player.get_stream_length())
 
 
@@ -85,6 +93,9 @@ func _process(delta: float) -> void:
 		return
 	_hint.modulate.a = clampf((_age - HINT_AFTER_S) / HINT_FADE_S, 0.0, 1.0)
 	_reached = maxf(_reached, _player.stream_position)
+	var length := _player.get_stream_length()
+	if length > FADE_IN_S + FADE_OUT_S and _reached >= length - FADE_OUT_S:
+		_leave(true) # the fade out runs over the film's last moments, and the run follows as it ends
 	if _age > START_WATCHDOG_S and _reached <= 0.0:
 		push_warning("intro_cg: nothing played after %.0f s, going on to the run" % START_WATCHDOG_S)
 		_leave(false)
@@ -108,9 +119,12 @@ func _leave(whole: bool) -> void:
 	_leaving = true
 	print("intro_cg: %s, %.1f s in" % ["watched to the end" if whole else "skipped", _reached])
 	Session.cg_played(whole and _reached > 0.0)
+	if _rise != null and _rise.is_valid():
+		_rise.kill()
+	var seconds := FADE_OUT_S if whole else SKIP_FADE_S
 	var fade := create_tween().set_parallel(true)
-	fade.tween_property(_veil, "color:a", 1.0, FADE_OUT_S)
+	fade.tween_property(_veil, "color:a", 1.0, seconds)
 	if _player != null:
-		fade.tween_property(_player, "volume_db", -40.0, FADE_OUT_S)
+		fade.tween_property(_player, "volume_db", -40.0, seconds)
 	await fade.finished
 	get_tree().change_scene_to_file(GAMEPLAY)

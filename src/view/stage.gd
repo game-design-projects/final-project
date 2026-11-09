@@ -76,7 +76,6 @@ var _reveal_image: Image
 var _reveal_texture: ImageTexture
 var _reveal_seen := {}
 var _reveal_key := []
-var _reveal_cell := Vector2i.ZERO
 var _flat_mat: ShaderMaterial
 var _wall_mat: ShaderMaterial
 var _flicker_key := []
@@ -206,24 +205,15 @@ func _show_warmth() -> void:
 
 func _update_reveal(state, now: float) -> void:
 	var enabled: bool = state.viewing("dungeon-reveal")
-	var moved: bool = state.cell != _reveal_cell
-	_reveal_cell = state.cell
 	var key := [state, state.cell, state.seen.size(), enabled, is_visible_in_tree()]
 	if key != _reveal_key:
 		_reveal_key = key
 		var fresh := []
+		# Only a cell seen for the first time lights up. A wall already shown stays settled as you walk past it: replaying the whole
+		# visible corridor on every step made every wall flash at once, and flicker when stepping one at a time.
 		for c in state.seen:
 			if not _reveal_seen.has(c):
 				fresh.append(c)
-		# Every successful step replays the visible corridor, including explored cells.
-		# Stationary frames, bumps and returning from menus do not restart the wave.
-		if moved:
-			for c in state.in_sight:
-				if not fresh.has(c):
-					fresh.append(c)
-			for c in Vision.ahead(state.floor_map, state.cell, state.facing):
-				if not fresh.has(c):
-					fresh.append(c)
 		fresh.sort_custom(func(a, b): return a.distance_squared_to(state.cell) < b.distance_squared_to(state.cell))
 		var near := 0.0 if fresh.is_empty() else float(fresh.front().distance_to(state.cell))
 		for c in fresh:
@@ -270,7 +260,6 @@ func _flicker(now: float) -> void:
 func _load_floor(state) -> void:
 	var t0 := Time.get_ticks_usec()
 	if _floor_map != state.floor_map:
-		_reveal_cell = state.cell
 		_reveal_seen = state.seen.duplicate()
 		_reveal_image = Image.create(state.floor_map.size, state.floor_map.size, false, Image.FORMAT_RF)
 		_reveal_image.fill(Color(-1000.0, 0, 0))
