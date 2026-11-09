@@ -16,10 +16,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
+- A monster whose face goes blank as you meet it (`warmth`, after a few kills) no longer looks like a drawing that lost its eyes: the first time, a tip says the halls heard every kill and that sparing brings faces back.
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
 - Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
+- `skill-combat`, off unless named: SKILLS replaces FIGHT and HEAVY with STRIKE, DEFEND and SLAM. Skills cost energy (2 a turn), SLAM cools down a turn and bruises, DEFEND's block soaks hits in the dodge, and none asks for timing.
+- `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling on every successful step, including explored corridors, at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
+- `tools/reveal_shots.gd`: stepping and turning captures with exploration lifecycle checks; `tools/panel_reveal_demo.gd` captures a deterministic corridor, 60 fps animation, and monster/hazard readability.
 - `hand-drawn`: the whole game is redrawn from sheets made with Codex: brick and flagstone walls, chibi monsters with continuous animation that hop and react, the same drawings walking and fighting, drawn wall decor, chests and sacks, and key art on the menu.
 - `warmth`: the halls answer what you do: torches look at you, look away, then shut their eyes, faces go blank one monster at a time, and at the coldest the set is the old wire.
 - `wick`: a run opens with a very small witch hopping down the corridor to hand you a heart; she is your first friend, and can be lost like any other.

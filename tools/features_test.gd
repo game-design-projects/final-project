@@ -26,6 +26,7 @@ const Items = preload("res://src/rules/items.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Skills = preload("res://src/rules/skills.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -65,6 +66,7 @@ func _run() -> void:
 	await _roaming()
 	await _input_cooldown()
 	await _heavy_strike()
+	await _skill_combat()
 	_close_camera()
 	_finish()
 
@@ -84,8 +86,12 @@ func _use(words := []) -> void:
 
 func _flags() -> void:
 	Flags.set_args(PackedStringArray(["nosave", "nosound"])) # without BASE's no-wick
-	_check(Flags.FEATURES.keys().all(func(f): return Flags.enabled(f)), "every feature is on by default")
+	_check(Flags.FEATURES.keys().all(func(f): return Flags.enabled(f) != Flags.OPT_IN.has(f)), "every feature is on by default, but the opt-in ones")
+	_check(Flags.OPT_IN.all(func(f): return Flags.FEATURES.has(f)), "and those are features too")
 	for f in Flags.FEATURES:
+		if Flags.OPT_IN.has(f):
+			_use([f])
+			_check(Flags.enabled(f), "naming %s turns it on" % f)
 		_use(["no-" + f])
 		_check(not Flags.enabled(f), "no-%s turns it off" % f)
 		_use([f + "=off"])
@@ -95,6 +101,85 @@ func _flags() -> void:
 		Flags.set_args(PackedStringArray(["nosave", "nosound", "classic", f]))
 		_check(Flags.enabled(f), "classic %s brings it back" % f)
 	_use()
+
+
+## skill-combat: SKILLS in FIGHT's place, energy that comes back every turn, a cooldown, block that soaks hits, bruises that add up.
+func _skill_combat() -> void:
+	var flow = _flow(70)
+	await _at_menu(flow, "rock")
+	var s = flow.state
+	_check(s.menu[0].label == "FIGHT" and s.skill_fight == null and s.skills.is_empty(), "off unless named: FIGHT as it was")
+	_check(not s.to_dict().has("skills"), "and a save says nothing of skills")
+	flow = _flow(71, ["skill-combat"])
+	var m = await _at_menu(flow, "rock")
+	s = flow.state
+	var f: Dictionary = s.skill_fight
+	_check(s.menu[0].label == "SKILLS" and not s.menu.any(func(c): return c.label == "HEAVY"), "SKILLS takes FIGHT's place, and HEAVY is gone (%s)" % [s.menu.map(func(c): return c.label)])
+	_check(s.skills == ["strike", "defend", "slam"] and f.energy == 2, "a run starts with STRIKE, DEFEND and SLAM, and 2 energy")
+	await flow.press("1")
+	_check(s.stage == "skills" and s.menu.size() == 4 and s.menu[3].label == "END TURN", "SKILLS lists them, and END TURN (%s)" % s.stage)
+	_check(s.menu.all(func(c): return not c.get("disabled", false)), "all of them can be used on a fresh turn")
+	await flow.press("cancel")
+	_check(s.stage == "menu", "ESC goes back while nothing is used yet")
+	await flow.press("1")
+	var hp: int = m.hp
+	await flow.press("3")
+	_check(m.hp == hp - 12 and f.bruised == 1, "SLAM: 12 damage, then a bruise (%d -> %d)" % [hp, m.hp])
+	_check(f.energy == 0 and s.stage in ["wait", "menu"], "with no energy left the turn is over by itself (%s)" % s.stage)
+	await _through_dodge(flow)
+	_check(s.stage == "menu" and f.energy == 2, "the next turn gives the energy back (%s, %d)" % [s.stage, f.energy])
+	await flow.press("1")
+	_check(s.menu[2].get("disabled", false) and s.menu[2].sub.contains("ready in 1 turn"), "SLAM is cooling down for one turn (%s)" % s.menu[2].sub)
+	hp = m.hp
+	await flow.press("1")
+	_check(m.hp == hp - 9 and s.stage == "skills", "STRIKE: 8, and 1 more for the bruise; one energy is left to use")
+	await flow.press("cancel")
+	_check(s.stage == "skills", "once a skill is used there is no going back to the menu this turn")
+	await flow.press("2")
+	_check(f.block == 2 and s.stage in ["wait", "menu"], "DEFEND: 2 block, and the turn is over")
+	var probe := {"block": 2}
+	_check(Skills.soak(probe, 3) == 1 and probe.block == 0 and Skills.soak(probe, 3) == 3, "block soaks a hit and is used up")
+	await _through_dodge(flow)
+	_check(f.block == 0 and Skills.usable(f, "slam"), "a new turn: the block is gone, and SLAM is ready again")
+	await flow.press("1")
+	await flow.press("4")
+	_check(s.stage in ["wait", "menu"] and f.used == 0, "END TURN with nothing used lets it attack")
+	await _through_dodge(flow)
+	await flow.press("1")
+	m.hp = 3
+	var slain: int = s.tally.slain
+	await flow.press("1")
+	_check(s.stage == "explore" and s.tally.slain == slain + 1 and m.gone == "slain", "a skill that kills ends the fight (%s)" % s.stage)
+	_check(Skills.damage(Skills.new_fight(), "strike", true) == roundi(8 * Combat.BOSS_DAMAGE_SCALE), "a champion takes less, as from a strike")
+	var held := Skills.start()
+	_check(not Skills.learn(held, "strike") and held.size() == 3 and Skills.slots() == 6, "a skill held already isn't learned twice, and three of six slots are free")
+	_check(not Skills.learn(held, "nonexistent"), "nor one that doesn't exist")
+	_check(not Skills.learn(["defend", "slam", "x", "y", "z", "w"], "strike"), "and full slots take no more")
+	# a save keeps them, and one from before the feature starts with the first three
+	var saved: Dictionary = s.to_dict()
+	_check(saved.skills == ["strike", "defend", "slam"] and State.from_dict(saved).skills == saved.skills, "a save keeps the skills held")
+	saved.erase("skills")
+	var later = _flow(72, ["skill-combat"])
+	await later.load_state(saved)
+	_check(later.state.skills == Skills.start(), "a save from before skill-combat starts with the first three")
+	for id in Skills.table().skills:
+		var sub: String = Skills.sub(Skills.new_fight(), id)
+		_check(sub != "" and Skills.label(id) != "", "%s has a name and help" % id)
+	_check(Overlay.banner_fits(Content.table("coach").tips.skills), "its tip fits the banner")
+	_use()
+
+
+## Lets the monster's attack play out (with health to spare), up to the menu of the next turn.
+func _through_dodge(flow) -> void:
+	var s = flow.state
+	s.max_hp = 999
+	s.hp = 999
+	for i in 400:
+		if s.stage == "menu":
+			return
+		if s.stage == "wait" and s.hint == "ANY KEY CONTINUE":
+			await flow.press("confirm")
+		await flow.tick(flow.clock + 100.0)
 
 
 ## Walk the party onto the stairs, as the last step of a floor does.
@@ -383,6 +468,17 @@ func _tutorial() -> void:
 	flow.state.banner = null
 	flow.coach._on_stage("menu")
 	_check(flow.coach.seen.has("flee"), "FLEE gets a tip too")
+	# a foe that meets you with its face already gone (warmth) gets a tip saying why, or it reads like a drawing that lost its eyes
+	for words in [[], ["no-warmth"]]:
+		for slain in [0, 6]:
+			flow = _flow(38, words)
+			await flow.new_run()
+			flow.state.banner = null
+			flow.state.tally.slain = slain
+			var plain = flow.state.floor_map.monsters.filter(func(m): return not m.boss)[0]
+			await flow.go("intro", {"foe": plain})
+			var want: bool = slain > 0 and words.is_empty()
+			_check(flow.coach.seen.has("blank") == want, "%s, %d slain: %s" % [" ".join(words) if not words.is_empty() else "warmth", slain, "a blank face is explained" if want else "no word of blank faces"])
 	# the TIPS setting skips the slow start as well: only the first fights' pace knows about it
 	var paces := {}
 	for tips in [true, false]:

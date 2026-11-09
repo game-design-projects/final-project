@@ -128,6 +128,8 @@ func _mercy_moved(mercy: float) -> String:
 
 ## After the player acts: show what happened, then the monster either holds back or winds up its attack.
 func after_player(lines: Array, decision: Dictionary, show_attack_line := true) -> void:
+	if flow.state.skill_fight != null:
+		flow.state.skill_fight.turn_over = true # the next menu is a new turn (skill-combat)
 	if flow.feature("dynamic-moods"):
 		var cue := Moods.advance(flow.state.foe, flow.dice)
 		if cue != "":

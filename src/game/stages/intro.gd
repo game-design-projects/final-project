@@ -6,6 +6,7 @@ extends "res://src/game/stages/stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -20,6 +21,7 @@ func enter(flow, args: Dictionary) -> void:
 	_ambush = args.get("ambush", false)
 	_queued = false
 	s.foe = m
+	s.skill_fight = Skills.new_fight() if flow.feature("skill-combat") else null
 	m.spoke = false
 	s.menu = []
 	s.hint = ""

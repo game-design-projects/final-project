@@ -11,13 +11,15 @@
   "ask": "Friends make every fight easier, and the Last Door needs one.",
   "clans": "Monsters talk. Its kin will hear what you just did.",
   "dead": "Dying only starts this fight over.",
- "item": "Found something. In a fight, ITEM uses it. Hover to read it.",
+  "item": "Found something. In a fight, ITEM uses it. Hover to read it.",
   "crack": "That wall is cracked. Walk into it.",
   "roaming": "They move when you move. Turning is free: stop and look.",
   "hunted": "It has seen you. It takes a step for every step you take.",
   "lurker": "Something stirs. Walk round it, or into it: a fight, and its purse.",
   "request": "That one isn't here to fight. Walk up and hear what it wants.",
   "hungry": "You are hungry. ENTER makes camp, if you have anything to eat.",
-  "boss": "Champions change attack every turn. They can be won over too."
+  "boss": "Champions change attack every turn. They can be won over too.",
+  "skills": "Skills cost energy, which comes back each turn. END TURN when you're done.",
+  "blank": "Its face is gone: down here, every kill is heard. Spare some and faces come back."
  }
 }

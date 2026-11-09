@@ -1,0 +1,18 @@
+{
+ "energy": 2,
+ "slots": 6,
+ "start": ["strike", "defend", "slam"],
+ "skills": {
+  "strike": {"label": "STRIKE", "cost": 1, "cooldown": 0, "damage": 8, "text": "Deal 8 damage"},
+  "defend": {"label": "DEFEND", "cost": 1, "cooldown": 0, "block": 2, "text": "Gain 2 block: it soaks up hits until your next turn"},
+  "slam": {"label": "SLAM", "cost": 2, "cooldown": 1, "damage": 12, "bruise": 1, "text": "Deal 12 damage, then 1 Bruised: it takes 1 more from every attack"}
+ },
+ "end_turn": {"label": "END TURN", "text": "Let it attack. Your energy comes back next turn"},
+ "lines": {
+  "hit": "%s: %d damage.",
+  "bruised": "%s is bruised (%d).",
+  "block": "%s: block %d.",
+  "turn": "This turn: %d damage.",
+  "guarded": "You hold your guard."
+ }
+}

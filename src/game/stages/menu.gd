@@ -1,10 +1,12 @@
-## The fight's main menu: FIGHT, ACT, SPARE, FLEE.
+## The fight's main menu: FIGHT, ACT, SPARE, FLEE. With skill-combat, SKILLS takes FIGHT's place and HEAVY isn't offered: a turn
+## that ended (encounter.after_player) gives the energy back here.
 extends "res://src/game/stages/list_stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
+const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -14,18 +16,24 @@ const SPARE := 2
 const FLEE := 3
 const HEAVY := "HEAVY" # the two below come and go, so they are picked by name: the four above keep their places
 const ITEM := "ITEM"
+const SKILLS := "SKILLS"
 
 
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var mercy: float = await flow.mind.mercy(s.foe)
+	var skilled: bool = s.skill_fight != null
+	if skilled and s.skill_fight.turn_over:
+		Skills.start_turn(s.skill_fight)
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
 		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss) if flow.feature("recruit-step") else "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
-	if flow.feature("heavy-strike"):
+	if skilled:
+		s.menu[FIGHT] = {"label": SKILLS, "sub": "%d ENERGY · %s" % [s.skill_fight.energy, ", ".join(s.skills.map(func(id): return Skills.label(id)))]}
+	if flow.feature("heavy-strike") and not skilled:
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
 	if flow.feature("items") and (flow.feature("combat-grid") or not s.items.is_empty()):
@@ -69,7 +77,7 @@ func pick(flow, index: int) -> void:
 		return
 	match index:
 		FIGHT:
-			await flow.go("fightbar")
+			await flow.go("skills" if flow.state.skill_fight != null else "fightbar")
 		ACT:
 			await flow.go("act")
 		SPARE:

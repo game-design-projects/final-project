@@ -6,6 +6,7 @@
 ##
 ## The game's features are declared in FEATURES and are on unless switched off: `no-<name>` or `<name>=off` turns one off,
 ## `classic` turns them all off (`classic <name>` then brings that one back), which is the game as it was before they came.
+## The few in OPT_IN are the exception: experiments that replace part of the game, off unless named (`skill-combat`).
 extends RefCounted
 
 ## name -> what it does. Add a line here when a feature gets a switch.
@@ -24,6 +25,7 @@ const KNOWN := {
 	"nosfx": "no sound effects and no monster voices (the music still plays)",
 	"nomusic": "no music (the effects and voices still play)",
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
+	"frames": "frames=off: skip animation frame exports in tools/panel_reveal_demo.gd",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
 	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
@@ -33,6 +35,7 @@ const KNOWN := {
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.
 const FEATURES := {
 	"dynamic-moods": "contextual monster intentions and restrained autonomous behavior",
+	"dungeon-reveal": "solid floor, wall and ceiling light panels cascade through visible corridors on every step",
 	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",
 	"piece-icons": "chess attacks show a piece's shape and lines to the squares it reaches, not a letter, and every attack's rule is in plain words",
 	"gentle-dodge": "dodges run slower, and their pace follows the foe's friendliness, the floor, how you are doing and the EASY DODGE setting",
@@ -83,7 +86,12 @@ const FEATURES := {
 	"wick": "a run opens with a very small witch hopping out of the dark to hand you a heart, and she is your first friend until you lose her",
 	"text-size": "a TEXT SIZE setting: the log and the speech box write larger wherever they still fit",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
+	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",
 }
+
+## Features that are off unless named on the command line (`skill-combat`, or `classic skill-combat`): experiments that replace part
+## of the game, to be tried beside it rather than in place of it.
+const OPT_IN := ["skill-combat"]
 
 const OFF_WORDS := ["off", "0", "false", "no"]
 
@@ -111,7 +119,8 @@ static func value(name: String, default := "") -> String:
 	return v if v != "" else default
 
 
-## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>`, `<name>=off` or `classic`.
+## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>`, `<name>=off` or `classic`. One in OPT_IN is on
+## only when named.
 static func enabled(name: String) -> bool:
 	if not FEATURES.has(name):
 		push_error("flags: '%s' is not a declared feature (see Flags.FEATURES)" % name)
@@ -121,6 +130,8 @@ static func enabled(name: String) -> bool:
 		return false
 	if all.has(name):
 		return not str(all[name]) in OFF_WORDS
+	if OPT_IN.has(name):
+		return false
 	return not all.has("classic")
 
 

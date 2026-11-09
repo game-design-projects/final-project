@@ -34,6 +34,8 @@ static func build(floor_map, wall_mat: Material, flat_mat: Material) -> ArrayMes
 			var c := Vector2i(x, y)
 			if not floor_map.is_open(c):
 				continue
+			walls.cell_uv = (Vector2(c) + Vector2(0.5, 0.5)) / float(floor_map.size)
+			flats.cell_uv = walls.cell_uv
 			var mid := center(c)
 			if c == floor_map.stairs:
 				_floor_round_hole(flats, mid, half)
@@ -109,11 +111,14 @@ class _Quads:
 	extends RefCounted
 	var verts := PackedVector3Array()
 	var uvs := PackedVector2Array()
+	var cell_uv := Vector2.ZERO
+	var cells := PackedVector2Array()
 	var idx := PackedInt32Array()
 
 	func add(a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
 		var base := verts.size()
 		verts.append_array([a, b, c, d])
+		cells.append_array([cell_uv, cell_uv, cell_uv, cell_uv])
 		uvs.append_array([Vector2(0, 1), Vector2(1, 1), Vector2(1, 0), Vector2(0, 0)])
 		idx.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
 
@@ -124,6 +129,7 @@ class _Quads:
 		arrays.resize(Mesh.ARRAY_MAX)
 		arrays[Mesh.ARRAY_VERTEX] = verts
 		arrays[Mesh.ARRAY_TEX_UV] = uvs
+		arrays[Mesh.ARRAY_TEX_UV2] = cells
 		arrays[Mesh.ARRAY_INDEX] = idx
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		mesh.surface_set_material(mesh.get_surface_count() - 1, material)

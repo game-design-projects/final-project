@@ -5,6 +5,7 @@ extends "res://src/game/stages/stage.gd"
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Pace = preload("res://src/rules/pace.gd")
+const Skills = preload("res://src/rules/skills.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
@@ -12,6 +13,7 @@ const Texts = preload("res://src/game/texts.gd")
 const MOVES := {"up": Vector2i(0, -1), "down": Vector2i(0, 1), "left": Vector2i(-1, 0), "right": Vector2i(1, 0)}
 
 var _hits := 0 # how many hits this dodge has landed
+var _rule := {} # the attack's rule, for the hint
 
 
 func enter(flow, args: Dictionary) -> void:
@@ -29,8 +31,16 @@ func enter(flow, args: Dictionary) -> void:
 		s.dodge.guard = Combat.party_guard(s.allies.size())
 	_hits = 0
 	s.menu = []
-	var rules: Dictionary = Content.table("encounter").genres[genre]
-	s.hint = "ARROWS MOVE · %s" % (rules.plain if flow.feature("piece-icons") else rules.rule)
+	_rule = Content.table("encounter").genres[genre]
+	_hint(flow)
+
+
+## The keys and the attack's rule, and the block that is left (skill-combat).
+func _hint(flow) -> void:
+	var s = flow.state
+	s.hint = "ARROWS MOVE · %s" % (_rule.plain if flow.feature("piece-icons") else _rule.rule)
+	if s.skill_fight != null and int(s.skill_fight.block) > 0:
+		s.hint += " · BLOCK %d" % s.skill_fight.block
 
 
 func handle(flow, key: String) -> void:
@@ -46,6 +56,12 @@ func tick(flow, t: float) -> void:
 	for e in run.update(t, flow.rng):
 		match e.type:
 			"hurt":
+				if s.skill_fight != null and int(s.skill_fight.block) > 0:
+					e.damage = Skills.soak(s.skill_fight, e.damage)
+					_hint(flow)
+					if e.damage <= 0:
+						flow.event("shield")
+						continue
 				s.hp -= e.damage
 				_hits += 1
 				flow.event("player_hurt", {"damage": e.damage})

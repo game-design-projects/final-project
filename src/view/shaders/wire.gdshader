@@ -16,6 +16,14 @@ uniform vec3 torch_color = vec3(1.0, 0.7, 0.28);
 uniform float drawn = 0.0;                    // 0 the plain wire, 1 hand-drawn brick and flagstone joints (the feature hand-drawn)
 uniform float warmth = 1.0;                   // how warm the halls are (rules/warmth.gd): the joints go as it falls, and at 0 only the wire is left
 
+uniform bool reveal_enabled = false;
+uniform sampler2D reveal_times : filter_nearest, repeat_disable;
+uniform float reveal_now = 0.0;
+uniform float reveal_seconds = 0.45;
+uniform float reveal_intensity = 3.0;
+uniform float reveal_wall_delay = 0.04;
+uniform float reveal_ceiling_delay = 0.03;
+uniform float reveal_panel_inset = 0.14;
 varying vec3 world_pos;
 
 // 1 within `px` screen pixels of the edge where x (0..1) is 0
@@ -92,6 +100,32 @@ void fragment() {
 		float fade = clamp(1.15 - z * 0.16, fade_floor, 1.0);
 		float flags = masonry(world_pos.xz * vec2(0.92, 1.15) + (below ? vec2(0.0) : vec2(0.37, 0.61)), 0.9, below ? 7.0 : 13.0) * smoothstep(0.02, 0.32, warmth) * (1.0 - smoothstep(1.6, 5.0, z));
 		col = mix(torch_glow(world_pos) * 0.45, line_color * fade, flags * (below ? 0.36 : 0.22));
+	}
+	if (reveal_enabled) {
+		float start = texture(reveal_times, UV2).r;
+		float delay = kind == 0 ? reveal_wall_delay :
+			(world_pos.y > 0.85 ? reveal_wall_delay + reveal_ceiling_delay : 0.0);
+		float age = reveal_now - start - delay;
+		if (start >= 0.0 && age < reveal_seconds) {
+			// Keep queued architecture dark. Restore the original wire appearance
+			// as the panel decays, without changing opaque depth or other objects.
+			float t = clamp(age / max(reveal_seconds, 0.001), 0.0, 1.0);
+			col *= smoothstep(0.0, 1.0, t);
+			if (age >= 0.0) {
+				// Filled interior, with a one-pixel antialiased rectangular boundary.
+				// These UVs belong to real faces: openings and the stair hole stay open.
+				vec2 d = min(UV, vec2(1.0) - UV);
+				vec2 aa = max(fwidth(UV), vec2(0.0001));
+				vec2 inside = smoothstep(vec2(reveal_panel_inset) - aa * 0.5,
+					vec2(reveal_panel_inset) + aa * 0.5, d);
+				float glow = 1.0 - smoothstep(0.04, 1.0, t);
+				// Biome hue retained even at peak; existing postfx supplies the bloom.
+				vec3 light = mix(torch_color, line_color, 0.25);
+				// Leave headroom for the existing 1.3x bloom addition on broad fills.
+				vec3 peak = (vec3(1.0) - exp(-light * reveal_intensity)) * 0.68;
+				col += peak * glow * inside.x * inside.y;
+			}
+		}
 	}
 	ALBEDO = col;
 }
