@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Changed
+- Floors are about 1.7 times as long and wide: the halls run 21 to 37 cells a side, the Undercroft 31 to 55 and the Wet Caves 27 to 51, with more monsters and rooms to match. The largest builds in about 70 ms and sight stays under 7 ms (`tools/map_test.gd`).
 - The opening film no longer cuts in or out: the menu goes to black, the film rises out of it with its sound, goes back into black over its last moments, and the run rises out of that. A key press leaves in a third of a second.
 - The opening film is graded toward the halls (colour pulled down to bone-white lines on black, a soft glow, faint scanlines, darker corners), and it is 1.5 MB smaller.
 - Combat commands fill a larger three-column grid, with bigger labels and directional navigation.

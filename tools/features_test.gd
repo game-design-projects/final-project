@@ -1967,6 +1967,7 @@ func _roaming() -> void:
 	var f = s.floor_map
 	var m = f.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
 	f.monsters = [m, f.monsters.back()]
+	f.quester = {} # a floor with a request keeps the monster it asks about; this one is down to two and a save must still load
 	var bare := func(sp: String):
 		m.species = sp
 		m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
