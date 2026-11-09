@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Walking and camp keep the same picture and dock size when opening or closing the camp menu.
 
 ### Fixed
+- A monster whose face goes blank as you meet it (`warmth`, after a few kills) no longer looks like a drawing that lost its eyes: the first time, a tip says the halls heard every kill and that sparing brings faces back.
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
