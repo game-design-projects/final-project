@@ -20,5 +20,5 @@
 
 ## 提交与推送
 
-- 修改本文件或仓库里的其他文件后，需要时直接 commit 并 push 到当前分支，**不用先征求许可**。
-- push 前先 `git pull --rebase`；冲突时停下来汇报，不 force push。
+- 修改本文件或仓库里的其他文件后，直接 commit 并 push，**不用先征求许可**。
+- push 前先 `git pull --rebase`；冲突自己解决后继续 rebase 并 push，不停下来问。不 force push。
