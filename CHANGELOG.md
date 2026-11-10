@@ -25,6 +25,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
+- A tag now also publishes to itch.io: `release.yml` pushes the zips that passed CI to `aalfalasi/donjon`, channels `html5`, `windows`, `osx` and `linux`; `BUTLER_API_KEY` (an org secret on game-design-projects) is seen by that one step.
 - `intro-cg`: NEW GAME opens with a 15-second film (a chest, the halls reshuffling, Wick waving; any key skips it) from `assets/video/intro.ogv`, made by `tools/intro_video.sh`.
 - Wick teaches the practice floor: after the film her welcome and how to walk, then the tips there (item, menu, mercy, spare, the shy slime) in her voice; `tools/cg_shots.gd` takes pictures of it.
 - `tutorial-floor`: a first run starts on a short practice floor above B1F (a salve, a small shy slime to learn sparing on, the stairs down); on by default, once per profile, skipped with TIPS off, `floor=N` or `meet=`.

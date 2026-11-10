@@ -1,7 +1,8 @@
 # Pushing a tag vX.Y.Z publishes a GitHub release with every platform's zip and that version's CHANGELOG section.
 # The tag is the only trigger (ci.yml doesn't run on tags itself): it must match config/version in project.godot,
 # then ci.yml runs as a called workflow (the checks, then web, Windows, macOS and Linux builds) and the release publishes
-# the very zips that passed, so a tag builds once. Only the publish job may write, and only the release itself.
+# the very zips that passed, so a tag builds once. Only the publish job may write, and only the release itself; the itch job pushes
+# the same zips to itch.io (aalfalasi/donjon, one channel a platform) and is the only one that sees BUTLER_API_KEY.
 name: Release
 on:
   push:
@@ -67,3 +68,55 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/donjon-*.zip \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Donjon $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
+
+  # The same zips that passed, to itch.io: one channel a platform. The page is the team's existing DONJON (aalfalasi's, which the work account can edit; BUTLER_API_KEY is an org
+  # secret on game-design-projects, inherited here); the key is in the push step alone, and the job can read the repository and nothing more.
+  itch:
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: itch-production
+      cancel-in-progress: false
+    environment:
+      name: itch-production
+      url: https://aalfalasi.itch.io/donjon
+    env:
+      ITCH_GAME: aalfalasi/donjon
+      BUTLER_VERSION: 15.31.0
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: donjon-*
+          merge-multiple: true
+          path: dist
+      - name: Every platform is there
+        run: |
+          set -euo pipefail
+          for platform in web windows macos linux; do
+            compgen -G "dist/donjon-*-$platform.zip" > /dev/null || { echo "::error::No $platform zip among the build artifacts"; exit 1; }
+          done
+          ls -l dist
+      - name: Install butler
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://broth.itch.zone/butler/linux-amd64/$BUTLER_VERSION/archive/default" -o "$RUNNER_TEMP/butler.zip"
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+      - name: Push every platform
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$BUTLER_API_KEY" || { echo '::error::Missing BUTLER_API_KEY (an org secret on game-design-projects)'; exit 1; }
+          version=${GITHUB_REF_NAME#v}
+          # platform -> itch channel
+          for pair in web:html5 windows:windows macos:osx linux:linux; do
+            platform=${pair%%:*}
+            channel=${pair##*:}
+            zip=$(compgen -G "dist/donjon-*-$platform.zip" | head -n 1)
+            echo "== $zip -> $ITCH_GAME:$channel ($version)"
+            "$RUNNER_TEMP/butler/butler" push "$zip" "$ITCH_GAME:$channel" --userversion "$version"
+          done
+          "$RUNNER_TEMP/butler/butler" status "$ITCH_GAME"
