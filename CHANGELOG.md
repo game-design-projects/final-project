@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-10
+
 ### Changed
 - Floors are about 1.7 times as long and wide: the halls run 21 to 37 cells a side, the Undercroft 31 to 55 and the Wet Caves 27 to 51, with more monsters and rooms to match. The largest builds in about 70 ms and sight stays under 7 ms (`tools/map_test.gd`).
 - The opening film no longer cuts in or out: the menu goes to black, the film rises out of it with its sound, goes back into black over its last moments, and the run rises out of that. A key press leaves in a third of a second.
@@ -25,7 +27,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
-- A tag now also publishes to itch.io: `release.yml` pushes the zips that passed CI to `aalfalasi/donjon`, channels `html5`, `windows`, `osx` and `linux`; `BUTLER_API_KEY` (an org secret on game-design-projects) is seen by that one step.
+- A tag now also publishes to itch.io: `release.yml` pushes the zips that passed CI to `stevenli-phoenix-work/donjon`, channels `html5`, `windows`, `osx` and `linux`; `BUTLER_API_KEY` (an org secret on game-design-projects) is seen by that one step.
 - `intro-cg`: NEW GAME opens with a 15-second film (a chest, the halls reshuffling, Wick waving; any key skips it) from `assets/video/intro.ogv`, made by `tools/intro_video.sh`.
 - Wick teaches the practice floor: after the film her welcome and how to walk, then the tips there (item, menu, mercy, spare, the shy slime) in her voice; `tools/cg_shots.gd` takes pictures of it.
 - `tutorial-floor`: a first run starts on a short practice floor above B1F (a salve, a small shy slime to learn sparing on, the stairs down); on by default, once per profile, skipped with TIPS off, `floor=N` or `meet=`.

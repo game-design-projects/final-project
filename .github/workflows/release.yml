@@ -2,7 +2,7 @@
 # The tag is the only trigger (ci.yml doesn't run on tags itself): it must match config/version in project.godot,
 # then ci.yml runs as a called workflow (the checks, then web, Windows, macOS and Linux builds) and the release publishes
 # the very zips that passed, so a tag builds once. Only the publish job may write, and only the release itself; the itch job pushes
-# the same zips to itch.io (aalfalasi/donjon, one channel a platform) and is the only one that sees BUTLER_API_KEY.
+# the same zips to itch.io (stevenli-phoenix-work/donjon, one channel a platform) and is the only one that sees BUTLER_API_KEY.
 name: Release
 on:
   push:
@@ -69,7 +69,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Donjon $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
 
-  # The same zips that passed, to itch.io: one channel a platform. The page is the team's existing DONJON (aalfalasi's, which the work account can edit; BUTLER_API_KEY is an org
+  # The same zips that passed, to itch.io: one channel a platform. The page is the work account's DONJON (BUTLER_API_KEY is an org
   # secret on game-design-projects, inherited here); the key is in the push step alone, and the job can read the repository and nothing more.
   itch:
     needs: ci
@@ -80,9 +80,9 @@ jobs:
       cancel-in-progress: false
     environment:
       name: itch-production
-      url: https://aalfalasi.itch.io/donjon
+      url: https://stevenli-phoenix-work.itch.io/donjon
     env:
-      ITCH_GAME: aalfalasi/donjon
+      ITCH_GAME: stevenli-phoenix-work/donjon
       BUTLER_VERSION: 15.31.0
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
