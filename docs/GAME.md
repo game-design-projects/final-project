@@ -12,9 +12,9 @@ Each floor belongs to a biome with its own generator, colours and monsters, and 
 
 | Biome | How it is built | Size by floor | Lives here most |
 | --- | --- | --- | --- |
-| The halls | A maze with a hall in the middle | 13 to 21 | Bandits, rocks |
-| The Undercroft | Authored rooms that nearly fit; half its floors are long or tall, not square | 19 to 31 | Rocks, bandits |
-| The Wet Caves | Cave rock, no straight walls | 17 to 29 | Slimes, snakes |
+| The halls | A maze with a hall in the middle | 21 to 37 | Bandits, rocks |
+| The Undercroft | Authored rooms that nearly fit; half its floors are long or tall, not square | 31 to 55 | Rocks, bandits |
+| The Wet Caves | Cave rock, no straight walls | 27 to 51 | Slimes, snakes |
 
 The camera glides from cell to cell, and the automap in the corner learns what the camera sees. A champion stands on the stairs of every floor, hidden from the map until seen, so there is no way down without facing it. Beaten or won over, it leaves you stronger: 4 more max HP and 6 health back.
 

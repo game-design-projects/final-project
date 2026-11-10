@@ -17,7 +17,7 @@ const Vision = preload("res://src/rules/vision.gd")
 
 const DEPTH_MAX := 99
 const CHAT_MAX := 60
-const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' largest is 31)
+const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' largest is 55)
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
