@@ -391,7 +391,6 @@ func _the_battle_screen_shows_the_face() -> void:
 	var s = State.new()
 	s.views["hand-drawn"] = true
 	s.views["warmth"] = true
-	s.views["mood-cues"] = true
 	s.stage = "menu"
 	var m = _monster("bandit")
 	m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}

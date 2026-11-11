@@ -167,7 +167,7 @@ func _allowed(key: String) -> bool:
 	if key == "map":
 		return state.stage in ["explore", "end", "trade", "request", "camp"]
 	if key == "chat":
-		return state.viewing("chat") and not state.chat.is_empty() and state.stage in CARD_STAGES
+		return not state.chat.is_empty() and state.stage in CARD_STAGES
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
@@ -176,9 +176,9 @@ func _allowed(key: String) -> bool:
 	return false
 
 
-## The mind's answers the card may show: none with no-show-mind, unless the debug panel asks for them.
+## The mind's answers the card shows.
 func _rows() -> Array:
-	return state.mind_rows if debug or not Flags.switched_off("show-mind") else []
+	return state.mind_rows
 
 
 func _blocks_for(key: String) -> Array:
@@ -198,7 +198,7 @@ func _blocks_for(key: String) -> Array:
 # ---------------------------------------------------------------- the content
 
 ## The foe: who it is, what it seems like, how it feels, and the last `shown` answers of the mind (0 for all of them).
-## `gradual` says only what the player has found out (the feature reveal), with ??? for the rest.
+## `gradual` says only what the player has found out (CHECK reads one thing at a time), with ??? for the rest.
 static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gradual := false) -> Array:
 	var out := [{"kind": "head", "left": m.name, "right": str(Content.species(m.species).label).to_upper()}]
 	if gradual:

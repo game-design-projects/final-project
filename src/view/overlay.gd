@@ -180,7 +180,7 @@ func charm_rows() -> Array:
 
 ## The mercy odds as the mind last answered (0..1), for the gauge; below 0 when there is no gauge to draw.
 func mercy_gauge() -> float:
-	if not state.viewing("mercy-link") or state.foe == null or state.foe.is_gone():
+	if state.foe == null or state.foe.is_gone():
 		return -1.0
 	for row in state.mind_rows:
 		if row.id == "mercy":
@@ -213,7 +213,7 @@ func send_words(text: String) -> void:
 
 ## The line in the speech box now: the last thing the foe said, while the fight waits on it. {} when there is none.
 func speech() -> Dictionary:
-	if state == null or not state.viewing("chat") or state.foe == null or not state.stage in SPEECH_STAGES:
+	if state == null or state.foe == null or not state.stage in SPEECH_STAGES:
 		return {}
 	for i in range(state.lines.size() - 1, -1, -1):
 		var l: Dictionary = state.lines[i]
@@ -241,10 +241,8 @@ func emote(tone: String) -> void:
 func bubble() -> Dictionary:
 	if state.foe == null or state.foe.is_gone():
 		return {}
-	if state.viewing("chat") and (state.listening or clock_ms - _words_at < HEARD_MS):
+	if state.listening or clock_ms - _words_at < HEARD_MS:
 		return {"text": ".".repeat(1 + int(clock_ms / 300.0) % 3)}
-	if not state.viewing("mood-cues"):
-		return {}
 	if not _emote.is_empty() and clock_ms - _emote.born < EMOTE_MS:
 		return {"tone": _emote.tone}
 	if can_spare() and state.stage in BUBBLE_STAGES:
@@ -415,7 +413,7 @@ func _battle() -> void:
 
 ## Where the foe's health bar goes: over its head when it fills the picture, up in the corner while it is small over the dodge box.
 func foe_bar() -> Rect2:
-	if state.viewing("clear-hp") and state.dodge == null:
+	if state.dodge == null:
 		return HEAD_BAR
 	return Rect2(12, 26, 120, 6)
 
@@ -438,25 +436,21 @@ static func ghost_after(ghost: float, frac: float, dt: float) -> float:
 
 func _name_and_health(m) -> void:
 	var spare := can_spare()
-	var clear: bool = state.viewing("clear-hp")
 	var bar := foe_bar()
-	if clear and bar == HEAD_BAR:
+	if bar == HEAD_BAR:
 		_text(_title, m.name, Vector2(0, bar.position.y - 4.0), 8, Palette.MERCY if spare else Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	elif clear:
-		_text(_title, m.name, Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
 	else:
-		_text(_title, m.name + ("  (MERCY 50%+)" if spare else ""), Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
+		_text(_title, m.name, Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
-	if clear and _ghost > frac:
+	if _ghost > frac:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _ghost, bar.size.y)), Palette.INK)
-	var struck: bool = clear and clock_ms < hurt_until
+	var struck: bool = clock_ms < hurt_until
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if struck else (Palette.WARN if frac < 0.4 else HEALTH_OK))
-	if clear:
-		_text(_title, "%d/%d" % [maxi(0, m.hp), m.max_hp], bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0), 6, Palette.INK)
-		if not m.is_gone():
-			var mood := mood_word(m)
-			_text(_title, mood[0], Vector2(12, 21) if bar == HEAD_BAR else Vector2(12, 50), 7, mood[1])
+	_text(_title, "%d/%d" % [maxi(0, m.hp), m.max_hp], bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0), 6, Palette.INK)
+	if not m.is_gone():
+		var mood := mood_word(m)
+		_text(_title, mood[0], Vector2(12, 21) if bar == HEAD_BAR else Vector2(12, 50), 7, mood[1])
 	var mercy := mercy_gauge()
 	if mercy >= 0.0:
 		var gauge := Rect2(bar.position + Vector2(0.0, bar.size.y + 4.0), Vector2(bar.size.x, 3.0))

@@ -18,7 +18,7 @@ const CASHES_IN := ["bandit", "snake"]
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.menu = []
-	s.hint = "ASK ABOUT THE FLOOR OR WIN IT OVER · ENTER SAY IT · ESC NEVER MIND · GOLD OFFERS COST 6" if flow.feature("chat") else "TYPE ANYTHING · ENTER SAY IT · ESC NEVER MIND · GOLD OFFERS COST 6 IF ACCEPTED"
+	s.hint = "ASK ABOUT THE FLOOR OR WIN IT OVER · ENTER SAY IT · ESC NEVER MIND · GOLD OFFERS COST 6"
 
 
 func handle(flow, key: String) -> void:

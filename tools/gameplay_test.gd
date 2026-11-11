@@ -467,7 +467,7 @@ func _hover_and_tips(game) -> void:
 	tips.hover(Vector2(224, 150))
 	_check(tips.shown() == "foe", "the mouse over the foe shows its mind card")
 	var m = s.foe
-	m.checks = m.clues().size() # as if read: the feature reveal hides what isn't yet
+	m.checks = m.clues().size() # as if read: CHECK hides what isn't yet
 	m.known_traits = m.traits.duplicate()
 	var text := _text_of(tips.blocks())
 	_check(text.contains("FRIENDLY") and text.contains("ANGER") and text.contains("FEAR"), "the card has the three meters")

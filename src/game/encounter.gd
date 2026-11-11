@@ -67,14 +67,13 @@ func greeting(m):
 		if remembered != "":
 			flow.event("shout", {"text": remembered, "species": m.species, "boss": m.boss})
 			memory = State.speech(m.name, remembered)
-	if not flow.feature("clans"):
+	if flow.on_slice():
 		return memory if memory != null else foe_line(m, "converse")
 	var news: Dictionary = Clans.hear(m, flow.state)
 	if news.is_empty():
 		return memory if memory != null else foe_line(m, "converse")
 	flow.event("word_spread", {"clan": news.clan, "tone": news.tone})
-	if flow.feature("mood-cues"):
-		flow.event("mood", {"tone": news.tone})
+	flow.event("mood", {"tone": news.tone})
 	if not flow.banner_up():
 		flow.announce("WORD HAS SPREAD", Clans.news(news))
 	return memory if memory != null else foe_line(m, news.kind, news.who)
@@ -100,21 +99,20 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 		feelings = await flow.mind.feeling_when_told(m, act)
 	var id := Odds.pick_by_odds(flow.dice, feelings)
 	var feeling := Feelings.apply(m, id)
-	if not act is String and flow.feature("recruit-step"):
+	if not act is String and not flow.on_slice():
 		Feelings.warm_up(m, feeling)
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
 	var mercy: float = after.mercy
 	var pressure: float = after.pressure
-	if not act is String and flow.feature("reveal"):
+	if not act is String and not flow.on_slice():
 		var learned := Reveal.learn(m, m.last_intent, str(feeling.get("tone", "")))
 		if not learned.is_empty():
 			print("encounter: found out about %s: %s" % [m.name, " ".join(learned)])
 			if not flow.banner_up():
 				flow.announce("YOU FOUND OUT", " ".join(learned))
-	if flow.feature("mood-cues"):
-		flow.event("mood", {"tone": str(feeling.get("tone", "odd"))})
-		if known_mercy >= 0.0 and known_mercy < Odds.LIKELY and mercy >= Odds.LIKELY:
-			flow.event("wants_join")
+	flow.event("mood", {"tone": str(feeling.get("tone", "odd"))})
+	if known_mercy >= 0.0 and known_mercy < Odds.LIKELY and mercy >= Odds.LIKELY:
+		flow.event("wants_join")
 	var note := _mercy_moved(mercy)
 	print_verbose("encounter: %s (%s) %s -> %s, mercy %d%%, pressure %.2f" % [m.name, ", ".join(m.traits), m.last_intent, id, roundi(mercy * 100.0), pressure])
 	var rows := []
@@ -128,11 +126,11 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	return {"id": id, "feeling": feeling, "pressure": pressure, "pacified": Feelings.pacifies(id), "note": note, "told": not act is String}
 
 
-## Says that the mercy odds moved, and returns the words for it for the log ("" when they stayed, or the feature is off).
+## Says that the mercy odds moved, and returns the words for it for the log ("" when they stayed, or on the personality slice).
 func _mercy_moved(mercy: float) -> String:
 	var before := known_mercy
 	known_mercy = mercy
-	if before < 0.0 or not flow.feature("mercy-link") or roundi(before * 100.0) == roundi(mercy * 100.0):
+	if before < 0.0 or flow.on_slice() or roundi(before * 100.0) == roundi(mercy * 100.0):
 		return ""
 	flow.event("mercy_changed", {"from": before, "to": mercy})
 	return Texts.mercy_moved(before, mercy)
@@ -174,9 +172,9 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 	await flow.go("wait", {"pressure": decision.pressure, "prompt": foe_spoke and flow.feature("ambush-prompt")})
 
 
-## What the monster says about what was just done to it, in its own words (reveal): null when it has no strong opinion.
+## What the monster says about what was just done to it, in its own words: null when it has no strong opinion.
 func _reaction(decision: Dictionary):
-	if not decision.get("told", false) or not flow.feature("reveal"):
+	if not decision.get("told", false) or flow.on_slice():
 		return null
 	var kind: String = REACTION_LINES.get(str(decision.feeling.get("tone", "")), "")
 	return null if kind == "" else foe_line(flow.state.foe, kind)
@@ -216,12 +214,12 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	m.gone = how
 	s.tally[how] += 1
 	flow.event(how, {"boss": m.boss})
-	if flow.feature("clans"):
+	if not flow.on_slice():
 		Clans.record(s, m, how)
 	if m.boss and not flow.on_slice():
 		_reward_for_champion(m)
 	_open_purse(m)
-	if how == "spared" and allow_join and flow.feature("recruit-step"):
+	if how == "spared" and allow_join and not flow.on_slice():
 		await flow.go("ask")
 		return
 	var joined := false
@@ -236,7 +234,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 			s.allies.append(Ally.make(m.species, m.name, Allies.start_loyalty(flow.dice)))
 			s.tally.recruited += 1
 			flow.event("recruited", {"species": m.species})
-			if flow.feature("clans"):
+			if not flow.on_slice():
 				Clans.record(s, m, "recruited")
 		line = foe_line(m, "join_party" if joined else "leave_peacefully")
 	elif how == "spared":
@@ -281,7 +279,7 @@ func take_along(m, wants: float) -> void:
 	s.allies.append(Ally.make(m.species, m.name, Allies.eager_loyalty(flow.dice, wants)))
 	s.tally.recruited += 1
 	flow.event("recruited", {"species": m.species})
-	if flow.feature("clans"):
+	if not flow.on_slice():
 		Clans.record(s, m, "recruited")
 	var charm: Dictionary = Content.table("encounter").charms[m.species]
 	var healed := _heal(Allies.gift(m.species).heal)

@@ -440,10 +440,11 @@ func _recruiting() -> void:
 	m = await _at_menu(flow, "bandit")
 	await flow.press("2")
 	_check(flow.state.menu.any(func(i): return i.label == "TREAT IT AS AN EQUAL") or m.species != "bandit", "a bandit can be befriended without paying")
-	flow = _flow(30, ["no-recruit-step"])
+	flow = _flow(30)
 	m = await _at_menu(flow, "bandit")
+	flow.slice_floor = true
 	await flow.press("2")
-	_check(not flow.state.menu.any(func(i): return i.label == "TREAT IT AS AN EQUAL"), "no-recruit-step: the ACTs are the old three")
+	_check(not flow.state.menu.any(func(i): return i.label == "TREAT IT AS AN EQUAL"), "the personality slice: the ACTs are the old three")
 
 	# the mercy link
 	flow = _flow(25)
@@ -480,12 +481,13 @@ func _recruiting() -> void:
 	_check(s.stage == "end" and s.run_over and s.lines[0].who == "THE LONELY WAY OUT", "LEAVE ALONE ends the run, not cleared (%s)" % s.lines[0].who)
 	_check(s.menu[0].label == "NEW RUN", "and offers a new run")
 
-	# switched off, the old way
-	flow = _flow(28, ["no-recruit-step"])
+	# the personality slice, the old way
+	flow = _flow(28)
 	m = await _at_menu(flow)
+	flow.slice_floor = true
 	_won_over(m)
 	await flow.press("3")
-	_check(flow.state.stage == "explore" and m.gone == "spared", "no-recruit-step: a spare goes back to rolling by itself")
+	_check(flow.state.stage == "explore" and m.gone == "spared", "the personality slice: a spare goes back to rolling by itself")
 	flow = _flow(29, ["no-last-door"])
 	await flow.new_run()
 	flow.state.depth = Floors.run_floors()
@@ -639,18 +641,6 @@ func _mood_cues() -> void:
 	flow.state.mind_rows = [{"id": "mercy", "answer": 0.2}]
 	_check(view.bubble().is_empty(), "with mercy unlikely there is no bubble")
 	view.free()
-	flow = _flow(38, ["no-mood-cues"])
-	m = await _at_menu(flow)
-	var quiet := []
-	flow.happened.connect(func(n, _d): if n in ["mood", "wants_join"]: quiet.append(n))
-	await flow.encounter.decide(m, [{"intent": "kindness", "w": 1.0}], "TEST")
-	_check(quiet.is_empty(), "no-mood-cues: no cues")
-	_use()
-	_check(not Flags.switched_off("show-mind"), "the mind's rows show by default")
-	_use(["no-show-mind"])
-	_check(Flags.switched_off("show-mind"), "no-show-mind hides them")
-	_use(["classic"])
-	_check(not Flags.switched_off("show-mind"), "classic leaves them as they were")
 	_use()
 
 
@@ -738,12 +728,13 @@ func _reveal() -> void:
 	_check(s.lines.any(func(l): return l.kind == "say" and Content.species(m.species).lines.pleased.any(func(p): return l.text.contains(p.left(8)))), "a liked deed gets a pleased line (%s)" % str(s.lines))
 	await flow.encounter.after_player([State.sys_line("x")], {"pacified": false, "pressure": 1.0, "told": true, "feeling": {"tone": "fear"}})
 	_check(s.lines.any(func(l): return l.kind == "say" and Content.species(m.species).lines.scared.any(func(p): return l.text.contains(p.left(8)))), "and a frightening one a scared line")
-	flow = _flow(43, ["no-reveal"])
+	flow = _flow(43)
 	m = await _at_menu(flow)
+	flow.slice_floor = true
 	s = flow.state
 	await flow.press("2")
 	await flow.press("1")
-	_check(s.lines[0].text.contains("likes"), "no-reveal: CHECK tells all at once")
+	_check(s.lines[0].text.contains("likes"), "the personality slice: CHECK tells all at once")
 	_use()
 
 
@@ -1093,10 +1084,11 @@ func _clans() -> void:
 				var text: String = Clans.news({"clan": id, "deed": deed, "who": "WWWWWWWW", "tone": tone})
 				_check(Overlay.banner_fits(text), "the news fits the banner: %s" % text)
 	_check(Clans.mood(-1000.0).friendliness >= -Clans.MOOD_MAX and Clans.mood(1000.0).friendliness <= Clans.MOOD_MAX, "a clan's opinion only moves a mood so far")
-	var word_off = _flow(31, ["no-clans"])
+	var word_off = _flow(31)
 	var off_goo = await _at_menu(word_off)
+	word_off.slice_floor = true
 	await word_off.encounter.defeat(off_goo, "slain")
-	_check(word_off.state.reputation.is_empty() and word_off.state.deeds.is_empty(), "no-clans: nothing is recorded")
+	_check(word_off.state.reputation.is_empty() and word_off.state.deeds.is_empty(), "the personality slice: nothing is recorded")
 	_use()
 
 
@@ -1276,6 +1268,7 @@ func _dodges() -> void:
 	var slice = _flow(13, ["personality-slice"])
 	await slice.new_run()
 	_check(not slice.state.rotate_mini_games, "the personality slice leaves them out")
+	_check(flow.state.viewing("reveal") and not slice.state.viewing("reveal"), "CHECK reads one thing at a time everywhere but the personality slice")
 	_use()
 
 
@@ -2033,9 +2026,9 @@ func _roaming() -> void:
 	m.cell = cell_at.call(int(t.revenge_sense))
 	var wronged: Vector2i = m.cell
 	Roaming.turn(s, {"revenge": false})
-	_check(m.cell == wronged, "without clans, a wronged clan's monster takes no notice")
+	_check(m.cell == wronged, "with no revenge asked for (the personality slice), a wronged clan's monster takes no notice")
 	Roaming.turn(s, {"revenge": true})
-	_check(m.cell != wronged and m.hunting, "with them it comes for you from far off")
+	_check(m.cell != wronged and m.hunting, "with it, it comes for you from far off")
 	# a whole floor, by the keys
 	var walk = _flow(861)
 	await walk.new_run()

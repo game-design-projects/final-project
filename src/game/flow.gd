@@ -31,7 +31,8 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["dungeon-reveal", "mercy-link", "mood-cues", "clear-hp", "reveal", "chat", "items", "npcs", "roaming", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
+const VIEW_FEATURES := ["dungeon-reveal", "items", "npcs", "roaming", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
+const SLICE_HIDES := ["reveal"] # views that are on everywhere but the personality slice
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -241,6 +242,8 @@ func _apply_features() -> void:
 	_place_camera()
 	for name in VIEW_FEATURES:
 		state.views[name] = feature(name)
+	for name in SLICE_HIDES:
+		state.views[name] = not on_slice()
 	if feature("skill-combat") and state.skills.is_empty(): # a new run, or a save from before: the starting skills
 		state.skills = Skills.start()
 

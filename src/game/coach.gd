@@ -66,7 +66,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 func _on_stage(to: String) -> void:
 	match to:
 		"explore":
-			if flow.feature("clans") and not flow.state.deeds.is_empty():
+			if not flow.state.deeds.is_empty(): # only the clans write deeds, and not on the slice
 				say("clans")
 		"menu":
 			if not say("menu") and not (flow.feature("heavy-strike") and flow.state.skill_fight == null and say("heavy")) and seen.has("act") and (seen.has("strike") or seen.has("skills")):

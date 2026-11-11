@@ -32,7 +32,7 @@ static func apply(m, id: String) -> Dictionary:
 
 
 ## Patience pays: a monster you kept talking to warms up a little however the words landed, unless they landed badly. So every
-## monster can be won over in the end, and the odds never stall (recruit-step).
+## monster can be won over in the end, and the odds never stall.
 static func warm_up(m, feeling: Dictionary) -> void:
 	if feeling.get("tone", "") != "bad":
 		_shift(m, WARM_UP)

@@ -41,7 +41,7 @@ func enter(flow, args: Dictionary) -> void:
 	var rule: String
 	if m.boss:
 		rule = Texts.BOSS_RULE
-		if flow.feature("recruit-step"):
+		if not flow.on_slice():
 			rule += " " + Texts.BOSS_WINNABLE
 	else:
 		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre])

@@ -292,13 +292,12 @@ func _status() -> void:
 	bar.size.x = size.x - bar.position.x
 	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)
 	draw_rect(bar, Palette.FAINT)
-	var clear: bool = state.viewing("clear-hp")
-	if clear and _hp_ghost > frac:
+	if _hp_ghost > frac:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _hp_ghost, bar.size.y)), Palette.INK)
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if clear and _hp_flash > 0.0 else hp_color(frac))
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if _hp_flash > 0.0 else hp_color(frac))
 	draw_rect(bar.grow(-0.5), Palette.DIM, false, 1.0)
 	var moving := trend()
-	if clear and moving != 0:
+	if moving != 0:
 		_trend_arrow(Vector2(bar.position.x + bar.size.x * frac, bar.get_center().y), moving)
 
 
@@ -379,9 +378,9 @@ static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 	return lines.size()
 
 
-## What the log shows: what the foe says has a box of its own on the picture (the feature chat) while the fight waits on it.
+## What the log shows: what the foe says has a box of its own on the picture while the fight waits on it.
 func _log_lines() -> Array:
-	if not state.viewing("chat") or state.foe == null or not state.stage in Overlay.SPEECH_STAGES:
+	if state.foe == null or not state.stage in Overlay.SPEECH_STAGES:
 		return state.lines
 	return state.lines.filter(func(l): return not (l.kind == "say" and l.who == state.foe.name))
 

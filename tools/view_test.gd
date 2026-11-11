@@ -836,10 +836,8 @@ func _no_name_without_a_body() -> void:
 func _strike_bar_stands_clear(s, m) -> void:
 	var overlay = Overlay.new()
 	overlay.state = s
-	var chat_was: bool = s.viewing("chat")
 	var stage_was: String = s.stage
 	var foe_was = s.foe
-	s.views["chat"] = true
 	s.foe = m
 	s.stage = "fightbar"
 	s.bar = {"t0": 0.0, "dur": 1000.0, "heavy": true}
@@ -848,7 +846,6 @@ func _strike_bar_stands_clear(s, m) -> void:
 	_check(not overlay.speech().is_empty() and not overlay.strike_bar_rect().intersects(Overlay.SPEECH), "the bar stands above the foe's words")
 	_check(not overlay.strike_bar_rect().intersects(overlay.banner_rect()), "and a banner stands above the bar")
 	overlay.free()
-	s.views["chat"] = chat_was
 	s.stage = stage_was
 	s.foe = foe_was
 	s.bar = null
