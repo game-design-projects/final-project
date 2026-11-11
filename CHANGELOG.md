@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-11
+
 ### Added
 - Writing on the walls (#77, #56): one piece on every floor, on the closed end of a quiet corridor, read by stepping up to it; the floor and how warm the halls are when you read it (warm, wary or cold) pick one of fifteen in `data/lore.json`, so it takes about three runs to read them all. It is marked on the map, kept in a save, counted across runs in the Store (`lore_read`), and earns two achievements.
 - Clan hostility (#77): kills climb a clan through ANGRY, FURIOUS and ENRAGED (standing -18, -36, -72 in `data/clans.json`), a banner says each move up or down, and sparing its side or a favour cools it.
@@ -394,7 +396,9 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.7.0...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.8.1...main
+[0.8.1]: https://github.com/game-design-projects/final-project/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/game-design-projects/final-project/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/game-design-projects/final-project/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/game-design-projects/final-project/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/game-design-projects/final-project/compare/v0.5.2...v0.6.0
