@@ -94,6 +94,7 @@ func _run() -> void:
 	await _music_pacing()
 	await _music_fades()
 	await _motifs()
+	await _hum_theme()
 	_finish()
 
 
@@ -465,8 +466,9 @@ func _voice_keys() -> void:
 
 # ---------------------------------------------------------------- the music
 
-func _music() -> Node:
+func _music(hum := false) -> Node:
 	var m = Music.new()
+	m.hum = hum
 	var seq := [0.0]
 	m.random = func():
 		seq[0] = fposmod(seq[0] + 0.381966, 1.0)
@@ -581,6 +583,35 @@ func _motifs() -> void:
 	_check(one == [2], "motif=N keeps that one")
 	_check(Music.pick_motifs([1, 2, 3], "") == [1, 2, 3], "without it, all of them")
 	_check(Music.pick_motifs([1, 2, 3], "9") == [1, 2, 3], "and a number that isn't one is ignored")
+
+
+## The hum theme (#49): its exploring loop and, in every fight, its combat loop, both looping whole; the stings as ever.
+func _hum_theme() -> void:
+	var m = _music(true)
+	await process_frame
+	m.set_mode("explore")
+	var e: AudioStreamPlayer = m.loop_player("explore")
+	_check(e != null and e.playing and e.stream.resource_path == Music.HUM_EXPLORE, "exploring plays the hum theme's loop")
+	_check(e.stream.loop and absf(e.stream.get_length() - 174.55) < 0.05, "which loops whole, 174.55 s (%.2f)" % e.stream.get_length())
+	var picks := {}
+	for i in 5:
+		m.set_mode("battle")
+		picks[m.battle_name()] = true
+		m.set_mode("explore")
+	_check(picks.keys() == Music.HUM_BATTLES, "every fight plays the combat loop (%s)" % [picks.keys()])
+	m.set_mode("battle")
+	var b: AudioStreamPlayer = m.loop_player("battle")
+	_check(b != null and b.stream.loop and absf(b.stream.get_length() - 65.45) < 0.05, "which loops whole, 65.45 s (%.2f)" % b.stream.get_length())
+	m.sting("victory")
+	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a won fight still plays the victory sting over it")
+	m.free()
+	m = _music()
+	await process_frame
+	m.set_mode("explore")
+	_check(m.loop_player("explore").stream.resource_path == Music.EXPLORE, "without it, the passacaglia as before")
+	m.free()
+	var credits := FileAccess.get_file_as_string("res://assets/CREDITS.txt")
+	_check(credits.contains("hum-explore.ogg") and credits.contains("GeneralUser GS"), "the credits name the hum theme and its soundfont")
 
 
 func _files_under(path: String) -> Array:

@@ -2,6 +2,8 @@
 ## battle themes in a fight (a random one, never the last), and short stings: the victory when a fight is won, the
 ## fanfare at the stairs. A sting takes the loops out of its way, and the exploring music comes back after it has rung
 ## out and a few seconds more. The tracks are in assets/audio/.
+## With the feature `hum-theme` (`hum`), Abdulla's hum theme takes the loops' place: its exploring loop, and its combat loop in
+## every fight. The stings stay the same either way.
 ## A loop's fade belongs to the player it fades, and a new fade cancels the old one on the same player, so an old fade
 ## can never stop what a newer one has started. A battle theme gets a player of its own for each fight.
 extends Node
@@ -11,6 +13,11 @@ const Mix = preload("res://src/audio/mix.gd")
 const EXPLORE := "res://assets/audio/ambient.ogg"
 const BATTLES := ["battle-toccata", "battle-charge", "battle-crusade", "battle-gallop"]
 const STINGS := ["victory", "fanfare"]
+## The hum theme (tools/music/hum-theme/): one exploring loop of 174.55 s (88 BPM) and one combat loop of 65.45 s (176 BPM).
+const HUM_EXPLORE := "res://assets/audio/hum-explore.ogg"
+const HUM_BATTLES := ["hum-combat"]
+## It is mastered 1 dB hotter than the old music (-18 and -16 dBFS RMS), so it plays 1 dB under the same VOLUME.
+const HUM_TRIM_DB := -1.0
 ## The tracks are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings). These levels put a fight
 ## about as loud against the effects as the old music, and the exploring music about 2.6 dB under it.
 const VOLUME := {"explore": 0.7, "battle": 0.75, "sting": 0.75}
@@ -34,6 +41,8 @@ const TRIAL := {"play": [25.0, 35.0], "rest": [4.0, 8.0], "volume": 0.58}
 
 ## False with the `nomusic` flag: no player is made and nothing plays.
 var enabled := true
+## True with the feature `hum-theme`: the hum theme's loops instead of the old ones. Set before the node enters the tree.
+var hum := false
 ## The motifs on trial, as streams in their order: none (as a shipped game has) leaves the music as it always was.
 var motifs: Array = []
 ## () -> float in [0, 1), for the pacing and the choice of theme (tests drive it).
@@ -63,11 +72,12 @@ var _motif_turn := true # whose turn the next stretch is
 func _ready() -> void:
 	if not enabled:
 		return
+	print("music: %s" % ("the hum theme" if hum else "the passacaglia and four battle themes"))
 	_explore = _player(Mix.MUSIC_IN)
-	_explore.stream = _stream(EXPLORE)
+	_explore.stream = _stream(explore_path())
 	_explore.volume_db = SILENT_DB
 	_sting = _player(Mix.SFX)
-	for n in BATTLES:
+	for n in battles():
 		ResourceLoader.load_threaded_request(_battle_path(n))
 	for n in STINGS:
 		ResourceLoader.load_threaded_request(_sting_path(n))
@@ -185,9 +195,22 @@ func sting_length() -> float:
 
 # ---- a fight's theme
 
-## A theme that is not the last one's.
+## The exploring loop: the hum theme's or the passacaglia.
+func explore_path() -> String:
+	return HUM_EXPLORE if hum else EXPLORE
+
+
+## The fights' themes: the hum theme's one, or the four old ones.
+func battles() -> Array:
+	return HUM_BATTLES if hum else BATTLES
+
+
+## A theme that is not the last one's, unless there is only the one.
 func pick_battle() -> String:
-	var fresh := BATTLES.filter(func(n): return n != _last_battle)
+	var all := battles()
+	var fresh := all.filter(func(n): return n != _last_battle)
+	if fresh.is_empty():
+		fresh = all
 	return fresh[mini(floori(float(random.call()) * fresh.size()), fresh.size() - 1)]
 
 
@@ -200,7 +223,7 @@ func _start_battle() -> void:
 	_battle.stream = stream
 	_battle.volume_db = SILENT_DB
 	_battle.play()
-	_fade(_battle, linear_to_db(VOLUME.battle), FADES.battle["in"])
+	_fade(_battle, _level("battle"), FADES.battle["in"])
 	print_verbose("music: battle theme %s" % _battle_name)
 
 
@@ -225,7 +248,7 @@ func _explore_in(fade: float) -> void:
 	_explore.stream_paused = false # it keeps its place while resting and comes back from there
 	if not _explore.playing:
 		_explore.play()
-	_fade(_explore, linear_to_db(VOLUME.explore), fade)
+	_fade(_explore, _level("explore"), fade)
 	_schedule(_between(TRIAL.play if not motifs.is_empty() else PACE.play), _rest_after_playing)
 	print_verbose("music: exploring music in, resting in %.0f s" % pending_in())
 
@@ -344,6 +367,11 @@ func _player(bus: String) -> AudioStreamPlayer:
 	return p
 
 
+## A loop's playing level in dB ("explore" or "battle").
+func _level(track: String) -> float:
+	return linear_to_db(VOLUME[track]) + (HUM_TRIM_DB if hum else 0.0)
+
+
 func _battle_path(name: String) -> String:
 	return "res://assets/audio/%s.ogg" % name
 
@@ -360,7 +388,7 @@ func _stream(path: String) -> AudioStream:
 			stream = ResourceLoader.load_threaded_get(path)
 		else:
 			stream = load(path)
-		if stream is AudioStreamOggVorbis and (path == EXPLORE or path.contains("/battle-")):
+		if stream is AudioStreamOggVorbis and (path == explore_path() or battles().any(func(n): return path == _battle_path(n))):
 			stream.loop = true # the loops are cut to whole bars, so they wrap inside the music
 		_streams[path] = stream
 	return _streams[path]
