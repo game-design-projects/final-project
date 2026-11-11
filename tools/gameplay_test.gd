@@ -116,8 +116,6 @@ func _dialogue_buffer(game) -> void:
 
 
 func _camp_grid(game) -> void:
-	if not game.flow.feature("butcher"): # the nine camp choices below are the butcher's
-		return
 	await game.flow.new_run()
 	var s = game.flow.state
 	var Ally = load("res://src/game/ally.gd")

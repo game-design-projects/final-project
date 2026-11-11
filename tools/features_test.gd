@@ -1529,10 +1529,11 @@ func _items() -> void:
 	_check(FloorGen.generate(Rng.new(5), den).pickups.any(func(p): return p.item == Items.gift_for("rock")), "a kind's own territory has the gift it loves")
 	for id in Items.table().items:
 		_check(Overlay.banner_fits(str(Items.info(id).sub)), "%s's line fits the banner" % id)
-	var none = _flow(58, ["no-items"])
+	var none = _flow(58, ["personality-slice"])
 	await none.new_run()
-	_check(none.state.floor_map.pickups.is_empty() and none.state.floor_map.merchant.is_empty(), "no-items: nothing lies about")
-	var slice_like = await _item_fight(59, ["no-items"])
+	_check(none.state.floor_map.pickups.is_empty() and none.state.floor_map.merchant.is_empty(), "the personality slice: nothing lies about")
+	var slice_like = await _item_fight(59)
+	slice_like.slice_floor = true
 	slice_like.state.items = ["salve"]
 	await slice_like.go("menu")
 	_check(slice_like.state.menu.all(func(i): return i.label != "ITEM"), "and no ITEM, whatever a save carried")
@@ -1645,7 +1646,7 @@ func _heavy_strike() -> void:
 	_check(off.state.menu.size() == 5 and off.state.menu[4].label == "ITEM" and off.state.menu[4].disabled, "no-heavy-strike: the four commands and disabled ITEM remain")
 	var classic = _flow(65, ["classic"])
 	await _at_menu(classic, "rock")
-	_check(classic.state.menu.size() == 4, "classic: four too")
+	_check(classic.state.menu.size() == 5 and not classic.state.menu.any(func(c): return c.label == "HEAVY"), "classic: the four commands and ITEM, no HEAVY")
 	var slice = _flow(68, ["personality-slice"])
 	await slice.new_run()
 	await slice.tick(slice.clock + 5000.0)
@@ -1719,12 +1720,6 @@ func _shop() -> void:
 	await back.load_state(saved)
 	_check(back.state.floor_map.merchant.stock.size() == shelf, "what is sold stays sold in a save")
 	_check(f.in_the_way(f.merchant.cell), "routes go round the trader")
-	var closed = _flow(61, ["no-shop"])
-	await closed.new_run()
-	closed.state.foe = null
-	await closed.next_floor()
-	_check(closed.state.floor_map.merchant.is_empty(), "no-shop: no trader")
-	_check(not closed.state.floor_map.pickups.is_empty(), "though things still lie about")
 	_use()
 
 
@@ -1863,17 +1858,17 @@ func _npcs() -> void:
 	var saves: Dictionary = JSON.parse_string(JSON.stringify(rid.state.to_dict()))
 	saves.floor.quester.target = 999
 	_check(not State.is_playable(saves), "a request about nobody doesn't load")
-	var off = _flow(100, ["no-npcs"])
+	var off = _flow(100, ["personality-slice"])
 	await off.new_run()
-	_check(off.state.floor_map.quester.is_empty(), "no-npcs: nobody asks")
-	var no_items = _flow(100, ["no-items"])
+	_check(off.state.floor_map.quester.is_empty(), "the personality slice: nobody asks")
+	var bare: Dictionary = Floors.plan(2, {})
+	bare.request = true
 	var kinds := {}
 	for i in 40:
-		no_items = _flow(100 + i, ["no-items"])
-		await no_items.new_run()
-		if not no_items.state.floor_map.quester.is_empty():
-			kinds[no_items.state.floor_map.quester.kind] = true
-	_check(not kinds.has("fetch") and not kinds.is_empty(), "no-items: nobody asks you to fetch (%s)" % [kinds.keys()])
+		var made = FloorGen.generate(Rng.new(100 + i), bare)
+		if not made.quester.is_empty():
+			kinds[made.quester.kind] = true
+	_check(not kinds.has("fetch") and not kinds.is_empty(), "with nothing lying about, nobody asks you to fetch (%s)" % [kinds.keys()])
 	_use()
 
 

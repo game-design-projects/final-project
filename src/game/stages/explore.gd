@@ -47,7 +47,7 @@ func handle(flow, key: String) -> void:
 
 
 func _can_camp(flow) -> bool:
-	return flow.feature("hunger") or flow.feature("butcher")
+	return not flow.on_slice()
 
 
 func _step(flow, backwards: bool) -> void:
@@ -77,11 +77,9 @@ func _step(flow, backwards: bool) -> void:
 	s.visited[next] = true
 	s.look()
 	flow.event("step")
-	var fed := true
-	if flow.feature("hunger"):
-		fed = Survival.heals(s)
+	if not flow.on_slice(): # the slice has no hunger, and no cure by walking
+		var fed := Survival.heals(s)
 		_get_hungrier(flow)
-	if flow.feature("walk-heal"):
 		s.steps += 1
 		if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 			s.hp += 1

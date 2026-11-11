@@ -18,11 +18,10 @@ func _fill(flow) -> void:
 	var stock: Array = s.floor_map.merchant.stock
 	s.menu = stock.map(func(id): return {"label": "%s %dG" % [Items.label(id), Items.info(id).price], "sub": str(Items.info(id).sub), "gold": s.gold >= int(Items.info(id).price)})
 	_selling = []
-	if flow.feature("butcher"):
-		for id in s.items:
-			if Survival.sell_price(id) > 0 and not _selling.has(id):
-				_selling.append(id)
-				s.menu.append({"label": "SELL %s %dG" % [Items.label(id), Survival.sell_price(id)], "sub": "It won't ask where you got it."})
+	for id in s.items:
+		if Survival.sell_price(id) > 0 and not _selling.has(id):
+			_selling.append(id)
+			s.menu.append({"label": "SELL %s %dG" % [Items.label(id), Survival.sell_price(id)], "sub": "It won't ask where you got it."})
 	s.menu.append({"label": "LEAVE", "sub": "Back to the walk"})
 	s.selected = mini(s.selected, s.menu.size() - 1)
 	s.hint = "ENTER BUY · ESC LEAVE · I INFO"

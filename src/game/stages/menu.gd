@@ -43,7 +43,7 @@ func enter(flow, _args: Dictionary) -> void:
 	if flow.feature("heavy-strike") and not skilled:
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
-	if flow.feature("items"):
+	if not flow.on_slice():
 		s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
 	if flow.feature("initiated-dialogue") and int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)

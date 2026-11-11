@@ -16,8 +16,8 @@ static func table() -> Dictionary:
 	return Content.table("floors").practice
 
 
-## The floor, with its item only when `items` is on. `rng` only names the slime and rolls its mood, as any monster's.
-static func make(rng: Rng, items: bool):
+## The floor, with its item. `rng` only names the slime and rolls its mood, as any monster's.
+static func make(rng: Rng):
 	var t := table()
 	var f := FloorMap.new()
 	f.seed_value = rng.seed_value
@@ -35,8 +35,7 @@ static func make(rng: Rng, items: bool):
 				">":
 					f.stairs = c
 				"I":
-					if items:
-						f.pickups.append({"cell": c, "item": str(t.item)})
+					f.pickups.append({"cell": c, "item": str(t.item)})
 				"M":
 					var m = Monster.make(rng, t.foe, c)
 					for meter in t.meters: # shy, not hostile: the first fight is the one to learn sparing on

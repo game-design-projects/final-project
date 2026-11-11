@@ -284,7 +284,7 @@ func _status() -> void:
 	for piece in [["HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU], ["   GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY]]:
 		_text(_title, piece[0], Vector2(x, y), 9, piece[1])
 		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-	var hunger: String = Survival.stage_of(state.hunger).to_upper() if state.viewing("hunger") else ""
+	var hunger: String = Survival.stage_of(state.hunger).to_upper()
 	if hunger != "":
 		_text(_title, "   " + hunger, Vector2(x, y), 9, Palette.WARN if hunger == "STARVING" else Palette.MERCY)
 		x += _title.get_string_size("   " + hunger, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x

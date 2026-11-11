@@ -49,7 +49,7 @@ func enter(flow, _args: Dictionary) -> void:
 func _offer_ways(flow, lines: Array) -> void:
 	var s = flow.state
 	s.say(lines)
-	_ways = Floors.paths(s.run_seed, s.depth, flow.feature("items") and flow.feature("shop")) if flow.feature("branching") else []
+	_ways = Floors.paths(s.run_seed, s.depth) if flow.feature("branching") else []
 	s.menu = []
 	for way in _ways:
 		s.menu.append({"label": way.label, "sub": way.sub})
@@ -104,7 +104,7 @@ func _finish(flow, ending: Dictionary, how := "cleared") -> void:
 	flow.event("run_ended", {"how": how})
 	var embers: int = flow.close_run(how == "cleared")
 	var tail: String = ending.tail
-	if flow.feature("butcher") and Survival.ending_note(s) != "":
+	if Survival.ending_note(s) != "":
 		tail = Survival.ending_note(s)
 	elif flow.feature("toll") and not s.left_behind.is_empty():
 		tail = Floors.toll().ending % s.left_behind[-1]

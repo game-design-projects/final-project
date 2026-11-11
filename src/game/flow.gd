@@ -31,8 +31,8 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["dungeon-reveal", "items", "npcs", "roaming", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
-const SLICE_HIDES := ["reveal"] # views that are on everywhere but the personality slice
+const VIEW_FEATURES := ["dungeon-reveal", "roaming", "sprite-look", "hand-drawn", "warmth", "wick"]
+const SLICE_HIDES := ["reveal", "items", "npcs"] # views that are on everywhere but the personality slice
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -209,7 +209,7 @@ func next_floor(way := {}) -> void:
 	state.foe = null
 	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal() + int(way.get("rest", 0)))
 	state.gold += int(way.get("gold", 0))
-	if feature("hunger"):
+	if not on_slice():
 		Survival.rest(state)
 	_make_floor(way)
 	encounter.pending_notes = []
@@ -276,18 +276,18 @@ func _arrival() -> Array:
 ## generator as it always was, so old seeds make the same floor.
 func _make_floor(way := {}) -> void:
 	if state.practice:
-		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)), feature("items"))
+		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)))
 	elif not on_slice():
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
 		plan.boss_at_exit = true
 		plan.biome = Floors.biome(state.run_seed, state.depth)
 		plan.secrets = Floors.secrets(plan.get("biome", {}))
-		plan.items = feature("items")
-		plan.food = feature("items") and feature("hunger")
-		plan.shop = feature("items") and feature("shop") and (Items.shop_on(state.depth) or way.get("shop", false))
+		plan.items = true
+		plan.food = true
+		plan.shop = Items.shop_on(state.depth) or way.get("shop", false)
 		plan.lurkers = true
-		plan.request = feature("npcs") and Requests.due(state.depth)
+		plan.request = Requests.due(state.depth)
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:
 		state.floor_map = FloorGen.generate(rng)
