@@ -5,9 +5,11 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
 - `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `classic` keeps the old music (refs #49).
 
 ### Fixed
+- Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
 - No sound at all in a run on an output slower than 40 kHz, such as Bluetooth headphones in call mode (24 kHz): the music's low-pass opened to 20 kHz, past what that output can carry, turned unstable and silenced the whole mix. It now opens to at most 0.46 of the output's rate, which leaves 44.1 and 48 kHz as they were. The opening film, which plays before those buses exist, was never affected.
 - The game no longer opens the microphone at startup (`audio/driver/enable_input`, left over from the old hold-to-talk). Opening it switched Bluetooth headphones such as AirPods into call mode (24 kHz), and the game could start with no sound in them.
 

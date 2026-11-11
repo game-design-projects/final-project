@@ -25,6 +25,7 @@ var known_traits: Array = []
 var heard := {}
 ## Per intent (kindness, joke, gold, ...) how much this one monster likes it, on top of its species' leaning.
 var taste := {}
+var mood := {} # temporary state; empty in old saves
 var last_intent := ""
 var spoke := false # it only hears one line per fight
 var threshold := 0.0 # how friendly it must be before it will join
@@ -157,7 +158,7 @@ func to_dict() -> Dictionary:
 	return {
 		"species": species, "genre": genre, "boss": boss, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
 		"meters": meters.duplicate(), "traits": traits.duplicate(), "taste": taste.duplicate(), "lastIntent": last_intent,
-		"spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
+		"mood": mood.duplicate(true), "spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
 		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
 		"lurking": lurking, "purse": purse,
 		"hold": hold, "patrol": patrol.map(func(c): return [c.x, c.y]), "leg": leg, "hunting": hunting, "lastSeen": [last_seen.x, last_seen.y],
@@ -180,6 +181,7 @@ static func from_dict(d: Dictionary):
 	m.traits = d.get("traits", []).duplicate()
 	m.taste = d.get("taste", {}).duplicate()
 	m.last_intent = str(d.get("lastIntent", ""))
+	m.mood = d.get("mood", {}).duplicate(true)
 	m.spoke = bool(d.get("spoke", false))
 	m.threshold = float(d.get("threshold", 0.0))
 	m.turn = maxi(0, int(d.get("turn", 0)))
