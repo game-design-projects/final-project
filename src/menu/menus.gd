@@ -36,10 +36,8 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 		{"label": "LOAD GAME", "disabled": not any_save, "act": _go(panel, func(): return slot_list(panel, ctx, "load"))},
 		{"label": "SAVE MANAGER", "sub": "Copy, rename, delete", "act": _go(panel, func(): return slot_list(panel, ctx, "manage"))},
 	]
-	if Flags.enabled("legacy"):
-		items.append({"label": "LEGACY", "sub": "Embers to spend: %d" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
-	if Flags.enabled("achievements"):
-		items.append({"label": "ACHIEVEMENTS", "sub": "%d of %d" % [Progress.earned().size(), Achievements.ids().size()], "act": _go(panel, func(): return achievements())})
+	items.append({"label": "LEGACY", "sub": "Embers to spend: %d" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
+	items.append({"label": "ACHIEVEMENTS", "sub": "%d of %d" % [Progress.earned().size(), Achievements.ids().size()], "act": _go(panel, func(): return achievements())})
 	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{"label": "CREDITS", "act": _go(panel, func(): return credits())},

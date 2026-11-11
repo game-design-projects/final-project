@@ -20,7 +20,7 @@ func _init(owner) -> void:
 
 
 func _on_event(name: String, data: Dictionary) -> void:
-	if name == "trophy" or not flow.feature("achievements"):
+	if name == "trophy" or flow.on_slice():
 		return
 	for id in Achievements.earned_by(name, data, flow.state):
 		if not earned.has(id):
