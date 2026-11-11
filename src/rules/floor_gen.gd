@@ -25,6 +25,7 @@ const CARVE_TRIES := 100 # a layout that won't do is carved again, from the same
 const EXTRA_MONSTER_CELLS := 3 # a floor this much wider than the classic one has one more monster
 const MIN_MONSTER_DISTANCE := 3 # steps from the start before the first monster may stand
 const MONSTER_SPACING := 2 # no two monsters within this many cells of each other (Manhattan)
+const LORE_SEED := 300 # the writing is placed from a generator of its own, so the rest of a floor is what that seed always made
 
 
 ## `plan` (rules/floors.gd) says how deep the floor is, who guards it, its biome and its secrets; without one it is the classic first
@@ -69,8 +70,22 @@ static func generate(rng: Rng, plan := {}):
 	_add_lurkers(rng, f, stirs.keys(), plan)
 	if not f.quester.is_empty():
 		_finish_request(rng, f, walk, hall, plan, stirs)
-	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", ", someone asking" if not f.quester.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
+	if plan.get("lore", false):
+		_write_on_a_wall(f, walk, hall)
+	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s%s%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", ", someone asking" if not f.quester.is_empty() else "", ", writing at %s" % f.lore.cell if not f.lore.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
 	return f
+
+
+## The writing (rules/lore.gd), on a wall nobody stands in front of. Which piece it is is decided when it is read.
+static func _write_on_a_wall(f, walk: Dictionary, hall: Vector2i) -> void:
+	var keep_off := {}
+	for m in f.monsters:
+		keep_off[m.cell] = true
+	var spot: Variant = Secrets.lore_spot(Rng.new(Rng.offset(f.seed_value, LORE_SEED)), f, walk, hall, keep_off)
+	if spot == null:
+		print("floor: no wall for the writing")
+		return
+	f.lore = {"cell": spot.cell, "side": int(spot.side), "read": false}
 
 
 ## Whoever stirs in these cells: a monster like the floor's others, with a purse. The champion stays the last of the list.

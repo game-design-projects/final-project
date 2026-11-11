@@ -1,7 +1,7 @@
 ## Which walls carry what: torches, chains, banners, cracks, barred windows, skull niches. Which wall gets which is decided
 ## by a hash of its place and the floor's seed, so a wall is always decorated the same way. wall_art.gd draws them; a cracked
 ## wall always shows a fissure, in the accent colour: it can be breakable only if it can be told apart from the cracks that are
-## only cracks.
+## only cracks. The wall with the writing on it (rules/lore.gd) carries that and nothing else.
 extends RefCounted
 
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
@@ -23,6 +23,9 @@ static func placements(floor_map) -> Array:
 					continue
 				if floor_map.is_cracked(c + FloorMap.DIRS[side]):
 					out.append({"cell": c, "side": side, "kind": "fissure", "roll": 0.0})
+					continue
+				if floor_map.lore_at(c) and floor_map.lore.side == side:
+					out.append({"cell": c, "side": side, "kind": "lore", "roll": 0.5})
 					continue
 				var roll := _hash(x, y, side, floor_map.seed_value)
 				if roll[0] <= SHARE:

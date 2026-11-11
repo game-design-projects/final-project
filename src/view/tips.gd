@@ -14,6 +14,7 @@ const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Lore = preload("res://src/rules/lore.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Sprites = preload("res://src/view/sprites.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -307,6 +308,8 @@ static func map_blocks(roaming := false, s = null) -> Array:
 	out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
 	out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
 	out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
+	var writing: Dictionary = Lore.table().legend
+	out.append({"kind": "swatch", "color": Palette.MERCY, "left": str(writing.left), "right": str(writing.right)})
 	if s != null:
 		out.append({"kind": "text", "text": harder_text(s)})
 	return out

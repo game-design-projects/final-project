@@ -82,6 +82,11 @@ static func _floor_problem(f) -> String:
 		return "the floor's steps are not a number"
 	if f.has("hpScale") and not is_num(f.hpScale):
 		return "the floor's toughness is not a number"
+	if f.has("lore") and not f.lore is Dictionary:
+		return "the floor's writing is not a record"
+	if f.has("lore") and not f.lore.is_empty():
+		if not is_cell(f.lore.get("cell")) or not is_open(f, cell(f.lore.cell)) or not is_num(f.lore.get("side")) or to_int(f.lore.side) < 0 or to_int(f.lore.side) > 3 or not f.lore.get("read", false) is bool:
+			return "the floor's writing is not on a side of an open cell"
 	if f.has("quester") and not f.quester is Dictionary:
 		return "the floor's request is not a record"
 	if f.has("quester") and not f.quester.is_empty():

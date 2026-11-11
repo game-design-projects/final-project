@@ -1,7 +1,8 @@
 ## The automap: a small panel in the picture's top right corner, drawn outside the post-processing so it stays crisp. Floor
 ## you have seen is dark, floor you stood on lighter, walls are lines on the edges of seen floor (in the view walls are faces
 ## with no thickness, and a block would look like unexplored dark). The stairs are a ring; monsters you have seen are dots;
-## the champion is marked in red from the start, so you can choose to hunt it. A big floor shows through a window that follows you.
+## the champion is marked in red from the start, so you can choose to hunt it. The wall with writing on it is a gold edge, grey once read.
+## A big floor shows through a window that follows you.
 ## It only reads the game's state.
 extends Control
 
@@ -11,6 +12,7 @@ const PANEL := 115.0 # the whole panel, border and margin included
 const MARGIN := 5.0 # border and margin round the map
 const MAP_PX := 105
 const LAST_SEEN_DARK := 0.45 # a monster out of sight is darker, because it may not be there now
+const LORE_EDGE := 2.0 # how deep the writing's edge is
 const MIN_CELL_PX := 7 # a smaller cell has no room for a dot in it; a floor that would need one scrolls instead
 const SEEN := Color("#262626")
 const VISITED := Color("#5a5a5a")
@@ -134,13 +136,26 @@ func secret_marks() -> Array:
 		out.append({"rect": Rect2(Vector2(f.merchant.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.INK})
 	if not f.quester.is_empty() and state.seen.has(f.quester.cell) and _in_window(f.quester.cell):
 		out.append({"rect": Rect2(Vector2(f.quester.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.YOU})
+	if not f.lore.is_empty() and state.seen.has(f.lore.cell) and _in_window(f.lore.cell):
+		out.append({"rect": _edge(f.lore.cell, f.lore.side, LORE_EDGE), "color": Palette.DIM if f.lore.read else Palette.MERCY})
 	return out
+
+
+## A strip `thick` pixels deep along one side of a cell, inside it (map pixels).
+func _edge(c: Vector2i, side: int, thick: float) -> Rect2:
+	var s := float(cell_px())
+	var at := Vector2(c) * s
+	match side:
+		0: return Rect2(at, Vector2(s, thick))
+		1: return Rect2(at + Vector2(s - thick, 0), Vector2(thick, s))
+		2: return Rect2(at + Vector2(0, s - thick), Vector2(s, thick))
+		_: return Rect2(at, Vector2(thick, s))
 
 
 func _process(_dt: float) -> void:
 	if state == null or state.floor_map == null:
 		return
-	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size(), state.floor_map.steps]
+	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size(), state.floor_map.steps, state.floor_map.lore.get("read", false)]
 	if key != _drawn_key:
 		_drawn_key = key
 		queue_redraw()

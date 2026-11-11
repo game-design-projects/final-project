@@ -24,6 +24,7 @@ const Pace = preload("res://src/rules/pace.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Hud = preload("res://src/view/hud.gd")
 const Items = preload("res://src/rules/items.gd")
+const Lore = preload("res://src/rules/lore.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -64,6 +65,7 @@ func _run() -> void:
 	await _hostility()
 	await _map_gen()
 	await _secrets()
+	await _lore()
 	await _items()
 	await _shop()
 	await _lurkers()
@@ -1498,6 +1500,136 @@ func _secrets() -> void:
 	_check(fissures.size() == 2, "a cracked wall always shows a fissure, on both its faces (%d)" % fissures.size())
 	var legend: Array = Tips.map_blocks().map(func(b): return str(b.get("left", "")))
 	_check(legend.has("PAD") and legend.has("CHEST"), "the legend names pads and chests")
+	_use()
+
+
+func _lore() -> void:
+	var t0 := Time.get_ticks_msec()
+	# the words: fifteen pieces, five floors by three tones, each fitting the banner
+	var title_font: Font = load("res://src/view/fonts.gd").title()
+	var ids := {}
+	for depth in Lore.depths():
+		for tone in Lore.TONES:
+			var each := Lore.piece(depth, tone)
+			ids[each.id] = true
+			_check_quietly(Lore.known(each.id) and Overlay.banner_fits(each.text) and title_font.get_string_size(each.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x <= Overlay.BANNER_W, "the writing %s fits the banner: %s / %s" % [each.id, each.title, each.text])
+	_check(Lore.total() == 15 and ids.size() == 15 and Lore.depths().size() == Floors.run_floors(), "there are fifteen pieces of writing, three for each of the %d floors" % Floors.run_floors())
+	_check(Lore.piece(Floors.run_floors() + 3, "warm").id == Lore.piece(Floors.run_floors(), "warm").id, "a floor deeper than the last shows the deepest piece")
+	var warmth: Array = load("res://src/rules/warmth.gd").table().levels
+	var tones := []
+	for level in warmth.size():
+		tones.append(Lore.tone_of_level(level))
+	_check(tones == ["cold", "cold", "wary", "warm", "warm"], "cold and shut halls read the cold writing, wary the wary, kind and beloved the warm (%s)" % [tones])
+	_check(not Lore.known("6-warm") and not Lore.known("1-hot") and not Lore.known("1warm"), "and only those are pieces")
+	# where it goes: every floor of a run has it, mostly at the end of a corridor, and placing it changes nothing else on the floor
+	var floors := 0
+	var placed := 0
+	var ends := 0
+	var same := true
+	for seed_value in range(1, 21):
+		for depth in [1, 3, 5]:
+			var plan := Floors.plan(depth)
+			plan.biome = Floors.biome(seed_value, depth)
+			plan.secrets = Floors.secrets(plan.biome)
+			plan.items = true
+			plan.lurkers = true
+			plan.request = Requests.due(depth)
+			var bare: Dictionary = plan.duplicate()
+			plan.lore = true
+			var lored = FloorGen.generate(Rng.new(seed_value * 31 + depth), plan)
+			var plain = FloorGen.generate(Rng.new(seed_value * 31 + depth), bare)
+			floors += 1
+			same = same and lored.grid == plain.grid and lored.stairs == plain.stairs and lored.pickups == plain.pickups and lored.treasure == plain.treasure and lored.monsters.map(func(m): return m.cell) == plain.monsters.map(func(m): return m.cell) and plain.lore.is_empty()
+			if lored.lore.is_empty():
+				continue
+			placed += 1
+			var c: Vector2i = lored.lore.cell
+			var behind: Vector2i = c + FloorMap.DIRS[lored.lore.side]
+			_check_quietly(lored.is_open(c) and not lored.is_open(behind) and not lored.is_cracked(behind), "seed %d B%dF: the writing is on a plain wall of an open cell" % [seed_value, depth])
+			_check_quietly(lored.monster_at(c) == null and lored.pickup_at(c) == "" and lored.pad_partner(c) == null and not lored.merchant_at(c) and not lored.quester_at(c) and c != lored.stairs and c != lored.start, "seed %d B%dF: and nothing else stands there" % [seed_value, depth])
+			var open := FloorMap.DIRS.filter(func(d): return lored.is_open(c + d))
+			if open.size() == 1:
+				ends += 1
+				_check_quietly(lored.lore.side == (FloorMap.DIRS.find(open[0]) + 2) % 4 or lored.is_cracked(c - open[0]), "seed %d B%dF: at a corridor's end, it is the wall you face walking in" % [seed_value, depth])
+	_check(placed == floors, "every floor has writing on a wall (%d of %d)" % [placed, floors])
+	_check(ends * 4 >= placed * 3, "at the end of a corridor on most of them (%d of %d)" % [ends, placed])
+	_check(same, "and placing it changes nothing else a seed makes")
+	# reading it
+	var flow = _flow(47)
+	var heard := []
+	flow.happened.connect(func(name, data): heard.append([name, data]))
+	await flow.new_run()
+	var st = flow.state
+	var f = st.floor_map
+	_check(not f.lore.is_empty() and not f.lore.read and f.reserved().has(f.lore.cell), "a run's first floor has writing, unread, where no monster may wander")
+	var decor: Array = load("res://src/view/decor.gd").placements(f).filter(func(p): return p.cell == f.lore.cell and p.side == f.lore.side)
+	_check(decor.size() == 1 and decor[0].kind == "lore", "its wall carries the writing and nothing else")
+	var map = load("res://src/view/automap.gd").new()
+	map.state = st
+	var start_cell: Vector2i = st.cell
+	st.cell = f.lore.cell # a big floor's map is a window that follows you
+	st.seen = {f.lore.cell: true}
+	var marks: Array = map.secret_marks()
+	st.cell = start_cell
+	_check(marks.size() == 1 and marks[0].color == load("res://src/view/palette.gd").MERCY, "the map marks it in gold once seen")
+	st.seen = {}
+	_check(map.secret_marks().is_empty(), "and not before")
+	st.banner = null
+	flow.clock = 100000.0
+	flow.coach.seen = {}
+	flow.lore_read = {}
+	_face(st, f.lore.cell)
+	st.floor_map.monsters = st.floor_map.monsters.filter(func(m): return m.boss) # nobody walks up while it is read
+	await flow.press("left")
+	st.banner = null
+	await flow.press("right")
+	_check(st.banner != null and st.banner.text == Content.table("coach").tips.lore, "the first time you look down at it, a tip says what it is")
+	st.banner = null
+	heard.clear()
+	var now_tone := Lore.tone(st)
+	await flow.press("up")
+	var piece := Lore.piece(1, now_tone)
+	_check(now_tone == "warm" and st.cell == f.lore.cell and f.lore.read, "stepping up to it reads it; a run starts in warm halls")
+	_check(st.banner != null and st.banner.title == piece.title and st.banner.text == piece.text, "its words go up on the picture: %s" % piece.title)
+	_check(st.lines.any(func(l): return l.text == piece.text) and st.lines.any(func(l): return l.text == Lore.found_line(1)), "the log keeps them, and counts what has been read over all runs")
+	_check(heard.any(func(h): return h[0] == "found" and h[1].what == "lore" and h[1].id == "1-warm" and h[1].read == 1 and h[1].total == 15), "the scene hears what was read, to keep it")
+	_check(heard.any(func(h): return h[0] == "sound" and h[1].name == "holy"), "lored a chime")
+	_check(flow.lore_read.has("1-warm"), "and the game counts it")
+	st.seen = {f.lore.cell: true}
+	marks = map.secret_marks()
+	_check(marks.size() == 1 and marks[0].color == load("res://src/view/palette.gd").DIM, "on the map it goes grey")
+	map.free()
+	var achievements = load("res://src/rules/achievements.gd")
+	_check(achievements.earned_by("found", {"what": "lore", "id": "1-warm", "read": 1, "total": 15}, st) == ["lore"], "reading writing earns an achievement")
+	_check(achievements.earned_by("found", {"what": "lore", "id": "5-cold", "read": 15, "total": 15}, st) == ["lore", "lore_all"], "and reading all of it, another")
+	for id in ["lore", "lore_all"]:
+		var info: Dictionary = achievements.info(id)
+		_check_quietly(Overlay.banner_fits("%s: %s" % [info.label, info.text]), "the achievement %s fits the banner" % id)
+	heard.clear()
+	_face(st, f.lore.cell)
+	await flow.press("up")
+	_check(not heard.any(func(h): return h[0] == "found"), "read once, it says nothing the next time you step up to it")
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(st.to_dict()))
+	var back = _flow(47)
+	await back.load_state(saved)
+	_check(back.state.floor_map.lore == f.lore, "a save keeps where it is and that it was read")
+	var check = load("res://src/game/save_check.gd")
+	for wrong in [{"cell": [0, 0], "side": 1, "read": false}, {"cell": saved.floor.lore.cell, "side": 7, "read": false}, {"cell": saved.floor.lore.cell, "side": 1, "read": "yes"}, "here"]:
+		var broken: Dictionary = saved.duplicate(true)
+		broken.floor.lore = wrong
+		_check_quietly(check.problem(broken) != "", "a save lored its writing as %s is turned away" % [wrong])
+	# a cruel run, deeper down, reads another piece on the same wall
+	f.lore.read = false
+	st.tally.slain = 10
+	st.depth = 4
+	_face(st, f.lore.cell)
+	await flow.press("up")
+	_check(st.banner != null and st.banner.text == Lore.piece(4, "cold").text and flow.lore_read.size() == 2, "cold halls read the cold piece: %s" % st.banner.title if st.banner != null else "")
+	_check(st.lines.any(func(l): return l.text == Lore.found_line(2)), "and the count goes on")
+	var legend: Array = Tips.map_blocks().map(func(b): return str(b.get("left", "")))
+	_check(legend.has(str(Lore.table().legend.left)), "the map's legend names the writing")
+	_check(Practice.make(Rng.new(5)).lore.is_empty(), "the practice landing has none")
+	print("features: writing checked in %d ms" % (Time.get_ticks_msec() - t0))
 	_use()
 
 

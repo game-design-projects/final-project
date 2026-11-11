@@ -1,0 +1,32 @@
+{
+ "tones": {"cold": [0, 1], "wary": [2], "warm": [3, 4]},
+ "found": "Writing %d of %d found, over all your runs.",
+ "legend": {"left": "WRITING", "right": "on a wall: step up to read it"},
+ "pieces": {
+  "1": {
+   "warm": {"title": "IN WICK'S HAND", "text": "Lit every torch again. They watch who comes down, and remember the kind ones."},
+   "wary": {"title": "SCRATCHED BY THE STAIR", "text": "The halls moved while I slept. Same stones, new turns. Nobody else was surprised."},
+   "cold": {"title": "CARVED DEEP", "text": "The Hoard threw me down for a cup of gold. Six dead since. Which of us is the thief?"}
+  },
+  "2": {
+   "warm": {"title": "A TALLY, CROSSED OUT", "text": "Someone struck out the tally and wrote: these sat with me instead. Count those."},
+   "wary": {"title": "A TALLY", "text": "Everyone the Hoard threw down. The oldest marks are in a hand a lot like yours."},
+   "cold": {"title": "A FRESH TALLY", "text": "The newest marks are still wet, cut with an edge just like the one you carry."}
+  },
+  "3": {
+   "warm": {"title": "A BURROW SCRAWL", "text": "Drawn in slime for the young: the way the gentle one walked. It's the way you came."},
+   "wary": {"title": "A CREW LEDGER", "text": "Paid ASHKA forty to look away. Paid the Coil twenty. The halls take the rest."},
+   "cold": {"title": "OLD STONE, SPLIT", "text": "The Old Stone carved a name for each of its own you broke. It ran out of wall."}
+  },
+  "4": {
+   "warm": {"title": "UNDER THE FLOOR", "text": "The breathing below slows as you pass, like something listening for company."},
+   "wary": {"title": "A WARNING", "text": "When the Door stays shut, the halls fold up and the thief wakes on B1F again."},
+   "cold": {"title": "WHAT THE DOOR SAYS", "text": "Alone again. Fold the halls. Throw them back to the top. Let them try once more."}
+  },
+  "5": {
+   "warm": {"title": "ON THE LAST DOOR", "text": "Names under the soot, two by two. Nobody who walked out of here walked out alone."},
+   "wary": {"title": "VEXALITH'S CLAW", "text": "I made the Door to keep my gold. It opens only for two. I never had a second."},
+   "cold": {"title": "BEHIND THE DOOR", "text": "Every thief who came down alone is still here, folded into the walls."}
+  }
+ }
+}

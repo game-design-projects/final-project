@@ -20,6 +20,7 @@ var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
 var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
 var merchant := {} # {cell: Vector2i, stock: [item id]}, or empty when no trader is here
 var quester := {} # {cell, species, name, kind, target, want, taken} (rules/requests.gd), or empty when nobody here is asking
+var lore := {} # {cell: Vector2i, side: int, read: bool}: writing on the wall at `side` of that cell (rules/lore.gd), or empty
 var steps := 0 # how many steps have been taken here, which the monsters' moves are worked out from (rules/roaming.gd)
 var changes := 0 # how many walls have been broken, for whoever built something from the grid
 
@@ -66,6 +67,8 @@ func reserved() -> Dictionary:
 		out[merchant.cell] = true
 	if not quester.is_empty():
 		out[quester.cell] = true
+	if not lore.is_empty():
+		out[lore.cell] = true
 	return out
 
 
@@ -76,6 +79,11 @@ func in_the_way(c: Vector2i) -> bool:
 
 func quester_at(c: Vector2i) -> bool:
 	return not quester.is_empty() and quester.cell == c
+
+
+## Whether the writing on this floor is read from this cell.
+func lore_at(c: Vector2i) -> bool:
+	return not lore.is_empty() and lore.cell == c
 
 
 func merchant_at(c: Vector2i) -> bool:
@@ -138,6 +146,7 @@ func to_dict() -> Dictionary:
 		"quester": {} if quester.is_empty() else _quester_dict(),
 		"steps": steps,
 		"hpScale": hp_scale,
+		"lore": {} if lore.is_empty() else {"cell": [lore.cell.x, lore.cell.y], "side": lore.side, "read": lore.read},
 	}
 
 
@@ -166,6 +175,9 @@ static func from_dict(d: Dictionary, monster_script):
 		f.merchant = {"cell": _cell(trader.cell), "stock": trader.stock.map(func(id): return str(id))}
 	f.steps = maxi(0, int(d.get("steps", 0)))
 	f.hp_scale = clampf(float(d.get("hpScale", 0.0)), 0.0, 100.0) if d.get("hpScale") is float or d.get("hpScale") is int else 0.0
+	var writing: Dictionary = d.get("lore", {})
+	if not writing.is_empty():
+		f.lore = {"cell": _cell(writing.cell), "side": int(writing.side), "read": bool(writing.get("read", false))}
 	var asking: Dictionary = d.get("quester", {})
 	if not asking.is_empty():
 		f.quester = asking.duplicate()

@@ -63,7 +63,7 @@ func _flow(seed_value: int, words := []) -> Variant:
 
 
 func _clear_store() -> void:
-	for key in [Progress.EARNED_KEY, Progress.EMBERS_KEY, Progress.RANKS_KEY, Progress.PAID_KEY]:
+	for key in [Progress.EARNED_KEY, Progress.EMBERS_KEY, Progress.RANKS_KEY, Progress.PAID_KEY, Progress.LORE_KEY]:
 		Store.remove(key)
 
 
@@ -223,6 +223,17 @@ func _progress_store() -> void:
 	Store.set_value(Progress.RANKS_KEY, {"skin": 99, "nonsense": 1, "purse": "x"})
 	_check(Progress.ranks() == {"skin": Legacy.top_rank("skin")}, "damaged ranks are brought back into line (%s)" % [Progress.ranks()])
 	_clear_store()
+	_check(Progress.lore_read().is_empty(), "no writing has been read in a fresh store")
+	Progress.read_lore("2-wary")
+	Progress.read_lore("2-wary")
+	Progress.read_lore("9-warm")
+	Progress.read_lore("nonsense")
+	_check(Progress.lore_read() == ["2-wary"], "a piece of writing is kept once, and what isn't one is not (%s)" % [Progress.lore_read()])
+	Store.set_value(Progress.LORE_KEY, "everything")
+	_check(Progress.lore_read().is_empty(), "a damaged list of it counts as nothing")
+	Store.set_value(Progress.LORE_KEY, ["1-cold", 3, "1-cold-ish"])
+	_check(Progress.lore_read() == ["1-cold"], "and the damaged entries in it are dropped")
+	_clear_store()
 
 
 ## Stands the party somewhere with two cells of open floor, so it can walk there and back as long as a test wants.
@@ -234,6 +245,7 @@ func _pace(flow, steps: int) -> void:
 	s.floor_map.teleports = []
 	s.floor_map.merchant = {}
 	s.floor_map.quester = {}
+	s.floor_map.lore = {}
 	for i in 4:
 		if s.floor_map.is_open(s.cell + FloorMap.DIRS[i]) and s.cell + FloorMap.DIRS[i] != s.floor_map.stairs:
 			s.facing = i

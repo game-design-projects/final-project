@@ -1,13 +1,15 @@
-## What is kept between runs, whichever slot is played: the achievements earned, the embers, and the boons bought with them (the
-## features achievements and legacy). One key each in the Store, so a damaged value counts as nothing, and `nosave` keeps it in memory.
+## What is kept between runs, whichever slot is played: the achievements earned, the embers, the boons bought with them (the
+## features achievements and legacy), and the writing read on the walls (rules/lore.gd). One key each in the Store, so a damaged value counts as nothing, and `nosave` keeps it in memory.
 extends RefCounted
 
 const Achievements = preload("res://src/rules/achievements.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
+const Lore = preload("res://src/rules/lore.gd")
 
 const EARNED_KEY := "achievements"
 const EMBERS_KEY := "embers"
 const RANKS_KEY := "legacy_ranks"
+const LORE_KEY := "lore_read"
 const PAID_KEY := "legacy_paid" # run seed -> what that run has paid so far: a run left, loaded and left again pays only what is new
 
 
@@ -21,6 +23,20 @@ static func earn(id: String) -> void:
 	if not all.has(id):
 		all.append(id)
 		Store.set_value(EARNED_KEY, all)
+
+
+## The pieces of writing read on any run, by id.
+static func lore_read() -> Array:
+	var v = Store.get_value(LORE_KEY, [])
+	return v.filter(func(id): return Lore.known(str(id))).map(func(id): return str(id)) if v is Array else []
+
+
+static func read_lore(id: String) -> void:
+	var all := lore_read()
+	if Lore.known(id) and not all.has(id):
+		all.append(id)
+		Store.set_value(LORE_KEY, all)
+		print("progress: read the writing %s, %d of %d" % [id, all.size(), Lore.total()])
 
 
 static func embers() -> int:
