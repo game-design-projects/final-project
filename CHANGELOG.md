@@ -5,6 +5,10 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Clan hostility (#77): kills climb a clan through ANGRY, FURIOUS and ENRAGED (standing -18, -36, -72 in `data/clans.json`), a banner says each move up or down, and sparing its side or a favour cools it.
+- Nemesis elites (#77): a FURIOUS clan's kind comes as elites on every floor made after (not champions): +25% HP, faster attacks, +1 damage per hit, tagged ELITE over their heads, in the header and on their card, and kept in a save.
+- ENRAGED clans refuse mercy (#77): SPARE greys out and says why, the odds read 0% whatever the mind says, no gold cut and no monster offer, and a champion of the Hoard can't be won over.
+- What makes a floor harder is on screen (#77): the header tags FOES +N% HP, the map's legend gives each clan's mood and what its levels mean, and an elite's or enraged clan's fight opens with a banner.
 - Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals.
 - `initiated-dialogue`: contextual monster offers, species-specific social combat, action/resource tradeoffs, remembered promises, a keyboard/mouse popup and a reproducible `social-demo` playtest.
 - `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `no-hum-theme` keeps the old music (refs #49).
@@ -27,6 +31,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - Which stages are a fight, a walk or a choice of command is written once, in `src/game/transitions.gd` (`FIGHT`, `WALK`, `PICKING`), instead of in five copies across the flow, the overlay, the tooltips and the gameplay scene; `meta_test` checks every stage is exactly one of a fight or a walk, and the gameplay log names the features that are on.
 
 ### Fixed
+- A blank-faced (hollow) monster no longer shows eyes when hit or when it lunges: it keeps its blank frame and shakes, flinches or swells in code, while a killing blow still hurts with its eyes before they go out (#77).
+- `tools/run_tests.sh` fails a suite whose log has a SCRIPT ERROR, which used to pass if the suite still reached its last line (#72).
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
 - No sound at all in a run on an output slower than 40 kHz, such as Bluetooth headphones in call mode (24 kHz): the music's low-pass opened to 20 kHz, past what that output can carry, turned unstable and silenced the whole mix. It now opens to at most 0.46 of the output's rate, which leaves 44.1 and 48 kHz as they were. The opening film, which plays before those buses exist, was never affected.
 - The game no longer opens the microphone at startup (`audio/driver/enable_input`, left over from the old hold-to-talk). Opening it switched Bluetooth headphones such as AirPods into call mode (24 kHz), and the game could start with no sound in them.

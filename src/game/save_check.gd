@@ -80,6 +80,8 @@ static func _floor_problem(f) -> String:
 			return wrong
 	if f.has("steps") and not is_num(f.steps):
 		return "the floor's steps are not a number"
+	if f.has("hpScale") and not is_num(f.hpScale):
+		return "the floor's toughness is not a number"
 	if f.has("quester") and not f.quester is Dictionary:
 		return "the floor's request is not a record"
 	if f.has("quester") and not f.quester.is_empty():
@@ -116,6 +118,8 @@ static func _monster_problem(m, f: Dictionary) -> String:
 		for key in ["rounds", "due", "checked", "seed", "pressure", "soft_turns", "opening", "trial"]:
 			if social.has(key) and not is_num(social[key]):
 				return "social %s is not a number" % key
+	if m.has("elite") and not m.elite is bool:
+		return "a monster's 'elite' is not true or false"
 	if m.has("checks") and not is_num(m.checks):
 		return "a monster's 'checks' is not a number"
 	if m.has("tried") and not m.tried is Dictionary:

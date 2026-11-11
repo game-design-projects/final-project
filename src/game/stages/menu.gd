@@ -2,6 +2,7 @@
 ## that ended (encounter.after_player) gives the energy back here.
 extends "res://src/game/stages/list_stage.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Odds = preload("res://src/rules/odds.gd")
@@ -22,8 +23,9 @@ const SKILLS := "SKILLS"
 
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
-	var mercy: float = await flow.mind.mercy(s.foe)
-	if Social.promised(s.foe):
+	var mercy: float = await flow.encounter.mercy(s.foe)
+	var enraged := Clans.enraged(s, s.foe)
+	if Social.promised(s.foe) and not enraged:
 		mercy = 1.0
 		s.mind_rows = s.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "PROMISE KEPT: WILL IT ACCEPT MERCY?", "answer": mercy}]
 	var skilled: bool = s.skill_fight != null
@@ -35,7 +37,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
-		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss), "gold": mercy >= 0.5},
+		{"label": "SPARE", "sub": str(Clans.no_mercy().spare) if enraged else Texts.spare_tip(mercy, s.foe.boss), "gold": mercy >= 0.5, "disabled": enraged},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
 	if skilled:
@@ -107,7 +109,9 @@ func cancel(flow) -> void:
 func _spare(flow) -> void:
 	var s = flow.state
 	var m = s.foe
-	var odds: float = await flow.mind.mercy(m)
+	if Clans.enraged(s, m): # SPARE is greyed out, and a key that still reaches it does nothing
+		return
+	var odds: float = await flow.encounter.mercy(m)
 	if Social.promised(m):
 		odds = 1.0
 	var accepted := Odds.succeeds(flow.dice, odds)

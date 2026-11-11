@@ -2,6 +2,7 @@
 ## how hard it presses. Health at zero is the end of the fight; surviving the time brings the menu back.
 extends "res://src/game/stages/stage.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Pace = preload("res://src/rules/pace.gd")
@@ -26,8 +27,8 @@ func enter(flow, args: Dictionary) -> void:
 	var pace := Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
 	if flow.coach.active(): # the TIPS setting: someone who knows the game gets no slow start either
 		pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
-	print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size()])
-	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace)
+	print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies%s)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size(), ", elite" if m.elite else ""])
+	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace, Clans.elite() if m.elite else {})
 	s.dodge.guard = Combat.party_guard(s.allies.size())
 	_hits = 0
 	s.menu = []

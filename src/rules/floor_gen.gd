@@ -33,6 +33,7 @@ static func generate(rng: Rng, plan := {}):
 	var t0 := Time.get_ticks_usec()
 	var f := FloorMap.new()
 	f.seed_value = rng.seed_value
+	f.hp_scale = float(plan.get("hp_scale", 1.0))
 	var biome: Dictionary = plan.get("biome", {})
 	f.biome = str(biome.get("id", ""))
 	var hall := _lay_out(f, rng, biome)

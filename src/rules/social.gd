@@ -2,6 +2,7 @@
 ## The scheduler's draws use Dice with a seed derived from the encounter and resolved turn, so reading time never matters.
 extends RefCounted
 
+const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dice = preload("res://src/utils/dice.gd")
 const Odds = preload("res://src/rules/odds.gd")
@@ -46,6 +47,8 @@ static func begin(m, s, dice: Dice) -> void:
 ## Context supplies the reason; the roll only decides whether to voice it now.
 static func eligible(m, s) -> bool:
 	if m.is_gone() or m.social.get("used", false) or s.practice:
+		return false
+	if Clans.enraged(s, m): # it has nothing to offer you: its clan won't hear of a deal
 		return false
 	var goal := str(m.mood.get("goal", ""))
 	match m.species:

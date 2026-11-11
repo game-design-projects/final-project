@@ -13,6 +13,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
+const Floors = preload("res://src/rules/floors.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Sprites = preload("res://src/view/sprites.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -187,9 +188,9 @@ func _blocks_for(key: String) -> Array:
 	if key == "chat":
 		return chat_blocks(state.chat)
 	if key == "foe":
-		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, not debug)
+		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, not debug, state)
 	if key == "map":
-		return map_blocks(state.viewing("roaming"))
+		return map_blocks(state.viewing("roaming"), state)
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -199,8 +200,9 @@ func _blocks_for(key: String) -> Array:
 
 ## The foe: who it is, what it seems like, how it feels, and the last `shown` answers of the mind (0 for all of them).
 ## `gradual` says only what the player has found out (CHECK reads one thing at a time), with ??? for the rest.
-static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gradual := false) -> Array:
-	var out := [{"kind": "head", "left": m.name, "right": str(Content.species(m.species).label).to_upper()}]
+static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gradual := false, s = null) -> Array:
+	var kind := str(Content.species(m.species).label).to_upper()
+	var out := [{"kind": "head", "left": m.name, "right": ("ELITE " + kind) if m.elite else kind}]
 	if gradual:
 		out.append({"kind": "text", "text": found_text(m)})
 	elif not m.traits.is_empty():
@@ -211,11 +213,30 @@ static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gr
 		out.append({"kind": "text", "text": text})
 	if not m.heard.is_empty():
 		out.append({"kind": "text", "text": "%s heard you %s %s." % [Clans.title(m.heard.clan), "killed" if m.heard.deed == "slain" else "spared", m.heard.who]})
+	var hostile := clan_text(m, s)
+	if hostile != "":
+		out.append({"kind": "text", "text": hostile})
 	out.append({"kind": "meters", "cells": [["FRIENDLY", roundi(m.meters.friendliness)], ["ANGER", roundi(m.meters.anger)], ["FEAR", roundi(m.meters.fear)]]})
 	for row in (rows if shown <= 0 else rows.slice(-shown)):
 		out.append(question(row))
 	out.append({"kind": "note", "text": mind_note(label)})
 	return out
+
+
+## Where its clan stands, when that changes the fight: elite, and whether it will still take mercy. "" when it doesn't.
+static func clan_text(m, s) -> String:
+	var clan := Clans.of(m.species)
+	if clan == "" or s == null:
+		return ""
+	var word := Clans.mood_word(Clans.standing_of(s, m.species))
+	var out := PackedStringArray()
+	if Clans.rank(Clans.hostility_of(s, m.species)) > 0:
+		out.append("%s: %s." % [Clans.title(clan), word])
+	if m.elite:
+		out.append("An elite: tougher, and it hits harder.")
+	if Clans.enraged(s, m):
+		out.append("It won't take mercy.")
+	return " ".join(out)
 
 
 ## What has been found out about `m`, with ??? for each trait still hidden.
@@ -267,7 +288,8 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(roaming := false) -> Array:
+## With the run's state `s`, each kind also says how its clan feels about you, and the card ends on what makes this floor harder.
+static func map_blocks(roaming := false, s = null) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -275,14 +297,28 @@ static func map_blocks(roaming := false) -> Array:
 		fights[entry.species] = str(genres[entry.genre].name).to_lower()
 	fights[Content.table("encounter").boss.species] = "all four"
 	for id in Content.table("species"):
-		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": fights.get(id, "")})
+		var right: String = fights.get(id, "")
+		if s != null and Clans.of(id) != "":
+			right += (" · " if right != "" else "") + Clans.mood_word(Clans.standing_of(s, id))
+		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": right})
 	out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
 	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
 	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
 	out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
 	out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
 	out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
+	if s != null:
+		out.append({"kind": "text", "text": harder_text(s)})
 	return out
+
+
+## What makes the fights harder here, in one place: the depth, and the clans your kills have turned.
+static func harder_text(s) -> String:
+	var lines := PackedStringArray()
+	var more := Floors.toughness_pct(s)
+	lines.append("This deep, foes have +%d%% HP." % more if more > 0 else "Foes here have their base HP; deeper floors add more.")
+	lines.append("Kills anger a clan. FURIOUS: its own come as elites on the floors after. ENRAGED: they won't take mercy.")
+	return "\n".join(lines)
 
 
 ## One answer of the mind as a question with bars: {kind: "question", label, code, bars: [[name, p, pct, picked]], note}.
@@ -367,7 +403,7 @@ func _process(_dt: float) -> void:
 		if str(rows) != _last_rows:
 			_last_rows = str(rows)
 			print("tips: %s mind rows: %s" % [state.foe.name, rows.map(func(r): return "%s=%s" % [r.get("id", "?"), r.get("answer", "?")])])
-		_panel.set_blocks(foe_blocks(state.foe, state.mind_rows, 0, mind_label))
+		_panel.set_blocks(foe_blocks(state.foe, state.mind_rows, 0, mind_label, false, state))
 		_panel.visible = true
 		_panel.place(global_position + Vector2(size.x - _panel.size.x - 8.0, 36.0 * k), Card.AT)
 	else:

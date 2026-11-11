@@ -1,6 +1,10 @@
 ## Who stands with whom, and what the run has done to them. Every kind of monster belongs to a clan (data/clans.json); what you
 ## do to one changes how its clan, less so the clans on its side, and a little the dragon's hoard, think of you. A monster hears
 ## of it when it meets you: it starts in a different mood, and says so. No rolls here: the same deeds always mean the same.
+##
+## Killing climbs a clan's hostility (`hostility`): angry, then furious (two of its own dead, nothing made up for it: the floors
+## made after that send its elites), then enraged (four: none of its own will take mercy). Its standing is the one number behind
+## all of it, so sparing its side or doing one of its kind a favour brings it back down.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -51,31 +55,124 @@ static func reach(from: String, to: String) -> float:
 	return float(_table().clans[to].get("hears_all", 0.0))
 
 
-## Write a deed into the run: "spared", "slain" or "recruited" against monster `m`.
-static func record(state, m, deed: String) -> void:
+## Write a deed into the run: "spared", "slain" or "recruited" against monster `m`. Returns how it moved the clans' hostility,
+## [{clan, from, to}] (hostility ids, "" for none), the monster's own clan first.
+static func record(state, m, deed: String) -> Array:
 	var from := of(m.species)
 	if from == "":
 		push_error("clans: %s has no clan" % m.species)
-		return
-	_spread(state, from, float(_table().deeds[deed]) * (float(_table().champion_weight) if m.boss else 1.0))
+		return []
+	var moved := _spread(state, from, float(_table().deeds[deed]) * (float(_table().champion_weight) if m.boss else 1.0))
 	state.deeds.append({"clan": from, "species": m.species, "who": m.name, "deed": deed})
 	if state.deeds.size() > DEEDS_MAX:
 		state.deeds = state.deeds.slice(-DEEDS_MAX)
 	print("clans: %s %s (%s), standing now %s" % [deed, m.name, from, state.reputation])
+	moved.sort_custom(func(a, b): return a.clan == from and b.clan != from)
+	return moved
 
 
-## A kindness to this kind of monster that isn't a deed in a fight: it moves opinions, and nobody tells the tale.
-static func favour(state, species: String, worth: float) -> void:
+## A kindness to this kind of monster that isn't a deed in a fight: it moves opinions, and nobody tells the tale. Returns how it
+## moved the clans' hostility, as `record` does.
+static func favour(state, species: String, worth: float) -> Array:
 	var from := of(species)
-	if from != "":
-		_spread(state, from, worth)
+	if from == "":
+		return []
+	return _spread(state, from, worth)
 
 
-static func _spread(state, from: String, worth: float) -> void:
+static func _spread(state, from: String, worth: float) -> Array:
+	var moved := []
 	for clan in _table().clans:
 		var part: float = worth * reach(from, clan)
 		if part != 0.0:
+			var was := hostility(float(state.reputation.get(clan, 0.0)))
 			state.reputation[clan] = clampf(float(state.reputation.get(clan, 0.0)) + part, -STANDING_MAX, STANDING_MAX)
+			var now := hostility(float(state.reputation[clan]))
+			if now != was:
+				moved.append({"clan": clan, "from": was, "to": now})
+				print("clans: %s %s -> %s (standing %.0f)" % [clan, was if was != "" else "calm", now if now != "" else "calm", state.reputation[clan]])
+	return moved
+
+
+# ---------------------------------------------------------------- hostility
+
+## How hostile a clan with this standing is: "" (not at all), "angry", "furious" or "enraged".
+static func hostility(standing: float) -> String:
+	var out := ""
+	for level in _table().hostility:
+		if standing <= float(level.at):
+			out = str(level.id)
+	return out
+
+
+## How far up the levels a hostility is: 0 for none, then 1, 2, 3.
+static func rank(id: String) -> int:
+	if id == "":
+		return 0
+	var levels: Array = _table().hostility
+	for i in levels.size():
+		if levels[i].id == id:
+			return i + 1
+	return 0
+
+
+static func _level(id: String) -> Dictionary:
+	for level in _table().hostility:
+		if level.id == id:
+			return level
+	return {}
+
+
+## How the clan of this kind of monster stands with you now.
+static func standing_of(state, species: String) -> float:
+	return float(state.reputation.get(of(species), 0.0))
+
+
+## How hostile the clan of this kind of monster is now.
+static func hostility_of(state, species: String) -> String:
+	return hostility(standing_of(state, species))
+
+
+## Whether its clan has gone so far that `m` won't take mercy, nor join: enraged. Nothing in a fight changes this; only the next
+## deed or favour does.
+static func enraged(state, m) -> bool:
+	return rank(hostility_of(state, m.species)) >= rank(str(_table().no_mercy.from))
+
+
+## Whether a floor made now sends this kind's elites: its clan is furious or worse.
+static func sends_elites(state, species: String) -> bool:
+	return of(species) != "" and rank(hostility_of(state, species)) >= rank(str(_table().elite.from))
+
+
+## What being elite does: {hp_scale, intensity, damage, pace, tag, rule, arrival}.
+static func elite() -> Dictionary:
+	return _table().elite
+
+
+## The words of the no-mercy rule: {spare, rule, cut}.
+static func no_mercy() -> Dictionary:
+	return _table().no_mercy
+
+
+## A clan's mood in a word, for the map's legend and the cards: FRIENDLY, CALM, or its hostility's title.
+static func mood_word(standing: float) -> String:
+	var level := _level(hostility(standing))
+	if not level.is_empty():
+		return str(level.title)
+	return "FRIENDLY" if standing >= float(_table().friendly_at) else "CALM"
+
+
+## What a move of hostility says: {title, text} for the picture's banner, and `line` for the log when the picture is taken. The level
+## it reached and what that means, or that it cooled.
+static func moved_words(change: Dictionary) -> Dictionary:
+	var name := title(change.clan)
+	if rank(change.to) > rank(change.from):
+		var level := _level(change.to)
+		return {"title": "%s IS %s" % [name.to_upper(), level.title], "text": str(level.effect), "line": str(level.line) % name}
+	var calmer: Dictionary = _table().calmer
+	var now: String = str(_level(change.to).get("title", "calm")).to_lower()
+	var was: String = str(_level(change.from).get("title", "calm")).to_lower()
+	return {"title": str(calmer.title) % name.to_upper(), "text": str(calmer.effect) % [now, was], "line": str(calmer.line) % [name, now]}
 
 
 ## How much a clan's opinion moves a monster's starting mood.

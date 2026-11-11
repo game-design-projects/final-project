@@ -6,6 +6,7 @@ extends Control
 
 const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
+const Floors = preload("res://src/rules/floors.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
@@ -259,21 +260,50 @@ static func _box(bg: Color, border: Color, pad: float) -> StyleBoxFlat:
 
 func _header() -> void:
 	var where: String = "THE GENRE HALLS"
+	var elite := false
 	if state.foe != null and state.stage != "explore" and state.stage != "end":
 		var genre: String = state.genre_of(state.foe)
-		where = "%s ENCOUNTER" % Content.table("encounter").genres[genre].name
+		elite = state.foe.elite
+		where = "%s%s ENCOUNTER" % ["ELITE " if elite else "", Content.table("encounter").genres[genre].name]
 	var y := size.y * 0.5 + 4.0
 	var floor_name: String = "B%dF OF %d " % [state.depth, state.floors_of] if state.floors_of > 0 else "B%dF " % state.depth
 	if state.practice:
 		floor_name = Practice.line("header") + " "
-	_text(_title, floor_name, Vector2(0, y), 9, Palette.DIM)
-	_text(_title, where, Vector2(_title.get_string_size(floor_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, y), 9, Palette.INK)
 	var spared: int = state.tally.spared
 	var slain: int = state.tally.slain
 	var route := "UNWRITTEN" if spared + slain == 0 else "%d SPARED · %d SLAIN" % [spared, slain]
 	var w := _title.get_string_size(route, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var tough := toughness_tag(state)
+	var room := size.x - w - _title.get_string_size("ROUTE   ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var parts := header_left(floor_name, tough, where, func(t): return _title.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, room)
+	var x := 0.0
+	for piece in [[parts[0], Palette.DIM], [parts[1], Palette.WARN], [parts[2], Palette.WARN if elite else Palette.INK]]:
+		if piece[0] != "":
+			_text(_title, piece[0], Vector2(x, y), 9, piece[1])
+			x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	_text(_title, route, Vector2(size.x - w, y), 9, Palette.INK)
 	_text(_title, "ROUTE ", Vector2(size.x - w - _title.get_string_size("ROUTE ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, y), 9, Palette.DIM)
+
+
+## The header's left side as [floor, toughness, where], made to fit `room` (width measures a string): on a narrow screen "ENCOUNTER"
+## goes first, then the walk's title, then the toughness tag; the floor and an elite's name stay.
+static func header_left(floor_name: String, tough: String, where: String, width: Callable, room: float) -> Array:
+	var parts := [floor_name, tough, where]
+	var fits := func(): return width.call("".join(parts)) <= room
+	if not fits.call() and where.ends_with(" ENCOUNTER"):
+		parts[2] = where.trim_suffix(" ENCOUNTER")
+	if not fits.call() and where == "THE GENRE HALLS":
+		parts[2] = ""
+	if not fits.call():
+		parts[1] = ""
+	return parts
+
+
+## What makes this floor's monsters tougher than B1F's, for the header: "+24% HP " from the depth (and the steep stair), or "" when
+## nothing does. An elite's own toughness is in its name: ELITE in the header and over its head.
+static func toughness_tag(s) -> String:
+	var more := Floors.toughness_pct(s)
+	return "FOES +%d%% HP " % more if more > 0 else ""
 
 
 # ---------------------------------------------------------------- the status row

@@ -2,6 +2,7 @@
 ## touching the rules. Monster lines come from data/species.json; this is the narrator and the menu hints.
 extends RefCounted
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 
@@ -205,6 +206,23 @@ static func flee(foe) -> String:
 
 const BOSS_BLOCKS := "The champion's tail blocks the way back."
 const NOT_ATTACKING := "It doesn't attack this turn."
+
+
+## What the picture says as an elite, or a monster whose clan is enraged, steps up: {title, text}, or {} for anyone else.
+static func hostile(foe, s) -> Dictionary:
+	var clan := Clans.of(foe.species)
+	if clan == "":
+		return {}
+	var name := Clans.title(clan)
+	var mood := Clans.mood_word(Clans.standing_of(s, foe.species)).to_lower()
+	var elite: Dictionary = Clans.elite()
+	var said := str(elite.rule) % [name, mood] if foe.elite else ""
+	if Clans.enraged(s, foe):
+		var no_mercy: Dictionary = Clans.no_mercy()
+		return {"title": str(no_mercy.title) % name.to_upper(), "text": str(no_mercy.rule_elite if foe.elite else no_mercy.rule)}
+	if foe.elite:
+		return {"title": str(elite.title) % name.to_upper(), "text": said}
+	return {}
 
 
 static func pauses(foe, spareable: bool) -> String:

@@ -28,6 +28,7 @@ const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
+const Social = preload("res://src/rules/social.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -60,6 +61,7 @@ func _run() -> void:
 	await _branching()
 	await _late_decisions()
 	await _clans()
+	await _hostility()
 	await _map_gen()
 	await _secrets()
 	await _items()
@@ -1048,6 +1050,158 @@ func _clans() -> void:
 				_check(Overlay.banner_fits(text), "the news fits the banner: %s" % text)
 	_check(Clans.mood(-1000.0).friendliness >= -Clans.MOOD_MAX and Clans.mood(1000.0).friendliness <= Clans.MOOD_MAX, "a clan's opinion only moves a mood so far")
 	_use()
+
+
+## Kills climb a clan through angry, furious and enraged (#77). A furious clan sends elites to the floors made after it got so; an
+## enraged one won't take mercy, a cut or an offer; sparing its side or a favour cools it; the header and the cards say why it's harder.
+func _hostility() -> void:
+	var clan: String = Clans.of("slime")
+	var side: String = Clans.side_of(clan)[0]
+	var slime_line: Dictionary = Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0]
+	var tally := State.new()
+	var kill := func(species: String, who: String) -> Array:
+		var victim := Monster.new()
+		victim.species = species
+		victim.name = who
+		return Clans.record(tally, victim, "slain")
+	_check(Clans.hostility_of(tally, "slime") == "" and Clans.mood_word(0.0) == "CALM", "a run starts with no clan hostile")
+	var moved: Array = kill.call("slime", "A")
+	_check(Clans.hostility_of(tally, "slime") == "angry" and moved.size() >= 1 and moved[0].clan == clan and moved[0].to == "angry", "one kill: its clan is angry, and the deed says so first (%s)" % str(moved))
+	_check(not Clans.sends_elites(tally, "slime"), "and sends no elites yet")
+	kill.call("slime", "B")
+	_check(Clans.hostility_of(tally, "slime") == "furious" and Clans.sends_elites(tally, "slime"), "two kills: furious, and it sends elites")
+	_check(Clans.hostility(float(tally.reputation[side])) == "angry" and not Clans.sends_elites(tally, side_species(side)), "its side is only angry (%s)" % str(tally.reputation))
+	_check(not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "another side doesn't care")
+	var goo = Monster.make(Rng.new(5), slime_line, Vector2i.ONE)
+	_check(not Clans.enraged(tally, goo), "furious still takes mercy")
+	kill.call("slime", "C")
+	kill.call("slime", "D")
+	_check(Clans.enraged(tally, goo) and Clans.mood_word(float(tally.reputation[clan])) == "ENRAGED", "four kills: enraged")
+	var rock := Monster.new()
+	rock.species = side_species(side)
+	rock.name = "R"
+	var cooled: Array = Clans.record(tally, rock, "spared")
+	_check(not Clans.enraged(tally, goo) and cooled.any(func(c): return c.clan == clan and c.to == "furious"), "sparing one on its side cools it back to furious (%s)" % str(cooled))
+	var favoured: Array = Clans.favour(tally, "slime", 30.0)
+	_check(favoured.any(func(c): return c.clan == clan and Clans.rank(c.to) < Clans.rank(c.from)), "and a favour to its kind cools it further (%s)" % str(favoured))
+	_check(Clans.mood_word(20.0) == "FRIENDLY", "a clan that likes you says so")
+	var title_font: Font = load("res://src/view/fonts.gd").title()
+	for id in Content.table("clans").clans:
+		for change in [{"clan": id, "from": "", "to": "angry"}, {"clan": id, "from": "angry", "to": "furious"}, {"clan": id, "from": "furious", "to": "enraged"}, {"clan": id, "from": "enraged", "to": "furious"}, {"clan": id, "from": "angry", "to": ""}]:
+			var words: Dictionary = Clans.moved_words(change)
+			_check_quietly(Overlay.banner_fits(words.text) and words.line.contains(Clans.title(id)) and title_font.get_string_size(words.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x <= Overlay.BANNER_W, "%s %s->%s fits the banner: %s / %s" % [id, change.from, change.to, words.title, words.line])
+	_check(true, "every move of every clan's hostility fits the banner")
+
+	# a furious clan sends its elites to the next floor: tougher, the champion never, said on arrival, and kept in a save
+	var flow = _flow(80, ["no-branching", "no-roaming"])
+	await flow.new_run()
+	var s = flow.state
+	_check(Hud.toughness_tag(s) == "" and s.floor_map.monsters.all(func(m): return not m.elite), "B1F: no toughness to tell, no elites on a fresh run")
+	s.reputation[clan] = -40.0
+	await _reach_stairs(flow)
+	await flow.press("1")
+	var slimes: Array = s.floor_map.monsters.filter(func(m): return m.species == "slime" and not m.boss)
+	var others: Array = s.floor_map.monsters.filter(func(m): return Clans.of(m.species) != clan and not m.boss)
+	var hp_scale: float = Floors.plan(s.depth).hp_scale
+	_check(s.depth == 2 and not slimes.is_empty() and slimes.all(func(m): return m.elite), "B2F: every slime is one of the Burrow's elites (%d)" % slimes.size())
+	_check(slimes.all(func(m): return m.max_hp == roundi(roundi(float(slime_line.hp) * hp_scale) * float(Clans.elite().hp_scale)) and m.hp == m.max_hp), "with a quarter more health (%s)" % str(slimes.map(func(m): return m.max_hp)))
+	_check(others.all(func(m): return not m.elite) and not s.floor_map.monsters.back().elite, "nobody else is, and never the champion")
+	_check(s.lines.any(func(l): return l.text.contains("Elites on this floor") and l.text.contains(Clans.title(clan))), "arriving, the log says who sent elites (%s)" % str(s.lines.map(func(l): return l.text)))
+	_check(Hud.toughness_tag(s) == "FOES +12% HP ", "the header says how much tougher this floor's monsters are (%s)" % Hud.toughness_tag(s))
+	var by_chars := func(t: String) -> float: return float(t.length())
+	_check(Hud.header_left("B2F OF 5 ", "FOES +12% HP ", "ELITE GOO RAIN ENCOUNTER", by_chars, 100.0) == ["B2F OF 5 ", "FOES +12% HP ", "ELITE GOO RAIN ENCOUNTER"], "with room, the header says it all")
+	_check(Hud.header_left("B2F OF 5 ", "FOES +12% HP ", "ELITE GOO RAIN ENCOUNTER", by_chars, 40.0) == ["B2F OF 5 ", "FOES +12% HP ", "ELITE GOO RAIN"], "narrow, ENCOUNTER goes first")
+	_check(Hud.header_left("B2F OF 5 ", "FOES +12% HP ", "THE GENRE HALLS", by_chars, 25.0) == ["B2F OF 5 ", "FOES +12% HP ", ""], "on the walk, then the title, before the toughness")
+	_check(Hud.header_left("B2F OF 5 ", "FOES +12% HP ", "ELITE GOO RAIN ENCOUNTER", by_chars, 10.0)[1] == "", "and the toughness last")
+	var back = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	_check(back != null and back.floor_map.monsters.filter(func(m): return m.elite).size() == slimes.size() and is_equal_approx(back.floor_map.hp_scale, s.floor_map.hp_scale), "a save keeps the elites and the floor's toughness")
+	var old: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	old.floor.erase("hpScale")
+	for md in old.floor.monsters:
+		md.erase("elite")
+	var before = State.from_dict(old)
+	_check(before != null and before.floor_map.monsters.all(func(m): return not m.elite) and Hud.toughness_tag(before) == "FOES +12% HP ", "a save from before has no elites and its depth still tells the toughness")
+	var wrong: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	wrong.floor.monsters[0].elite = "yes"
+	_check(State.from_dict(wrong) == null, "a save with a wrong elite is refused")
+	var legend := str(Tips.map_blocks(true, s))
+	_check(legend.contains("FURIOUS") and legend.contains("+12% HP") and legend.contains("ENRAGED"), "the map's legend says each clan's mood and what makes it harder (%s)" % legend.right(260))
+
+	# an elite steps up: the picture says so, the header and its card too, and its attacks are harder
+	var elite = slimes[0]
+	await flow.go("intro", {"foe": elite})
+	_check(s.banner != null and s.banner.title.contains("ELITE") and Overlay.banner_fits(s.banner.text), "an elite's fight starts with a banner saying so (%s)" % str(s.banner))
+	var card := str(Tips.foe_blocks(elite, [], 2, "", false, s))
+	_check(card.contains("ELITE") and card.contains("FURIOUS") and card.contains("hits harder"), "its card says it's an elite of a furious clan (%s)" % card)
+	var plain = Monster.make(Rng.new(5), slime_line, Vector2i.ONE)
+	_check(Pace.of(elite, 2, 0.0, 0, false) > Pace.of(plain, 2, 0.0, 0, false) or Pace.of(plain, 2, 0.0, 0, false) >= Pace.HIGHEST, "it presses faster in the dodge")
+	var hard = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0, Clans.elite())
+	var soft = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+	_check(hard.intensity > soft.intensity, "its attacks run faster (%.2f > %.2f)" % [hard.intensity, soft.intensity])
+	for run in [hard, soft]:
+		run.hazards = []
+		run.add_hazard(0.0, [Dodge.index(run.soul.x, run.soul.y)], 0.0, 500.0, "bullet")
+	var hit_hard: Array = hard.update(10.0, Rng.new(1)).filter(func(e): return e.type == "hurt")
+	var hit_soft: Array = soft.update(10.0, Rng.new(1)).filter(func(e): return e.type == "hurt")
+	_check(not hit_hard.is_empty() and not hit_soft.is_empty() and hit_hard[0].damage == hit_soft[0].damage + int(Clans.elite().damage), "and each hit costs more (%s vs %s)" % [str(hit_hard), str(hit_soft)])
+
+	# enraged: no mercy, no cut, no offer; the champion says so too
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	s.reputation[clan] = -80.0
+	_won_over(elite)
+	await flow.go("menu")
+	_check(s.menu[2].get("disabled", false) and str(s.menu[2].sub).begins_with("ENRAGED"), "enraged: SPARE is greyed out and says why (%s)" % str(s.menu[2]))
+	_check(await flow.encounter.mercy(elite) == 0.0, "its odds are none, however friendly it is")
+	await flow.press("3")
+	_check(s.stage == "menu" and elite.gone == "", "and SPARE does nothing (%s)" % s.stage)
+	_check(not Social.eligible(elite, s), "it has nothing to offer you either")
+	var decision: Dictionary = await flow.encounter.decide(elite, [{"intent": "kindness", "w": 1.0}], "PAT")
+	_check(s.mind_rows.any(func(r): return r.id == "mercy" and float(r.answer) == 0.0), "an ACT can't raise the odds (%s)" % str(decision.get("id", "")))
+	var robber = s.floor_map.monsters.filter(func(m): return m.species == "bandit" and not m.boss)
+	if robber.is_empty():
+		robber = [Monster.make(Rng.new(6), Content.table("encounter").roster.filter(func(e): return e.species == "bandit")[0], s.cell)]
+	s.reputation[Clans.of("bandit")] = -80.0
+	s.gold = 50
+	await flow.go("intro", {"foe": robber[0]})
+	_check(s.banner != null and s.banner.title.contains("ENRAGED"), "an enraged clan's fight starts by saying so (%s)" % str(s.banner))
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	await flow.go("act")
+	_check(s.menu.any(func(c): return str(c.sub).contains("no price will do")), "the cut's help says it won't be taken (%s)" % str(s.menu.map(func(c): return c.sub)))
+	await flow.encounter.offer_cut(robber[0], "PAY OFF")
+	_check(s.gold == 50 and robber[0].gone == "" and s.stage == "menu", "and no gold changes hands (%d, %s)" % [s.gold, s.stage])
+	s.reputation[Clans.of("dragon")] = -80.0
+	await flow.go("explore", {"lines": []})
+	await flow.go("intro", {"foe": s.floor_map.monsters.back()})
+	_check(s.lines.any(func(l): return l.text.contains(str(Clans.no_mercy().boss))), "a champion of an enraged clan can't be won over, and the rule says so")
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	await flow.go("explore", {"lines": []})
+
+	# killing one makes the clan's next level news on the picture
+	var flow2 = _flow(82, ["no-branching"])
+	var goo2 = await _at_menu(flow2)
+	var s2 = flow2.state
+	s2.reputation[clan] = -20.0
+	s2.banner = null # the words about the door are gone by the time a fight is over
+	await flow2.encounter.defeat(goo2, "slain")
+	_check(s2.banner != null and s2.banner.title == "%s IS FURIOUS" % Clans.title(clan).to_upper(), "the kill that makes a clan furious says so on the picture (%s)" % str(s2.banner))
+	var goo3 = await _at_menu(flow2)
+	s2 = flow2.state
+	s2.reputation[clan] = -60.0
+	await flow2.encounter.defeat(goo3, "slain") # the words about the door are still up
+	_check(s2.lines.any(func(l): return l.text.contains("enraged")), "with the picture taken, the log says it instead (%s)" % str(s2.lines.map(func(l): return l.text)))
+	_use()
+
+
+## A check that only prints when it fails, for a loop of many.
+func _check_quietly(ok: bool, what: String) -> void:
+	if not ok:
+		_check(false, what)
 
 
 func side_species(clan: String) -> String:

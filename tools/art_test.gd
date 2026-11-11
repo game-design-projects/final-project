@@ -155,6 +155,19 @@ func _a_figure_moves_without_jumps() -> void:
 	anim.lunge(4.0)
 	_check(anim.tick(4.01).act == "lunge", "and so does a lunge")
 
+	for species in FIGURES:
+		anim = FigureAnim.new(species, 1)
+		anim.set_mood("hollow", 0.0)
+		_watch(anim, 0.0, 3.0)
+		anim.hurt(3.0)
+		var hit := _watch(anim, 3.0, 0.6)
+		_check_quietly(hit.all(func(a): return a.act == "hollow"), "%s: a blank face hit never shows the hurt drawing, which has eyes" % species)
+		_check_quietly(hit.slice(0, 12).any(func(a): return a.shake != 0.0 and a.sy < 1.0), "%s: it shakes and flinches instead" % species)
+		anim.lunge(4.0)
+		var lurch := _watch(anim, 4.0, 0.6)
+		_check_quietly(lurch.all(func(a): return a.act == "hollow") and lurch.any(func(a): return a.sx > 1.05), "%s: and lunges by swelling, with no eyes either" % species)
+	_check(true, "a blank face takes a hit and lunges without the drawings that have eyes, for every figure")
+
 	anim = FigureAnim.new("trader", 1)
 	anim.set_mood("hollow", 0.0)
 	_check(anim.tick(0.5).act == "idle", "someone with no such drawing stays calm")
@@ -404,6 +417,10 @@ func _the_battle_screen_shows_the_face() -> void:
 	s.tally.slain = 6
 	art._process(FRAME)
 	_check(art.face() == "hollow", "and in cold halls its face is gone")
+	overlay.hurt_until = overlay.clock_ms + 300.0
+	art._process(FRAME)
+	_check(art._anim.tick(overlay.clock_ms / 1000.0 + 0.05).act == "hollow", "hit in cold halls, the blank face stays blank (no eyes in the hurt)")
+	overlay.clock_ms += 400.0
 	s.tally.slain = 0
 	m.gone = "spared"
 	art._process(FRAME)
@@ -412,9 +429,16 @@ func _the_battle_screen_shows_the_face() -> void:
 	art._process(FRAME)
 	_check(art.face() == "hollow", "slain, blank")
 	m.gone = ""
+	art._process(FRAME) # its face comes back before the hit, as it does in a fight
 	overlay.hurt_until = overlay.clock_ms + 300.0
 	art._process(FRAME)
 	_check(art._anim.tick(overlay.clock_ms / 1000.0 + 0.01).act == "hurt", "a hit shows")
+	m.gone = "slain"
+	overlay.clock_ms += 400.0
+	overlay.hurt_until = overlay.clock_ms + 300.0
+	art._process(FRAME)
+	_check(art._anim.tick(overlay.clock_ms / 1000.0 + 0.01).act == "hurt", "a killing blow still hurts, with its eyes, before the face goes blank")
+	m.gone = ""
 	s.dodge = {"genre": "bullet"}
 	art._process(FRAME)
 	_check(art._small > 0.0, "and for a dodge it shrinks up out of the way")

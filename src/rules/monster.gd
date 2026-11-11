@@ -10,6 +10,7 @@ const METER_MAX := 100.0
 var species := ""
 var genre := "" # which attack style it fights in (a key of encounter.genres)
 var boss := false
+var elite := false # its clan was furious when its floor was made (rules/clans.gd): tougher, and it hits harder
 var name := ""
 var cell := Vector2i.ZERO
 var hp := 0
@@ -147,6 +148,16 @@ func clues() -> Array:
 	return out
 
 
+## Its clan sends it as one of its elites: more health, and harder attacks (the dodge reads `elite`). Once only.
+func become_elite(hp_scale: float) -> void:
+	if elite or boss:
+		return
+	elite = true
+	max_hp = roundi(max_hp * hp_scale)
+	hp = max_hp
+	print_verbose("monster: %s the %s is an elite, %d HP" % [name, species, max_hp])
+
+
 func hp_fraction() -> float:
 	return float(hp) / max_hp if max_hp > 0 else 0.0
 
@@ -157,7 +168,7 @@ func is_gone() -> bool:
 
 func to_dict() -> Dictionary:
 	return {
-		"species": species, "genre": genre, "boss": boss, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
+		"species": species, "genre": genre, "boss": boss, "elite": elite, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
 		"meters": meters.duplicate(), "traits": traits.duplicate(), "taste": taste.duplicate(), "lastIntent": last_intent,
 		"social": social.duplicate(true), "mood": mood.duplicate(true), "spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
 		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
@@ -171,6 +182,7 @@ static func from_dict(d: Dictionary):
 	m.species = str(d.get("species", ""))
 	m.genre = str(d.get("genre", ""))
 	m.boss = bool(d.get("boss", false))
+	m.elite = d.get("elite") == true and not m.boss # a save from before elites has none
 	m.name = str(d.get("name", ""))
 	var c: Array = d.get("cell", [0, 0])
 	m.cell = Vector2i(int(c[0]), int(c[1]))

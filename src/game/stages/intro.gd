@@ -4,6 +4,7 @@
 ## A snapshot is taken so dying can try this fight again.
 extends "res://src/game/stages/stage.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const SocialDemo = preload("res://src/game/social_demo.gd")
@@ -38,9 +39,10 @@ func enter(flow, args: Dictionary) -> void:
 		"allies": s.allies.map(func(a): return a.to_dict()),
 	}
 	flow.event("encounter", {"boss": m.boss})
+	var enraged := Clans.enraged(s, m)
 	var rule: String
 	if m.boss:
-		rule = Texts.BOSS_RULE + " " + Texts.BOSS_WINNABLE
+		rule = Texts.BOSS_RULE + " " + (str(Clans.no_mercy().boss) if enraged else Texts.BOSS_WINNABLE)
 	else:
 		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre])
 	var before: Array = args.get("before", [])
@@ -53,11 +55,14 @@ func enter(flow, args: Dictionary) -> void:
 			s.hint = "ANY KEY CONTINUE"
 	lines.append(State.sys_line(rule))
 	s.say(lines)
-	var mercy: float = await flow.mind.mercy(m)
+	var warning := Texts.hostile(m, s)
+	if not warning.is_empty(): # says more than WORD HAS SPREAD, so it takes the picture's place
+		flow.announce(warning.title, warning.text)
+	var mercy: float = await flow.encounter.mercy(m)
 	flow.encounter.known_mercy = mercy
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
 	_continue_at = flow.clock + flow.DIALOGUE_BUFFER_MS
-	print("intro: %s (%s) %s" % [m.name, m.species, "BOSS" if m.boss else ""])
+	print("intro: %s (%s) %s%s%s" % [m.name, m.species, "BOSS" if m.boss else "", " ELITE" if m.elite else "", " ENRAGED" if enraged else ""])
 
 
 func tick(flow, _t: float) -> void:

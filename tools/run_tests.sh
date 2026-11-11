@@ -28,6 +28,9 @@ run_mode() {
 		if ! grep -q 'all checks passed' "$log"; then
 			code=1 # a script that doesn't parse never runs and still exits with 0
 		fi
+		if grep -q 'SCRIPT ERROR' "$log"; then
+			code=1 # an error in the middle of a check ends that check and the run still says all passed
+		fi
 		echo "$mode $t: exit $code, $fails failed"
 		if [ "$code" != 0 ]; then
 			failed=1

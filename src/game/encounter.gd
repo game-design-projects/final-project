@@ -73,7 +73,14 @@ func greeting(m):
 
 
 func spareable(m) -> bool:
-	return await flow.mind.mercy(m) >= 0.5
+	return await mercy(m) >= 0.5
+
+
+## The odds `m` takes mercy now: the mind's, or none at all when its clan is enraged (rules/clans.gd), whatever the mind says.
+func mercy(m) -> float:
+	if Clans.enraged(flow.state, m):
+		return 0.0
+	return await flow.mind.mercy(m)
 
 
 ## One round of the mind: how `m` feels about `act` ("fight", or [{intent, w}] for an ACT button or typed words), and how
@@ -95,7 +102,7 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	if not act is String:
 		Feelings.warm_up(m, feeling)
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
-	var mercy: float = after.mercy
+	var mercy: float = 0.0 if Clans.enraged(flow.state, m) else after.mercy
 	var pressure: float = after.pressure
 	if not act is String:
 		var learned := Reveal.learn(m, m.last_intent, str(feeling.get("tone", "")))
@@ -207,10 +214,11 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	m.gone = how
 	s.tally[how] += 1
 	flow.event(how, {"boss": m.boss})
-	Clans.record(s, m, how)
+	var moved := Clans.record(s, m, how)
 	if m.boss:
 		_reward_for_champion(m)
 	_open_purse(m)
+	var told := tell_hostility(moved)
 	if how == "spared" and allow_join:
 		await flow.go("ask")
 		return
@@ -220,10 +228,24 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 		verdict = settlement if settlement != "" else Texts.VERDICT_SPARED
 	else:
 		verdict = Texts.VERDICT_SLAIN
-	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + _take_notes()
+	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + told + _take_notes()
 	s.mind_rows = pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## A clan's hostility moved (Clans.record or Clans.favour): the first move is said on the picture, or in the log when something
+## else holds the picture. Returns the log lines, [] when the picture said it.
+func tell_hostility(moved: Array) -> Array:
+	if moved.is_empty():
+		return []
+	var words: Dictionary = Clans.moved_words(moved[0])
+	if Clans.rank(moved[0].to) > Clans.rank(moved[0].from):
+		flow.event("sound", {"name": "bad"})
+	if not flow.banner_up():
+		flow.announce(words.title, words.text)
+		return []
+	return [State.sys_line(words.line)]
 
 
 ## Whatever it was carrying is yours, however it ended.
@@ -255,7 +277,7 @@ func take_along(m, wants: float) -> void:
 	s.allies.append(Ally.make(m.species, m.name, Allies.eager_loyalty(flow.dice, wants)))
 	s.tally.recruited += 1
 	flow.event("recruited", {"species": m.species})
-	Clans.record(s, m, "recruited")
+	Clans.record(s, m, "recruited") # the joined banner below says more than a clan cooling
 	var charm: Dictionary = Content.table("encounter").charms[m.species]
 	var healed := _heal(Allies.gift(m.species).heal)
 	flow.announce(Texts.joined_title(m), "%s: %s" % [charm.name, charm.text])
@@ -308,6 +330,11 @@ func slip_away(m, line: String) -> void:
 ## A fair cut of gold to stand down (bandits and snakes). `label` names the offer; `words` is what was read from a typed one.
 func offer_cut(m, label: String, words = null) -> void:
 	var s = flow.state
+	if Clans.enraged(s, m):
+		print("encounter: %s is enraged, no cut taken" % m.name)
+		s.say([State.sys_line(str(Clans.no_mercy().cut) % m.name)])
+		await flow.go("menu")
+		return
 	if s.gold < Combat.CUT_COST:
 		s.say([State.sys_line(Texts.cut_too_poor(s.gold, words != null))])
 		await flow.go("menu")

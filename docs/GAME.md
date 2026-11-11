@@ -39,6 +39,10 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 
 Then the monster attacks, unless what you did calmed it. Monsters belong to clans that hear what you did: later ones say so and start in a different mood.
 
+**Clans keep count.** A kill angers the monster's clan, half as much the clans on its side, and a quarter the Hoard; a champion counts one and a half. One kill of its own makes a clan ANGRY (its own start out angrier). Two, with nothing made up for them, make it FURIOUS: every floor reached after that has its kind as elites, tagged ELITE over their heads and in the header, with a quarter more health, faster attacks and a point more per hit (never the champion). Four make it ENRAGED: none of its own takes mercy, a cut or an offer, and SPARE greys out, even for a champion of the Hoard. Sparing one on its side, or doing one of its kind a favour, cools it back down. A banner says so whenever a clan moves.
+
+**What makes it harder** is on the screen: the header tags how much tougher this floor's monsters are (FOES +12% HP for each floor below B1F, a quarter more down the steep stair), the map's legend (the info key on the walk) gives every clan's mood and what its levels mean, and an elite's or an enraged clan's fight opens with a banner saying which.
+
 How long winning a monster over takes, from `tools/sim_recruit.gd` over 1000 seeds, playing the best ACT every time:
 
 | Monster | Mercy odds at the start | ACTs to reach even odds | Join odds by then | Strikes to kill |

@@ -67,11 +67,13 @@ func _process(dt: float) -> void:
 		_say = ""
 		print("battle art: %s the %s" % [_foe.name, _foe.species])
 	_small = move_toward(_small, 1.0 if s.dodge != null else 0.0, dt * SHRINK_PER_S)
-	_anim.set_mood(_mood(s), now)
+	# the hit first, with the face it had: a killing blow still hurts with its eyes before they go blank, and a face already
+	# blank (cold halls) stays blank through it (figure_anim.hurt)
 	if overlay.hurt_until != _hurt_seen:
 		_hurt_seen = overlay.hurt_until
 		if overlay.clock_ms < overlay.hurt_until:
 			_anim.hurt(now)
+	_anim.set_mood(_mood(s), now)
 	var dodging: bool = s.dodge != null
 	if dodging and not _dodging:
 		_anim.lunge(now)
