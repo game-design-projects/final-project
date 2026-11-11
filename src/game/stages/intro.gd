@@ -12,7 +12,7 @@ const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
-var _ambush := false # it caught you, and strikes first (the feature ambush)
+var _ambush := false # it caught you, and strikes first (not on the personality slice)
 var _continue_at := 0.0
 var _queued := false
 

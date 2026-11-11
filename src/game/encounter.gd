@@ -218,7 +218,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 	flow.event(how, {"boss": m.boss})
 	if flow.feature("clans"):
 		Clans.record(s, m, how)
-	if m.boss and flow.feature("boss-reward"):
+	if m.boss and not flow.on_slice():
 		_reward_for_champion(m)
 	_open_purse(m)
 	if how == "spared" and allow_join and flow.feature("recruit-step"):

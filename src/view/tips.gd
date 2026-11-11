@@ -189,7 +189,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
-		return map_blocks(state.viewing("secrets"), state.viewing("items"), state.viewing("lurkers"), state.viewing("npcs"), state.viewing("roaming"))
+		return map_blocks(state.viewing("items"), state.viewing("npcs"), state.viewing("roaming"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -267,7 +267,7 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(secrets := false, items := false, lurkers := false, npcs := false, roaming := false) -> Array:
+static func map_blocks(items := false, npcs := false, roaming := false) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -276,16 +276,14 @@ static func map_blocks(secrets := false, items := false, lurkers := false, npcs 
 	fights[Content.table("encounter").boss.species] = "all four"
 	for id in Content.table("species"):
 		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": fights.get(id, "")})
-	if secrets:
-		out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
-		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
+	out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
+	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
 	if items:
 		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
 		out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
 	if npcs:
 		out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
-	if lurkers:
-		out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
+	out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
 	return out
 
 

@@ -73,7 +73,7 @@ func monster_marks() -> Array:
 			at = m.last_seen # a monster on the move shows where you last saw it, never through a wall
 		if m.is_gone() or at.x < 0 or not _in_window(at):
 			continue
-		if m.boss and state.viewing("boss-at-exit") and not state.seen.has(m.cell):
+		if m.boss and not state.seen.has(m.cell):
 			continue
 		if m.boss:
 			out.append({"rect": Rect2(Vector2(at) * s, Vector2(s, s)), "color": Palette.BOSS})

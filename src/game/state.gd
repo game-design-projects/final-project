@@ -30,7 +30,7 @@ var listening := false # a monster is taking in what you typed
 var views := {} # the features the picture may show, as the flow worked them out (off on the personality slice)
 var floors_of := 0 # how many floors the run has, for the header (0: it doesn't say)
 var banner = null # a moment on the picture, {title, text, t0, ms} (see flow.announce)
-var run_over := false # the run ended at the stairs: there is no floor below (always so without the feature real-floors)
+var run_over := false # the run ended at the stairs: there is no floor below (always so on the personality slice)
 var palette_id := 0 # which colours this run wears (Palette.for_run), picked from the seed and saved with the run
 
 # the walk

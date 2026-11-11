@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Removed
 - The `combat-grid`, `choice-grid`, `dialogue-buffer`, `input-cooldown`, `text-size`, `party-aid`, `mini-games`, `gentle-dodge`, `piece-icons` and `smooth-fight` feature flags: all ten are part of the game now, and `classic` no longer turns them off. The personality slice keeps the rules that change a fight (`dialogue-buffer`, `input-cooldown`, `party-aid`, `mini-games`, `gentle-dodge`) off, as before. The chess attacks' old letter display and rule text (`rule` in `data/encounter.json`) are gone.
+- The `real-floors`, `map-gen`, `boss-at-exit`, `boss-chase`, `boss-reward`, `secrets`, `lurkers` and `ambush` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice keeps its 13x13 maze, with no secrets or lurkers, a champion that stays in its hall, no ambush and no boss reward, as before.
 
 ### Fixed
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.

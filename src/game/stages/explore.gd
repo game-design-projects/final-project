@@ -108,11 +108,11 @@ func _get_hungrier(flow) -> void:
 func _monsters_move(flow) -> bool:
 	var s = flow.state
 	var t0 := Time.get_ticks_usec()
-	var done := Roaming.turn(s, {"revenge": flow.feature("clans"), "boss_chase": flow.feature("boss-chase")})
+	var done := Roaming.turn(s, {"revenge": flow.feature("clans"), "boss_chase": not flow.on_slice()})
 	s.spot()
 	print_verbose("explore: the monsters' turn took %d us" % (Time.get_ticks_usec() - t0))
 	if done.caught != null:
-		var ambush: bool = flow.feature("ambush")
+		var ambush: bool = not flow.on_slice()
 		var said: String = Roaming.table().caught % done.caught.name
 		await flow.go("intro", {"foe": done.caught, "ambush": ambush, "before": [State.sys_line(said + " " + str(Roaming.table().first) if ambush else said)]})
 		return true

@@ -250,13 +250,13 @@ func _real_floors() -> void:
 	await again.press("1")
 	_check(again.state != ended and again.state.depth == 1, "and NEW RUN starts over on B1F")
 
-	var classic = _flow(11, ["classic"])
+	var classic = _flow(11, ["personality-slice"])
 	await classic.new_run()
 	await _reach_stairs(classic)
-	_check(classic.state.stage == "end" and classic.state.run_over, "classic: the stairs end the run")
+	_check(classic.state.stage == "end" and classic.state.run_over, "the personality slice: the stairs end the run")
 	var kept = classic.state
 	await classic.press("1")
-	_check(classic.state != kept and classic.state.depth == 1, "classic: NEW FLOOR starts over")
+	_check(classic.state != kept and classic.state.depth == 1, "the personality slice: NEW FLOOR starts over")
 	_use()
 
 
@@ -309,7 +309,7 @@ func _practice() -> void:
 	await plain.new_run()
 	_check(s.floor_map.grid == plain.state.floor_map.grid, "the same B1F the seed makes without it")
 	_check(s.lines[0].text.begins_with("B1F"), "and it is named as usual (%s)" % s.lines[0].text)
-	for words in [["no-tutorial-floor"], ["no-real-floors"], ["floor=3"], ["meet=slime"], ["no-tutorial"], ["classic"]]:
+	for words in [["no-tutorial-floor"], ["floor=3"], ["meet=slime"], ["no-tutorial"], ["classic"]]:
 		flow = _flow(12, words)
 		await flow.new_run(true)
 		_check(not flow.state.practice and not flow.coach.seen.has(flow.PRACTICE_SEEN), "%s: no practice floor" % " ".join(words))
@@ -829,9 +829,10 @@ func _chat() -> void:
 ## The monster that catches you strikes first; the toll on the third stairs; the text size.
 func _late_decisions() -> void:
 	# ambush
-	for words in [[], ["no-ambush"]]:
-		var flow = _flow(61, words)
+	for sliced in [false, true]:
+		var flow = _flow(61)
 		await flow.new_run()
+		flow.slice_floor = sliced
 		var s = flow.state
 		var m = s.floor_map.monsters[0]
 		s.floor_map.monsters = [m]
@@ -846,12 +847,12 @@ func _late_decisions() -> void:
 		m.cell = s.cell + FloorMap.DIRS[d]
 		s.banner = null
 		var caught: bool = await flow._stages["explore"]._monsters_move(flow)
-		_check(caught and s.stage == "intro" and s.foe == m, "a monster next to you catches you (%s)" % str(words))
+		_check(caught and s.stage == "intro" and s.foe == m, "a monster next to you catches you (slice %s)" % sliced)
 		await flow.tick(flow.clock + 5000.0)
-		var first: bool = words.is_empty()
-		_check(s.stage == "intro" and s.hint == "ANY KEY CONTINUE", "the greeting waits for a key")
+		var first: bool = not sliced
+		_check(sliced or (s.stage == "intro" and s.hint == "ANY KEY CONTINUE"), "the greeting waits for a key")
 		await flow.press("right")
-		_check(s.stage == ("dodge" if first else "menu"), "%s (%s)" % ["and strikes first" if first else "no-ambush: you still go first", s.stage])
+		_check(s.stage == ("dodge" if first else "menu"), "%s (%s)" % ["and strikes first" if first else "on the personality slice you still go first", s.stage])
 		_check(s.lines.any(func(l): return l.text.contains("strikes first")) == first, "and the log says which")
 	# the toll
 	var toll: Dictionary = Floors.toll()
@@ -985,9 +986,6 @@ func _gate() -> void:
 	gold = s.gold
 	await flow.press("4")
 	_check(s.gold == gold and m.hp == m.max_hp, "no-flee-cost: it costs nothing and heals it, as before")
-	flow = _flow(48, ["no-boss-at-exit"])
-	await flow.new_run()
-	_check(flow.state.floor_map.monsters.back().cell != flow.state.floor_map.stairs, "no-boss-at-exit: the champion keeps to its hall")
 	_use()
 
 
@@ -1309,11 +1307,10 @@ func _map_gen() -> void:
 	_check(JSON.stringify(again.state.floor_map.to_dict()) == JSON.stringify(other.state.floor_map.to_dict()), "the same seed makes the same floor")
 	var quiet = FloorGen.generate(Rng.new(5), _with_biome(Floors.plan(5, {"count": 2})))
 	_check(quiet.monsters.size() > 3 and quiet.monsters.size() < FloorGen.generate(Rng.new(5), _with_biome(Floors.plan(5))).size, "the quiet stair's two monsters scale with a bigger floor (%d)" % quiet.monsters.size())
-	var plain = _flow(41, ["no-map-gen"])
+	var plain = _flow(41, ["personality-slice"])
 	await plain.new_run()
-	_check(plain.state.floor_map.size == 13 and plain.state.floor_map.biome == "", "no-map-gen: the floor is the 13x13 maze")
+	_check(plain.state.floor_map.size == 13 and plain.state.floor_map.biome == "", "the personality slice: the floor is the 13x13 maze")
 	_check(plain.state.palette_id == plain.state.floor_map.seed_value, "in the colours its seed picks")
-	_check(not plain.state.floor_map.teleports.is_empty() or not plain.state.floor_map.treasure.is_empty(), "with its secrets, which are a feature of their own")
 	_use()
 
 
@@ -1402,12 +1399,12 @@ func _secrets() -> void:
 	var w2 := _cracked_wall(other.state.floor_map)
 	var fissures: Array = load("res://src/view/decor.gd").placements(other.state.floor_map).filter(func(p): return p.kind == "fissure" and p.cell + other.state.floor_map.DIRS[p.side] == w2)
 	_check(fissures.size() == 2, "a cracked wall always shows a fissure, on both its faces (%d)" % fissures.size())
-	var hidden = _flow(47, ["no-secrets"])
-	await hidden.new_run()
-	var h = hidden.state.floor_map
-	_check(h.treasure.is_empty() and h.teleports.is_empty() and _cracked_wall(h) == Vector2i(-1, -1), "no-secrets: nothing is hidden")
-	_check(not hidden.state.viewing("secrets"), "and the map's legend doesn't speak of it")
-	_check(Tips.map_blocks(true).size() == Tips.map_blocks().size() + 2, "with them, the legend names pads and chests")
+	var legend: Array = Tips.map_blocks().map(func(b): return str(b.get("left", "")))
+	_check(legend.has("PAD") and legend.has("CHEST"), "the legend names pads and chests")
+	var slice = _flow(47, ["personality-slice"])
+	await slice.new_run()
+	var h = slice.state.floor_map
+	_check(h.treasure.is_empty() and h.teleports.is_empty() and _cracked_wall(h) == Vector2i(-1, -1), "the personality slice: nothing is hidden")
 	_use()
 
 
@@ -1775,8 +1772,8 @@ func _lurkers() -> void:
 	var purse: int = m.purse
 	await flow.encounter.defeat(m, "slain")
 	_check(s.gold == gold + purse and m.purse == 0, "out of the fight it leaves its purse (%d)" % s.gold)
-	var plain = await _floor_with_lurker(71, ["no-lurkers"])
-	_check(plain.state.floor_map.monsters.all(func(o): return not o.lurking), "no-lurkers: nothing stirs")
+	var plain = await _floor_with_lurker(71, ["personality-slice"])
+	_check(plain.state.floor_map.monsters.all(func(o): return not o.lurking), "the personality slice: nothing stirs")
 	var way: Dictionary = Floors.plan(2, {"count": 2})
 	way.lurkers = true
 	_check(FloorGen.generate(Rng.new(5), way).monsters.all(func(o): return not o.lurking), "a quiet way down is quiet")
@@ -2163,9 +2160,14 @@ func _champion_moves() -> void:
 	for _i in 5:
 		Roaming.turn(hs, {"boss_chase": true})
 	_check(post == hs.floor_map.stairs and boss.cell == post, "with boss-at-exit, a champion holds the stairs, boss-chase or not")
-	var free = _flow(870, ["no-boss-at-exit"])
+	var free = _flow(870)
 	await free.new_run()
 	var fs = free.state
+	var open_plan: Dictionary = Floors.plan(1)
+	open_plan.boss_at_exit = false # a floor whose champion keeps to its hall
+	fs.floor_map = FloorGen.generate(Rng.new(870), open_plan)
+	fs.cell = fs.floor_map.start
+	fs.seen = {}
 	var ff = fs.floor_map
 	var chaser = ff.monsters.back()
 	var hall: Vector2i = chaser.cell

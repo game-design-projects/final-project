@@ -473,7 +473,7 @@ func _apply_camera() -> void:
 
 ## Every monster still on the floor stands in its cell, turned toward the camera, with a name tag; walls hide them. Not
 ## while you stand in its cell too (a test put you there): it would be in the camera's face.
-## What a monster standing on the stairs stands on: a slab over the pit, gone once the way is clear (the feature boss-at-exit).
+## What a monster standing on the stairs stands on: a slab over the pit, gone once the way is clear.
 static func _slab(color: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
 	box.size = Vector3(DungeonMesh.CELL, SLAB_H, DungeonMesh.CELL)

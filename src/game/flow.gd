@@ -31,7 +31,7 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["dungeon-reveal", "mercy-link", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
+const VIEW_FEATURES := ["dungeon-reveal", "mercy-link", "mood-cues", "clear-hp", "reveal", "chat", "items", "npcs", "roaming", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -160,7 +160,7 @@ func new_run(practice := false) -> void:
 ## Whether a run may start on the practice floor: it needs floors to go down to and the tips to teach it, and a run told to start
 ## deeper (`floor=N`) or to meet a given species (`meet=`) skips it.
 func practice_allowed() -> bool:
-	if not (feature("tutorial-floor") and feature("real-floors") and feature("tutorial")):
+	if not (feature("tutorial-floor") and feature("tutorial")):
 		return false
 	if Flags.value("floor") != "" or Flags.value("meet") != "" or Flags.on("social-demo"):
 		print("flow: no practice floor, the flags ask for another start")
@@ -251,7 +251,7 @@ func _place_camera() -> void:
 
 ## The story needs a below to tell of.
 func _telling_story() -> bool:
-	return feature("story") and feature("real-floors")
+	return feature("story")
 
 
 ## What the log says on arriving on this floor.
@@ -269,23 +269,21 @@ func _arrival() -> Array:
 	return lines
 
 
-## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
+## The floor for `state.depth`, with the party at its start. On the personality slice it is the classic one, drawn from the game's
 ## generator as it always was, so old seeds make the same floor.
 func _make_floor(way := {}) -> void:
 	if state.practice:
 		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)), feature("items"))
-	elif feature("real-floors"):
+	elif not on_slice():
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
-		plan.boss_at_exit = feature("boss-at-exit")
-		if feature("map-gen"):
-			plan.biome = Floors.biome(state.run_seed, state.depth)
-		if feature("secrets"):
-			plan.secrets = Floors.secrets(plan.get("biome", {}))
+		plan.boss_at_exit = true
+		plan.biome = Floors.biome(state.run_seed, state.depth)
+		plan.secrets = Floors.secrets(plan.get("biome", {}))
 		plan.items = feature("items")
 		plan.food = feature("items") and feature("hunger")
 		plan.shop = feature("items") and feature("shop") and (Items.shop_on(state.depth) or way.get("shop", false))
-		plan.lurkers = feature("lurkers")
+		plan.lurkers = true
 		plan.request = feature("npcs") and Requests.due(state.depth)
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:
