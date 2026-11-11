@@ -18,6 +18,7 @@ const Materials = preload("res://src/view/materials.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const SaveCheck = preload("res://src/game/save_check.gd")
 const State = preload("res://src/game/state.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
@@ -328,7 +329,7 @@ func _save_keeps_the_secrets() -> void:
 	]:
 		var wrong: Dictionary = saved.duplicate(true)
 		bad.call(wrong)
-		_check(State.from_dict(wrong) == null, "a save with bad secrets is refused (%s)" % State._problem(wrong))
+		_check(State.from_dict(wrong) == null, "a save with bad secrets is refused (%s)" % SaveCheck.problem(wrong))
 	var old: Dictionary = saved.duplicate(true)
 	old.floor.erase("treasure")
 	old.floor.erase("teleports")
