@@ -28,6 +28,8 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 
 **The halls answer what you do.** Spare monsters and the corridor warms: torches grow eyes, turn to you and lean in as you pass, skulls nod, and a cracked wall that gives is a guilty smile. Kill and they look away, then shut their eyes; faces go blank one monster at a time, champions last, and at the bottom the set is cold wire. Eating or abandoning a friend costs more than a kill. Nothing here changes a number: it is how the place feels about you. See [ART.md](ART.md).
 
+**Writing on the walls.** Every floor has one piece of writing, a banner in the accent colour on the closed end of a quiet corridor, marked in gold on the map once seen (grey once read). Step up to it to read it. What it says depends on the floor and on how the halls feel about you as you read: warm (kind or beloved), wary, or cold (shut or cold). So a kind run, a mixed one and a cruel one each read their own five of the fifteen, which tell why the halls fold up and drop the thief back on B1F, who scratched the tally on B2F, and why the Last Door wants two. What has been read is kept across runs, the log counts it ("Writing 4 of 15 found"), and reading all of it is an achievement. The words are in `data/lore.json`.
+
 ## Fights
 
 - **FIGHT** is a timing bar: strike when the line crosses the middle. A hit sours the monster's mood.
