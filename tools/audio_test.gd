@@ -395,6 +395,15 @@ func _master_has_its_limiter() -> void:
 	var count := AudioServer.bus_count
 	Mix.build_buses()
 	_check(AudioServer.bus_count == count, "building the buses again adds none")
+	# Bluetooth headphones in call mode run at 24 kHz: a low-pass past 12 kHz there turned unstable and silenced the game
+	_check(Mix.open_hz(48000.0) == Mix.OPEN_HZ and Mix.open_hz(44100.0) == Mix.OPEN_HZ, "the music's low-pass opens to 20 kHz at 44.1 and 48 kHz")
+	for rate in [24000.0, 16000.0, 8000.0]:
+		_check(Mix.open_hz(rate) < rate / 2.0, "at %d Hz it stays under the top frequency (%.0f Hz)" % [rate, Mix.open_hz(rate)])
+	var low := AudioServer.get_bus_effect(AudioServer.get_bus_index(Mix.MUSIC), 0) as AudioEffectLowPassFilter
+	for danger in [0.0, 0.5, 1.0]:
+		Mix.set_danger(danger)
+		_check(low.cutoff_hz < AudioServer.get_mix_rate() / 2.0 and low.cutoff_hz >= Mix.CLOSED_HZ, "at danger %.1f the cutoff (%.0f Hz) is under this output's top frequency" % [danger, low.cutoff_hz])
+	Mix.set_danger(0.0)
 
 
 func _flags_exist() -> void:
