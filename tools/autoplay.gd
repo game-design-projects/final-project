@@ -93,7 +93,9 @@ func _press_something(flow) -> void:
 			else:
 				await flow.press(_explore_key(s))
 		"camp":
-			await flow.press("1") # food is listed first, and LEAVE last: it eats what there is and gets up
+			# food is listed first, then the party (to feed or butcher), and LEAVE last: it eats what there is, then gets up. Taking "1" with no
+			# food left would ask to butcher a friend, answer NO, and ask again for as long as the game lasts.
+			await flow.press("1" if str(s.menu[0].label).begins_with("EAT") else "cancel")
 		"trade", "request":
 			await flow.press("cancel")
 		"menu", "act":

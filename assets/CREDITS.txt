@@ -9,6 +9,13 @@ Music (assets/audio/ambient.ogg, battle-*.ogg, fanfare.ogg, victory.ogg)
   https://creativecommons.org/licenses/by-sa/3.0/
 - Kettle drums and tabor: synthesised in tools/music/sampler.py, no samples.
 
+Music (assets/audio/hum-explore.ogg, hum-combat.ogg)
+- The hum theme, by Abdulla Alfalasi: an exploring loop and a combat loop on the same hummed melody. Source, MIDI and
+  the render script are in tools/music/hum-theme/.
+- Rendered with GeneralUser GS v2.0.3 by S. Christian Collins (https://www.schristiancollins.com,
+  https://github.com/mrbumpy409/GeneralUser-GS). Its licence: "You may use GeneralUser GS without restriction for
+  your own music creation, private or commercial."
+
 Sound effects: synthesised when the game starts (src/audio/sfx.gd, src/audio/synth.gd), no samples.
 
 Monster voices (assets/voices/): every line rendered ahead by an open text-to-speech model, each monster's voice

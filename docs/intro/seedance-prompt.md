@@ -1,6 +1,6 @@
 # 开场视频：Seedance prompt（issue #56）
 
-这段视频最初是开场过场的**参考**。第三次生成的结果现在就是游戏的开场影片：`tools/intro_video.sh` 把它转成 `assets/video/intro.ogv`，NEW GAME 之后播放（`intro-cg` 开关，`src/menu/intro_cg.gd`），看完后接练习层，由 Wick 教（`docs/GAME.md`）。重新生成之后用同一个脚本替换文件即可。
+这段视频是开场过场的**参考**，不是成品：Steven 用它给队友看“被拉进 donjon 领域”大概是什么感觉。游戏里真正的开场由引擎画（`src/view/opening.gd`，`wick` 开关），视频里的文字、画面比例和细节都以引擎为准。
 
 ## 它要讲清楚的三件事（来自 #56）
 
@@ -36,7 +36,7 @@
 | `4_wick_heart.png` | 第 3 镜 | Wick 笑眼加爱心 |
 | `5_wall_things.png` | 第 2 镜 | 月亮铁窗、点头骷髅、倒挂蝙蝠、爱心旗 |
 
-参考图模式里按顺序叫 `@Image1`…`@Image5`（Dreamina 上实测有效）；上传顺序必须和上表一致。第三方资料称首尾帧模式不能同时带参考图（没验证）：那就只上传 `2_chest.png` 做首帧、`1_corridor_keyart.png` 做尾帧，把下面 prompt 里的 `@Image…` 换成文字描述。
+Seedance 2.x 的参考图模式里按顺序叫 `@Image1`…`@Image5`；上传顺序必须和上表一致。首尾帧模式不能同时带参考图：那就只上传 `2_chest.png` 做首帧、`1_corridor_keyart.png` 做尾帧，把下面 prompt 里的 `@Image…` 换成文字描述。
 
 ## Prompt（英文，直接粘贴）
 
@@ -84,19 +84,9 @@ AVOID: any text, letters, captions or logos; any visible face or body of the vie
 
 第三版 prompt 针对这几处：所有物体“黑底加彩色描边，不填色”；手缩小、从两个下角抓盒盖边，盖子绕铰链完全立起；火把眼睛写成“两颗实心黑点，不要眼白、不要瞳孔”；蝙蝠“倒挂在天花板钩子上”；骷髅、蝙蝠、旗都“小一点，只画轮廓”。
 
-### 第三次生成（第三版 prompt，同样 480p）
-
-| 镜头 | 结果 |
-| --- | --- |
-| 1 宝箱 | 对。手只剩白色轮廓，箱盖绕铰链完全立起，里面是走廊，火星升起 |
-| 2 洗牌 | 基本对。黑底，线色依次是青、绿、紫，没有实心墙面了；窗、锁链、倒挂的蝙蝠、爱心旗、骷髅都出现了。剩下的：骷髅、蝙蝠、旗是单色实心块，不是“黑底加描边”；“拆开翻牌”变成了镜头翻滚，只有青色那段能看出翻动，没有石板飞散 |
-| 3 落地 | 对。火把的眼睛是两颗小黑点，和游戏一致；Wick 青线、蹦近、挥手、冒心。约 11 秒时远处地面有一小团白色涂鸦，是生成的杂点 |
-
-结论：第三版可以当给队友看的参考，不再为它改 prompt。真要接进游戏时只当分镜用：镜头 1 和 2 重画成几张定格（#56 的 “a few drawn frames”），镜头 3 由 `opening.gd` 来做。如果还要再出一版，只改一处：把 “each small and drawn in outline only” 换成 “black body with a coloured outline, exactly like @Image5”。
-
 ## 用法和取舍
 
-- **时长**：15 秒、3 个镜头已在 Dreamina 上一次生成成功（三次都是），`@Image1`…`@Image5` 的参考图引用也生效。更长的单次时长（第三方资料称 Seedance 2.5 最长 30 秒）没对照官方文档，没用过；想要更长就把第 2 镜拆成两段分别生成再剪。
+- **时长**：15 秒在 Seedance 2.0 和 2.5 都能一次出（2.5 单次最长 30 秒）。想要更长就把第 2 镜拆成两段分别生成再剪。
 - **一致性**：Wick 和宝箱靠 `@Image` 锁形状；换参考图要整套重生成，别在两次生成之间换图。
 - **文字**：视频不出字。开场字幕（`premise.line` 和 “It only opens for someone who is not alone.”）由引擎用 PressStart2P 叠，AI 视频生成不出可读的像素字。
 - **和引擎开场的衔接**：引擎的开场（`opening.gif`）从一条空走廊和标题字开始，Wick 才从远处蹦来递心，所以视频第 3 镜和它是同一件事。真接进游戏时，视频只用到第 2 镜落地、火把点亮为止，之后交给 `opening.gd`。视频的最后一帧（Wick 已在走廊中央）是 `keyart.png` 的构图，只给队友看用。

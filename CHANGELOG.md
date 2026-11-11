@@ -4,7 +4,20 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
+- `initiated-dialogue`: contextual monster offers, species-specific social combat, action/resource tradeoffs, remembered promises, a keyboard/mouse popup and a reproducible `social-demo` playtest.
+- `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `classic` keeps the old music (refs #49).
+
+### Fixed
+- Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
+- No sound at all in a run on an output slower than 40 kHz, such as Bluetooth headphones in call mode (24 kHz): the music's low-pass opened to 20 kHz, past what that output can carry, turned unstable and silenced the whole mix. It now opens to at most 0.46 of the output's rate, which leaves 44.1 and 48 kHz as they were. The opening film, which plays before those buses exist, was never affected.
+- The game no longer opens the microphone at startup (`audio/driver/enable_input`, left over from the old hold-to-talk). Opening it switched Bluetooth headphones such as AirPods into call mode (24 kHz), and the game could start with no sound in them.
+
+## [0.8.0] - 2026-11-10
+
 ### Changed
+- Floors are about 1.7 times as long and wide: the halls run 21 to 37 cells a side, the Undercroft 31 to 55 and the Wet Caves 27 to 51, with more monsters and rooms to match. The largest builds in about 70 ms and sight stays under 7 ms (`tools/map_test.gd`).
 - The opening film no longer cuts in or out: the menu goes to black, the film rises out of it with its sound, goes back into black over its last moments, and the run rises out of that. A key press leaves in a third of a second.
 - The opening film is graded toward the halls (colour pulled down to bone-white lines on black, a soft glow, faint scanlines, darker corners), and it is 1.5 MB smaller.
 - Combat commands fill a larger three-column grid, with bigger labels and directional navigation.
@@ -20,16 +33,14 @@ All notable changes to this project are documented here. The format follows [Kee
 - The opening film plays as loud as the game's music (it was about 7 LU quieter).
 - `meet=<species>` and `no-tutorial` no longer start a run on the practice floor, where they had no effect.
 - The HEAVY tip no longer shows with `skill-combat`, which hides HEAVY; skill descriptions take their numbers from `data/skills.json`.
-- Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
 - A monster whose face goes blank as you meet it (`warmth`, after a few kills) no longer looks like a drawing that lost its eyes: the first time, a tip says the halls heard every kill and that sparing brings faces back.
 - Audio and gameplay checks follow the dialogue prompt and also verify classic mode without it.
 
 ### Added
-- `initiated-dialogue`: contextual monster offers, species-specific social combat, action/resource tradeoffs, remembered promises, a keyboard/mouse popup and a reproducible `social-demo` playtest.
+- A tag now also publishes to itch.io: `release.yml` pushes the zips that passed CI to `stevenli-phoenix-work/donjon`, channels `html5`, `windows`, `osx` and `linux`; `BUTLER_API_KEY` (an org secret on game-design-projects) is seen by that one step.
 - `intro-cg`: NEW GAME opens with a 15-second film (a chest, the halls reshuffling, Wick waving; any key skips it) from `assets/video/intro.ogv`, made by `tools/intro_video.sh`.
 - Wick teaches the practice floor: after the film her welcome and how to walk, then the tips there (item, menu, mercy, spare, the shy slime) in her voice; `tools/cg_shots.gd` takes pictures of it.
 - `tutorial-floor`: a first run starts on a short practice floor above B1F (a salve, a small shy slime to learn sparing on, the stairs down); on by default, once per profile, skipped with TIPS off, `floor=N` or `meet=`.
-- Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
 - `skill-combat`, off unless named: SKILLS replaces FIGHT and HEAVY with STRIKE, DEFEND and SLAM. Skills cost energy (2 a turn), SLAM cools down a turn and bruises, DEFEND's block soaks hits in the dodge, and none asks for timing.
 - `dungeon-reveal`: solid rectangular surface panels cascade floor → walls → ceiling over cells seen for the first time (a wall already shown stays settled as you walk past it, so stepping doesn't flash every wall), at 100 ms per cell, with configurable timing, biome glow and 450 ms decay; preserves geometry, depth, explored saves and classic rendering.
 - `tools/reveal_shots.gd`: stepping and turning captures with exploration lifecycle checks; `tools/panel_reveal_demo.gd` captures a deterministic corridor, 60 fps animation, and monster/hazard readability.

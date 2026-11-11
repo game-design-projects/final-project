@@ -35,6 +35,7 @@ func _ready() -> void:
 	add_child(_sfx)
 	_music = Music.new()
 	_music.enabled = not Flags.on("nomusic")
+	_music.hum = Flags.enabled("hum-theme")
 	if Flags.enabled("motifs") and not PersonalitySlice.pending():
 		_music.motifs = Music.pick_motifs(Music.local_motifs(), Flags.value("motif"))
 	add_child(_music)
