@@ -1,6 +1,6 @@
 ## Checks the drawn look with no window: that the atlases say what the game needs, how a figure moves (a change of mood never makes its
 ## eyes jump), how warm the halls are and what that does, what a face shows, and Wick from her first hop to a saved game.
-## Prints one line per check and exits with 1 if any failed. With `classic`, only that the personality slice keeps the old look.
+## Prints one line per check and exits with 1 if any failed.
 ##   godot --headless --path . -s res://tools/art_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
@@ -38,11 +38,6 @@ func _name() -> String:
 
 
 func _run() -> void:
-	var words := OS.get_cmdline_user_args() as PackedStringArray
-	if words.has("classic"): # without Wick and the rest, so only the slice has anything to check
-		await _the_slice_keeps_the_old_look()
-		_finish()
-		return
 	_the_atlases_are_whole()
 	_a_figure_moves_without_jumps()
 	_warmth_is_read_off_the_deeds()

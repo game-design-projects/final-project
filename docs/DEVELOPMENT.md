@@ -20,7 +20,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 
 | Script | Checks |
 | --- | --- |
-| `social_test` | Contextual monster offers, personality outcomes, combat/resources, safe popup, custom text, saves/retry and classic |
+| `social_test` | Contextual monster offers, personality outcomes, combat/resources, safe popup, custom text, saves/retry and the game without it |
 | `moods_test` | Seeded dynamic moods, pressure and old-save defaults |
 | `gameplay_test` | Flow, stages, tooltips, mouse and touch input, views after a new floor or a load |
 | `menu_test` | Menu pages and their keys, the opening film is there and plays |
@@ -32,10 +32,10 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
 | `map_test` | The floor generators, biomes and chunks, and what sight costs on a big floor |
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, and a save without any of them |
-| `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game; with `classic`, only that the personality slice keeps the old look |
+| `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game, and that the personality slice keeps the old look |
 | `features_test` | Each feature with its flag on and off (it switches them itself) |
 
-`tools/run_tests.sh [on|classic|both]` runs them all, plays whole games in each mode, and with the features on plays five games without a strike.
+`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`.
 
 Tests can't judge how it looks. These draw the real thing and print numbers, with pictures if given `out=<dir>`. They need a window, which may stay hidden:
 
@@ -58,7 +58,7 @@ Flags change one run. From source they go after `--`; the list with descriptions
 
 ## Features
 
-What shipped from 0.6.1 on is simply the game now. Sixteen features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy` and the opt-in `skill-combat`. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off, and `classic` turns all of them off.
+What shipped from 0.6.1 on is simply the game now. Sixteen features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy` and the opt-in `skill-combat`. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off; there is no switch for all of them at once.
 
 The personality slice (`personality-slice`) is the reference run and stays what it was before any of this: one 13×13 floor, the two bandits, no tips, no items, no drawings. Code that changes a fight or the walk asks `flow.on_slice()`; the views the slice hides are in `flow.SLICE_HIDES`.
 
@@ -156,7 +156,7 @@ The opaque dungeon shader draws filled rectangular panels on existing faces only
 using face UVs and cell addresses in UV2. Floor, walls and ceiling activate separately.
 The original wire appearance returns as the panels decay. Existing bloom/CRT stays
 in charge of the glow; monsters, hazards and props retain their own depth and materials.
-Stair holes remain holes. `no-dungeon-reveal` and `classic` restore the original output.
+Stair holes remain holes. `no-dungeon-reveal` restores the original output.
 
 A small RF texture stores start times, uploaded only on steps or exploration changes;
 frames update uniforms, never geometry. The stage compares `state.seen` with its

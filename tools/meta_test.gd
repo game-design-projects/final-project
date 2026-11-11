@@ -21,7 +21,6 @@ const Transitions = preload("res://src/game/transitions.gd")
 const BASE := ["nosave", "nosound"]
 const FEATURES := ["achievements", "legacy"]
 
-var _classic := false
 # loaded when the test runs: they read the Store autoload, which a `-s` script is compiled before
 var Menus
 var Progress
@@ -33,15 +32,11 @@ func _name() -> String:
 
 
 func _run() -> void:
-	_classic = OS.get_cmdline_user_args().has("classic")
 	Menus = load("res://src/menu/menus.gd")
 	Progress = load("res://src/menu/progress.gd")
 	Store = root.get_node("Store")
 	_declared()
-	if _classic:
-		await _classic_has_none_of_it()
-		_finish()
-		return
+	await _without_them()
 	await _achievements()
 	await _legacy()
 	_progress_store()
@@ -82,6 +77,11 @@ func _declared() -> void:
 		_check(Flags.FEATURES.has(f), "%s is a feature" % f)
 	_check(Transitions.allowed("explore", "camp") and Transitions.allowed("camp", "explore"), "you can sit down and get up")
 	_check(not Transitions.allowed("menu", "camp"), "but not in the middle of a fight")
+	for stage in Transitions.stages():
+		_check(int(stage in Transitions.FIGHT) + int(stage in Transitions.WALK) == 1, "%s is either a fight or a walk, not both" % stage)
+	for stage in Transitions.FIGHT + Transitions.WALK + Transitions.PICKING:
+		_check(Transitions.ALLOWED.has(stage), "%s, named as a kind of stage, is a stage" % stage)
+	_check(Transitions.PICKING.all(func(s): return s in Transitions.FIGHT), "picking a command only happens in a fight")
 	for id in Achievements.ids():
 		var info: Dictionary = Achievements.info(id)
 		_check(str(info.label) != "" and str(info.text) != "", "%s says what it is" % id)
@@ -91,14 +91,14 @@ func _declared() -> void:
 	_check(Items.known(Survival.RATION) and Items.known(Survival.ROAST), "the food is in the item table")
 
 
-func _classic_has_none_of_it() -> void:
-	var flow = _flow(5, ["classic"])
+func _without_them() -> void:
+	var flow = _flow(5, ["no-legacy", "no-achievements"])
 	flow.legacy_ranks = {"skin": 3, "purse": 3}
 	await flow.new_run()
 	var s = flow.state
-	_check(s.max_hp == State.new().max_hp and s.gold == State.new().gold, "classic: the boons do nothing")
+	_check(s.max_hp == State.new().max_hp and s.gold == State.new().gold, "no-legacy: the boons do nothing")
 	flow.event("spared", {"boss": false})
-	_check(flow.trophies.earned.is_empty(), "classic: nothing is earned")
+	_check(flow.trophies.earned.is_empty(), "no-achievements: nothing is earned")
 
 
 func _achievements() -> void:
@@ -576,10 +576,10 @@ func _menu_pages() -> void:
 	var trophies: Dictionary = Menus.achievements()
 	_check(str(trophies.title).contains("1") and str(trophies.body).contains(str(Achievements.info("words").label)), "the earned ones are named (%s)" % trophies.title)
 	_check(not str(trophies.body).contains(str(Achievements.info("nobody_asked").label)), "and the others stay a surprise")
-	_use(["classic"])
-	var classic: Dictionary = Menus.main(panel, {"new_game": func(): pass, "load_slot": func(_s): pass})
-	var plain: Array = classic.items.map(func(i): return i.label)
-	_check(not plain.has("LEGACY") and not plain.has("ACHIEVEMENTS"), "classic: neither page")
+	_use(["no-legacy", "no-achievements"])
+	var without: Dictionary = Menus.main(panel, {"new_game": func(): pass, "load_slot": func(_s): pass})
+	var plain: Array = without.items.map(func(i): return i.label)
+	_check(not plain.has("LEGACY") and not plain.has("ACHIEVEMENTS"), "without them: neither page")
 	_clear_store()
 	panel.free()
 

@@ -55,6 +55,6 @@ the same authoritative pressure modifier. No additional negotiation, trust or
 recruitment modifier is implemented in this first slice.
 
 Run tools/moods_test.gd, tools/slice_test.gd and tools/rules_test.gd with
-`-- nosave nosound`. Disable with no-dynamic-moods or classic.
+`-- nosave nosound`. Disable with no-dynamic-moods.
 The unit test covers snapshot restoration, not a full interactive death/retry.
 Visual readability and balance still need human playtesting.

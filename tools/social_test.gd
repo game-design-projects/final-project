@@ -36,10 +36,7 @@ func _popup(flow) -> void:
 	_check(flow.state.stage == "social", "pending offer opens only at menu boundary")
 
 func _run() -> void:
-	if Flags.on("classic"):
-		await _classic_only()
-		_finish()
-		return
+	await _without_it()
 	await _bandits()
 	await _slimes()
 	await _scheduler()
@@ -309,11 +306,6 @@ func _compatibility() -> void:
 	_check(s.foe.social.betrayed and s.skill_fight.used == 1, "damage skill breaks promise through same rules as timed strike")
 	await flow.press(str(s.menu.size()))
 	_check(s.stage == "wait" and s.skill_fight.turn_over, "skills still resolve one enemy attack after betrayal")
-	flow = await _fresh("bandit", ["jumpy"], ["classic"])
-	s = flow.state
-	for i in 6:
-		await flow.encounter.after_player([], {"pressure": 1.0, "pacified": true})
-	_check(s.stage == "menu" and s.social_offer.is_empty() and s.foe.social.is_empty(), "classic never schedules or displays initiated dialogue")
 	flow = await _fresh("bandit", ["jumpy"], ["no-initiated-dialogue"])
 	s = flow.state
 	for i in 6:
@@ -362,18 +354,18 @@ func _ui() -> void:
 	await process_frame
 
 
-func _classic_only() -> void:
-	var flow = await _fresh("bandit", ["jumpy"], ["classic"])
+func _without_it() -> void:
+	var flow = await _fresh("bandit", ["jumpy"], ["no-initiated-dialogue"])
 	var s = flow.state
 	for i in 8:
 		await flow.encounter.after_player([], {"pressure": 1.0, "pacified": true})
-	_check(not flow.feature("initiated-dialogue"), "classic disables explicit initiated-dialogue feature")
-	_check(s.stage == "menu" and s.social_offer.is_empty() and s.foe.social.is_empty(), "classic leaves combat untouched after eight actions")
+	_check(not flow.feature("initiated-dialogue"), "no-initiated-dialogue turns the feature off")
+	_check(s.stage == "menu" and s.social_offer.is_empty() and s.foe.social.is_empty(), "without it, combat is untouched after eight actions")
 	await flow.go("act")
 	await flow.press(str(s.menu.size()))
-	_check(s.stage == "talk", "classic keeps ordinary TALK")
+	_check(s.stage == "talk", "without it, TALK is the ordinary one")
 	await flow.submit_text("Hello friend")
-	_check(s.foe.spoke and s.stage in ["wait", "menu"], "classic TALK resolves normally")
+	_check(s.foe.spoke and s.stage in ["wait", "menu"], "without it, TALK resolves normally")
 
 
 func _safe_queue() -> void:

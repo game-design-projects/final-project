@@ -20,14 +20,14 @@
 数据与资源：`data`（物种、台词、数值）、`assets`（音乐、字体、语音、手绘图集）、`flags`（启动参数）。
 外部：`proxy`（持有密钥）→ Jev LLM。本地语音识别（`native/asr`）和按住说话暂未带回。
 
-`game` 里的阶段都在 `game/stages/`，一张转移表（`transitions.gd`）管住能从哪到哪，事件的字段在 `events.gd` 里校验。小游戏一个文件一个，在 `rules/minigames/`；地图生成器也是，在 `rules/maps/`。跨局留下的东西（成就、余烬、加成）存在 `menu/progress.gd`，由 `gameplay` 交给 `game`；`game` 只发事件（`trophy`、`run_closed`），不碰存储。
+`game` 里的阶段都在 `game/stages/`，一张转移表（`transitions.gd`）管住能从哪到哪，每个阶段算战斗还是行走（`FIGHT` / `WALK`，选指令的是 `PICKING`）也只在这里写，画面和提示从这里读，事件的字段在 `events.gd` 里校验。小游戏一个文件一个，在 `rules/minigames/`；地图生成器也是，在 `rules/maps/`。跨局留下的东西（成就、余烬、加成）存在 `menu/progress.gd`，由 `gameplay` 交给 `game`；`game` 只发事件（`trophy`、`run_closed`），不碰存储。
 
 ## 约定
 
 - 联网和子进程只经 `network manager`；超时和失败回退放在这一处。
 - 日志、随机、存储、启动参数是小工具，不画在图里，统一放在 `src/utils/`，由用到的模块直接使用。
 - 场景文件（`.tscn`）跟各自模块放在一起，不单设目录。
-- 新功能默认就是游戏的一部分，不加开关；需要和旧行为对照的才进 `utils/flags.gd` 的 `FEATURES`（默认开；`OPT_IN` 里的实验功能例外，不点名不开），`classic` 把这些关掉。性格切片（`flow.on_slice()`）保持原样。
+- 新功能默认就是游戏的一部分，不加开关；需要和旧行为对照的才进 `utils/flags.gd` 的 `FEATURES`（默认开，`no-<name>` 单独关掉；`OPT_IN` 里的实验功能例外，不点名不开）。性格切片（`flow.on_slice()`）保持原样。
 - 数值和文本放 `data/*.json`，由 `rules/content.gd` 读。
 
 ## 目录
