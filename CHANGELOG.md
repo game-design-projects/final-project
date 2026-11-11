@@ -9,9 +9,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - `initiated-dialogue`: contextual monster offers, species-specific social combat, action/resource tradeoffs, remembered promises, a keyboard/mouse popup and a reproducible `social-demo` playtest.
 - `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `classic` keeps the old music (refs #49).
 
-### Removed
-- The `achievements` and `legacy` feature flags: both are part of the game now, and `classic` no longer turns them off. On the personality slice they stay off, as before.
-
 ### Fixed
 - `tools/run_tests.sh` fails a suite whose log has a SCRIPT ERROR, which used to pass if the suite still reached its last line.
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.

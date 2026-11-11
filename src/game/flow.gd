@@ -113,15 +113,10 @@ func _init(game_rng, game_mind) -> void:
 	_place_camera() # a save looks about it as it loads, so this is in place before that
 
 
-## True on the personality slice, the reference run: the game's extras (what a feature once switched on) stay off there, so its
-## routes stay fixed and its sessions can be compared.
-func on_slice() -> bool:
-	return slice_floor or PersonalitySlice.pending()
-
-
-## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice.
+## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice, whose routes stay fixed so
+## its sessions can be compared.
 func feature(name: String) -> bool:
-	return Flags.enabled(name) and not on_slice()
+	return Flags.enabled(name) and not slice_floor and not PersonalitySlice.pending()
 
 
 ## A fresh run: a new floor, standing at its start. With `practice` (the scene asks for it until it has been played once) and
@@ -137,7 +132,7 @@ func new_run(practice := false) -> void:
 		coach.seen[PRACTICE_SEEN] = true
 		event("coach", {"id": PRACTICE_SEEN}) # the scene remembers it with the tips, so SHOW THE TIPS AGAIN brings it back
 	_apply_features()
-	if not on_slice():
+	if feature("legacy"):
 		Legacy.apply(state, legacy_ranks)
 	if feature("wick"):
 		_meet_wick()
@@ -223,10 +218,10 @@ func next_floor(way := {}) -> void:
 	await go("explore", {"lines": _arrival()})
 
 
-## This run is over for good: at the last stairs, or given up after a fall. What it earned in all (0 on the personality slice). The scene
+## This run is over for good: at the last stairs, or given up after a fall. What it earned in all (0 without the feature legacy). The scene
 ## pays it; a run left and loaded again pays only what is new.
 func close_run(cleared: bool) -> int:
-	if on_slice():
+	if not feature("legacy"):
 		return 0
 	var embers := Legacy.earned(state, cleared)
 	print("flow: run closed, %d embers" % embers)

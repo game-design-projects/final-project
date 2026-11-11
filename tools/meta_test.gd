@@ -19,7 +19,7 @@ const Survival = preload("res://src/rules/survival.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 const BASE := ["nosave", "nosound"]
-const FEATURES := ["hunger", "butcher"]
+const FEATURES := ["achievements", "legacy", "hunger", "butcher"]
 
 var _classic := false
 # loaded when the test runs: they read the Store autoload, which a `-s` script is compiled before
@@ -93,8 +93,12 @@ func _declared() -> void:
 
 func _classic_has_none_of_it() -> void:
 	var flow = _flow(5, ["classic"])
+	flow.legacy_ranks = {"skin": 3, "purse": 3}
 	await flow.new_run()
 	var s = flow.state
+	_check(s.max_hp == State.new().max_hp and s.gold == State.new().gold, "classic: the boons do nothing")
+	flow.event("spared", {"boss": false})
+	_check(flow.trophies.earned.is_empty(), "classic: nothing is earned")
 	var hunger: float = s.hunger
 	await flow.press("up")
 	await flow.press("down")
@@ -145,11 +149,10 @@ func _achievements() -> void:
 	_check(Achievements.earned_by("run_ended", {"how": "cleared"}, s).has("nobody_asked"), "fed them and got away with it")
 	s.found_out = true
 	_check(not Achievements.earned_by("run_ended", {"how": "cleared"}, s).has("nobody_asked"), "not when it came out")
-	var slice = _flow(5)
-	await slice.new_run()
-	slice.slice_floor = true
-	slice.event("spared", {"boss": false})
-	_check(slice.trophies.earned.is_empty(), "the personality slice earns nothing")
+	var off = _flow(5, ["no-achievements"])
+	await off.new_run()
+	off.event("spared", {"boss": false})
+	_check(off.trophies.earned.is_empty(), "no-achievements earns nothing")
 
 
 func _legacy() -> void:
@@ -171,10 +174,10 @@ func _legacy() -> void:
 	over.legacy_ranks = {"skin": 99}
 	await over.new_run()
 	_check(over.state.max_hp == base_hp + Legacy.top_rank("skin") * int(b.skin.max_hp), "a rank past the top counts as the top")
-	var ref = _flow(5, ["personality-slice"])
-	ref.legacy_ranks = {"skin": 3}
-	await ref.new_run()
-	_check(ref.state.max_hp == base_hp, "the personality slice: the boons do nothing")
+	var off = _flow(5, ["no-legacy"])
+	off.legacy_ranks = {"skin": 3}
+	await off.new_run()
+	_check(off.state.max_hp == base_hp, "no-legacy: the boons do nothing")
 	var e: Dictionary = Legacy.table().earn
 	s.tally = {"spared": 2, "slain": 1, "fled": 0, "recruited": 1, "left": 0}
 	s.depth = 3
@@ -189,15 +192,14 @@ func _legacy() -> void:
 	_use()
 	flow.close_run(false)
 	_check(paid == [want], "a closed run says what it earned (%s)" % [paid])
-	var slice = _flow(5)
+	var slice = _flow(5, ["no-legacy"])
 	await slice.new_run()
-	slice.slice_floor = true
 	var none := []
 	slice.happened.connect(func(n, _d):
 		if n == "run_closed":
 			none.append(1))
 	slice.close_run(false)
-	_check(none.is_empty(), "the personality slice: nothing to pay")
+	_check(none.is_empty(), "no-legacy: nothing to pay")
 
 
 func _progress_store() -> void:
@@ -600,7 +602,7 @@ func _menu_pages() -> void:
 	_use(["classic"])
 	var classic: Dictionary = Menus.main(panel, {"new_game": func(): pass, "load_slot": func(_s): pass})
 	var plain: Array = classic.items.map(func(i): return i.label)
-	_check(plain.has("LEGACY") and plain.has("ACHIEVEMENTS"), "classic: both pages stay")
+	_check(not plain.has("LEGACY") and not plain.has("ACHIEVEMENTS"), "classic: neither page")
 	_clear_store()
 	panel.free()
 
