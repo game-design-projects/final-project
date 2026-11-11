@@ -7,6 +7,7 @@ const Content = preload("res://src/rules/content.gd")
 const Pace = preload("res://src/rules/pace.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
+const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -20,6 +21,8 @@ func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
 	var genre: String = flow.encounter.foe_genre(m)
+	if flow.feature("initiated-dialogue") and int(m.social.get("trial", 0)) > 0:
+		genre = "gates" # the dragon's telegraphed walls trial, even on a mini-game turn
 	var pace := 1.0
 	if flow.feature("gentle-dodge"):
 		pace = Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
@@ -88,5 +91,6 @@ func tick(flow, t: float) -> void:
 		s.foe.turn += 1
 		s.struggle = Pace.after_dodge(s.struggle, _hits)
 		var spareable: bool = await flow.encounter.spareable(s.foe)
-		s.say([State.sys_line(Texts.pauses(s.foe, spareable))])
+		var trial := Social.trial_over(s.foe, s) if flow.feature("initiated-dialogue") else ""
+		s.say([State.sys_line(trial if trial != "" else Texts.pauses(s.foe, spareable))])
 		await flow.go("menu")

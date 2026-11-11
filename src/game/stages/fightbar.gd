@@ -3,6 +3,7 @@
 extends "res://src/game/stages/stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
+const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
@@ -45,6 +46,8 @@ func _strike(flow, t: float) -> void:
 		result = Combat.strike(x, m.boss, s.has_ally("dragon"), aid + s.sharpened)
 	if not result.miss:
 		s.sharpened = 0
+		if flow.feature("initiated-dialogue"):
+			result.damage += Social.strike_bonus(m)
 	if result.miss:
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")
@@ -53,6 +56,7 @@ func _strike(flow, t: float) -> void:
 			swung.pressure += Combat.HEAVY_MISS_PRESSURE
 		await flow.encounter.after_player([State.sys_line("%s %s is %s." % [Texts.HEAVY_MISS if heavy else Texts.miss(), m.name, swung.feeling.label])], swung)
 		return
+	var betrayal := Social.hit(m) if flow.feature("initiated-dialogue") else ""
 	m.hp = maxi(0, m.hp - result.damage)
 	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy}) # a heavy hit sounds and flashes like a big one
 	var found: String = _learn_how_it_takes_it(flow, m) if heavy else ""
@@ -66,6 +70,9 @@ func _strike(flow, t: float) -> void:
 	if begging:
 		flow.encounter.judge("slay_begging")
 	var line := "%s %s%s" % [Texts.hit(result.damage, result.crit), found, Texts.foe_feels(m, decision.feeling)]
+	if betrayal != "":
+		line = betrayal + " " + line
+		decision.pacified = false
 	await flow.encounter.after_player([State.sys_line(line)], decision)
 
 

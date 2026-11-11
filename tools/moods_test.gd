@@ -33,4 +33,5 @@ func _initialize() -> void:
 	var old: Dictionary = snap.duplicate(true)
 	old.erase("mood")
 	check(Monster.from_dict(old).mood.is_empty(), "old save default")
+	print("moods_test: all checks passed" if failures == 0 else "moods_test: %d checks failed" % failures)
 	quit(failures)

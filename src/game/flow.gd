@@ -38,13 +38,14 @@ const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on h
 const WICK_BANNER_MS := 4500.0
 const WARMTH_TITLE := "THE HALLS"
 const WALK_HEAL_STEPS := 6
-const FIGHT_STAGES := ["intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
+const FIGHT_STAGES := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
 const PRACTICE_SEEN := "practice" # its id among the tips seen
 
 const STAGES := {
+	"social": preload("res://src/game/stages/social.gd"),
 	"explore": preload("res://src/game/stages/explore.gd"),
 	"intro": preload("res://src/game/stages/intro.gd"),
 	"menu": preload("res://src/game/stages/menu.gd"),
@@ -156,7 +157,7 @@ func new_run(practice := false) -> void:
 func practice_allowed() -> bool:
 	if not (feature("tutorial-floor") and feature("real-floors") and feature("tutorial")):
 		return false
-	if Flags.value("floor") != "" or Flags.value("meet") != "":
+	if Flags.value("floor") != "" or Flags.value("meet") != "" or Flags.on("social-demo"):
 		print("flow: no practice floor, the flags ask for another start")
 		return false
 	return true
@@ -313,7 +314,7 @@ func load_state(saved: Dictionary) -> bool:
 
 ## Whether the scene may write the AUTO save when the walk resumes: not on the slice's floor.
 func autosave_allowed() -> bool:
-	return not slice_floor
+	return not slice_floor and not Flags.on("social-demo")
 
 
 ## A floor that replaces the current one (new run, loaded save) is an ordinary floor: no slice, no mark.
@@ -431,10 +432,10 @@ func select(index: int) -> void:
 
 ## The player sent a line of text in the talk stage.
 func submit_text(text: String) -> void:
-	if busy or state.stage != "talk":
+	if busy or state.stage not in ["talk", "social"]:
 		return
 	busy = true
-	await _stages["talk"].submit(self, text)
+	await _stages[state.stage].submit(self, text)
 	busy = false
 
 

@@ -4,6 +4,8 @@
 extends RefCounted
 
 const FIELDS := {
+	"social_offer": ["who", "species", "turn", "goal"],
+	"social_reply": ["who", "choice", "cost", "outcome"],
 	"stage": ["from", "to"], # the game moved to another stage
 	"step": [], # the party walked one cell
 	"bump": [], # walked into a wall

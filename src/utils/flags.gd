@@ -11,6 +11,7 @@ extends RefCounted
 
 ## name -> what it does. Add a line here when a feature gets a switch.
 const KNOWN := {
+	"social-demo": "reproducible Bandit and Slime social-combat playtest",
 	"debug": "keep the foe's mind panel open (every row of the mind's last answers) in a fight, and log every game event",
 	"mock": "monsters think with the seeded mind instead of calling Jev (not in the personality slice, which always uses the local rules)",
 	"jev": "jev=<url>: ask Jev through the proxy at this address (without it the rule-based mind answers)",
@@ -35,6 +36,7 @@ const KNOWN := {
 
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.
 const FEATURES := {
+	"initiated-dialogue": "monsters offer contextual, action-costing social choices at safe combat boundaries",
 	"dynamic-moods": "contextual monster intentions and restrained autonomous behavior",
 	"dungeon-reveal": "solid floor, wall and ceiling light panels cascade over each cell the first time you see it",
 	"real-floors": "the stairs lead down to the next floor, with HP, gold, allies and the tally carried over; the run ends at the last floor",

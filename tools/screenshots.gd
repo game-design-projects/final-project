@@ -22,6 +22,10 @@ func _initialize() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
 	DisplayServer.window_move_to_foreground()
+	if Flags.on("social-demo"):
+		await _social_shots()
+		quit()
+		return
 	var menu = load("res://src/menu/main_menu.tscn").instantiate()
 	root.add_child(menu)
 	await _wait(0.5)
@@ -78,7 +82,8 @@ func _until(stage: String, max_s: float) -> void:
 
 
 func _shot(name: String) -> void:
-	await RenderingServer.frame_post_draw
+	await process_frame
+	RenderingServer.force_draw()
 	root.get_texture().get_image().save_png("%s/%s.png" % [_out, name])
 	print("screenshots: %s" % name)
 
@@ -351,3 +356,47 @@ func _tooltips() -> void:
 	_game._pad.visible = false
 	s.allies = []
 	await _wait(0.2)
+
+
+## Social slice: actual gameplay controls and popup, isolated from the long art tour above.
+func _social_shots() -> void:
+	_game = load("res://src/gameplay/gameplay.tscn").instantiate()
+	root.add_child(_game)
+	await _wait(0.8)
+	await _until("menu", 5.0)
+	var flow = _game.flow
+	var s = flow.state
+	for i in 2:
+		await flow.exclusive(func(): await flow.encounter.after_player([], {"pressure": 1.0, "pacified": true}))
+	await _wait(0.3)
+	await _shot("social_01_bandit_offer")
+	await flow.press("4")
+	await _wait(0.2)
+	_game._social._input.text = "You are bluffing. I see your hands shake."
+	await _shot("social_02_typing")
+	await flow.submit_text(_game._social._input.text)
+	await _wait(0.2)
+	await _shot("social_03_preview")
+	await flow.press("confirm")
+	await _wait(0.3)
+	await _shot("social_04_bluff_consequence")
+	# Render the emotional encounter with its own art, motives and choices.
+	await flow.exclusive(func(): await flow.go("explore"))
+	await flow.exclusive(func(): await flow.go("intro", {"foe": s.floor_map.monsters[2]}))
+	await flow.exclusive(func(): await flow.go("menu"))
+	for i in 2:
+		await flow.exclusive(func(): await flow.encounter.after_player([], {"pressure": 1.0, "pacified": true}))
+	await _wait(0.3)
+	await _shot("social_05_slime_offer")
+	await _wait(0.5)
+	await flow.press("2")
+	await _wait(0.3)
+	await _shot("social_06_promise_consequence")
+	# The same real popup at a compact window; every control must still fit.
+	DisplayServer.window_set_size(Vector2i(840, 640))
+	s.foe.social.used = false
+	s.foe.social.pending = true
+	await flow.exclusive(func(): await flow.go("menu"))
+	await _wait(0.3)
+	await _shot("social_07_compact")
+	print("screenshots: social pictures written to %s" % _out)

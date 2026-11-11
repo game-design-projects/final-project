@@ -337,6 +337,8 @@ static func hp_color(frac: float) -> Color:
 # ---------------------------------------------------------------- the dock
 
 func _dock() -> void:
+	if state.stage == "social":
+		return # its popup owns both speech and choices
 	_log(Rect2(0, 0, size.x, LOG_H))
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	if state.stage == "talk":

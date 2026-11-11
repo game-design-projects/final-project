@@ -47,6 +47,11 @@ jobs:
           godot --headless --path . -s res://tools/autoplay.gd -- mock
           godot --headless --path . -s res://tools/autoplay.gd -- practice
           godot --headless --path . -s res://tools/autoplay.gd -- skill-combat
+      - name: Check initiated dialogue and dynamic moods
+        run: |
+          set -euo pipefail
+          godot --headless --path . -s res://tools/social_test.gd -- nosave nosound
+          godot --headless --path . -s res://tools/moods_test.gd -- nosave nosound
       # The personality slice (ROOK and VEX at fixed rolls): what ends it, the retry, the autosave rule, the seed, the mind.
       - name: Check the personality slice
         run: |
