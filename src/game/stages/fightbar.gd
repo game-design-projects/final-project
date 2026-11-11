@@ -13,7 +13,7 @@ func enter(flow, args: Dictionary) -> void:
 	var heavy: bool = args.get("heavy", false)
 	s.menu = []
 	s.hint = "ENTER STRIKE INSIDE THE RED MARK" if heavy else "ENTER STRIKE WHEN THE LINE CROSSES THE MIDDLE"
-	if not flow.on_slice() and s.party_size() > 0:
+	if s.party_size() > 0:
 		s.hint += " · PARTY +%d" % Combat.party_aid(s.party_size())
 	if s.sharpened > 0:
 		s.hint += " · WHETTED +%d" % s.sharpened
@@ -37,7 +37,7 @@ func _strike(flow, t: float) -> void:
 	var x := clampf((t - s.bar.t0) / s.bar.dur, 0.0, 1.0)
 	var heavy: bool = s.bar.heavy
 	s.bar = null
-	var aid: int = 0 if flow.on_slice() else Combat.party_aid(s.party_size())
+	var aid: int = Combat.party_aid(s.party_size())
 	var result: Dictionary
 	if heavy:
 		result = Combat.heavy_strike(x, m.boss, m.species, s.has_ally("dragon"), aid + s.sharpened)
@@ -46,8 +46,7 @@ func _strike(flow, t: float) -> void:
 		result = Combat.strike(x, m.boss, s.has_ally("dragon"), aid + s.sharpened)
 	if not result.miss:
 		s.sharpened = 0
-		if flow.feature("initiated-dialogue"):
-			result.damage += Social.strike_bonus(m)
+		result.damage += Social.strike_bonus(m)
 	if result.miss:
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")
@@ -56,7 +55,7 @@ func _strike(flow, t: float) -> void:
 			swung.pressure += Combat.HEAVY_MISS_PRESSURE
 		await flow.encounter.after_player([State.sys_line("%s %s is %s." % [Texts.HEAVY_MISS if heavy else Texts.miss(), m.name, swung.feeling.label])], swung)
 		return
-	var betrayal := Social.hit(m) if flow.feature("initiated-dialogue") else ""
+	var betrayal := Social.hit(m)
 	m.hp = maxi(0, m.hp - result.damage)
 	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy}) # a heavy hit sounds and flashes like a big one
 	var found: String = _learn_how_it_takes_it(flow, m) if heavy else ""

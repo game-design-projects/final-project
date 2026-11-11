@@ -88,7 +88,7 @@ func _press_something(flow) -> void:
 			if s.hint == "ANY KEY CONTINUE":
 				await flow.press("confirm")
 		"explore":
-			if not flow.on_slice() and Survival.stage_of(s.hunger) != "" and s.items.any(func(id): return str(Items.info(id).kind) == "food"):
+			if Survival.stage_of(s.hunger) != "" and s.items.any(func(id): return str(Items.info(id).kind) == "food"):
 				await flow.press("confirm")
 			else:
 				await flow.press(_explore_key(s))

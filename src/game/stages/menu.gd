@@ -23,19 +23,19 @@ const SKILLS := "SKILLS"
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var mercy: float = await flow.mind.mercy(s.foe)
-	if flow.feature("initiated-dialogue") and s.foe.social.get("promise", false) and not s.foe.social.get("betrayed", false) and not s.foe.boss:
+	if Social.promised(s.foe):
 		mercy = 1.0
 		s.mind_rows = s.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "PROMISE KEPT: WILL IT ACCEPT MERCY?", "answer": mercy}]
 	var skilled: bool = s.skill_fight != null
 	if skilled and s.skill_fight.turn_over:
 		Skills.start_turn(s.skill_fight)
-	if flow.feature("initiated-dialogue") and Social.ready(s.foe, s):
+	if Social.ready(s.foe, s):
 		await flow.go("social")
 		return
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
-		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss) if not flow.on_slice() else "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
+		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss), "gold": mercy >= 0.5},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
 	if skilled:
@@ -43,9 +43,8 @@ func enter(flow, _args: Dictionary) -> void:
 	if flow.feature("heavy-strike") and not skilled:
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
-	if not flow.on_slice():
-		s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
-	if flow.feature("initiated-dialogue") and int(s.foe.social.get("opening", 0)) > 0:
+	s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
+	if int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
 	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
@@ -109,7 +108,7 @@ func _spare(flow) -> void:
 	var s = flow.state
 	var m = s.foe
 	var odds: float = await flow.mind.mercy(m)
-	if flow.feature("initiated-dialogue") and m.social.get("promise", false) and not m.social.get("betrayed", false) and not m.boss:
+	if Social.promised(m):
 		odds = 1.0
 	var accepted := Odds.succeeds(flow.dice, odds)
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": odds, "picked": accepted}]
@@ -118,12 +117,8 @@ func _spare(flow) -> void:
 		await flow.encounter.defeat(m, "spared")
 		return
 	flow.event("mercy_refused")
-	var gentle: bool = not flow.on_slice()
-	if not gentle:
-		m.meters.anger = clampf(m.meters.anger + Combat.REFUSED_MERCY_ANGER, 0.0, 100.0)
 	var pressure: float = await flow.mind.pressure(m)
-	var line: String = Texts.not_ready(m, odds) if gentle else Texts.mercy_refused(m, odds)
-	await flow.encounter.after_player([State.sys_line(line)], {"pressure": pressure, "pacified": false})
+	await flow.encounter.after_player([State.sys_line(Texts.not_ready(m, odds))], {"pressure": pressure, "pacified": false})
 
 
 func _flee(flow) -> void:
@@ -143,8 +138,8 @@ func _flee(flow) -> void:
 		s.gold -= dropped
 		m.meters.anger = clampf(m.meters.anger + float(cost.anger), 0.0, 100.0)
 		print("menu: backing away from %s cost %d gold; anger now %.0f" % [m.name, dropped, m.meters.anger])
-	flow.encounter.judge("flee") # before the slice ends, so an ally's verdict is drawn at the fixed roll too
-	flow.end_slice() # a fled slice is over: no second bandit follows
+	flow.encounter.judge("flee")
+	flow.fight_queue = [] # a fled fight ends the queue (social-demo): no next one follows
 	Roaming.hold(m)
 	if not costly:
 		m.hp = m.max_hp

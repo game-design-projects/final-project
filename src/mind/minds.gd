@@ -1,5 +1,5 @@
-## Picks the mind a game uses. `mock` asks for the seeded random one (except for an offline game such as the personality
-## slice, which always gets the rule-based one). `jev=<url>` (or `saved_url`, the address the player saved, or else the one
+## Picks the mind a game uses. `mock` asks for the seeded random one (except for an offline game such as social-demo,
+## which always gets the rule-based one). `jev=<url>` (or `saved_url`, the address the player saved, or else the one
 ## a build ships with) asks Jev through the proxy, with the rule-based mind answering whenever the network can't.
 ## Otherwise the rule-based one.
 extends RefCounted
@@ -19,7 +19,7 @@ static func shipped_url() -> String:
 	return FileAccess.get_file_as_string(SHIPPED_URL).strip_edges() if FileAccess.file_exists(SHIPPED_URL) else ""
 
 
-## `offline` is the playtest slice, which must repeat exactly: it always thinks with the local rules, never asks Jev
+## `offline` is a playtest that must repeat exactly (social-demo): it always thinks with the local rules, never asks Jev
 ## (whatever address is saved, given or shipped) and ignores `mock`.
 static func create(rng: Rng, saved_url := "", offline := false):
 	var mind

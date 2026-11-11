@@ -88,7 +88,7 @@ func _mood(s) -> String:
 		return "hollow"
 	if m.gone == "spared":
 		return "happy"
-	if s.viewing("warmth") and Moods.hollow(m, Warmth.of(s)):
+	if Moods.hollow(m, Warmth.of(s)):
 		return "hollow"
 	var tone: String = overlay.emote_tone()
 	if tone == "good":

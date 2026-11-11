@@ -8,7 +8,6 @@ extends "res://tools/test_base.gd"
 const Automap = preload("res://src/view/automap.gd")
 const Chunks = preload("res://src/rules/maps/chunks.gd")
 const Content = preload("res://src/rules/content.gd")
-const Decor = preload("res://src/view/decor.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -18,8 +17,10 @@ const Materials = preload("res://src/view/materials.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const SaveCheck = preload("res://src/game/save_check.gd")
 const State = preload("res://src/game/state.gd")
 const Vision = preload("res://src/rules/vision.gd")
+const WallArt = preload("res://src/view/wall_art.gd")
 
 const FLOORS_EACH := 1000
 const SAME_SEED_CHECKS := 40
@@ -328,7 +329,7 @@ func _save_keeps_the_secrets() -> void:
 	]:
 		var wrong: Dictionary = saved.duplicate(true)
 		bad.call(wrong)
-		_check(State.from_dict(wrong) == null, "a save with bad secrets is refused (%s)" % State._problem(wrong))
+		_check(State.from_dict(wrong) == null, "a save with bad secrets is refused (%s)" % SaveCheck.problem(wrong))
 	var old: Dictionary = saved.duplicate(true)
 	old.floor.erase("treasure")
 	old.floor.erase("teleports")
@@ -404,7 +405,7 @@ func _costs() -> void:
 		var mesh_ms := (Time.get_ticks_usec() - t0) / 1000.0
 		t0 = Time.get_ticks_usec()
 		var torches := []
-		var decor: Node3D = Decor.build(f, Color.WHITE, Color.WHITE, torches)
+		var decor: Node3D = WallArt.build(f, Color.WHITE, Color.WHITE, torches, WallArt.EYES_AT_LEVEL.size() - 1)
 		var decor_ms := (Time.get_ticks_usec() - t0) / 1000.0
 		var worst_sight := 0.0
 		var total_sight := 0.0

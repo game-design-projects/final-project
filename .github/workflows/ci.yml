@@ -52,11 +52,6 @@ jobs:
           set -euo pipefail
           godot --headless --path . -s res://tools/social_test.gd -- nosave nosound
           godot --headless --path . -s res://tools/moods_test.gd -- nosave nosound
-      # The personality slice (ROOK and VEX at fixed rolls): what ends it, the retry, the autosave rule, the seed, the mind.
-      - name: Check the personality slice
-        run: |
-          set -euo pipefail
-          godot --headless --path . -s res://tools/slice_test.gd
       # The menu panel: hints wrap, digits and the mouse work, settings are taken over from the old game, a bad save is refused.
       - name: Check the menus
         run: |

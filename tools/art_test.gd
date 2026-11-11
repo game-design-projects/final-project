@@ -18,7 +18,6 @@ const Floors = preload("res://src/rules/floors.gd")
 const Flow = preload("res://src/game/flow.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Monster = preload("res://src/rules/monster.gd")
-const MonsterModel = preload("res://src/view/monster_model.gd")
 const Moods = preload("res://src/rules/moods.gd")
 const Opening = preload("res://src/view/opening.gd")
 const Overlay = preload("res://src/view/overlay.gd")
@@ -49,7 +48,6 @@ func _run() -> void:
 	_the_battle_screen_shows_the_face()
 	_the_opening()
 	_the_menu_has_her()
-	await _the_slice_keeps_the_old_look()
 	_finish()
 
 
@@ -282,9 +280,8 @@ func _wall_art_answers_the_warmth() -> void:
 	var f = FloorGen.generate(Rng.new(9))
 	var torches := []
 	var warm: Node3D = WallArt.build(f, Color.WHITE, Color.WHITE, torches, 3)
-	var plain := []
-	Decor.build(f, Color.WHITE, Color.WHITE, plain).free()
-	_check(torches.size() == plain.size() and torches.size() > 0, "every torch of a floor is lit (%d)" % torches.size())
+	var placed: int = Decor.placements(f).filter(func(p): return p.kind == "torch").size()
+	_check(torches.size() == placed and torches.size() > 0, "every torch of a floor is lit (%d)" % torches.size())
 	var props: MeshInstance3D = warm.get_node("Props")
 	_check(props.material_override.get_shader_parameter("sheet") == Sprites.texture("decor"), "what hangs on the wall comes from the decor atlas")
 	var flames: MeshInstance3D = warm.get_node("Flames")
@@ -385,8 +382,6 @@ func _the_battle_screen_shows_the_face() -> void:
 	var overlay = Overlay.new()
 	root.add_child(overlay)
 	var s = State.new()
-	s.views["hand-drawn"] = true
-	s.views["warmth"] = true
 	s.stage = "menu"
 	var m = _monster("bandit")
 	m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
@@ -463,31 +458,3 @@ func _the_menu_has_her() -> void:
 	wick.size = Vector2(700, 820)
 	_check(wick.stands_at().x < 0.0, "and a narrow window leaves her out")
 	wick.free()
-
-
-## The personality slice is the reference run: no friend along, and the set, the monsters and the fight as they were before the drawings.
-func _the_slice_keeps_the_old_look() -> void:
-	var flow = _flow(5, ["personality-slice"])
-	await flow.new_run()
-	var s = flow.state
-	_check(s.allies.is_empty() and not s.viewing("hand-drawn") and not s.viewing("warmth"), "the personality slice: nobody along, nothing drawn")
-	var stage = load("res://src/view/stage.gd").new()
-	root.add_child(stage)
-	stage.update(s, 0.0, FRAME)
-	var m = s.floor_map.monsters.filter(func(o): return not o.lurking)[0]
-	m.cell = s.floor_map.start + Vector2i(1, 0)
-	stage.update(s, 0.1, FRAME)
-	_check(not stage._models[m] is Figure and stage._models[m].has_node("Rig"), "the old model")
-	_check(stage._wall_mat.get_shader_parameter("drawn") in [null, 0.0], "the plain wire")
-	s.tally.slain = 6
-	var decor: Node3D = stage._decor
-	stage.update(s, 0.2, FRAME)
-	_check(stage._decor == decor, "and nothing answers what you do")
-	stage.free()
-	var overlay = Overlay.new()
-	root.add_child(overlay)
-	s.foe = m
-	s.stage = "menu"
-	overlay.state = s
-	_check(not overlay.drawn_foe(), "a fight is the line art on black")
-	overlay.free()

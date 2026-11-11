@@ -187,9 +187,9 @@ func _blocks_for(key: String) -> Array:
 	if key == "chat":
 		return chat_blocks(state.chat)
 	if key == "foe":
-		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
+		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, not debug)
 	if key == "map":
-		return map_blocks(state.viewing("items"), state.viewing("npcs"), state.viewing("roaming"))
+		return map_blocks(state.viewing("roaming"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -267,7 +267,7 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(items := false, npcs := false, roaming := false) -> Array:
+static func map_blocks(roaming := false) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -278,11 +278,9 @@ static func map_blocks(items := false, npcs := false, roaming := false) -> Array
 		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": fights.get(id, "")})
 	out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
 	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
-	if items:
-		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
-		out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
-	if npcs:
-		out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
+	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
+	out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
+	out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
 	out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
 	return out
 
@@ -405,7 +403,7 @@ func _update_chips() -> void:
 		_chips = []
 		for i in state.allies.size():
 			var chip := Chip.new()
-			chip.setup(state.allies[i], state.viewing("hand-drawn"))
+			chip.setup(state.allies[i])
 			chip.hovered.connect(hover_chip.bind(i))
 			chip.tapped.connect(toggle.bind("ally%d" % i))
 			add_child(chip)
@@ -438,11 +436,11 @@ class Chip:
 		mouse_entered.connect(func(): hovered.emit(true))
 		mouse_exited.connect(func(): hovered.emit(false))
 
-	func setup(a, drawn := false) -> void:
+	func setup(a) -> void:
 		dot = Color(Content.species(a.species).color)
 		label = a.charm().name
 		warn = a.loyalty < Allies.LEAVE_BELOW
-		face = a.species if drawn and Sprites.has(a.species) else ""
+		face = a.species if Sprites.has(a.species) else ""
 		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if face != "" else CanvasItem.TEXTURE_FILTER_PARENT_NODE
 
 	## Chip number `i` from the bottom, at scale `k` (the picture's size over 448).

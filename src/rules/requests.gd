@@ -81,15 +81,14 @@ static func speak(q: Dictionary, s) -> String:
 
 
 ## Paid: what was asked for leaves the bag, the gold and health come, and its clan hears. Returns {gold, healed}.
-static func settle(q: Dictionary, s, clans_on: bool) -> Dictionary:
+static func settle(q: Dictionary, s) -> Dictionary:
 	var t := table()
 	if q.kind == "fetch":
 		s.items.erase(q.want)
 	s.gold += int(t.gold)
 	var before: int = s.hp
 	s.hp = mini(s.max_hp, s.hp + int(t.heal))
-	if clans_on:
-		Clans.favour(s, q.species, float(t.standing))
+	Clans.favour(s, q.species, float(t.standing))
 	print("requests: %s is paid: %d gold, %d health" % [q.name, t.gold, s.hp - before])
 	return {"gold": int(t.gold), "healed": s.hp - before}
 

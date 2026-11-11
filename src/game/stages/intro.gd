@@ -1,5 +1,5 @@
 ## A fight begins: the monster says its piece and tells you how it fights. `before` is what
-## the log said as the last fight ended (the personality slice goes straight from one fight to the next); only the line that
+## the log said as the last fight ended (queued fights, in social-demo, go straight from one to the next); only the line that
 ## says how it ended is kept, because the log holds three lines and the greeting and the fight rule must both show.
 ## A snapshot is taken so dying can try this fight again.
 extends "res://src/game/stages/stage.gd"
@@ -12,7 +12,7 @@ const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
-var _ambush := false # it caught you, and strikes first (not on the personality slice)
+var _ambush := false # it caught you, and strikes first
 var _continue_at := 0.0
 var _queued := false
 
@@ -28,7 +28,7 @@ func enter(flow, args: Dictionary) -> void:
 	s.social_offer = {}
 	s.social_typing = false
 	s.social_note = ""
-	if flow.feature("initiated-dialogue"):
+	if flow.feature("initiated-dialogue"): # without it the fight keeps no social state, so nothing downstream acts on one
 		Social.begin(m, s, flow.dice)
 		SocialDemo.tune(m)
 	s.menu = []
@@ -40,13 +40,11 @@ func enter(flow, args: Dictionary) -> void:
 	flow.event("encounter", {"boss": m.boss})
 	var rule: String
 	if m.boss:
-		rule = Texts.BOSS_RULE
-		if not flow.on_slice():
-			rule += " " + Texts.BOSS_WINNABLE
+		rule = Texts.BOSS_RULE + " " + Texts.BOSS_WINNABLE
 	else:
 		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre])
 	var before: Array = args.get("before", [])
-	var ended: Array = before.filter(func(l): return l.kind == "sys").slice(-1) # the verdict of the fight before (the last game line, after the foe's farewell), in the personality slice
+	var ended: Array = before.filter(func(l): return l.kind == "sys").slice(-1) # the verdict of the fight before (the last game line, after the foe's farewell), when fights are queued
 	var lines: Array = ended if not ended.is_empty() else before.slice(0, 1)
 	var greeting = flow.encounter.greeting(m)
 	if greeting != null:
@@ -58,7 +56,7 @@ func enter(flow, args: Dictionary) -> void:
 	var mercy: float = await flow.mind.mercy(m)
 	flow.encounter.known_mercy = mercy
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
-	_continue_at = flow.clock + (0.0 if flow.on_slice() else flow.DIALOGUE_BUFFER_MS)
+	_continue_at = flow.clock + flow.DIALOGUE_BUFFER_MS
 	print("intro: %s (%s) %s" % [m.name, m.species, "BOSS" if m.boss else ""])
 
 

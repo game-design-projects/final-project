@@ -28,7 +28,6 @@ const HEAVY_MISS_PRESSURE := 0.5 # a miss leaves you off balance: the next attac
 const HIT_FRIENDLINESS := -8.0
 const HIT_ANGER := 10.0
 const HIT_FEAR := 8.0
-const REFUSED_MERCY_ANGER := 4.0
 
 # What friends do for a fight
 const AID_PER_ALLY := 1 # added to every strike

@@ -91,7 +91,7 @@ func _ready() -> void:
 
 ## Whether the monster in this fight is the drawing (battle_art.gd), with the halls dimmed behind it, rather than line art on black.
 func drawn_foe() -> bool:
-	return state != null and state.foe != null and state.viewing("hand-drawn") and BattleArt.can_draw(state.foe.species)
+	return state != null and state.foe != null and BattleArt.can_draw(state.foe.species)
 
 
 ## How a deed landed, for as long as that shows: "" otherwise.

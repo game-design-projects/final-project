@@ -8,11 +8,9 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 
 const RANGE := 12 # the farthest a cell can be seen, along either axis: the classic floor fits inside it, so a big one costs no more
 const STEP := 0.1 # how finely a line of sight is walked, in cells
-const BACK := 0.38 # how far behind the middle of your cell the camera stands, in cells (stage.gd stands it there)
-const CLOSE_BACK := 0.2 # the same with close-camera
+const BACK := 0.2 # how far behind the middle of your cell the camera stands, in cells (stage.gd stands it there)
 const VIEW_TAN := 1.0493 # the camera's field of view: tan of half its width, for FOV 68 at 448:288 (tools/view_test.gd checks it)
-static var back := BACK # where the camera stands now (the flow sets it)
-static var view_tan := VIEW_TAN # and how wide it sees (the scene sets it, as wide as the picture is)
+static var view_tan := VIEW_TAN # how wide the camera sees now (the scene sets it, as wide as the picture is)
 
 const SAMPLES := [Vector2(0, 0), Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)] # where in a cell a line may end, from its middle
 const BODY_SAMPLES := [Vector2(0, 0), Vector2(-0.2, -0.2), Vector2(0.2, -0.2), Vector2(-0.2, 0.2), Vector2(0.2, 0.2)] # where a monster's body is, from the middle of its cell
@@ -36,7 +34,7 @@ static func sight(floor_map, from: Vector2i, facing: int) -> Array:
 	var fwd := Vector2(FloorMap.DIRS[facing])
 	var side := fwd.orthogonal()
 	var mid := Vector2(from) + Vector2(0.5, 0.5)
-	var eye := mid - fwd * back
+	var eye := mid - fwd * BACK
 	var out := [from]
 	for y in range(maxi(0, from.y - RANGE), mini(floor_map.size, from.y + RANGE + 1)):
 		for x in range(maxi(0, from.x - RANGE), mini(floor_map.size, from.x + RANGE + 1)):

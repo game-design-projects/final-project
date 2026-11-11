@@ -303,19 +303,6 @@ func _autosave(game) -> void:
 	var saved: Dictionary = game.flow.state.to_dict()
 	await game.flow.load_state(saved)
 	_check(Saves.info(Saves.AUTO).empty, "loading a save does not write the autosave")
-	# the playtest slice's floor is never autosaved
-	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=11", "personality-slice"]))
-	var PersonalitySlice = load("res://src/game/personality_slice.gd")
-	PersonalitySlice.reset()
-	var slice = load("res://src/gameplay/gameplay.tscn").instantiate()
-	root.add_child(slice)
-	await process_frame
-	await process_frame # the scene begins the slice itself
-	_check(Saves.info(Saves.AUTO).empty, "the personality slice's floor is not autosaved")
-	slice.queue_free()
-	await process_frame
-	PersonalitySlice.reset()
-	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=11"]))
 	Saves.delete_all()
 
 

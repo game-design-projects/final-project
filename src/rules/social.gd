@@ -11,6 +11,25 @@ const Hints = preload("res://src/rules/hints.gd")
 static func table() -> Dictionary:
 	return Content.table("social")
 
+
+## A line of data/social.json's `lines`.
+static func line(id: String) -> String:
+	return str(table().lines[id])
+
+
+## What `m` says on meeting you again about a promise you made it, or "".
+static func remembered(m) -> String:
+	if m.social.get("betrayed", false):
+		return line("remembered_betrayal")
+	if m.social.get("promise", false):
+		return line("remembered_promise")
+	return ""
+
+
+## Whether a promise you made `m` still stands, so it accepts mercy (never a champion).
+static func promised(m) -> bool:
+	return m.social.get("promise", false) and not m.social.get("betrayed", false) and not m.boss
+
 static func begin(m, s, dice: Dice) -> void:
 	var used: bool = m.social.get("used", false)
 	var history: Array = m.social.get("history", [])
@@ -66,16 +85,18 @@ static func offer(m, s) -> Dictionary:
 		return {}
 	e["id"] = m.species
 	e["cue"] = visible_cue(m)
-	if m.species == "slime" and (m.meters.fear >= 45 or m.hp_fraction() < 0.35):
-		e.goal = "survive without being hurt"
-		e.speech = "Please, no more. Can I trust you to put that weapon down?"
-	if m.species == "bandit" and int(m.heard.get("standing", 0)) < -10:
-		e.speech = "My clan warned me about you. Six gold buys a truce. Dare you refuse?"
+	if e.has("afraid") and (m.meters.fear >= 45 or m.hp_fraction() < 0.35):
+		e.goal = e.afraid.goal
+		e.speech = e.afraid.speech
+	if e.has("warned") and int(m.heard.get("standing", 0)) < -10:
+		e.speech = e.warned
+	e.erase("afraid")
+	e.erase("warned")
 	if m.species == "snake":
 		# Direct sight only: not the player's invisible global tally. Freeze its knowledge with the question.
 		e["witness"] = s.floor_map.monsters.any(func(o): return o != m and o.gone == "spared" and _witnessed(s.floor_map, m.cell, o.cell))
 	if m.social.get("betrayed", false):
-		e.speech = "You broke your word before. " + str(e.speech)
+		e.speech = line("broke_word") + " " + str(e.speech)
 	return e
 
 static func _witnessed(floor_map, from: Vector2i, to: Vector2i) -> bool:
@@ -206,7 +227,8 @@ static func resolve(m, s, e: Dictionary, id: String) -> Dictionary:
 ## One hit only, and never carried to another monster. Called on landed timed strikes or damage skills.
 static func strike_bonus(m) -> int:
 	var bonus: int = int(m.social.get("opening", 0))
-	m.social["opening"] = 0
+	if bonus != 0:
+		m.social["opening"] = 0
 	return bonus
 
 ## Breaking a promise works even when a single blow kills; it cannot be undone by a friendly roll afterward.

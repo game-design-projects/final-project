@@ -44,13 +44,13 @@ func pick(flow, index: int) -> void:
 	var attacks: bool = Skills.damage(f, id, m.boss) > 0
 	var bonus := 0
 	if attacks:
-		bonus = (Social.strike_bonus(m) if flow.feature("initiated-dialogue") else 0) + (0 if flow.on_slice() else Combat.party_aid(s.party_size())) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
+		bonus = Social.strike_bonus(m) + Combat.party_aid(s.party_size()) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
 	var did: Dictionary = Skills.use(f, id, m.boss, bonus)
 	print("skills: %s on %s: %s, %d energy left" % [id, m.name, did, f.energy])
 	var words := []
 	if did.damage > 0:
 		s.sharpened = 0
-		var betrayal := Social.hit(m) if flow.feature("initiated-dialogue") else ""
+		var betrayal := Social.hit(m)
 		if betrayal != "":
 			words.append(betrayal)
 		m.hp = maxi(0, m.hp - did.damage)
@@ -86,7 +86,7 @@ func _end_turn(flow) -> void:
 		return
 	var begging: bool = await flow.encounter.spareable(m)
 	var decision: Dictionary = await flow.encounter.decide(m, "fight", "YOU HIT IT")
-	if flow.feature("initiated-dialogue") and m.social.get("betrayed", false):
+	if m.social.get("betrayed", false):
 		decision.pacified = false
 	if begging:
 		flow.encounter.judge("slay_begging")

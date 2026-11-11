@@ -5,13 +5,8 @@ extends RefCounted
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 
-const SPARE_TIP := "Acceptance is a roll at any odds. Gold marks a 50%+ chance, not a guarantee. A spared monster may join as a passive charm."
 const BOSS_RULE := "The champion shifts its rules every turn: chess, shadow, rhythm, goo."
 const GOLD_ACT_TIP := "Costs 6 gold if accepted; ends the fight"
-
-
-static func new_floor(depth: int) -> String:
-	return "B%dF. Find the stairs." % depth
 
 
 ## What the log says on arriving on a floor, with the story: who holds it and what is known of them.
@@ -45,13 +40,6 @@ static func feeling_effect(feeling: Dictionary) -> String:
 
 static func foe_feels(foe, feeling: Dictionary) -> String:
 	return "%s is %s: %s." % [foe.name, feeling.label, feeling_effect(feeling)]
-
-
-static func check(foe, individual_clues: Array) -> String:
-	var sp := Content.species(foe.species)
-	var likes: Array = sp.likes.slice(0, 2)
-	var individual := "This one may differ." if individual_clues.is_empty() else "It %s." % ". It ".join(individual_clues)
-	return "%s seems %s. Its kind likes %s and hates %s. %s" % [foe.name, " and ".join(foe.traits), ", ".join(likes), sp.dislikes[0], individual]
 
 
 ## "Mercy 13% -> 34%.": how far a deed moved the odds.
@@ -211,10 +199,6 @@ static func hit(damage: int, crit: bool) -> String:
 	return "%s%d damage." % ["A perfect strike! " if crit else "", damage]
 
 
-static func mercy_refused(foe, odds: float) -> String:
-	return "You offer mercy. %s refuses mercy. (%s chance to accept)" % [foe.name, Combat.chance_label(odds)]
-
-
 static func flee(foe) -> String:
 	return "You back away. %s stays where it is." % foe.name
 
@@ -231,8 +215,7 @@ static func falls(foe) -> String:
 	return "%s falls." % foe.name
 
 
-static func verdict_spared(joined: bool, charm: Dictionary) -> String:
-	return "SPARED. It joins you: %s, %s." % [charm.name, charm.text] if joined else "SPARED. It goes its own way."
+const VERDICT_SPARED := "SPARED. It goes its own way."
 
 
 const VERDICT_SLAIN := "SLAIN."

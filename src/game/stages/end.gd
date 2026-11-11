@@ -23,7 +23,7 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.foe = null
 	flow.event("stairs")
-	s.run_over = not s.practice and (flow.on_slice() or Floors.is_last(s.depth))
+	s.run_over = not s.practice and Floors.is_last(s.depth)
 	_at_door = false
 	_at_toll = false
 	_ways = []
@@ -111,7 +111,7 @@ func _finish(flow, ending: Dictionary, how := "cleared") -> void:
 	elif embers > 0:
 		tail += " " + Legacy.line("carried") % embers
 	s.say([State.speech(ending.route, ending.text), State.sys_line(tail)])
-	s.menu = [{"label": "NEW FLOOR" if flow.on_slice() else "NEW RUN", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
+	s.menu = [{"label": "NEW RUN", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
 	print("end: %s" % ending.route)
 
 

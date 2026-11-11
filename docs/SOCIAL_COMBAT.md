@@ -19,7 +19,7 @@ Suggested session, without a reading timer:
 3. **MALLOW**, lonely/shy Slime (about 1 minute): reassure it for softer attacks, or promise no harm and follow with SPARE to see the recruitment decision. A promise ends no fight on its own.
 4. **QUIVER**, frightened Slime (about 1 minute): compare the emotional cue and try rejecting it, or promise and then land a hit to see betrayal. A timed-strike miss does not count as harm.
 5. **CINDER**, bored/vain Dragon champion (about 1 minute): take the trial or lower the stakes, survive its announced WALLS pattern, and check the payout. Flattery skips the attack but heals the Dragon. The challenge never clears the champion or its stairs.
-6. Spend the remaining 1–2 minutes comparing choices or restarting with the feature disabled. FLEE ends the chained demo, as it does in the existing personality slice. Finish or spare each encounter to reach the next one.
+6. Spend the remaining 1–2 minutes comparing choices or restarting with the feature disabled. FLEE ends the chained demo. Finish or spare each encounter to reach the next one.
 
 Use SHOW A CLEVER TRICK against the Bandits and STAND YOUR GROUND against Cinder to reach the offers without an ordinary paid ACT truce. A Dragon soothed with flattery may no longer want a contest until you show bravery or attack.
 
@@ -49,9 +49,11 @@ Openings apply once to the next landed timed strike or damaging skill, only agai
 
 ## Scheduler, memory and integration
 
-`data/social.json` defines the event goals, speeches, choices, probability (65%), cooldown (2 turns), cost and memory bound. `rules/social.gd` evaluates species, traits, current mood/goal, feelings, HP, last resolved intent, available gold/food, clan news and previous offers. Normal eligibility begins after 2–4 resolved player actions; repeated species topics wait two extra actions. HP crossing below 35%, or threats to a jumpy monster, take priority. Opportunities are queued during action resolution and opened only by the main combat menu, after the enemy attack or held-back turn has finished. The tutorial practice encounter is excluded.
+`data/social.json` defines the event goals, speeches (with the frightened Slime's and the warned Bandit's variants), choices, probability (65%), cooldown (2 turns), cost, memory bound and the lines a monster says about a promise on meeting you again. `rules/social.gd` evaluates species, traits, current mood/goal, feelings, HP, last resolved intent, available gold/food, clan news and previous offers. Normal eligibility begins after 2–4 resolved player actions; repeated species topics wait two extra actions. HP crossing below 35%, or threats to a jumpy monster, take priority. Opportunities are queued during action resolution and opened only by the main combat menu, after the enemy attack or held-back turn has finished. The tutorial practice encounter is excluded.
 
-All scheduling rolls pass through the flow's Dice. `Dice.keyed` derives a draw from encounter identity and resolved turn and honours the existing pin. Waiting, typing, animation frames and other rolls do not change a scheduled draw. The original personality slice has all new features disabled as before.
+All scheduling rolls pass through the flow's Dice. `Dice.keyed` derives a draw from encounter identity and resolved turn and honours a pin. Waiting, typing, animation frames and other rolls do not change a scheduled draw.
+
+`no-initiated-dialogue` switches the feature off at the two places that make social state: `stages/intro.gd` (`Social.begin`) and `Encounter.after_player` (`Social.observe`, `Social.pressure`). Without them a monster's `social` stays empty, so the menu, strikes, skills, dodges and greetings, which only read that state, play as before; `social_test` checks that reading an empty state changes nothing.
 
 There is at most one offer per encounter, with a stronger anti-farming rule: a monster that has resolved or been ignored never repeats its offer after fleeing or loading. Its last eight important interactions are structured records; promises and betrayals persist with the monster. Re-entering a fight remembers the promise in its greeting. Save fields are optional for older saves and validated before loading. Retry restores the pre-encounter monster, resources, social topic and schedule. This uses the existing walk-only save policy; it does not add mid-fight saves.
 
@@ -102,7 +104,7 @@ The implementation and its integration points (Godot UID sidecars accompany the 
 | Checks and captures | `tools/social_test.gd`, `moods_test.gd`, `features_test.gd`, `autoplay.gd`, `screenshots.gd`, `run_tests.sh`; `.github/workflows/ci.yml` |
 | Documentation | `CHANGELOG.md`, `docs/DEVELOPMENT.md`, this guide |
 
-PR #55 also contributes `data/moods.json`, `src/rules/moods.gd`, mood serialization and Jev context, `docs/PERSONALITY_PLAYTEST.md`, and its pressure fix. The merged upstream film/reveal changes are retained intact.
+PR #55 also contributes `data/moods.json`, `src/rules/moods.gd`, mood serialization and Jev context, `docs/MOODS.md`, and its pressure fix. The merged upstream film/reveal changes are retained intact.
 
 
 ## Validation results

@@ -73,7 +73,7 @@ static func _from_entry(entry: Dictionary, cell: Vector2i):
 	return m
 
 
-## A monster whose personality is given instead of rolled (the playtest slice): the same species, genre and hp fields as
+## A monster whose personality is given instead of rolled (social-demo and the tests): the same species, genre and hp fields as
 ## `make`, and the taste its traits shift, without the random part. `entry` is a roster line, `meters` its starting feelings.
 static func given(entry: Dictionary, cell: Vector2i, given_name: String, given_traits: Array, meters: Dictionary):
 	var m = _from_entry(entry, cell)
