@@ -12,7 +12,7 @@ const Skills = preload("res://src/rules/skills.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
-var _ambush := false # it caught you, and strikes first (the feature ambush)
+var _ambush := false # it caught you, and strikes first (not on the personality slice)
 var _continue_at := 0.0
 var _queued := false
 
@@ -41,10 +41,10 @@ func enter(flow, args: Dictionary) -> void:
 	var rule: String
 	if m.boss:
 		rule = Texts.BOSS_RULE
-		if flow.feature("recruit-step"):
+		if not flow.on_slice():
 			rule += " " + Texts.BOSS_WINNABLE
 	else:
-		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre], flow.feature("piece-icons"))
+		rule = Texts.fight_rule(Content.table("encounter").genres[m.genre])
 	var before: Array = args.get("before", [])
 	var ended: Array = before.filter(func(l): return l.kind == "sys").slice(-1) # the verdict of the fight before (the last game line, after the foe's farewell), in the personality slice
 	var lines: Array = ended if not ended.is_empty() else before.slice(0, 1)
@@ -58,7 +58,7 @@ func enter(flow, args: Dictionary) -> void:
 	var mercy: float = await flow.mind.mercy(m)
 	flow.encounter.known_mercy = mercy
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
-	_continue_at = flow.clock + (flow.DIALOGUE_BUFFER_MS if flow.feature("dialogue-buffer") else 0.0)
+	_continue_at = flow.clock + (0.0 if flow.on_slice() else flow.DIALOGUE_BUFFER_MS)
 	print("intro: %s (%s) %s" % [m.name, m.species, "BOSS" if m.boss else ""])
 
 

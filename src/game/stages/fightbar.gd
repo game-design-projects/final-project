@@ -13,7 +13,7 @@ func enter(flow, args: Dictionary) -> void:
 	var heavy: bool = args.get("heavy", false)
 	s.menu = []
 	s.hint = "ENTER STRIKE INSIDE THE RED MARK" if heavy else "ENTER STRIKE WHEN THE LINE CROSSES THE MIDDLE"
-	if flow.feature("party-aid") and s.party_size() > 0:
+	if not flow.on_slice() and s.party_size() > 0:
 		s.hint += " · PARTY +%d" % Combat.party_aid(s.party_size())
 	if s.sharpened > 0:
 		s.hint += " · WHETTED +%d" % s.sharpened
@@ -37,7 +37,7 @@ func _strike(flow, t: float) -> void:
 	var x := clampf((t - s.bar.t0) / s.bar.dur, 0.0, 1.0)
 	var heavy: bool = s.bar.heavy
 	s.bar = null
-	var aid: int = Combat.party_aid(s.party_size()) if flow.feature("party-aid") else 0
+	var aid: int = 0 if flow.on_slice() else Combat.party_aid(s.party_size())
 	var result: Dictionary
 	if heavy:
 		result = Combat.heavy_strike(x, m.boss, m.species, s.has_ally("dragon"), aid + s.sharpened)

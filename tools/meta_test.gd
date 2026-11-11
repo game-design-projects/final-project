@@ -19,7 +19,7 @@ const Survival = preload("res://src/rules/survival.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 const BASE := ["nosave", "nosound"]
-const FEATURES := ["achievements", "legacy", "hunger", "butcher"]
+const FEATURES := ["achievements", "legacy"]
 
 var _classic := false
 # loaded when the test runs: they read the Store autoload, which a `-s` script is compiled before
@@ -99,13 +99,6 @@ func _classic_has_none_of_it() -> void:
 	_check(s.max_hp == State.new().max_hp and s.gold == State.new().gold, "classic: the boons do nothing")
 	flow.event("spared", {"boss": false})
 	_check(flow.trophies.earned.is_empty(), "classic: nothing is earned")
-	var hunger: float = s.hunger
-	await flow.press("up")
-	await flow.press("down")
-	_check(s.hunger == hunger, "classic: nobody gets hungry")
-	await flow.press("confirm")
-	_check(s.stage == "explore", "classic: Enter does nothing on the walk")
-	_check(s.hint == load("res://src/game/stages/explore.gd").HINT, "classic: the hint has no camp on it")
 
 
 func _achievements() -> void:
@@ -277,16 +270,17 @@ func _hunger() -> void:
 	s.hunger = 5.0
 	Survival.rest(s)
 	_check(s.hunger == 0.0, "which goes no lower than fed")
-	var off = _flow(5, ["no-hunger", "no-butcher"])
+	var off = _flow(5, ["personality-slice"])
 	await off.new_run()
 	await _pace(off, 4)
-	_check(off.state.hunger == 0.0, "no-hunger: nobody gets hungry")
+	_check(off.state.hunger == 0.0, "the personality slice: nobody gets hungry")
 	await off.press("confirm")
-	_check(off.state.stage == "explore", "with neither, Enter does nothing on the walk")
+	_check(off.state.stage == "explore", "nor can anyone make camp")
+	_check(off.state.hint == load("res://src/game/stages/explore.gd").HINT, "and the hint has no camp on it")
 	var plan_on: Dictionary = {"food": true}
 	var pick := Items.floor_finds(Rng.new(3), plan_on)
 	_check(pick.has(Survival.RATION), "a floor has food lying about (%s)" % [pick])
-	_check(not Items.floor_finds(Rng.new(3), {}).has(Survival.RATION) and not Items.floor_finds(Rng.new(3), {}).has(Survival.ROAST), "and not without the feature")
+	_check(not Items.floor_finds(Rng.new(3), {}).has(Survival.RATION) and not Items.floor_finds(Rng.new(3), {}).has(Survival.ROAST), "and not when the plan has none")
 	_check(Items.stock(Rng.new(3), plan_on).has(Survival.RATION), "a trader sells it")
 	_check(not Items.stock(Rng.new(3), {}).has(Survival.ROAST), "but nobody has roasts to sell")
 
@@ -393,17 +387,6 @@ func _butcher() -> void:
 	await full.press("2")
 	full.dice.unpin()
 	_check(full.state.items.count(Survival.ROAST) == 0 and full.state.lines[0].text == Survival.line("no_room"), "a full bag wastes it, and says so")
-	var off = _flow(5, ["no-butcher"])
-	await off.new_run()
-	off.state.allies = [_ally()]
-	off.state.items = [Survival.RATION]
-	await off.press("confirm")
-	_check(off.state.stage == "camp" and off.state.menu.map(func(i): return i.label) == ["EAT %s" % Items.label(Survival.RATION), "LEAVE"], "no-butcher: only food at the camp")
-	await off.press("2")
-	var no_hunger = _flow(5, ["no-hunger"])
-	await no_hunger.new_run()
-	await no_hunger.press("confirm")
-	_check(no_hunger.state.stage == "camp", "no-hunger: the butcher still has a camp")
 
 
 func _feeding() -> void:
@@ -470,12 +453,6 @@ func _selling() -> void:
 	_check(not s.menu.map(func(i): return i.label).has(sell), "none left to sell")
 	await flow.press("cancel")
 	_check(s.stage == "explore", "and you walk off as ever")
-	var off = _flow(5, ["no-butcher"])
-	await off.new_run()
-	off.state.floor_map.merchant = {"cell": Vector2i(1, 1), "stock": ["salve"]}
-	off.state.items = [Survival.ROAST]
-	await off.go("trade")
-	_check(not off.state.menu.any(func(i): return str(i.label).begins_with("SELL")), "no-butcher: nothing to sell")
 
 
 func _saved() -> void:

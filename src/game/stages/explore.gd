@@ -47,7 +47,7 @@ func handle(flow, key: String) -> void:
 
 
 func _can_camp(flow) -> bool:
-	return flow.feature("hunger") or flow.feature("butcher")
+	return not flow.on_slice()
 
 
 func _step(flow, backwards: bool) -> void:
@@ -77,11 +77,9 @@ func _step(flow, backwards: bool) -> void:
 	s.visited[next] = true
 	s.look()
 	flow.event("step")
-	var fed := true
-	if flow.feature("hunger"):
-		fed = Survival.heals(s)
+	if not flow.on_slice(): # the slice has no hunger, and no cure by walking
+		var fed := Survival.heals(s)
 		_get_hungrier(flow)
-	if flow.feature("walk-heal"):
 		s.steps += 1
 		if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 			s.hp += 1
@@ -108,11 +106,11 @@ func _get_hungrier(flow) -> void:
 func _monsters_move(flow) -> bool:
 	var s = flow.state
 	var t0 := Time.get_ticks_usec()
-	var done := Roaming.turn(s, {"revenge": flow.feature("clans"), "boss_chase": flow.feature("boss-chase")})
+	var done := Roaming.turn(s, {"revenge": not flow.on_slice(), "boss_chase": not flow.on_slice()})
 	s.spot()
 	print_verbose("explore: the monsters' turn took %d us" % (Time.get_ticks_usec() - t0))
 	if done.caught != null:
-		var ambush: bool = flow.feature("ambush")
+		var ambush: bool = not flow.on_slice()
 		var said: String = Roaming.table().caught % done.caught.name
 		await flow.go("intro", {"foe": done.caught, "ambush": ambush, "before": [State.sys_line(said + " " + str(Roaming.table().first) if ambush else said)]})
 		return true

@@ -53,7 +53,6 @@ const BANNER_H := 44.0
 const BANNER_PX := 13
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
 # the receding corridor behind the title: how big each frame is against the picture
-const TITLE_FRAMES := [1.0, 0.556, 0.385, 0.294, 0.238]
 const TITLE_BLINK_MS := 600.0
 
 var state # State, set by the owner
@@ -72,7 +71,7 @@ var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _art: BattleArt # what is drawn behind this layer: the monster, the title picture
 var _popups: Array = [] # [{text, color, at, born}]
-var extra_x := 0.0 # how much wider the picture is than this layer, on each side (wide-view)
+var extra_x := 0.0 # how much wider the picture is than this layer, on each side
 var _words := "" # what you last typed, on its way to the monster
 var _words_at := -1e9
 var _emote := {} # {tone, born}: the last mood shown over the monster
@@ -80,7 +79,7 @@ var _ghost := 1.0 # where the trail behind the foe's health is
 var _ghost_foe = null # whose
 var _comets: Array = [] # [{from, born}]: what just hit you, on its way to your health bar
 var _lantern_glow: GradientTexture2D
-var _soul_shown = null # where your soul is drawn now (smooth-fight), null to start at its square
+var _soul_shown = null # where your soul is drawn now, null to start at its square
 var _was_fighting := false
 var _left_fight_at := -1e9
 
@@ -125,7 +124,7 @@ func can_spare() -> bool:
 
 ## How dark the picture still is from the fight that just ended (0 once it has faded).
 func leave_fade() -> float:
-	if state == null or not state.viewing("smooth-fight"):
+	if state == null:
 		return 0.0
 	return clampf(1.0 - (clock_ms - _left_fight_at) / LEAVE_FADE_MS, 0.0, 1.0)
 
@@ -140,7 +139,7 @@ func _follow_soul(dt: float) -> void:
 		_soul_shown = null
 		return
 	var square := soul_square(state.dodge)
-	if _soul_shown == null or not state.viewing("smooth-fight"):
+	if _soul_shown == null:
 		_soul_shown = square
 	else:
 		_soul_shown = _soul_shown.lerp(square, 1.0 - exp(-SOUL_GLIDE * dt))
@@ -180,7 +179,7 @@ func charm_rows() -> Array:
 
 ## The mercy odds as the mind last answered (0..1), for the gauge; below 0 when there is no gauge to draw.
 func mercy_gauge() -> float:
-	if not state.viewing("mercy-link") or state.foe == null or state.foe.is_gone():
+	if state.foe == null or state.foe.is_gone():
 		return -1.0
 	for row in state.mind_rows:
 		if row.id == "mercy":
@@ -213,7 +212,7 @@ func send_words(text: String) -> void:
 
 ## The line in the speech box now: the last thing the foe said, while the fight waits on it. {} when there is none.
 func speech() -> Dictionary:
-	if state == null or not state.viewing("chat") or state.foe == null or not state.stage in SPEECH_STAGES:
+	if state == null or state.foe == null or not state.stage in SPEECH_STAGES:
 		return {}
 	for i in range(state.lines.size() - 1, -1, -1):
 		var l: Dictionary = state.lines[i]
@@ -241,10 +240,8 @@ func emote(tone: String) -> void:
 func bubble() -> Dictionary:
 	if state.foe == null or state.foe.is_gone():
 		return {}
-	if state.viewing("chat") and (state.listening or clock_ms - _words_at < HEARD_MS):
+	if state.listening or clock_ms - _words_at < HEARD_MS:
 		return {"text": ".".repeat(1 + int(clock_ms / 300.0) % 3)}
-	if not state.viewing("mood-cues"):
-		return {}
 	if not _emote.is_empty() and clock_ms - _emote.born < EMOTE_MS:
 		return {"tone": _emote.tone}
 	if can_spare() and state.stage in BUBBLE_STAGES:
@@ -352,27 +349,8 @@ func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := H
 
 # ---------------------------------------------------------------- the title card
 
-## A receding corridor, the name in its box, what the game is, a blinking prompt, and how to leave.
-func _title_screen() -> void:
-	if Flags.enabled("hand-drawn"):
-		_drawn_title_screen()
-		return
-	draw_rect(whole_picture(), Color.BLACK)
-	for f in TITLE_FRAMES:
-		var size_at := (Vector2(W, H) - Vector2(8, 8)) * float(f)
-		draw_rect(Rect2((Vector2(W, H) - size_at) / 2.0, size_at).abs(), Palette.INK, false, 2.0)
-	var box := Rect2(W * 0.12, H * 0.3, W * 0.76, H * 0.42)
-	draw_rect(box, Color.BLACK)
-	draw_rect(box, Palette.INK, false, 2.0)
-	_text(_title, "DONJON", Vector2(0, H * 0.45), 28, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	_text(_title, "GENRE HALLS", Vector2(0, H * 0.55), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
-	if title_prompt_on():
-		_text(_title, "PRESS ANY KEY", Vector2(0, H * 0.65), 9, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	_text(_title, "ESC: MENU", Vector2(0, H * 0.82), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_CENTER, W)
-
-
 ## The picture of the halls and of her is behind this (battle_art.gd): the name sits over the top of it, where the corridor is empty.
-func _drawn_title_screen() -> void:
+func _title_screen() -> void:
 	_text(_title, "DONJON", Vector2(0, H * 0.2), 28, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
 	_text(_title, "GENRE HALLS", Vector2(0, H * 0.28), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
 	draw_rect(Rect2(0.0, H * 0.88, W, H * 0.12), Color(0.0, 0.0, 0.0, 0.75))
@@ -415,7 +393,7 @@ func _battle() -> void:
 
 ## Where the foe's health bar goes: over its head when it fills the picture, up in the corner while it is small over the dodge box.
 func foe_bar() -> Rect2:
-	if state.viewing("clear-hp") and state.dodge == null:
+	if state.dodge == null:
 		return HEAD_BAR
 	return Rect2(12, 26, 120, 6)
 
@@ -438,25 +416,21 @@ static func ghost_after(ghost: float, frac: float, dt: float) -> float:
 
 func _name_and_health(m) -> void:
 	var spare := can_spare()
-	var clear: bool = state.viewing("clear-hp")
 	var bar := foe_bar()
-	if clear and bar == HEAD_BAR:
+	if bar == HEAD_BAR:
 		_text(_title, m.name, Vector2(0, bar.position.y - 4.0), 8, Palette.MERCY if spare else Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	elif clear:
-		_text(_title, m.name, Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
 	else:
-		_text(_title, m.name + ("  (MERCY 50%+)" if spare else ""), Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
+		_text(_title, m.name, Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
-	if clear and _ghost > frac:
+	if _ghost > frac:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _ghost, bar.size.y)), Palette.INK)
-	var struck: bool = clear and clock_ms < hurt_until
+	var struck: bool = clock_ms < hurt_until
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if struck else (Palette.WARN if frac < 0.4 else HEALTH_OK))
-	if clear:
-		_text(_title, "%d/%d" % [maxi(0, m.hp), m.max_hp], bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0), 6, Palette.INK)
-		if not m.is_gone():
-			var mood := mood_word(m)
-			_text(_title, mood[0], Vector2(12, 21) if bar == HEAD_BAR else Vector2(12, 50), 7, mood[1])
+	_text(_title, "%d/%d" % [maxi(0, m.hp), m.max_hp], bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0), 6, Palette.INK)
+	if not m.is_gone():
+		var mood := mood_word(m)
+		_text(_title, mood[0], Vector2(12, 21) if bar == HEAD_BAR else Vector2(12, 50), 7, mood[1])
 	var mercy := mercy_gauge()
 	if mercy >= 0.0:
 		var gauge := Rect2(bar.position + Vector2(0.0, bar.size.y + 4.0), Vector2(bar.size.x, 3.0))
@@ -575,7 +549,7 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.kind == "pad":
 		_pad(h)
 		return
-	if h.has("glyph") and icons() and not live:
+	if h.has("glyph") and not live:
 		_rays(h, col)
 	for k in h.cells:
 		var cell := _cell_rect(k)
@@ -587,17 +561,9 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.has("glyph"):
 		var at := _cell_rect(h.at).get_center()
 		draw_rect(Rect2(at - Vector2(11, 11), Vector2(22, 22)), Color.BLACK)
-		if icons():
-			_piece(h.glyph, at, Color.WHITE)
-		else:
-			_text(_title, h.glyph, at + Vector2(-6, 6), 12, Color.WHITE)
+		_piece(h.glyph, at, Color.WHITE)
 	if h.kind == "goo" and not live:
 		draw_circle(goo_ball(h), 5.0, col)
-
-
-## Whether chess attacks show a piece's shape (the feature piece-icons).
-func icons() -> bool:
-	return state != null and state.viewing("piece-icons")
 
 
 ## A chess piece as a shape, so it can't be taken for a key to press: a tower, a pointed hat, a horse's head.
@@ -694,7 +660,7 @@ func _charms() -> void:
 	_text(_title, "CHARMS", Vector2(12, BOX_Y + 8.0), 7, Palette.DIM)
 	for row in rows:
 		_text(_title, row.name, Vector2(12, row.y), 7, row.color)
-	if state.viewing("party-aid") and state.party_size() > 0: # a friend who isn't a monster lends no strength
+	if state.party_size() > 0: # a friend who isn't a monster lends no strength
 		_text(_title, "+%d STRIKE" % state.party_size(), Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 4.0), 6, Palette.DIM)
 		if state.dodge.guard > 0:
 			_text(_title, "-%d HURT" % state.dodge.guard, Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 14.0), 6, Palette.DIM)

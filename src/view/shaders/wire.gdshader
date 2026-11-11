@@ -13,7 +13,7 @@ uniform float cell = 2.0;                     // world units per cell
 uniform float fade_floor = 0.15;              // the dimmest a line gets far away
 uniform vec4 torches[10];                     // xyz: a flame; w: how bright it flickers now (0 = no torch). stage.gd sets them
 uniform vec3 torch_color = vec3(1.0, 0.7, 0.28);
-uniform float drawn = 0.0;                    // 0 the plain wire, 1 hand-drawn brick and flagstone joints (the feature hand-drawn)
+uniform float drawn = 0.0;                    // 0 the plain wire, 1 hand-drawn brick and flagstone joints
 uniform float warmth = 1.0;                   // how warm the halls are (rules/warmth.gd): the joints go as it falls, and at 0 only the wire is left
 
 uniform bool reveal_enabled = false;

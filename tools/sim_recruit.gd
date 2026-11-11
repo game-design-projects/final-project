@@ -48,8 +48,7 @@ func _measure(entry: Dictionary) -> void:
 		var best := MAX_ACTS + 1
 		var best_join := 0.0
 		var kinds: Array = Content.table("encounter").acts[entry.species]
-		if Flags.enabled("recruit-step"):
-			kinds = kinds + Content.table("encounter").kind_acts.get(entry.species, [])
+		kinds = kinds + Content.table("encounter").kind_acts.get(entry.species, [])
 		for act in kinds:
 			if act.intent == "gold":
 				continue
@@ -59,8 +58,7 @@ func _measure(entry: Dictionary) -> void:
 			for n in MAX_ACTS:
 				m.last_intent = act.intent
 				var feeling := Feelings.apply(m, Odds.pick_by_odds(dice, mind.feeling_when_told(m, [{"intent": act.intent, "w": 1.0}])))
-				if Flags.enabled("recruit-step"):
-					Feelings.warm_up(m, feeling)
+				Feelings.warm_up(m, feeling)
 				if mind.mercy(m) >= 0.5:
 					turns = n + 1
 					break

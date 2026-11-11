@@ -1,4 +1,4 @@
-## The things on the walls as drawings, for the feature hand-drawn: the same placements as decor.gd, flat on the wall, one mesh and one atlas,
+## The things on the walls as drawings: the same placements as decor.gd, flat on the wall, one mesh and one atlas,
 ## and flames on quads that face you. They answer how warm the halls are (rules/warmth.gd): the torches look at you, look away, shut their
 ## eyes; a skull nods, then stares; a cracked wall that gives is a guilty smile, then only a crack. At the coldest the flames are the wire ones.
 extends RefCounted

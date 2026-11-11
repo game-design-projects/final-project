@@ -1,6 +1,5 @@
 ## What a wall and a monster one cell away look like, and a corridor further off, for choosing where the camera stands and how wide
-## the picture is (tests can't judge looks). Run it once per setting, with the flags to compare:
-##   godot --path . -s res://tools/camera_shots.gd -- out=<dir> label=now nosound no-close-camera no-wide-view
+## the picture is (tests can't judge looks). Run it once per setting you change (Vision.BACK, the picture's width), with a label to tell the sets apart:
 ##   godot --path . -s res://tools/camera_shots.gd -- out=<dir> label=new nosound
 extends SceneTree
 
@@ -19,7 +18,7 @@ func _initialize() -> void:
 	for word in words.filter(func(w): return w.begins_with("label=")):
 		_label = word.trim_prefix("label=")
 		words.erase(word)
-	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=7", "no-tutorial", "no-story"] + words))
+	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=7", "notips"] + words))
 	_out = Flags.value("out", ProjectSettings.globalize_path("user://camera_shots"))
 	_run.call_deferred()
 

@@ -45,7 +45,7 @@ var _card: Card
 var _panel: Card
 var _last_shown := ""
 var _last_rows := ""
-var extra_x := 0.0 # how much wider the picture is than 448 on each side, in its pixels (wide-view): this layer keeps the middle
+var extra_x := 0.0 # how much wider the picture is than 448 on each side, in its pixels: this layer keeps the middle
 
 
 func _init() -> void:
@@ -167,7 +167,7 @@ func _allowed(key: String) -> bool:
 	if key == "map":
 		return state.stage in ["explore", "end", "trade", "request", "camp"]
 	if key == "chat":
-		return state.viewing("chat") and not state.chat.is_empty() and state.stage in CARD_STAGES
+		return not state.chat.is_empty() and state.stage in CARD_STAGES
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):
@@ -176,9 +176,9 @@ func _allowed(key: String) -> bool:
 	return false
 
 
-## The mind's answers the card may show: none with no-show-mind, unless the debug panel asks for them.
+## The mind's answers the card shows.
 func _rows() -> Array:
-	return state.mind_rows if debug or not Flags.switched_off("show-mind") else []
+	return state.mind_rows
 
 
 func _blocks_for(key: String) -> Array:
@@ -189,7 +189,7 @@ func _blocks_for(key: String) -> Array:
 	if key == "foe":
 		return foe_blocks(state.foe, _rows(), MIND_ROWS_SHOWN if not debug else 0, mind_label, state.viewing("reveal") and not debug)
 	if key == "map":
-		return map_blocks(state.viewing("secrets"), state.viewing("items"), state.viewing("lurkers"), state.viewing("npcs"), state.viewing("roaming"))
+		return map_blocks(state.viewing("items"), state.viewing("npcs"), state.viewing("roaming"))
 	if key.begins_with("ally"):
 		return ally_blocks(state.allies[int(key.substr(4))])
 	return [{"kind": "text", "text": str(state.menu[int(key.substr(7))].sub)}]
@@ -198,7 +198,7 @@ func _blocks_for(key: String) -> Array:
 # ---------------------------------------------------------------- the content
 
 ## The foe: who it is, what it seems like, how it feels, and the last `shown` answers of the mind (0 for all of them).
-## `gradual` says only what the player has found out (the feature reveal), with ??? for the rest.
+## `gradual` says only what the player has found out (CHECK reads one thing at a time), with ??? for the rest.
 static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gradual := false) -> Array:
 	var out := [{"kind": "head", "left": m.name, "right": str(Content.species(m.species).label).to_upper()}]
 	if gradual:
@@ -267,7 +267,7 @@ static func ally_blocks(a) -> Array:
 
 
 ## The automap's legend: each monster's colour and the kind of fight it brings.
-static func map_blocks(secrets := false, items := false, lurkers := false, npcs := false, roaming := false) -> Array:
+static func map_blocks(items := false, npcs := false, roaming := false) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
 	var fights := {}
@@ -276,16 +276,14 @@ static func map_blocks(secrets := false, items := false, lurkers := false, npcs 
 	fights[Content.table("encounter").boss.species] = "all four"
 	for id in Content.table("species"):
 		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": fights.get(id, "")})
-	if secrets:
-		out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
-		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
+	out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
+	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
 	if items:
 		out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})
 		out.append({"kind": "swatch", "color": Palette.INK, "left": "TRADER", "right": "walk up to buy"})
 	if npcs:
 		out.append({"kind": "swatch", "color": Palette.YOU, "left": "A REQUEST", "right": "walk up to talk"})
-	if lurkers:
-		out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
+	out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
 	return out
 
 
@@ -430,7 +428,7 @@ class Chip:
 	var label := ""
 	var warn := false
 	var k := 1.0
-	var face := "" # whose small drawing stands for the dot (the feature hand-drawn)
+	var face := "" # whose small drawing stands for the dot
 
 	var _title: Font = Fonts.title()
 

@@ -23,11 +23,11 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.foe = null
 	flow.event("stairs")
-	s.run_over = not s.practice and (not flow.feature("real-floors") or Floors.is_last(s.depth))
+	s.run_over = not s.practice and (flow.on_slice() or Floors.is_last(s.depth))
 	_at_door = false
 	_at_toll = false
 	_ways = []
-	if s.run_over and flow.feature("last-door") and flow.feature("real-floors") and s.allies.is_empty():
+	if s.run_over and flow.feature("last-door") and s.allies.is_empty():
 		s.run_over = false
 		_at_door = true
 		s.say([State.sys_line(Texts.DOOR_SHUT), State.sys_line(Texts.DOOR_HINT)])
@@ -49,7 +49,7 @@ func enter(flow, _args: Dictionary) -> void:
 func _offer_ways(flow, lines: Array) -> void:
 	var s = flow.state
 	s.say(lines)
-	_ways = Floors.paths(s.run_seed, s.depth, flow.feature("items") and flow.feature("shop")) if flow.feature("branching") else []
+	_ways = Floors.paths(s.run_seed, s.depth) if flow.feature("branching") else []
 	s.menu = []
 	for way in _ways:
 		s.menu.append({"label": way.label, "sub": way.sub})
@@ -104,14 +104,14 @@ func _finish(flow, ending: Dictionary, how := "cleared") -> void:
 	flow.event("run_ended", {"how": how})
 	var embers: int = flow.close_run(how == "cleared")
 	var tail: String = ending.tail
-	if flow.feature("butcher") and Survival.ending_note(s) != "":
+	if Survival.ending_note(s) != "":
 		tail = Survival.ending_note(s)
 	elif flow.feature("toll") and not s.left_behind.is_empty():
 		tail = Floors.toll().ending % s.left_behind[-1]
 	elif embers > 0:
 		tail += " " + Legacy.line("carried") % embers
 	s.say([State.speech(ending.route, ending.text), State.sys_line(tail)])
-	s.menu = [{"label": "NEW RUN" if flow.feature("real-floors") else "NEW FLOOR", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
+	s.menu = [{"label": "NEW FLOOR" if flow.on_slice() else "NEW RUN", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
 	print("end: %s" % ending.route)
 
 

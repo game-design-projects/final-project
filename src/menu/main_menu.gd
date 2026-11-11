@@ -35,18 +35,15 @@ func _ready() -> void:
 	back.set_anchors_preset(Control.PRESET_FULL_RECT)
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(back)
-	var drawn := Flags.enabled("hand-drawn")
-	if drawn:
-		add_child(_keyart())
+	add_child(_keyart())
 	if Flags.value("meet") != "" or PersonalitySlice.pending() or Flags.on("social-demo"):
 		print("menu: straight to a fight (flag)")
 		_start(Session.start_new)
 		return
 	panel = MenuPanel.new()
-	if drawn:
-		panel.backdrop = 0.0 # its own frame is black; round it you see the halls
-		if Flags.enabled("wick"):
-			add_child(MenuWick.new())
+	panel.backdrop = 0.0 # its own frame is black; round it you see the halls
+	if Flags.enabled("wick"):
+		add_child(MenuWick.new())
 	add_child(panel)
 	var version := Label.new()
 	version.text = "v%s" % ProjectSettings.get_setting("application/config/version", "")

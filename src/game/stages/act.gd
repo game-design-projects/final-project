@@ -14,7 +14,7 @@ const CASHES_IN := ["bandit", "snake"] # these two can be paid off
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
-	var items := [{"label": "CHECK", "sub": "Free: read one thing about it" if flow.feature("reveal") else "Free: read it"}]
+	var items := [{"label": "CHECK", "sub": "Free: read one thing about it" if not flow.on_slice() else "Free: read it"}]
 	for a in _acts(m, flow):
 		var pays: bool = m.species in CASHES_IN and a.intent == "gold"
 		items.append({"label": a.label, "sub": Texts.GOLD_ACT_TIP if pays else ""})
@@ -31,7 +31,7 @@ func pick(flow, index: int) -> void:
 	var m = s.foe
 	var acts := _acts(m, flow)
 	if index == CHECK:
-		if flow.feature("reveal"):
+		if not flow.on_slice():
 			s.say([State.sys_line(Texts.check_piece(m, Reveal.next_piece(m)))])
 		else:
 			s.say([State.sys_line(Texts.check(m, m.clues()))])
@@ -54,7 +54,7 @@ func cancel(flow) -> void:
 func _acts(m, flow = null) -> Array:
 	var enc: Dictionary = Content.table("encounter")
 	var acts: Array = enc.acts[m.species]
-	if flow != null and flow.feature("recruit-step"):
+	if flow != null and not flow.on_slice():
 		return acts + enc.kind_acts.get(m.species, [])
 	return acts
 

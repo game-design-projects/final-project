@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `menu` | 主菜单、设置、存档页面（暂停菜单复用同一套页面）、NEW GAME 之后的开场影片（`intro_cg`） | → `gameplay`（经 `session` 交请求） |
 | `gameplay` | 一局游戏的场景：把 `game` `view` `audio` `mind` 接起来、读输入、暂停、自动存档 | `menu` → 它 → `game` |
-| `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，`classic` 用 `monster_model` `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
+| `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，性格切片用 `monster_model` `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
 | `audio` | 声音：合成音效（`sfx` `synth`）、音乐（`music`）、怪物录音和合成嗓音（`voices` `shout`）、总线（`mix`） | `assets` `flags` `game`（事件）→ `audio` |
 | `game` | 流程、状态机 | `menu` `view` `audio` `mind` → `game` → `mind` `rules` |
 | `mind` | 怪物怎么思考 | `game` `data` → `mind` → `rules` `game`（决定） |
@@ -27,7 +27,7 @@
 - 联网和子进程只经 `network manager`；超时和失败回退放在这一处。
 - 日志、随机、存储、启动参数是小工具，不画在图里，统一放在 `src/utils/`，由用到的模块直接使用。
 - 场景文件（`.tscn`）跟各自模块放在一起，不单设目录。
-- 每个游戏功能都有开关（`utils/flags.gd` 的 `FEATURES`，默认开；`OPT_IN` 里的实验功能例外，不点名不开），`classic` 全关。
+- 新功能默认就是游戏的一部分，不加开关；需要和旧行为对照的才进 `utils/flags.gd` 的 `FEATURES`（默认开；`OPT_IN` 里的实验功能例外，不点名不开），`classic` 把这些关掉。性格切片（`flow.on_slice()`）保持原样。
 - 数值和文本放 `data/*.json`，由 `rules/content.gd` 读。
 
 ## 目录

@@ -5,6 +5,7 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Flags = preload("res://src/utils/flags.gd")
 const Moods = preload("res://src/rules/moods.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
@@ -24,9 +25,15 @@ func _init(owner) -> void:
 	flow.happened.connect(_on_event)
 
 
+## Whether tips are given: not with the TIPS setting off, on the personality slice or with `notips`. The slow first fights
+## (stages/dodge.gd) and the practice floor go with them.
+func active() -> bool:
+	return enabled and not flow.on_slice() and not Flags.on("notips")
+
+
 ## Show this tip, if it is due. True when it went up.
 func say(id: String) -> bool:
-	if not enabled or seen.has(id) or not flow.feature("tutorial") or flow.banner_up():
+	if not active() or seen.has(id) or flow.banner_up():
 		return false
 	var tips: Dictionary = Content.table("coach").tips
 	if not tips.has(id):
@@ -66,7 +73,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 func _on_stage(to: String) -> void:
 	match to:
 		"explore":
-			if flow.feature("clans") and not flow.state.deeds.is_empty():
+			if not flow.state.deeds.is_empty(): # only the clans write deeds, and not on the slice
 				say("clans")
 		"menu":
 			if not say("menu") and not (flow.feature("heavy-strike") and flow.state.skill_fight == null and say("heavy")) and seen.has("act") and (seen.has("strike") or seen.has("skills")):
@@ -85,7 +92,7 @@ func _on_stage(to: String) -> void:
 			say("dead")
 
 
-## Whether this foe meets you with its face already gone (the warmth's blank faces, drawn only by hand-drawn): that reads like the drawing
+## Whether this foe meets you with its face already gone (the warmth's blank faces): that reads like the drawing
 ## lost its eyes unless something says why.
 func _blank(m) -> bool:
-	return m != null and flow.feature("warmth") and flow.feature("hand-drawn") and Moods.hollow(m, Warmth.of(flow.state))
+	return m != null and not flow.on_slice() and Moods.hollow(m, Warmth.of(flow.state))

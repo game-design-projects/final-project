@@ -26,8 +26,7 @@ func _fill(flow) -> void:
 		_add(s, "YES", "It won't see it coming", ["butcher", _asking])
 	else:
 		_add_food(flow)
-		if flow.feature("butcher"):
-			_add_party(flow)
+		_add_party(flow)
 		_add(s, "LEAVE", "Back to the walk", ["leave", null])
 	s.selected = mini(s.selected, s.menu.size() - 1)
 	s.hint = "ENTER PICK · ESC LEAVE · I INFO"

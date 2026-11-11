@@ -1,7 +1,6 @@
 ## The walk model and the fight sprite of each species side by side, for looking at (tests can't judge looks): the model from in
 ## front and from a little to one side, at the distance of the next cell, then the line art. A sheet, models.png, of all five.
 ##   godot --path . -s res://tools/model_shots.gd -- out=<dir> nosound
-##   ... -- out=<dir> nosound no-sprite-look       the models as they were
 extends SceneTree
 
 const Art = preload("res://src/view/art.gd")
@@ -56,7 +55,7 @@ func _model_picture(species: String, color: Color, angle: float) -> Image:
 	world.environment.background_mode = Environment.BG_COLOR
 	world.environment.background_color = Color.BLACK
 	view.add_child(world)
-	var model := MonsterModel.build(species, color, Flags.enabled("sprite-look"))
+	var model := MonsterModel.build(species, color, true)
 	view.add_child(model)
 	MonsterModel.pose(model, 0.0, 0.0)
 	var camera := Camera3D.new()

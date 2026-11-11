@@ -24,13 +24,13 @@ func enter(flow, args: Dictionary) -> void:
 	if flow.feature("initiated-dialogue") and int(m.social.get("trial", 0)) > 0:
 		genre = "gates" # the dragon's telegraphed walls trial, even on a mini-game turn
 	var pace := 1.0
-	if flow.feature("gentle-dodge"):
+	if not flow.on_slice():
 		pace = Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
-		if flow.feature("tutorial") and flow.coach.enabled: # the TIPS setting: someone who knows the game gets no slow start either
+		if flow.coach.active(): # the TIPS setting: someone who knows the game gets no slow start either
 			pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
 		print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size()])
 	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace)
-	if flow.feature("party-aid"):
+	if not flow.on_slice():
 		s.dodge.guard = Combat.party_guard(s.allies.size())
 	_hits = 0
 	s.menu = []
@@ -41,7 +41,7 @@ func enter(flow, args: Dictionary) -> void:
 ## The keys and the attack's rule, and the block that is left (skill-combat).
 func _hint(flow) -> void:
 	var s = flow.state
-	s.hint = "ARROWS MOVE · %s" % (_rule.plain if flow.feature("piece-icons") else _rule.rule)
+	s.hint = "ARROWS MOVE · %s" % _rule.plain
 	if s.skill_fight != null and int(s.skill_fight.block) > 0:
 		s.hint += " · BLOCK %d" % s.skill_fight.block
 

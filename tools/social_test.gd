@@ -18,7 +18,7 @@ func _name() -> String:
 	return "social_test"
 
 func _fresh(species := "bandit", traits := ["jumpy"], extra := []) :
-	Flags.set_args(PackedStringArray(["nosave", "nosound", "no-tutorial", "no-wick"] + extra))
+	Flags.set_args(PackedStringArray(["nosave", "nosound", "notips", "no-wick"] + extra))
 	var flow = Flow.new(Rng.new(7042), LocalMind.new())
 	await flow.new_run()
 	var s = flow.state
@@ -326,7 +326,7 @@ func _compatibility() -> void:
 	_check(s.foe.spoke and s.stage in ["wait", "menu"], "ordinary TALK still resolves its own existing action")
 
 func _ui() -> void:
-	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=7042", "no-tutorial"]))
+	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=7042", "notips"]))
 	var game = load("res://src/gameplay/gameplay.tscn").instantiate()
 	root.add_child(game)
 	await process_frame
@@ -431,7 +431,7 @@ func _finish_attack(flow) -> void:
 
 func _demo() -> void:
 	for enabled in [true, false]:
-		var args := PackedStringArray(["nosave", "nosound", "no-tutorial", "no-wick", "social-demo", "seed=7042"])
+		var args := PackedStringArray(["nosave", "nosound", "notips", "no-wick", "social-demo", "seed=7042"])
 		if not enabled:
 			args.append("no-initiated-dialogue")
 		Flags.set_args(args)

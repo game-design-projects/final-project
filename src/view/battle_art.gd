@@ -1,4 +1,4 @@
-## The drawn half of the battle screen, for the feature hand-drawn: the halls dimmed behind it, and the monster itself, as big as it is
+## The drawn half of the battle screen: the halls dimmed behind it, and the monster itself, as big as it is
 ## walking is small. It is a child of the overlay, drawn behind what the overlay draws, because drawings want smooth filtering and the
 ## overlay's text wants none. It shrinks up out of the way for a dodge. Everything it shows it reads off the overlay and the game: moods off
 ## the meters (rules/moods.gd), a blink of mood after a deed, a hit, a lunge as an attack comes, a face gone blank (rules/warmth.gd).

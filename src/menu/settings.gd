@@ -12,9 +12,9 @@ const DEFAULTS := {
 	"crt": true, # the glow and scanlines over the picture
 	"calm": false, # softer flashes and no colour split when something hits
 	"shake": true, # the battle screen shakes when something hits
-	"easy": false, # slower dodges (the feature gentle-dodge)
-	"tips": true, # the first-time tips (the feature tutorial)
-	"text_size": "normal", # the log and the speech box (the feature text-size)
+	"easy": false, # slower dodges
+	"tips": true, # the first-time tips
+	"text_size": "normal", # the log and the speech box
 	"seen_tips": [], # the tips already shown
 	"sfx": true,
 	"sfx_volume": 5, # 0..VOLUME_MAX, for the music too

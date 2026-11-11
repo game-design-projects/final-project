@@ -32,7 +32,7 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 			"sub": ("%s  %s" % [latest.summary, Saves.when(latest.saved_at)]) if not latest.is_empty() else "No save yet",
 			"act": func(): ctx.load_slot.call(latest.slot),
 		},
-		{"label": "NEW GAME", "sub": "Five floors down to the Last Door" if Flags.enabled("real-floors") else "One floor, one run", "act": func(): ctx.new_game.call()},
+		{"label": "NEW GAME", "sub": "Five floors down to the Last Door", "act": func(): ctx.new_game.call()},
 		{"label": "LOAD GAME", "disabled": not any_save, "act": _go(panel, func(): return slot_list(panel, ctx, "load"))},
 		{"label": "SAVE MANAGER", "sub": "Copy, rename, delete", "act": _go(panel, func(): return slot_list(panel, ctx, "manage"))},
 	]
@@ -224,8 +224,8 @@ static func effects() -> Dictionary:
 
 
 static func gameplay() -> Dictionary:
-	var sizes := [_setting("text_size", "TEXT SIZE", "The log and what monsters say, wherever the larger size fits")] if Flags.enabled("text-size") else []
-	return {"title": "GAMEPLAY", "hint": ADJUST_HINT, "items": sizes + [
+	return {"title": "GAMEPLAY", "hint": ADJUST_HINT, "items": [
+		_setting("text_size", "TEXT SIZE", "The log and what monsters say, wherever the larger size fits"),
 		_setting("easy", "EASY DODGE", "Attacks come slower, with longer warnings"),
 		_setting("tips", "TIPS", "Short tips the first time you meet something; off skips the tutorial"),
 		{"label": "SHOW THE TIPS AGAIN", "sub": "Forget which tips you have seen", "act": func(): Settings.set_value("seen_tips", [])},

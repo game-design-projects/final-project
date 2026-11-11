@@ -31,7 +31,8 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["dungeon-reveal", "piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger", "hand-drawn", "warmth", "wick", "combat-grid", "choice-grid"]
+const VIEW_FEATURES := ["dungeon-reveal", "roaming", "wick"]
+const SLICE_HIDES := ["reveal", "items", "npcs", "hand-drawn", "warmth", "sprite-look"] # views that are on everywhere but the personality slice
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -113,14 +114,19 @@ func _init(game_rng, game_mind) -> void:
 	_place_camera() # a save looks about it as it loads, so this is in place before that
 
 
-## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice, whose routes stay fixed so
-## its sessions can be compared.
+## True on the personality slice, the reference run: what the game added since stays off there (the rules that change a fight),
+## so its routes stay fixed and its sessions can be compared.
+func on_slice() -> bool:
+	return slice_floor or PersonalitySlice.pending()
+
+
+## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice.
 func feature(name: String) -> bool:
-	return Flags.enabled(name) and not slice_floor and not PersonalitySlice.pending()
+	return Flags.enabled(name) and not on_slice()
 
 
 ## A fresh run: a new floor, standing at its start. With `practice` (the scene asks for it until it has been played once) and
-## the feature tutorial-floor, the run starts on the practice floor above B1F (rules/practice.gd).
+## the tips on, the run starts on the practice floor above B1F (rules/practice.gd).
 func new_run(practice := false) -> void:
 	await _leave_current()
 	_forget_slice()
@@ -142,7 +148,7 @@ func new_run(practice := false) -> void:
 	print("flow: new run, seed %d%s" % [rng.seed_value, ", on the practice floor" if state.practice else ""])
 	event("state_replaced", {"how": "new"})
 	var lines := _arrival()
-	if _telling_story():
+	if not on_slice():
 		var premise: Dictionary = Floors.premise()
 		lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
 		announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
@@ -155,7 +161,7 @@ func new_run(practice := false) -> void:
 ## Whether a run may start on the practice floor: it needs floors to go down to and the tips to teach it, and a run told to start
 ## deeper (`floor=N`) or to meet a given species (`meet=`) skips it.
 func practice_allowed() -> bool:
-	if not (feature("tutorial-floor") and feature("real-floors") and feature("tutorial")):
+	if on_slice() or Flags.on("notips"):
 		return false
 	if Flags.value("floor") != "" or Flags.value("meet") != "" or Flags.on("social-demo"):
 		print("flow: no practice floor, the flags ask for another start")
@@ -203,7 +209,7 @@ func next_floor(way := {}) -> void:
 	state.foe = null
 	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal() + int(way.get("rest", 0)))
 	state.gold += int(way.get("gold", 0))
-	if feature("hunger"):
+	if not on_slice():
 		Survival.rest(state)
 	_make_floor(way)
 	encounter.pending_notes = []
@@ -231,22 +237,19 @@ func close_run(cleared: bool) -> int:
 
 ## What the views read from the state rather than ask the flags, because the personality slice has them off.
 func _apply_features() -> void:
-	state.rotate_mini_games = feature("mini-games")
-	state.floors_of = Floors.run_floors() if _telling_story() else 0
+	state.rotate_mini_games = not on_slice()
+	state.floors_of = 0 if on_slice() else Floors.run_floors()
 	_place_camera()
 	for name in VIEW_FEATURES:
 		state.views[name] = feature(name)
+	for name in SLICE_HIDES:
+		state.views[name] = not on_slice()
 	if feature("skill-combat") and state.skills.is_empty(): # a new run, or a save from before: the starting skills
 		state.skills = Skills.start()
 
 
 func _place_camera() -> void:
-	Vision.back = Vision.CLOSE_BACK if feature("close-camera") else Vision.BACK
-
-
-## The story needs a below to tell of.
-func _telling_story() -> bool:
-	return feature("story") and feature("real-floors")
+	Vision.back = Vision.BACK if on_slice() else Vision.CLOSE_BACK
 
 
 ## What the log says on arriving on this floor.
@@ -254,7 +257,7 @@ func _arrival() -> Array:
 	var lines := []
 	if state.practice:
 		return [State.sys_line(Practice.line("line"))]
-	if _telling_story():
+	if not on_slice():
 		lines.append(State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion)))
 	else:
 		lines.append(State.sys_line(Texts.new_floor(state.depth)))
@@ -264,24 +267,22 @@ func _arrival() -> Array:
 	return lines
 
 
-## The floor for `state.depth`, with the party at its start. Without real-floors it is the classic one, drawn from the game's
+## The floor for `state.depth`, with the party at its start. On the personality slice it is the classic one, drawn from the game's
 ## generator as it always was, so old seeds make the same floor.
 func _make_floor(way := {}) -> void:
 	if state.practice:
-		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)), feature("items"))
-	elif feature("real-floors"):
+		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)))
+	elif not on_slice():
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
-		plan.boss_at_exit = feature("boss-at-exit")
-		if feature("map-gen"):
-			plan.biome = Floors.biome(state.run_seed, state.depth)
-		if feature("secrets"):
-			plan.secrets = Floors.secrets(plan.get("biome", {}))
-		plan.items = feature("items")
-		plan.food = feature("items") and feature("hunger")
-		plan.shop = feature("items") and feature("shop") and (Items.shop_on(state.depth) or way.get("shop", false))
-		plan.lurkers = feature("lurkers")
-		plan.request = feature("npcs") and Requests.due(state.depth)
+		plan.boss_at_exit = true
+		plan.biome = Floors.biome(state.run_seed, state.depth)
+		plan.secrets = Floors.secrets(plan.get("biome", {}))
+		plan.items = true
+		plan.food = true
+		plan.shop = Items.shop_on(state.depth) or way.get("shop", false)
+		plan.lurkers = true
+		plan.request = Requests.due(state.depth)
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 	else:
 		state.floor_map = FloorGen.generate(rng)
@@ -338,7 +339,7 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
-	if to == "explore" and from in FIGHT_STAGES and feature("input-cooldown"):
+	if to == "explore" and from in FIGHT_STAGES and not on_slice():
 		_keys_back_at = clock + AFTER_FIGHT_MS
 		_held_over = true
 	state.stage = to
@@ -353,7 +354,7 @@ func go(to: String, args := {}) -> void:
 
 ## The halls have changed their mind about you: say so on the way back from whatever did it.
 func _note_warmth() -> void:
-	if not feature("warmth"):
+	if on_slice():
 		return
 	var now := Warmth.level(Warmth.of(state))
 	var was: int = state.warmth_level

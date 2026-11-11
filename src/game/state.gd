@@ -21,7 +21,7 @@ const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' larges
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
-var practice := false # on the practice floor above B1F (the feature tutorial-floor); depth stays 1 until its stairs
+var practice := false # on the practice floor above B1F; depth stays 1 until its stairs
 var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
 var steps := 0 # how far the party has walked this run
 var chat: Array = [] # {who, text}: everything said this run, oldest first, up to CHAT_MAX
@@ -30,7 +30,7 @@ var listening := false # a monster is taking in what you typed
 var views := {} # the features the picture may show, as the flow worked them out (off on the personality slice)
 var floors_of := 0 # how many floors the run has, for the header (0: it doesn't say)
 var banner = null # a moment on the picture, {title, text, t0, ms} (see flow.announce)
-var run_over := false # the run ended at the stairs: there is no floor below (always so without the feature real-floors)
+var run_over := false # the run ended at the stairs: there is no floor below (always so on the personality slice)
 var palette_id := 0 # which colours this run wears (Palette.for_run), picked from the seed and saved with the run
 
 # the walk
@@ -68,7 +68,7 @@ var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
 var skill_fight = null # this fight's energy, cooldowns, block and bruises (Skills.new_fight), with the feature skill-combat; null without it
 var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
-var rotate_mini_games := false # every third attack is a mini-game (the feature mini-games)
+var rotate_mini_games := false # every third attack is a mini-game (not on the personality slice)
 var social_offer := {} # only the social stage owns this popup
 var social_typing := false
 var social_note := ""

@@ -35,7 +35,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
-		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss) if flow.feature("recruit-step") else "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
+		{"label": "SPARE", "sub": Texts.spare_tip(mercy, s.foe.boss) if not flow.on_slice() else "%s chance to accept. %s" % [Combat.chance_label(mercy), Texts.SPARE_TIP], "gold": mercy >= 0.5},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
 	if skilled:
@@ -43,11 +43,11 @@ func enter(flow, _args: Dictionary) -> void:
 	if flow.feature("heavy-strike") and not skilled:
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
-	if flow.feature("items") and (flow.feature("combat-grid") or not s.items.is_empty()):
+	if not flow.on_slice():
 		s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
 	if flow.feature("initiated-dialogue") and int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
-	s.hint = ("ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" if flow.feature("combat-grid") else "UP / DOWN CHOOSE · ENTER PICK · 1-%d · I INFO") % s.menu.size()
+	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
 
 func handle(flow, key: String) -> void:
@@ -55,7 +55,7 @@ func handle(flow, key: String) -> void:
 		var index := int(key) - 1
 		if index < flow.state.menu.size() and flow.state.menu[index].get("disabled", false):
 			return
-	if not flow.feature("combat-grid") or not key in ["up", "down", "left", "right"]:
+	if not key in ["up", "down", "left", "right"]:
 		await super.handle(flow, key)
 		return
 	var s = flow.state
@@ -118,7 +118,7 @@ func _spare(flow) -> void:
 		await flow.encounter.defeat(m, "spared")
 		return
 	flow.event("mercy_refused")
-	var gentle: bool = flow.feature("recruit-step")
+	var gentle: bool = not flow.on_slice()
 	if not gentle:
 		m.meters.anger = clampf(m.meters.anger + Combat.REFUSED_MERCY_ANGER, 0.0, 100.0)
 	var pressure: float = await flow.mind.pressure(m)

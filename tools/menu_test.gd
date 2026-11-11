@@ -302,7 +302,6 @@ func _main_menu_refuses_a_bad_save() -> void:
 func _intro_film() -> void:
 	var IntroCg = load("res://src/menu/intro_cg.gd")
 	var Session = load("res://src/menu/session.gd")
-	_check(Flags.FEATURES.has("intro-cg"), "the opening film is a feature")
 	_check(ResourceLoader.exists(IntroCg.VIDEO) and load(IntroCg.VIDEO) is VideoStream, "the film is in the project, and Godot can read it")
 	Flags.set_args(PackedStringArray(["nosave", "nosound"]))
 	_check(not IntroCg.wanted(), "with no screen to show it on (this test), NEW GAME goes straight to the run")

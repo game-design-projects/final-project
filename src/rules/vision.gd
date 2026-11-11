@@ -11,7 +11,7 @@ const STEP := 0.1 # how finely a line of sight is walked, in cells
 const BACK := 0.38 # how far behind the middle of your cell the camera stands, in cells (stage.gd stands it there)
 const CLOSE_BACK := 0.2 # the same with close-camera
 const VIEW_TAN := 1.0493 # the camera's field of view: tan of half its width, for FOV 68 at 448:288 (tools/view_test.gd checks it)
-static var back := BACK # where the camera stands now (the flow sets it, by close-camera)
+static var back := BACK # where the camera stands now (the flow sets it)
 static var view_tan := VIEW_TAN # and how wide it sees (the scene sets it, as wide as the picture is)
 
 const SAMPLES := [Vector2(0, 0), Vector2(-0.4, -0.4), Vector2(0.4, -0.4), Vector2(-0.4, 0.4), Vector2(0.4, 0.4)] # where in a cell a line may end, from its middle

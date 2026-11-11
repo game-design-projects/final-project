@@ -23,8 +23,8 @@ static func welcome_back(summary: String) -> String:
 	return "Welcome back. %s." % summary
 
 
-static func fight_rule(genre: Dictionary, plain := false) -> String:
-	return "It fights in %s. %s." % [genre.name, genre.plain if plain else genre.rule]
+static func fight_rule(genre: Dictionary) -> String:
+	return "It fights in %s. %s." % [genre.name, genre.plain]
 
 
 static func you(what: String) -> String:

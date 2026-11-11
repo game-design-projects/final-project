@@ -1,6 +1,6 @@
 ## Checks the drawn look with no window: that the atlases say what the game needs, how a figure moves (a change of mood never makes its
 ## eyes jump), how warm the halls are and what that does, what a face shows, and Wick from her first hop to a saved game.
-## Prints one line per check and exits with 1 if any failed. With `classic`, that none of it is on.
+## Prints one line per check and exits with 1 if any failed. With `classic`, only that the personality slice keeps the old look.
 ##   godot --headless --path . -s res://tools/art_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
@@ -39,8 +39,8 @@ func _name() -> String:
 
 func _run() -> void:
 	var words := OS.get_cmdline_user_args() as PackedStringArray
-	if words.has("classic"):
-		await _classic_has_none_of_it()
+	if words.has("classic"): # without Wick and the rest, so only the slice has anything to check
+		await _the_slice_keeps_the_old_look()
 		_finish()
 		return
 	_the_atlases_are_whole()
@@ -54,6 +54,7 @@ func _run() -> void:
 	_the_battle_screen_shows_the_face()
 	_the_opening()
 	_the_menu_has_her()
+	await _the_slice_keeps_the_old_look()
 	_finish()
 
 
@@ -391,7 +392,6 @@ func _the_battle_screen_shows_the_face() -> void:
 	var s = State.new()
 	s.views["hand-drawn"] = true
 	s.views["warmth"] = true
-	s.views["mood-cues"] = true
 	s.stage = "menu"
 	var m = _monster("bandit")
 	m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 0.0}
@@ -470,11 +470,12 @@ func _the_menu_has_her() -> void:
 	wick.free()
 
 
-func _classic_has_none_of_it() -> void:
-	var flow = _flow(5, ["classic"])
+## The personality slice is the reference run: no friend along, and the set, the monsters and the fight as they were before the drawings.
+func _the_slice_keeps_the_old_look() -> void:
+	var flow = _flow(5, ["personality-slice"])
 	await flow.new_run()
 	var s = flow.state
-	_check(s.allies.is_empty() and not s.viewing("hand-drawn") and not s.viewing("warmth"), "classic: nobody along, nothing drawn")
+	_check(s.allies.is_empty() and not s.viewing("hand-drawn") and not s.viewing("warmth"), "the personality slice: nobody along, nothing drawn")
 	var stage = load("res://src/view/stage.gd").new()
 	root.add_child(stage)
 	stage.update(s, 0.0, FRAME)

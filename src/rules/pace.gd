@@ -1,4 +1,4 @@
-## How fast a dodge runs (the feature gentle-dodge): slower than the classic dodge to begin with, then faster down the floors and
+## How fast a dodge runs: slower than the original dodge to begin with, then faster down the floors and
 ## slower when the foe is friendly, when the player has been getting hit, with allies at their side, or with the EASY DODGE
 ## setting. 1.0 is the classic pace. Hazards come further apart and warn for longer as the number falls.
 extends RefCounted
@@ -11,7 +11,7 @@ const PER_STRUGGLE := 0.05 # for each hit lately
 const STRUGGLE_MAX := 4.0
 const PER_ALLY := 0.04
 const EASY_SCALE := 0.75
-const OPENING := [0.85, 0.92] # the first fights of a run, in order (the feature tutorial)
+const OPENING := [0.85, 0.92] # the first fights of a run, in order (with the tips)
 const LOWEST := 0.4
 const HIGHEST := 1.05
 const DURATION_SCALE := 0.85 # a shorter dodge, so a fight isn't mostly waiting

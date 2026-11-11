@@ -35,7 +35,7 @@ const Warmth = preload("res://src/rules/warmth.gd")
 const MENU_SCENE := "res://src/menu/main_menu.tscn"
 const VIEW_W := 448
 const VIEW_H := 288
-const WIDEST := 2.4 # with wide-view the picture follows the panel's shape up to this: FOV 68 is its height, so its width grows with it
+const WIDEST := 2.4 # the picture follows the panel's shape up to this: FOV 68 is its height, so its width grows with it
 const FILM_RISE_S := 0.9 # the run comes up out of the opening film's black this slowly when the film played to its end
 const FILM_RISE_SKIPPED_S := 0.35 # and this quickly when a key skipped it
 const WIDTH_STEP := 16 # and its width moves in steps this big, so a line more or less in the dock doesn't remake the picture
@@ -45,7 +45,7 @@ const FRAME_ROUND := 10 # hand-drawn, the frame has soft corners and the run's w
 const FRAME_DIM := 0.28
 
 
-## How wide the picture is, in its pixels, to fill a panel this shape with wide-view on. Its height stays VIEW_H.
+## How wide the picture is, in its pixels, to fill a panel this shape. Its height stays VIEW_H.
 static func picture_width(room: Vector2) -> int:
 	if room.x <= 0.0 or room.y <= 0.0:
 		return VIEW_W
@@ -312,7 +312,7 @@ func _process(dt: float) -> void:
 	_dock.thinking_ms = Network.waiting_ms()
 	flow.easy_dodge = Settings.get_value("easy")
 	flow.coach.enabled = Settings.get_value("tips")
-	var large: bool = flow.feature("text-size") and Settings.get_value("text_size") == "large"
+	var large: bool = Settings.get_value("text_size") == "large"
 	Hud.large_text = large
 	Overlay.large_text = large
 	if not flow.coach.seen.is_empty() and Settings.get_value("seen_tips").is_empty():
@@ -422,11 +422,11 @@ func _in_picture(at: Vector2) -> Vector2:
 	return at / _picture.size * Vector2(_viewport.size) - Vector2(_overlay.extra_x, 0.0)
 
 
-## Fill the panel, with wide-view: the 3D picture, the way the overlay and the tips sit in it, and what the party's sight takes in.
+## Fill the panel: the 3D picture, the way the overlay and the tips sit in it, and what the party's sight takes in.
 func _fit_picture() -> void:
 	if flow == null:
 		return
-	var width: int = picture_width(_room.size) if flow.feature("wide-view") else VIEW_W
+	var width: int = VIEW_W if flow.on_slice() else picture_width(_room.size)
 	if width == _viewport.size.x:
 		return
 	_viewport.size = Vector2i(width, VIEW_H)
@@ -507,8 +507,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_shake()
 			_postfx.hurt()
 			_overlay.popup("-%d" % data.damage, Palette.WARN, Vector2(224, 200))
-			if s.viewing("clear-hp"):
-				_overlay.comet(_overlay.soul_at())
+			_overlay.comet(_overlay.soul_at())
 		"shield":
 			_overlay.popup("BLOCKED", Palette.MERCY, Vector2(224, 200))
 		"beat":
@@ -518,15 +517,13 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"slain":
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
 		"said":
-			if s.viewing("chat"):
-				_overlay.send_words(data.text)
+			_overlay.send_words(data.text)
 		"mood":
 			_overlay.emote(data.tone)
-			if data.tone == "good" and s.viewing("clear-hp"):
+			if data.tone == "good":
 				_postfx.flash(Palette.MERCY, 0.14 * _softness())
 		"recruited":
-			if s.viewing("clear-hp"):
-				_postfx.flash(Palette.MERCY, 0.45 * _softness())
+			_postfx.flash(Palette.MERCY, 0.45 * _softness())
 		"coach":
 			Settings.set_value("seen_tips", flow.coach.seen.keys())
 		"trophy":

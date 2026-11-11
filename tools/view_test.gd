@@ -681,11 +681,9 @@ func _automap_marks() -> void:
 	s.seen = {s.cell: true}
 	_check(map.cell_px() == 8, "a cell of a 13x13 floor is 8 pixels on the map (105 across)")
 	var boss = s.floor_map.monsters.back()
-	if s.viewing("boss-at-exit"):
-		s.seen[boss.cell] = true # the map keeps it hidden until seen (features_test)
+	s.seen[boss.cell] = true # the map keeps it hidden until seen (features_test)
 	var marks: Array = map.monster_marks()
-	if s.viewing("boss-at-exit"):
-		s.seen.erase(boss.cell)
+	s.seen.erase(boss.cell)
 	if s.viewing("roaming"):
 		_last_seen_on_the_map(s, map)
 	_check(marks.any(func(k): return k.color == Palette.BOSS and k.rect.size == Vector2(8, 8)), "the champion is on the map, in red, from the start")
@@ -838,10 +836,8 @@ func _no_name_without_a_body() -> void:
 func _strike_bar_stands_clear(s, m) -> void:
 	var overlay = Overlay.new()
 	overlay.state = s
-	var chat_was: bool = s.viewing("chat")
 	var stage_was: String = s.stage
 	var foe_was = s.foe
-	s.views["chat"] = true
 	s.foe = m
 	s.stage = "fightbar"
 	s.bar = {"t0": 0.0, "dur": 1000.0, "heavy": true}
@@ -850,7 +846,6 @@ func _strike_bar_stands_clear(s, m) -> void:
 	_check(not overlay.speech().is_empty() and not overlay.strike_bar_rect().intersects(Overlay.SPEECH), "the bar stands above the foe's words")
 	_check(not overlay.strike_bar_rect().intersects(overlay.banner_rect()), "and a banner stands above the bar")
 	overlay.free()
-	s.views["chat"] = chat_was
 	s.stage = stage_was
 	s.foe = foe_was
 	s.bar = null
@@ -860,8 +855,6 @@ func _strike_bar_stands_clear(s, m) -> void:
 func _fight_eases(s, m) -> void:
 	var overlay = Overlay.new()
 	overlay.state = s
-	var was_on: bool = s.viewing("smooth-fight")
-	s.views["smooth-fight"] = true
 	s.foe = m
 	s.stage = "dodge"
 	s.dodge = {"soul": Vector2i(1, 1)}
@@ -886,10 +879,6 @@ func _fight_eases(s, m) -> void:
 	_check(is_equal_approx(overlay.leave_fade(), 0.5), "half gone halfway")
 	overlay.clock_ms = 500.0 + Overlay.LEAVE_FADE_MS
 	_check(overlay.leave_fade() == 0.0, "and the halls are back")
-	s.views["smooth-fight"] = false
-	overlay.clock_ms = 500.0
-	_check(overlay.leave_fade() == 0.0, "no-smooth-fight: no fade")
-	s.views["smooth-fight"] = was_on
 	overlay.free()
 
 

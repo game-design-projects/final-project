@@ -20,7 +20,7 @@ func enter(flow, args: Dictionary) -> void:
 
 func handle(flow, _key: String) -> void:
 	if _waiting:
-		if flow.feature("dialogue-buffer") and flow.clock - _started_at < flow.DIALOGUE_BUFFER_MS:
+		if not flow.on_slice() and flow.clock - _started_at < flow.DIALOGUE_BUFFER_MS:
 			_queued = true
 		else:
 			await _continue(flow)
