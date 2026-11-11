@@ -5,6 +5,7 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Flags = preload("res://src/utils/flags.gd")
 const Moods = preload("res://src/rules/moods.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
@@ -24,9 +25,15 @@ func _init(owner) -> void:
 	flow.happened.connect(_on_event)
 
 
+## Whether tips are given: not with the TIPS setting off, on the personality slice or with `notips`. The slow first fights
+## (stages/dodge.gd) and the practice floor go with them.
+func active() -> bool:
+	return enabled and not flow.on_slice() and not Flags.on("notips")
+
+
 ## Show this tip, if it is due. True when it went up.
 func say(id: String) -> bool:
-	if not enabled or seen.has(id) or not flow.feature("tutorial") or flow.banner_up():
+	if not active() or seen.has(id) or flow.banner_up():
 		return false
 	var tips: Dictionary = Content.table("coach").tips
 	if not tips.has(id):

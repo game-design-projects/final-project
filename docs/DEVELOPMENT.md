@@ -82,7 +82,7 @@ godot --headless --path . --import                  # a new PNG needs importing;
 
 ### The opening film
 
-NEW GAME plays `assets/video/intro.ogv` (the feature `intro-cg`; `src/menu/intro_cg.gd`) before the run. Godot plays Ogg Theora only, so a rendered mp4 is re-encoded by a script; the prompt it came from, and what each render got right and wrong, are in [intro/seedance-prompt.md](intro/seedance-prompt.md).
+NEW GAME plays `assets/video/intro.ogv` (`src/menu/intro_cg.gd`) before the run. Godot plays Ogg Theora only, so a rendered mp4 is re-encoded by a script; the prompt it came from, and what each render got right and wrong, are in [intro/seedance-prompt.md](intro/seedance-prompt.md).
 
 ```bash
 tools/intro_video.sh path/to/render.mp4            # mp4 -> assets/video/intro.ogv (30 fps, Theora q7, Vorbis at the loudness of the music; about 5 MB)
@@ -179,4 +179,4 @@ full corridor; normal play continues using its existing visibility rules.
 
 ## Social-combat playtest
 
-`godot --path . -- social-demo seed=7042 nosave no-tutorial` starts five deterministic encounters. Append `no-initiated-dialogue` for comparison. See [SOCIAL_COMBAT.md](SOCIAL_COMBAT.md) for the 5–7 minute protocol, exact tradeoffs and screenshot command.
+`godot --path . -- social-demo seed=7042 nosave notips` starts five deterministic encounters. Append `no-initiated-dialogue` for comparison. See [SOCIAL_COMBAT.md](SOCIAL_COMBAT.md) for the 5–7 minute protocol, exact tradeoffs and screenshot command.

@@ -13,7 +13,7 @@ const DEFAULTS := {
 	"calm": false, # softer flashes and no colour split when something hits
 	"shake": true, # the battle screen shakes when something hits
 	"easy": false, # slower dodges
-	"tips": true, # the first-time tips (the feature tutorial)
+	"tips": true, # the first-time tips
 	"text_size": "normal", # the log and the speech box
 	"seen_tips": [], # the tips already shown
 	"sfx": true,

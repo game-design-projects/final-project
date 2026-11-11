@@ -31,9 +31,9 @@ var _leaving := false
 var _rise: Tween # the fade in, while it runs
 
 
-## Whether NEW GAME should play the film: the feature is on, the file is there, and there is a screen to show it on.
+## Whether NEW GAME should play the film: the file is there, and there is a screen to show it on.
 static func wanted() -> bool:
-	return Flags.enabled("intro-cg") and DisplayServer.get_name() != "headless" and ResourceLoader.exists(VIDEO)
+	return DisplayServer.get_name() != "headless" and ResourceLoader.exists(VIDEO)
 
 
 func _ready() -> void:

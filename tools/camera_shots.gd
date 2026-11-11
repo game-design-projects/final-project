@@ -19,7 +19,7 @@ func _initialize() -> void:
 	for word in words.filter(func(w): return w.begins_with("label=")):
 		_label = word.trim_prefix("label=")
 		words.erase(word)
-	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=7", "no-tutorial", "no-story"] + words))
+	Flags.set_args(PackedStringArray(["nosave", "nosound", "seed=7", "notips"] + words))
 	_out = Flags.value("out", ProjectSettings.globalize_path("user://camera_shots"))
 	_run.call_deferred()
 

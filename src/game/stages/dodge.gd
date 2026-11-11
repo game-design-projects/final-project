@@ -26,7 +26,7 @@ func enter(flow, args: Dictionary) -> void:
 	var pace := 1.0
 	if not flow.on_slice():
 		pace = Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
-		if flow.feature("tutorial") and flow.coach.enabled: # the TIPS setting: someone who knows the game gets no slow start either
+		if flow.coach.active(): # the TIPS setting: someone who knows the game gets no slow start either
 			pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
 		print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size()])
 	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace)

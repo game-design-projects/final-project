@@ -126,7 +126,7 @@ func feature(name: String) -> bool:
 
 
 ## A fresh run: a new floor, standing at its start. With `practice` (the scene asks for it until it has been played once) and
-## the feature tutorial-floor, the run starts on the practice floor above B1F (rules/practice.gd).
+## the tips on, the run starts on the practice floor above B1F (rules/practice.gd).
 func new_run(practice := false) -> void:
 	await _leave_current()
 	_forget_slice()
@@ -148,7 +148,7 @@ func new_run(practice := false) -> void:
 	print("flow: new run, seed %d%s" % [rng.seed_value, ", on the practice floor" if state.practice else ""])
 	event("state_replaced", {"how": "new"})
 	var lines := _arrival()
-	if _telling_story():
+	if not on_slice():
 		var premise: Dictionary = Floors.premise()
 		lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
 		announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
@@ -161,7 +161,7 @@ func new_run(practice := false) -> void:
 ## Whether a run may start on the practice floor: it needs floors to go down to and the tips to teach it, and a run told to start
 ## deeper (`floor=N`) or to meet a given species (`meet=`) skips it.
 func practice_allowed() -> bool:
-	if not (feature("tutorial-floor") and feature("tutorial")):
+	if on_slice() or Flags.on("notips"):
 		return false
 	if Flags.value("floor") != "" or Flags.value("meet") != "" or Flags.on("social-demo"):
 		print("flow: no practice floor, the flags ask for another start")
@@ -238,7 +238,7 @@ func close_run(cleared: bool) -> int:
 ## What the views read from the state rather than ask the flags, because the personality slice has them off.
 func _apply_features() -> void:
 	state.rotate_mini_games = not on_slice()
-	state.floors_of = Floors.run_floors() if _telling_story() else 0
+	state.floors_of = 0 if on_slice() else Floors.run_floors()
 	_place_camera()
 	for name in VIEW_FEATURES:
 		state.views[name] = feature(name)
@@ -252,17 +252,12 @@ func _place_camera() -> void:
 	Vision.back = Vision.CLOSE_BACK if feature("close-camera") else Vision.BACK
 
 
-## The story needs a below to tell of.
-func _telling_story() -> bool:
-	return feature("story")
-
-
 ## What the log says on arriving on this floor.
 func _arrival() -> Array:
 	var lines := []
 	if state.practice:
 		return [State.sys_line(Practice.line("line"))]
-	if _telling_story():
+	if not on_slice():
 		lines.append(State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion)))
 	else:
 		lines.append(State.sys_line(Texts.new_floor(state.depth)))

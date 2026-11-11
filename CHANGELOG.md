@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The `real-floors`, `map-gen`, `boss-at-exit`, `boss-chase`, `boss-reward`, `secrets`, `lurkers` and `ambush` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice keeps its 13x13 maze, with no secrets or lurkers, a champion that stays in its hall, no ambush and no boss reward, as before.
 - The `recruit-step`, `clans`, `mercy-link`, `mood-cues`, `reveal`, `chat`, `show-mind` and `clear-hp` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice keeps its three ACTs, a spare that rolls by itself, no clan news and a CHECK that tells everything at once; `no-show-mind` is gone with the rest.
 - The `items`, `shop`, `npcs`, `hunger`, `walk-heal` and `butcher` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice still has no items, traders, requests, hunger, camp or walking cure.
+- The `tutorial`, `tutorial-floor`, `story` and `intro-cg` feature flags: part of the game now, and `classic` no longer turns them off. The TIPS setting still skips the tips, the slow first fights and the practice floor, and the new `notips` flag does the same for tests and playtests (it replaces `no-tutorial`). The personality slice has no tips, no practice floor and its old opening line.
 
 ### Fixed
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.

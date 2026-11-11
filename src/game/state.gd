@@ -21,7 +21,7 @@ const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' larges
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
-var practice := false # on the practice floor above B1F (the feature tutorial-floor); depth stays 1 until its stairs
+var practice := false # on the practice floor above B1F; depth stays 1 until its stairs
 var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
 var steps := 0 # how far the party has walked this run
 var chat: Array = [] # {who, text}: everything said this run, oldest first, up to CHAT_MAX

@@ -7,7 +7,7 @@ A monster has a reason to ask, waits for a combat decision boundary, and offers 
 ## Play the 5–7 minute demo
 
 ```sh
-godot --path . -- social-demo seed=7042 nosave no-tutorial
+godot --path . -- social-demo seed=7042 nosave notips
 ```
 
 On this Mac, substitute `/Applications/Godot.app/Contents/MacOS/Godot` for `godot` if it is not on PATH. The demo starts directly, uses the local mind, gives 40 HP and 18 gold, and chains five real encounters. Ordinary combat damage and resource rules still apply. For the comparison, run the same command with `no-initiated-dialogue` appended. `classic` also disables the feature.
@@ -65,7 +65,7 @@ Run the suite and render the actual UI:
 
 ```sh
 godot --headless --path . -s res://tools/social_test.gd -- nosave nosound
-godot --path . -s res://tools/screenshots.gd -- social-demo seed=7042 nosave nosound no-tutorial out=/tmp/donjon-social-shots
+godot --path . -s res://tools/screenshots.gd -- social-demo seed=7042 nosave nosound notips out=/tmp/donjon-social-shots
 ```
 
 The suite checks seeded eligibility, cooldown, urgent queuing, safe boundaries, personality branches, actual resource deductions and attack windups, Ignore, promise betrayal in both combat modes, save/load/retry, custom text preview/offline handling, feature-off/classic and mouse/focus behaviour in the gameplay scene. `tools/autoplay.gd` now handles social choices and preserves peaceful recruitment when running `pacifist`. CI and `tools/run_tests.sh` include the new suite and PR #55's mood checks.

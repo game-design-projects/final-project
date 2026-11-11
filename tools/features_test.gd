@@ -260,7 +260,7 @@ func _real_floors() -> void:
 	_use()
 
 
-## The practice floor before B1F (tutorial-floor): asked for by a first run, and then a run like any other from B1F.
+## The practice floor before B1F asked for by a first run, and then a run like any other from B1F.
 func _practice() -> void:
 	var flow = _flow(12)
 	await flow.new_run()
@@ -309,7 +309,7 @@ func _practice() -> void:
 	await plain.new_run()
 	_check(s.floor_map.grid == plain.state.floor_map.grid, "the same B1F the seed makes without it")
 	_check(s.lines[0].text.begins_with("B1F"), "and it is named as usual (%s)" % s.lines[0].text)
-	for words in [["no-tutorial-floor"], ["floor=3"], ["meet=slime"], ["no-tutorial"], ["classic"]]:
+	for words in [["floor=3"], ["meet=slime"], ["notips"], ["personality-slice"]]:
 		flow = _flow(12, words)
 		await flow.new_run(true)
 		_check(not flow.state.practice and not flow.coach.seen.has(flow.PRACTICE_SEEN), "%s: no practice floor" % " ".join(words))
@@ -519,9 +519,9 @@ func _story() -> void:
 		s.depth = depth
 		line = flow._arrival()[0].text
 		_check(Hud.log_fits([State.sys_line(line)], 760.0) == 1, "B%dF's line fits the log" % depth)
-	flow = _flow(32, ["no-story"])
+	flow = _flow(32, ["personality-slice"])
 	await flow.new_run()
-	_check(flow.state.lines[0].text == "B1F. Find the stairs." and flow.state.floors_of == 0, "no-story: the old opening line")
+	_check(flow.state.lines[0].text == "B1F. Find the stairs." and flow.state.floors_of == 0, "the personality slice: the old opening line")
 	_use()
 
 
@@ -595,12 +595,12 @@ func _tutorial() -> void:
 		flow._stages["dodge"].enter(flow, {})
 		paces[tips] = flow.state.dodge.pace
 	_check(paces[true] < paces[false], "with TIPS off the first fights aren't slowed (%.2f, %.2f)" % [paces[true], paces[false]])
-	flow = _flow(35, ["no-tutorial"])
+	flow = _flow(35, ["notips"])
 	await flow.new_run()
 	flow.state.banner = null
 	await flow.go("intro", {"foe": flow.state.floor_map.monsters[0]})
 	await flow.tick(flow.clock + 1000.0)
-	_check(flow.state.banner == null, "no-tutorial: no tips")
+	_check(flow.state.banner == null, "notips: no tips")
 	# walking heals
 	flow = _flow(36)
 	await flow.new_run()
