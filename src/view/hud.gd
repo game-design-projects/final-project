@@ -269,20 +269,34 @@ func _header() -> void:
 	var floor_name: String = "B%dF OF %d " % [state.depth, state.floors_of] if state.floors_of > 0 else "B%dF " % state.depth
 	if state.practice:
 		floor_name = Practice.line("header") + " "
-	var x := 0.0
-	_text(_title, floor_name, Vector2(x, y), 9, Palette.DIM)
-	x += _title.get_string_size(floor_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-	var tough := toughness_tag(state)
-	if tough != "":
-		_text(_title, tough, Vector2(x, y), 9, Palette.WARN)
-		x += _title.get_string_size(tough, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-	_text(_title, where, Vector2(x, y), 9, Palette.WARN if elite else Palette.INK)
 	var spared: int = state.tally.spared
 	var slain: int = state.tally.slain
 	var route := "UNWRITTEN" if spared + slain == 0 else "%d SPARED · %d SLAIN" % [spared, slain]
 	var w := _title.get_string_size(route, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var tough := toughness_tag(state)
+	var room := size.x - w - _title.get_string_size("ROUTE   ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var parts := header_left(floor_name, tough, where, func(t): return _title.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, room)
+	var x := 0.0
+	for piece in [[parts[0], Palette.DIM], [parts[1], Palette.WARN], [parts[2], Palette.WARN if elite else Palette.INK]]:
+		if piece[0] != "":
+			_text(_title, piece[0], Vector2(x, y), 9, piece[1])
+			x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	_text(_title, route, Vector2(size.x - w, y), 9, Palette.INK)
 	_text(_title, "ROUTE ", Vector2(size.x - w - _title.get_string_size("ROUTE ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, y), 9, Palette.DIM)
+
+
+## The header's left side as [floor, toughness, where], made to fit `room` (width measures a string): on a narrow screen "ENCOUNTER"
+## goes first, then the walk's title, then the toughness tag; the floor and an elite's name stay.
+static func header_left(floor_name: String, tough: String, where: String, width: Callable, room: float) -> Array:
+	var parts := [floor_name, tough, where]
+	var fits := func(): return width.call("".join(parts)) <= room
+	if not fits.call() and where.ends_with(" ENCOUNTER"):
+		parts[2] = where.trim_suffix(" ENCOUNTER")
+	if not fits.call() and where == "THE GENRE HALLS":
+		parts[2] = ""
+	if not fits.call():
+		parts[1] = ""
+	return parts
 
 
 ## What makes this floor's monsters tougher than B1F's, for the header: "+24% HP " from the depth (and the steep stair), or "" when
