@@ -665,7 +665,10 @@ func _add_monster(m) -> void:
 
 
 static func _plain_tag(m) -> String:
-	return "CHAMPION" if m.boss else str(Content.table("encounter").genres[m.genre].name)
+	if m.boss:
+		return "CHAMPION"
+	var genre := str(Content.table("encounter").genres[m.genre].name)
+	return "ELITE " + genre if m.elite else genre
 
 
 ## Which tags show: its monster is in a straight line of open floor from the camera, and it doesn't overlap a nearer tag. The

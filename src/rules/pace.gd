@@ -7,6 +7,7 @@ const BASE := 0.72
 const PER_FLOOR := 0.06
 const FRIENDLY := 0.22 # taken off at full friendliness
 const BOSS := 0.06
+const ELITE := 0.06 # a clan's elite (rules/clans.gd) presses as a champion does
 const PER_STRUGGLE := 0.05 # for each hit lately
 const STRUGGLE_MAX := 4.0
 const PER_ALLY := 0.04
@@ -22,6 +23,7 @@ static func of(foe, depth: int, struggle: float, allies: int, easy: bool) -> flo
 	var p := BASE + PER_FLOOR * (depth - 1)
 	p -= FRIENDLY * float(foe.meters.friendliness) / 100.0
 	p += BOSS if foe.boss else 0.0
+	p += ELITE if foe.get("elite") == true else 0.0
 	p -= PER_STRUGGLE * minf(struggle, STRUGGLE_MAX)
 	p -= PER_ALLY * allies
 	p *= EASY_SCALE if easy else 1.0

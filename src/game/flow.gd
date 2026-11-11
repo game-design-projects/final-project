@@ -7,6 +7,7 @@
 extends RefCounted
 
 const Ally = preload("res://src/game/ally.gd")
+const Clans = preload("res://src/rules/clans.gd")
 const Coach = preload("res://src/game/coach.gd")
 const Content = preload("res://src/rules/content.gd")
 const Trophies = preload("res://src/game/trophies.gd")
@@ -238,7 +239,32 @@ func _arrival() -> Array:
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
 		lines.append(State.sys_line(biome.line))
+	var senders := elites_from(state.floor_map)
+	if not senders.is_empty():
+		lines.append(State.sys_line(str(Clans.elite().arrival) % " and ".join(senders.map(func(c): return Clans.title(c)))))
 	return lines
+
+
+## The clans that sent elites to this floor, in the order their elites stand.
+static func elites_from(floor_map) -> Array:
+	var out := []
+	for m in floor_map.monsters:
+		var clan := Clans.of(m.species)
+		if m.elite and not out.has(clan):
+			out.append(clan)
+	return out
+
+
+## The clans furious with you send their elites to a floor made now: its monsters of their kinds (never the champion) are
+## tougher and hit harder. A floor made earlier keeps who it had, and so does a save.
+func _send_elites() -> void:
+	var scale := float(Clans.elite().hp_scale)
+	for m in state.floor_map.monsters:
+		if not m.boss and Clans.sends_elites(state, m.species):
+			m.become_elite(scale)
+	var senders := elites_from(state.floor_map)
+	if not senders.is_empty():
+		print("flow: B%dF has %d elites, sent by %s" % [state.depth, state.floor_map.monsters.filter(func(m): return m.elite).size(), ", ".join(senders)])
 
 
 ## The floor for `state.depth`, with the party at its start.
@@ -257,6 +283,7 @@ func _make_floor(way := {}) -> void:
 		plan.lurkers = true
 		plan.request = Requests.due(state.depth)
 		state.floor_map = FloorGen.generate(floor_rng, plan)
+		_send_elites()
 	state.palette_id = Floors.palette(state.floor_map.biome, state.floor_map.seed_value)
 	state.cell = state.floor_map.start
 	state.facing = state.floor_map.start_facing()

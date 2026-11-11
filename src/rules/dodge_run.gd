@@ -45,13 +45,16 @@ var foe_turn := 0
 var bandit_charm := false
 var snake_charm := false
 var pace := 1.0 # below 1 the hazards come further apart and warn for longer (rules/pace.gd)
+var elite_damage := 0 # what a clan's elite adds to each hit (rules/clans.gd)
 
 
-static func start(genre_id: String, pressure: float, boss_fight: bool, foe_turn_count: int, t: float, charms: Dictionary, dodge_pace := 1.0):
+## `elite` is what a clan's elite adds ({intensity, damage}, Clans.elite()), or {} for anyone else.
+static func start(genre_id: String, pressure: float, boss_fight: bool, foe_turn_count: int, t: float, charms: Dictionary, dodge_pace := 1.0, elite := {}):
 	var run = new()
 	run.pace = dodge_pace
 	run.genre = genre_id
-	run.intensity = Combat.dodge_intensity(pressure, boss_fight)
+	run.intensity = Combat.dodge_intensity(pressure, boss_fight) * float(elite.get("intensity", 1.0))
+	run.elite_damage = int(elite.get("damage", 0))
 	run.t0 = t
 	run.end_t = t + (DURATION_BOSS_MS if boss_fight else DURATION_MS) * (Pace.DURATION_SCALE if dodge_pace < 1.0 else 1.0)
 	run.next_t = t + FIRST_SPAWN_MS
@@ -100,7 +103,7 @@ func update(t: float, rng: Rng) -> Array:
 				events.append({"type": "shield"})
 				continue
 			hit_flash = t
-			events.append({"type": "hurt", "damage": maxi(1, (Combat.DODGE_DAMAGE_BOSS if boss else Combat.DODGE_DAMAGE) - guard)})
+			events.append({"type": "hurt", "damage": maxi(1, (Combat.DODGE_DAMAGE_BOSS if boss else Combat.DODGE_DAMAGE) + elite_damage - guard)})
 	hazards = hazards.filter(func(h): return t < h.end)
 	return events
 

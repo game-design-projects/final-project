@@ -14,6 +14,7 @@ var start := Vector2i(1, 1)
 var monsters: Array = [] # Monster; the champion (boss) is the last one, in the middle hall
 var seed_value := 0
 var biome := "" # its id in data/biomes.json, "" for a floor with none
+var hp_scale := 0.0 # how tough its monsters were made, for the header (rules/floors.gd's plan); 0 for a save from before, which says nothing
 var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find
 var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
 var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
@@ -136,6 +137,7 @@ func to_dict() -> Dictionary:
 		"merchant": {} if merchant.is_empty() else {"cell": [merchant.cell.x, merchant.cell.y], "stock": merchant.stock.duplicate()},
 		"quester": {} if quester.is_empty() else _quester_dict(),
 		"steps": steps,
+		"hpScale": hp_scale,
 	}
 
 
@@ -163,6 +165,7 @@ static func from_dict(d: Dictionary, monster_script):
 	if not trader.is_empty():
 		f.merchant = {"cell": _cell(trader.cell), "stock": trader.stock.map(func(id): return str(id))}
 	f.steps = maxi(0, int(d.get("steps", 0)))
+	f.hp_scale = clampf(float(d.get("hpScale", 0.0)), 0.0, 100.0) if d.get("hpScale") is float or d.get("hpScale") is int else 0.0
 	var asking: Dictionary = d.get("quester", {})
 	if not asking.is_empty():
 		f.quester = asking.duplicate()

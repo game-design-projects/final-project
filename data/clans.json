@@ -3,6 +3,33 @@
  "champion_weight": 1.5,
  "spill": 0.5,
  "mood": {"friendliness": 0.5, "anger": -0.4},
+ "friendly_at": 14,
+ "hostility": [
+  {"id": "angry", "at": -18, "title": "ANGRY", "effect": "Its own start out angrier.", "line": "%s is angry: its own start out angrier."},
+  {"id": "furious", "at": -36, "title": "FURIOUS", "effect": "Its own come as elites from the next floor on.", "line": "%s is furious: its own come as elites from the next floor."},
+  {"id": "enraged", "at": -72, "title": "ENRAGED", "effect": "None of its own will take mercy now.", "line": "%s is enraged: none of its own will take mercy now."}
+ ],
+ "calmer": {"title": "%s COOLS", "effect": "Now %s, no longer %s.", "line": "%s has cooled to %s."},
+ "elite": {
+  "from": "furious",
+  "hp_scale": 1.25,
+  "intensity": 1.2,
+  "damage": 1,
+  "pace": 0.06,
+  "tag": "ELITE",
+  "title": "AN ELITE OF %s",
+  "rule": "%s is %s with you. This elite is tougher and hits harder.",
+  "arrival": "Elites on this floor, sent by %s."
+ },
+ "no_mercy": {
+  "from": "enraged",
+  "title": "%s IS ENRAGED",
+  "spare": "ENRAGED: it won't take mercy. Spare its side, or do one of its kind a favour, to cool the clan",
+  "rule": "No mercy, no joining: only a fight ends this.",
+  "rule_elite": "No mercy, no joining. And an elite: it hits harder.",
+  "boss": "Its clan is enraged: it can't be won over.",
+  "cut": "%s is enraged: no price will do."
+ },
  "clans": {
   "burrow": {"name": "The Burrow", "side": "under", "species": ["slime"]},
   "old_stone": {"name": "The Old Stone", "side": "under", "species": ["rock"]},

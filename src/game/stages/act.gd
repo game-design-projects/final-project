@@ -1,6 +1,7 @@
 ## ACT: read the monster for free, do something it reacts to (each species has three), or say one line.
 extends "res://src/game/stages/list_stage.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -17,7 +18,8 @@ func enter(flow, _args: Dictionary) -> void:
 	var items := [{"label": "CHECK", "sub": "Free: read one thing about it"}]
 	for a in _acts(m):
 		var pays: bool = m.species in CASHES_IN and a.intent == "gold"
-		items.append({"label": a.label, "sub": Texts.GOLD_ACT_TIP if pays else ""})
+		var tip: String = (str(Clans.no_mercy().cut) % m.name if Clans.enraged(s, m) else Texts.GOLD_ACT_TIP) if pays else ""
+		items.append({"label": a.label, "sub": tip})
 	if m.spoke:
 		items.append({"label": "SAY SOMETHING", "sub": "Already spoke this fight"})
 	else:
