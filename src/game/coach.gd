@@ -33,7 +33,13 @@ func say(id: String) -> bool:
 		push_error("coach: no tip '%s'" % id)
 		return false
 	seen[id] = true
-	flow.announce("TIP", tips[id], TIP_MS)
+	var who := "TIP"
+	var words: String = tips[id]
+	if flow.state.practice and flow.feature("wick"): # on the practice floor she is the one who tells you
+		var wick: Dictionary = Content.table("coach").get("wick", {})
+		who = str(Content.table("floors").friend.title)
+		words = str(wick.get(id, words))
+	flow.announce(who, words, TIP_MS)
 	print("coach: %s" % id)
 	flow.event("coach", {"id": id})
 	return true
@@ -63,7 +69,7 @@ func _on_stage(to: String) -> void:
 			if flow.feature("clans") and not flow.state.deeds.is_empty():
 				say("clans")
 		"menu":
-			if not say("menu") and not (flow.feature("heavy-strike") and say("heavy")) and seen.has("act") and (seen.has("strike") or seen.has("skills")):
+			if not say("menu") and not (flow.feature("heavy-strike") and flow.state.skill_fight == null and say("heavy")) and seen.has("act") and (seen.has("strike") or seen.has("skills")):
 				say("flee") # last: what to do comes before how to get out of it
 		"act":
 			say("act")

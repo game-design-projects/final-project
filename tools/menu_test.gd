@@ -30,6 +30,7 @@ func _run() -> void:
 	_settings_fall_back_to_the_old_blob()
 	await _digits_wheel_and_clicks(panel)
 	await _main_menu_refuses_a_bad_save()
+	await _intro_film()
 	_finish()
 
 
@@ -295,3 +296,32 @@ func _main_menu_refuses_a_bad_save() -> void:
 	menu.queue_free()
 	await process_frame
 	Flags.set_args(PackedStringArray([]))
+
+
+## The opening film (menu/intro_cg.gd): it is in the project and Godot can play it, and the menu hands the run what it needs to know.
+func _intro_film() -> void:
+	var IntroCg = load("res://src/menu/intro_cg.gd")
+	var Session = load("res://src/menu/session.gd")
+	_check(Flags.FEATURES.has("intro-cg"), "the opening film is a feature")
+	_check(ResourceLoader.exists(IntroCg.VIDEO) and load(IntroCg.VIDEO) is VideoStream, "the film is in the project, and Godot can read it")
+	Flags.set_args(PackedStringArray(["nosave", "nosound"]))
+	_check(not IntroCg.wanted(), "with no screen to show it on (this test), NEW GAME goes straight to the run")
+	Session.start_new()
+	Session.cg_played(true)
+	var watched: Dictionary = Session.take()
+	_check(watched.get("kind") == "new" and watched.get("cg") == "whole", "a film watched to the end is told to the run")
+	Session.start_new()
+	Session.cg_played(false)
+	_check(Session.take().get("cg") == "skipped" and Session.take().is_empty(), "a skipped one says so, and the request is taken once")
+	var player := VideoStreamPlayer.new()
+	player.stream = load(IntroCg.VIDEO)
+	root.add_child(player)
+	await process_frame
+	player.play()
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 3000 and player.stream_position < 1.0:
+		await process_frame
+	_check(absf(player.get_stream_length() - 15.07) < 0.2 and player.stream_position >= 1.0, "it is 15 seconds long and plays (%.1f s in)" % player.stream_position)
+	_check(IntroCg.FADE_IN_S + IntroCg.FADE_OUT_S < player.get_stream_length() / 4.0, "it fades in and out over a small part of its length, not a cut either end")
+	_check(IntroCg.SKIP_FADE_S < IntroCg.FADE_OUT_S, "a skip leaves faster than the film's own end")
+	player.queue_free()

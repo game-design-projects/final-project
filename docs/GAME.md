@@ -2,7 +2,7 @@
 
 ![The foe's card in a fight](shots/foe-card.png)
 
-The main menu has Continue, New Game, Load Game, the save manager, Legacy, Achievements, Settings, Credits and Quit. You robbed the Hoard, and it threw you down here: a run is five floors down to the Last Door, the only way out.
+NEW GAME opens with a 15-second film (any key skips it): you look into a chest, fall through halls that reshuffle themselves, and a very small witch waves at the end of a corridor. Then the first run begins, on a practice floor if it is your first. The main menu has Continue, New Game, Load Game, the save manager, Legacy, Achievements, Settings, Credits and Quit. You robbed the Hoard, and it threw you down here: a run is five floors down to the Last Door, the only way out.
 
 This page describes the game as it ships, with every feature on. Each one has a flag and can be turned off ([Development](DEVELOPMENT.md#features)); `classic` turns them all off, which leaves one 13×13 floor and no more than the fights.
 
@@ -12,9 +12,9 @@ Each floor belongs to a biome with its own generator, colours and monsters, and 
 
 | Biome | How it is built | Size by floor | Lives here most |
 | --- | --- | --- | --- |
-| The halls | A maze with a hall in the middle | 13 to 21 | Bandits, rocks |
-| The Undercroft | Authored rooms that nearly fit; half its floors are long or tall, not square | 19 to 31 | Rocks, bandits |
-| The Wet Caves | Cave rock, no straight walls | 17 to 29 | Slimes, snakes |
+| The halls | A maze with a hall in the middle | 21 to 37 | Bandits, rocks |
+| The Undercroft | Authored rooms that nearly fit; half its floors are long or tall, not square | 31 to 55 | Rocks, bandits |
+| The Wet Caves | Cave rock, no straight walls | 27 to 51 | Slimes, snakes |
 
 The camera glides from cell to cell, and the automap in the corner learns what the camera sees. A champion stands on the stairs of every floor, hidden from the map until seen, so there is no way down without facing it. Beaten or won over, it leaves you stronger: 4 more max HP and 6 health back.
 
@@ -75,7 +75,7 @@ Monsters think through one interface (`src/mind/`): local rules, a seeded random
 
 ## Allies
 
-**Wick** finds you first. A run opens with a very small witch hopping down the corridor to hand you a heart; she lights the torches down here, and she walks with you from then on. She takes nobody's place in the party, adds no strength, and leaves the way any friend does: you can drive her off, leave her at the gate or put her in the bag.
+**Wick** finds you first. A run opens with a very small witch hopping down the corridor to hand you a heart; she lights the torches down here, and she walks with you from then on. On the practice floor she is the one who teaches: how to walk, what the slime is, ACT then SPARE, and the tips there are in her voice. She takes nobody's place in the party, adds no strength, and leaves the way any friend does: you can drive her off, leave her at the gate or put her in the bag.
 
 Up to three spared monsters travel with you, and each gives a passive charm. Each also adds to your strikes, and two or more take the edge off every hit.
 

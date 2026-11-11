@@ -60,6 +60,9 @@ func tick(flow, t: float) -> void:
 					e.damage = Skills.soak(s.skill_fight, e.damage)
 					_hint(flow)
 					if e.damage <= 0:
+						run.hit_flash = -1e9 # the run flagged a hurt before the block took it whole: show the shield, not the red
+						run.block_flash = t
+						print("dodge: block took the hit whole")
 						flow.event("shield")
 						continue
 				s.hp -= e.damage

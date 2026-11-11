@@ -21,6 +21,15 @@
   "boss": "Champions change attack every turn. They can be won over too.",
   "shy": "Your first fight, and it's shy. Try ACT, then SPARE: a friend is worth more than a kill.",
   "skills": "Skills cost energy, which comes back each turn. END TURN when you're done.",
-  "blank": "Its face is gone: down here, every kill is heard. Spare some and faces come back."
+  "blank": "Its face is gone: down here, every kill is heard. Spare some and faces come back.",
+  "walk": "Arrows or WASD to walk. Turning is free: stop and look."
+ },
+ "wick": {
+  "walk": "Arrows or WASD to walk. Turning is free, so stop and look around.",
+  "item": "Ooh, shiny! In a fight, ITEM uses it. Hover to read it.",
+  "menu": "Try ACT first: ask what it likes. I'm right here.",
+  "mercy": "See the gold bar? That's its mercy odds. What you do moves it.",
+  "spare": "Its name has gone gold: it will likely say yes. Try SPARE!",
+  "shy": "He's shy! Try ACT, then SPARE. A friend is worth more than a kill."
  }
 }

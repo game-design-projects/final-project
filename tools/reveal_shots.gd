@@ -84,8 +84,7 @@ func _run() -> void:
 			_check(stamp >= previous, "near-to-far order %s" % c)
 			previous = stamp
 		for c in old_seen:
-			var replayed: bool = mode == "step" and (s.in_sight.has(c) or Vision.ahead(s.floor_map, s.cell, s.facing).has(c))
-			_check((stage._reveal_image.get_pixel(c.x, c.y).r >= 10.0) == replayed, "step replays only visible explored cells %s" % c)
+			_check(stage._reveal_image.get_pixel(c.x, c.y).r < 0.0, "a step leaves explored cells settled, even in sight %s" % c)
 		for c in fresh:
 			var stamp: float = stage._reveal_image.get_pixel(c.x, c.y).r
 			_check(stamp >= 10.0 and stamp <= 10.0 + stage.reveal_stagger * s.floor_map.size * 1.5, "new cell %s stagger in range" % c)

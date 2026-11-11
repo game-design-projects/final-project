@@ -1,7 +1,7 @@
 # Every push to main and every pull request: import the project and play whole games headless, then build for every
 # platform (web, Windows, macOS, Linux), kept as workflow artifacts. Tags don't trigger this file: release.yml owns them
-# and calls this one, so a tag checks and builds once and publishes the artifacts that passed. Nothing publishes to
-# itch.io: the final ships native. Every build reaches Jev through the Jev API Worker (JEV_API, deployed by worker.yml),
+# and calls this one, so a tag checks and builds once and publishes the artifacts that passed, to a GitHub
+# release and to itch.io; this workflow itself publishes nothing. Every build reaches Jev through the Jev API Worker (JEV_API, deployed by worker.yml),
 # which holds the key, so no build carries one and this workflow uses no secrets and can only read.
 name: CI
 on:
@@ -135,6 +135,7 @@ jobs:
           done
           # CREDITS.txt is not a resource: only the export's include_filter ships it, and the Credits page is empty without it
           grep -aq 'assets/CREDITS.txt' build/web/index.pck || { echo '::error::assets/CREDITS.txt is not in the web build'; exit 1; }
+          grep -aq 'assets/video/intro.ogv' build/web/index.pck || { echo '::error::the opening film is not in the web build'; exit 1; }
       # The zip, not the folder: an artifact folder loses the executable bits of the Linux and macOS builds
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

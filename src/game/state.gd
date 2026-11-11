@@ -17,7 +17,7 @@ const Vision = preload("res://src/rules/vision.gd")
 
 const DEPTH_MAX := 99
 const CHAT_MAX := 60
-const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' largest is 31)
+const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' largest is 55)
 
 var stage := ""
 var depth := 1 # which floor, B1F is 1
@@ -53,7 +53,7 @@ var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
-var skills: Array = [] # the skills held (rules/skills.gd), with the feature skill-combat; empty without it
+var skills: Array = [] # the skills held (rules/skills.gd): given by the feature skill-combat, kept in a save made with it
 var hunger := 0.0 # 0 fed .. rules/survival.gd's starving_at
 var starved_steps := 0 # steps walked starving
 var butchered: Array = [] # {species, name}: the friends who went into the bag

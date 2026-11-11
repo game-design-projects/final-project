@@ -21,7 +21,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | Script | Checks |
 | --- | --- |
 | `gameplay_test` | Flow, stages, tooltips, mouse and touch input, views after a new floor or a load |
-| `menu_test` | Menu pages and their keys |
+| `menu_test` | Menu pages and their keys, the opening film is there and plays |
 | `saves_test` | Save slots, `nosave`, refusing a bad save |
 | `slice_test` | The personality slice's routes |
 | `rules_test` | Strike, odds, dodge cells, word reading, hints |
@@ -77,6 +77,17 @@ godot --headless --path . --import                  # a new PNG needs importing;
 ```
 
 `process.py` prints how much each frame moves from the one before it and marks a jump: read that before looking at the GIF. A figure's silhouette (the alpha of its atlas) is worked out by flood fill, so a drawing with an open outline shows through; the script warns.
+
+### The opening film
+
+NEW GAME plays `assets/video/intro.ogv` (the feature `intro-cg`; `src/menu/intro_cg.gd`) before the run. Godot plays Ogg Theora only, so a rendered mp4 is re-encoded by a script; the prompt it came from, and what each render got right and wrong, are in [intro/seedance-prompt.md](intro/seedance-prompt.md).
+
+```bash
+tools/intro_video.sh path/to/render.mp4            # mp4 -> assets/video/intro.ogv (30 fps, Theora q7, Vorbis at the loudness of the music; about 5 MB)
+godot --path . -s res://tools/cg_shots.gd -- out=/some/dir [skip=1]   # pictures of the film and the run's first seconds (needs a window: n8)
+```
+
+The film is shown whole on black; any key, click or tap skips it after half a second; a film that can't be read or shows nothing for 3 seconds is skipped by itself. It goes through the SFX bus, so the sound settings apply. Only the menu's NEW GAME plays it (not Continue, Load, a retry, or `meet=`), and never with no screen (the headless tests).
 
 `tools/art_shots.gd` records the look in motion on a fixed clock, however slow the machine (it needs a window, so it goes to n8):
 
