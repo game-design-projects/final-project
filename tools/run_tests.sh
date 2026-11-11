@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Every test script and whole games with no window, with the features on (the default) and with `classic`, which is the game
-# without them. Prints a line per suite and the failing checks; exits 1 if any failed.
+# Every test script and whole games with no window, with the features on (the default) and with `classic`, which switches off the
+# features that still have a flag. Prints a line per suite and the failing checks; exits 1 if any failed.
 #   tools/run_tests.sh            both modes
 #   tools/run_tests.sh on         only the default
 #   tools/run_tests.sh classic    only classic

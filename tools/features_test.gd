@@ -574,7 +574,7 @@ func _tutorial() -> void:
 	flow.coach._on_stage("menu")
 	_check(flow.coach.seen.has("flee"), "FLEE gets a tip too")
 	# a foe that meets you with its face already gone (warmth) gets a tip saying why, or it reads like a drawing that lost its eyes
-	for words in [[], ["no-warmth"]]:
+	for words in [[], ["personality-slice"]]:
 		for slain in [0, 6]:
 			flow = _flow(38, words)
 			await flow.new_run()
@@ -1553,9 +1553,7 @@ func _heavy_fight(seed_value: int, species: String, words := []) -> Variant:
 
 func _close_camera() -> void:
 	_flow(71)
-	_check(Vision.back == Vision.CLOSE_BACK, "close-camera: the camera stands closer")
-	_flow(72, ["no-close-camera"])
-	_check(Vision.back == Vision.BACK, "no-close-camera: where it was")
+	_check(Vision.back == Vision.CLOSE_BACK, "the camera stands closer")
 	_flow(73, ["personality-slice"])
 	_check(Vision.back == Vision.BACK, "and in the playtest slice")
 	_flow(74)
@@ -2164,7 +2162,7 @@ func _champion_moves() -> void:
 	Roaming.turn(fs, {"boss_chase": false})
 	fs.seen[hall] = true
 	Roaming.turn(fs, {"boss_chase": false})
-	_check(chaser.cell == hall, "no-boss-chase: it stays even once seen")
+	_check(chaser.cell == hall, "with the chase off (the personality slice), it stays even once seen")
 	Roaming.turn(fs, {"boss_chase": true})
 	_check(chaser.cell != hall and chaser.hunting, "seen, with boss-chase, it comes after you")
 

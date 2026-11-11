@@ -177,9 +177,6 @@ func _combat_layout(game) -> void:
 
 ## The picture follows the panel's shape, and what lies over it and points at it follows the picture.
 func _wide_view(game) -> void:
-	if not game.flow.feature("wide-view"):
-		_check(game._viewport.size == Vector2i(448, 288) and game._overlay.extra_x == 0.0, "no wide-view: the picture keeps 448:288")
-		return
 	var script = game.get_script()
 	_check(script.picture_width(Vector2(400, 400)) == 448, "a squarer panel keeps the old shape")
 	_check(script.picture_width(Vector2(1000, 400)) == 688, "a very wide one stops at the widest (%d)" % script.picture_width(Vector2(1000, 400)))

@@ -31,8 +31,8 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["dungeon-reveal", "roaming", "sprite-look", "hand-drawn", "warmth", "wick"]
-const SLICE_HIDES := ["reveal", "items", "npcs"] # views that are on everywhere but the personality slice
+const VIEW_FEATURES := ["dungeon-reveal", "roaming", "wick"]
+const SLICE_HIDES := ["reveal", "items", "npcs", "hand-drawn", "warmth", "sprite-look"] # views that are on everywhere but the personality slice
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -249,7 +249,7 @@ func _apply_features() -> void:
 
 
 func _place_camera() -> void:
-	Vision.back = Vision.CLOSE_BACK if feature("close-camera") else Vision.BACK
+	Vision.back = Vision.BACK if on_slice() else Vision.CLOSE_BACK
 
 
 ## What the log says on arriving on this floor.
@@ -354,7 +354,7 @@ func go(to: String, args := {}) -> void:
 
 ## The halls have changed their mind about you: say so on the way back from whatever did it.
 func _note_warmth() -> void:
-	if not feature("warmth"):
+	if on_slice():
 		return
 	var now := Warmth.level(Warmth.of(state))
 	var was: int = state.warmth_level

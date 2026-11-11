@@ -3,7 +3,7 @@
 ## small SubViewport and shown through the post-processing pass. Walls hide what stands behind them: the depth buffer decides
 ## what shows, so nothing pops in or out as you turn. Fights are the flat battle screen, with the set hidden behind it.
 ##
-## With the feature hand-drawn the same set is drawn by hand: the walls have their stones, the monsters are figures with faces that
+## The same set is drawn by hand (all but on the personality slice, which keeps the wire): the walls have their stones, the monsters are figures with faces that
 ## hop (figure.gd), what hangs on the walls is flat drawings (wall_art.gd), and in a fight the set stays on, dimmed, behind the monster.
 ## How warm the halls are (rules/warmth.gd) runs through all of it; at the coldest the set is the wire it started as.
 ##
@@ -90,8 +90,8 @@ var _tags := {} # Monster -> Label3D
 var _tag_light := {} # Monster -> 0..1, how far its tag has come in
 var _tag_key := []
 var _floor_map = null
-var _like_sprite := false # the models take the shape of the fight sprites (sprite-look)
-var _hand_drawn := false # the feature hand-drawn
+var _like_sprite := false # the models take the shape of the fight sprites
+var _hand_drawn := false # drawn by hand, not the wire
 var _warmth := 1.0 # how warm the halls are, 0..1, and which level that is
 var _warmth_level := -1
 var _warmth_shown := 1.0 # what the walls show: it follows

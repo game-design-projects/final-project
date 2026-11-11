@@ -53,7 +53,6 @@ const BANNER_H := 44.0
 const BANNER_PX := 13
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
 # the receding corridor behind the title: how big each frame is against the picture
-const TITLE_FRAMES := [1.0, 0.556, 0.385, 0.294, 0.238]
 const TITLE_BLINK_MS := 600.0
 
 var state # State, set by the owner
@@ -72,7 +71,7 @@ var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _art: BattleArt # what is drawn behind this layer: the monster, the title picture
 var _popups: Array = [] # [{text, color, at, born}]
-var extra_x := 0.0 # how much wider the picture is than this layer, on each side (wide-view)
+var extra_x := 0.0 # how much wider the picture is than this layer, on each side
 var _words := "" # what you last typed, on its way to the monster
 var _words_at := -1e9
 var _emote := {} # {tone, born}: the last mood shown over the monster
@@ -350,27 +349,8 @@ func _text(font: Font, s: String, at: Vector2, px: int, color: Color, align := H
 
 # ---------------------------------------------------------------- the title card
 
-## A receding corridor, the name in its box, what the game is, a blinking prompt, and how to leave.
-func _title_screen() -> void:
-	if Flags.enabled("hand-drawn"):
-		_drawn_title_screen()
-		return
-	draw_rect(whole_picture(), Color.BLACK)
-	for f in TITLE_FRAMES:
-		var size_at := (Vector2(W, H) - Vector2(8, 8)) * float(f)
-		draw_rect(Rect2((Vector2(W, H) - size_at) / 2.0, size_at).abs(), Palette.INK, false, 2.0)
-	var box := Rect2(W * 0.12, H * 0.3, W * 0.76, H * 0.42)
-	draw_rect(box, Color.BLACK)
-	draw_rect(box, Palette.INK, false, 2.0)
-	_text(_title, "DONJON", Vector2(0, H * 0.45), 28, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	_text(_title, "GENRE HALLS", Vector2(0, H * 0.55), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
-	if title_prompt_on():
-		_text(_title, "PRESS ANY KEY", Vector2(0, H * 0.65), 9, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	_text(_title, "ESC: MENU", Vector2(0, H * 0.82), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_CENTER, W)
-
-
 ## The picture of the halls and of her is behind this (battle_art.gd): the name sits over the top of it, where the corridor is empty.
-func _drawn_title_screen() -> void:
+func _title_screen() -> void:
 	_text(_title, "DONJON", Vector2(0, H * 0.2), 28, Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
 	_text(_title, "GENRE HALLS", Vector2(0, H * 0.28), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
 	draw_rect(Rect2(0.0, H * 0.88, W, H * 0.12), Color(0.0, 0.0, 0.0, 0.75))

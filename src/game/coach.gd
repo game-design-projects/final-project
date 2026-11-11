@@ -92,7 +92,7 @@ func _on_stage(to: String) -> void:
 			say("dead")
 
 
-## Whether this foe meets you with its face already gone (the warmth's blank faces, drawn only by hand-drawn): that reads like the drawing
+## Whether this foe meets you with its face already gone (the warmth's blank faces): that reads like the drawing
 ## lost its eyes unless something says why.
 func _blank(m) -> bool:
-	return m != null and flow.feature("warmth") and flow.feature("hand-drawn") and Moods.hollow(m, Warmth.of(flow.state))
+	return m != null and not flow.on_slice() and Moods.hollow(m, Warmth.of(flow.state))

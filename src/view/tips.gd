@@ -45,7 +45,7 @@ var _card: Card
 var _panel: Card
 var _last_shown := ""
 var _last_rows := ""
-var extra_x := 0.0 # how much wider the picture is than 448 on each side, in its pixels (wide-view): this layer keeps the middle
+var extra_x := 0.0 # how much wider the picture is than 448 on each side, in its pixels: this layer keeps the middle
 
 
 func _init() -> void:
@@ -428,7 +428,7 @@ class Chip:
 	var label := ""
 	var warn := false
 	var k := 1.0
-	var face := "" # whose small drawing stands for the dot (the feature hand-drawn)
+	var face := "" # whose small drawing stands for the dot
 
 	var _title: Font = Fonts.title()
 

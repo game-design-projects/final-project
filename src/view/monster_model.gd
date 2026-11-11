@@ -19,7 +19,7 @@ const TONGUE_S := 0.22 # how fast a snake's tongue goes in and out
 static var _parts := {} # "species|colour" -> [[part name, ArrayMesh, Transform3D], ...]
 
 
-## `species` is a key of data/species.json; `tint` the colour of its lines. `like_sprite` shapes it after its fight sprite (sprite-look).
+## `species` is a key of data/species.json; `tint` the colour of its lines. `like_sprite` shapes it after its fight sprite.
 static func build(species: String, tint: Color, like_sprite := false) -> Node3D:
 	var root := Node3D.new()
 	var rig := Node3D.new() # everything a hit shakes

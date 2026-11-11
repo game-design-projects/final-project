@@ -4,7 +4,7 @@
 
 NEW GAME opens with a 15-second film (any key skips it): you look into a chest, fall through halls that reshuffle themselves, and a very small witch waves at the end of a corridor. Then the first run begins, on a practice floor if it is your first. The main menu has Continue, New Game, Load Game, the save manager, Legacy, Achievements, Settings, Credits and Quit. You robbed the Hoard, and it threw you down here: a run is five floors down to the Last Door, the only way out.
 
-This page describes the game as it ships, with every feature on. Each one has a flag and can be turned off ([Development](DEVELOPMENT.md#features)); `classic` turns them all off, which leaves one 13×13 floor and no more than the fights.
+This page describes the game as it ships. A few features can be turned off with a flag ([Development](DEVELOPMENT.md#features)), and `classic` turns those off. The personality slice (`personality-slice`) is the old reference run: one 13×13 floor and no more than the fights.
 
 ## Walking
 

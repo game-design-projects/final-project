@@ -32,7 +32,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
 | `map_test` | The floor generators, biomes and chunks, and what sight costs on a big floor |
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, and a save without any of them |
-| `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game; with `classic`, that none of it is on |
+| `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game; with `classic`, only that the personality slice keeps the old look |
 | `features_test` | Each feature with its flag on and off (it switches them itself) |
 
 `tools/run_tests.sh [on|classic|both]` runs them all, plays whole games in each mode, and with the features on plays five games without a strike.
@@ -54,15 +54,17 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.
 
-`debug` · `mock` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `personality-slice` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
+`debug` · `mock` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `personality-slice` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
 
 ## Features
 
-Every game feature since 0.6.1 has a flag, on by default. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off, and `classic` turns them all off.
+What shipped from 0.6.1 on is simply the game now. Sixteen features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy` and the opt-in `skill-combat`. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off, and `classic` turns all of them off.
+
+The personality slice (`personality-slice`) is the reference run and stays what it was before any of this: one 13×13 floor, the two bandits, no tips, no items, no drawings. Code that changes a fight or the walk asks `flow.on_slice()`; the views the slice hides are in `flow.SLICE_HIDES`.
 
 The exception is `OPT_IN`: experiments that replace part of the game and are tried beside it, off unless named. Today that is `skill-combat` (`godot --path . -- skill-combat`, or `?skill-combat` on the web build): SKILLS takes FIGHT's place. Its numbers are in `data/skills.json`.
 
-A new feature goes in `FEATURES`, is read with `flow.feature(name)`, and if the view has to know, in `flow.VIEW_FEATURES` (the view reads `state.viewing(name)`). A save keeps working with any of them off.
+A new feature is part of the game and gets no flag. Give it one in `FEATURES` only when it has to be tried beside the old behaviour: it is read with `flow.feature(name)`, and if the view has to know, it goes in `flow.VIEW_FEATURES` (the view reads `state.viewing(name)`). A save keeps working with any of them off.
 
 `motifs` is the one exception to shipping: Abdulla's motifs aren't in the repo. See [AUDIO.md](AUDIO.md).
 

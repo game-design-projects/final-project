@@ -4,7 +4,7 @@
 ##          that shimmers, a part that fights another). A line sliding across a pixel is on and off once, so it doesn't count. Worst of a few moments.
 ##   jump   the biggest change in how many of the model's pixels are lit from one frame to the next while gliding, as a share of them (a part popping)
 ## Each frame is drawn on demand, so the run neither waits on the window (a hidden one draws nothing) nor shows anything in it.
-##   godot --path . -s res://tools/flicker_check.gd -- nosound [no-sprite-look] [only=bandit] [out=<dir>]
+##   godot --path . -s res://tools/flicker_check.gd -- nosound [only=bandit] [out=<dir>]
 ## With out=, every case leaves a picture of its last frame with the blinking pixels in white, to see which part it is.
 extends SceneTree
 
