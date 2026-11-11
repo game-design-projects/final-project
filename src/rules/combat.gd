@@ -30,7 +30,7 @@ const HIT_ANGER := 10.0
 const HIT_FEAR := 8.0
 const REFUSED_MERCY_ANGER := 4.0
 
-# What friends do for a fight (party-aid)
+# What friends do for a fight
 const AID_PER_ALLY := 1 # added to every strike
 const GUARD_FROM_ALLIES := 2 # this many allies take a point off every hit
 

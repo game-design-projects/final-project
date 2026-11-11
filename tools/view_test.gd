@@ -860,8 +860,6 @@ func _strike_bar_stands_clear(s, m) -> void:
 func _fight_eases(s, m) -> void:
 	var overlay = Overlay.new()
 	overlay.state = s
-	var was_on: bool = s.viewing("smooth-fight")
-	s.views["smooth-fight"] = true
 	s.foe = m
 	s.stage = "dodge"
 	s.dodge = {"soul": Vector2i(1, 1)}
@@ -886,10 +884,6 @@ func _fight_eases(s, m) -> void:
 	_check(is_equal_approx(overlay.leave_fade(), 0.5), "half gone halfway")
 	overlay.clock_ms = 500.0 + Overlay.LEAVE_FADE_MS
 	_check(overlay.leave_fade() == 0.0, "and the halls are back")
-	s.views["smooth-fight"] = false
-	overlay.clock_ms = 500.0
-	_check(overlay.leave_fade() == 0.0, "no-smooth-fight: no fade")
-	s.views["smooth-fight"] = was_on
 	overlay.free()
 
 

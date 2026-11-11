@@ -31,7 +31,7 @@ const Vision = preload("res://src/rules/vision.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
-const VIEW_FEATURES := ["dungeon-reveal", "piece-icons", "mercy-link", "party-aid", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "smooth-fight", "sprite-look", "hunger", "hand-drawn", "warmth", "wick", "combat-grid", "choice-grid"]
+const VIEW_FEATURES := ["dungeon-reveal", "mercy-link", "mood-cues", "clear-hp", "reveal", "chat", "boss-at-exit", "secrets", "items", "lurkers", "npcs", "roaming", "sprite-look", "hunger", "hand-drawn", "warmth", "wick"]
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -113,10 +113,15 @@ func _init(game_rng, game_mind) -> void:
 	_place_camera() # a save looks about it as it loads, so this is in place before that
 
 
-## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice, whose routes stay fixed so
-## its sessions can be compared.
+## True on the personality slice, the reference run: what the game added since stays off there (the rules that change a fight),
+## so its routes stay fixed and its sessions can be compared.
+func on_slice() -> bool:
+	return slice_floor or PersonalitySlice.pending()
+
+
+## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice.
 func feature(name: String) -> bool:
-	return Flags.enabled(name) and not slice_floor and not PersonalitySlice.pending()
+	return Flags.enabled(name) and not on_slice()
 
 
 ## A fresh run: a new floor, standing at its start. With `practice` (the scene asks for it until it has been played once) and
@@ -231,7 +236,7 @@ func close_run(cleared: bool) -> int:
 
 ## What the views read from the state rather than ask the flags, because the personality slice has them off.
 func _apply_features() -> void:
-	state.rotate_mini_games = feature("mini-games")
+	state.rotate_mini_games = not on_slice()
 	state.floors_of = Floors.run_floors() if _telling_story() else 0
 	_place_camera()
 	for name in VIEW_FEATURES:
@@ -338,7 +343,7 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
-	if to == "explore" and from in FIGHT_STAGES and feature("input-cooldown"):
+	if to == "explore" and from in FIGHT_STAGES and not on_slice():
 		_keys_back_at = clock + AFTER_FIGHT_MS
 		_held_over = true
 	state.stage = to

@@ -80,7 +80,7 @@ var _ghost := 1.0 # where the trail behind the foe's health is
 var _ghost_foe = null # whose
 var _comets: Array = [] # [{from, born}]: what just hit you, on its way to your health bar
 var _lantern_glow: GradientTexture2D
-var _soul_shown = null # where your soul is drawn now (smooth-fight), null to start at its square
+var _soul_shown = null # where your soul is drawn now, null to start at its square
 var _was_fighting := false
 var _left_fight_at := -1e9
 
@@ -125,7 +125,7 @@ func can_spare() -> bool:
 
 ## How dark the picture still is from the fight that just ended (0 once it has faded).
 func leave_fade() -> float:
-	if state == null or not state.viewing("smooth-fight"):
+	if state == null:
 		return 0.0
 	return clampf(1.0 - (clock_ms - _left_fight_at) / LEAVE_FADE_MS, 0.0, 1.0)
 
@@ -140,7 +140,7 @@ func _follow_soul(dt: float) -> void:
 		_soul_shown = null
 		return
 	var square := soul_square(state.dodge)
-	if _soul_shown == null or not state.viewing("smooth-fight"):
+	if _soul_shown == null:
 		_soul_shown = square
 	else:
 		_soul_shown = _soul_shown.lerp(square, 1.0 - exp(-SOUL_GLIDE * dt))
@@ -575,7 +575,7 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.kind == "pad":
 		_pad(h)
 		return
-	if h.has("glyph") and icons() and not live:
+	if h.has("glyph") and not live:
 		_rays(h, col)
 	for k in h.cells:
 		var cell := _cell_rect(k)
@@ -587,17 +587,9 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.has("glyph"):
 		var at := _cell_rect(h.at).get_center()
 		draw_rect(Rect2(at - Vector2(11, 11), Vector2(22, 22)), Color.BLACK)
-		if icons():
-			_piece(h.glyph, at, Color.WHITE)
-		else:
-			_text(_title, h.glyph, at + Vector2(-6, 6), 12, Color.WHITE)
+		_piece(h.glyph, at, Color.WHITE)
 	if h.kind == "goo" and not live:
 		draw_circle(goo_ball(h), 5.0, col)
-
-
-## Whether chess attacks show a piece's shape (the feature piece-icons).
-func icons() -> bool:
-	return state != null and state.viewing("piece-icons")
 
 
 ## A chess piece as a shape, so it can't be taken for a key to press: a tower, a pointed hat, a horse's head.
@@ -694,7 +686,7 @@ func _charms() -> void:
 	_text(_title, "CHARMS", Vector2(12, BOX_Y + 8.0), 7, Palette.DIM)
 	for row in rows:
 		_text(_title, row.name, Vector2(12, row.y), 7, row.color)
-	if state.viewing("party-aid") and state.party_size() > 0: # a friend who isn't a monster lends no strength
+	if state.party_size() > 0: # a friend who isn't a monster lends no strength
 		_text(_title, "+%d STRIKE" % state.party_size(), Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 4.0), 6, Palette.DIM)
 		if state.dodge.guard > 0:
 			_text(_title, "-%d HURT" % state.dodge.guard, Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 14.0), 6, Palette.DIM)

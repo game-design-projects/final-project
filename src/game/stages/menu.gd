@@ -43,11 +43,11 @@ func enter(flow, _args: Dictionary) -> void:
 	if flow.feature("heavy-strike") and not skilled:
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
-	if flow.feature("items") and (flow.feature("combat-grid") or not s.items.is_empty()):
+	if flow.feature("items"):
 		s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
 	if flow.feature("initiated-dialogue") and int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
-	s.hint = ("ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" if flow.feature("combat-grid") else "UP / DOWN CHOOSE · ENTER PICK · 1-%d · I INFO") % s.menu.size()
+	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
 
 func handle(flow, key: String) -> void:
@@ -55,7 +55,7 @@ func handle(flow, key: String) -> void:
 		var index := int(key) - 1
 		if index < flow.state.menu.size() and flow.state.menu[index].get("disabled", false):
 			return
-	if not flow.feature("combat-grid") or not key in ["up", "down", "left", "right"]:
+	if not key in ["up", "down", "left", "right"]:
 		await super.handle(flow, key)
 		return
 	var s = flow.state

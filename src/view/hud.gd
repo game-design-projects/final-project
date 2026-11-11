@@ -171,12 +171,12 @@ func _command_at(at: Vector2) -> int:
 
 
 func _grid() -> bool:
-	return state != null and not state.menu.is_empty() and ((state.stage == "menu" and state.viewing("combat-grid")) or (state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end"] and state.viewing("choice-grid")))
+	return state != null and not state.menu.is_empty() and (state.stage == "menu" or state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end"])
 
 
 ## Reserve the same space while walking and in menus, so opening a grid never resizes the picture.
 func _fixed_layout() -> bool:
-	return state != null and (state.viewing("combat-grid") or state.viewing("choice-grid"))
+	return state != null
 
 
 func _slot_height() -> float:

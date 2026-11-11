@@ -1,4 +1,4 @@
-## How fast a dodge runs (the feature gentle-dodge): slower than the classic dodge to begin with, then faster down the floors and
+## How fast a dodge runs: slower than the original dodge to begin with, then faster down the floors and
 ## slower when the foe is friendly, when the player has been getting hit, with allies at their side, or with the EASY DODGE
 ## setting. 1.0 is the classic pace. Hazards come further apart and warn for longer as the number falls.
 extends RefCounted

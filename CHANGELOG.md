@@ -9,6 +9,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - `initiated-dialogue`: contextual monster offers, species-specific social combat, action/resource tradeoffs, remembered promises, a keyboard/mouse popup and a reproducible `social-demo` playtest.
 - `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `classic` keeps the old music (refs #49).
 
+### Removed
+- The `combat-grid`, `choice-grid`, `dialogue-buffer`, `input-cooldown`, `text-size`, `party-aid`, `mini-games`, `gentle-dodge`, `piece-icons` and `smooth-fight` feature flags: all ten are part of the game now, and `classic` no longer turns them off. The personality slice keeps the rules that change a fight (`dialogue-buffer`, `input-cooldown`, `party-aid`, `mini-games`, `gentle-dodge`) off, as before. The chess attacks' old letter display and rule text (`rule` in `data/encounter.json`) are gone.
+
 ### Fixed
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
 - No sound at all in a run on an output slower than 40 kHz, such as Bluetooth headphones in call mode (24 kHz): the music's low-pass opened to 20 kHz, past what that output can carry, turned unstable and silenced the whole mix. It now opens to at most 0.46 of the output's rate, which leaves 44.1 and 48 kHz as they were. The opening film, which plays before those buses exist, was never affected.

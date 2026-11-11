@@ -1275,9 +1275,9 @@ func _dodges() -> void:
 	var flow = _flow(13)
 	await flow.new_run()
 	_check(flow.state.rotate_mini_games, "the run rotates mini-games in")
-	var classic = _flow(13, ["no-mini-games"])
-	await classic.new_run()
-	_check(not classic.state.rotate_mini_games, "no-mini-games leaves them out")
+	var slice = _flow(13, ["personality-slice"])
+	await slice.new_run()
+	_check(not slice.state.rotate_mini_games, "the personality slice leaves them out")
 	_use()
 
 
@@ -2181,8 +2181,8 @@ func _champion_moves() -> void:
 
 ## What a fight's end does to keys, without the scene. (gameplay_test presses real keys.)
 func _input_cooldown() -> void:
-	for on in [true, false]:
-		var flow = _flow(880, [] if on else ["no-input-cooldown"])
+	for sliced in [false, true]:
+		var flow = _flow(880, ["personality-slice"] if sliced else [])
 		await flow.new_run()
 		var s = flow.state
 		var m = s.floor_map.monsters[0]
@@ -2193,8 +2193,8 @@ func _input_cooldown() -> void:
 		await flow.encounter.leave_fight([])
 		var stood: Vector2i = s.cell
 		await flow.press("up")
-		_check((s.cell == stood) == on, "a key just after a fight %s (%s)" % ["does nothing" if on else "walks, with no-input-cooldown", s.cell])
-		if on:
+		_check((s.cell == stood) != sliced, "a key just after a fight %s (%s)" % ["walks on the personality slice" if sliced else "does nothing", s.cell])
+		if not sliced:
 			await flow.tick(flow.clock + Flow.AFTER_FIGHT_MS + 1.0)
 			await flow.press("up", true)
 			_check(s.cell == stood, "a key still held does nothing after that either")
@@ -2207,8 +2207,5 @@ func _input_cooldown() -> void:
 	await hurried.new_run()
 	await hurried.press("up")
 	_check(hurried.state.cell != hurried.state.floor_map.start or hurried.state.stage != "explore", "keys work as ever before any fight")
-	var slice = _flow(882)
-	slice.slice_floor = true
-	_check(not slice.feature("input-cooldown"), "and the slice stays as it was")
 	_use()
 

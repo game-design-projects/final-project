@@ -8,7 +8,7 @@ func handle(flow, key: String) -> void:
 	var n: int = s.menu.size()
 	if n == 0:
 		return
-	if (flow.feature("combat-grid") if s.stage == "menu" else flow.feature("choice-grid")) and key in ["up", "down", "left", "right"]:
+	if key in ["up", "down", "left", "right"]:
 		var old: int = s.selected
 		var cols := mini(3, n)
 		var row: int = old / cols

@@ -91,7 +91,7 @@ func _ambush_prompt(game) -> void:
 
 
 func _dialogue_buffer(game) -> void:
-	if not game.flow.feature("ambush-prompt") or not game.flow.feature("dialogue-buffer"):
+	if not game.flow.feature("ambush-prompt"):
 		return
 	await game.flow.new_run()
 	var flow = game.flow
@@ -116,7 +116,7 @@ func _dialogue_buffer(game) -> void:
 
 
 func _camp_grid(game) -> void:
-	if not game.flow.feature("choice-grid"):
+	if not game.flow.feature("butcher"): # the nine camp choices below are the butcher's
 		return
 	await game.flow.new_run()
 	var s = game.flow.state
@@ -155,8 +155,6 @@ func _camp_grid(game) -> void:
 
 
 func _combat_layout(game) -> void:
-	if not game.flow.feature("combat-grid"):
-		return
 	await _fight(game)
 	await process_frame
 	await process_frame
@@ -436,18 +434,17 @@ func _hover_and_tips(game) -> void:
 	var dock = game._dock
 	var rects: Array = dock.command_rects()
 	_check(rects.size() == s.menu.size() and rects.size() >= 4, "the dock knows where its commands are, and they all fit (%d)" % rects.size())
-	if game.flow.feature("combat-grid"):
-		if rects.size() == 6 and s.menu[5].get("disabled", false):
-			_check(dock._command_at(rects[5].get_center()) == -1, "an empty ITEM button cannot be hovered or clicked")
-		_check(rects[0].position.y == rects[2].position.y and rects[3].position.y > rects[0].position.y and rects[3].position.x == rects[0].position.x, "combat commands occupy three columns")
-		s.selected = 0
-		game._unhandled_input(_key(KEY_S, {}, 115))
-		_check(s.selected == 3, "S moves down a row")
-		game._unhandled_input(_key(KEY_W, {}, 119))
-		game._unhandled_input(_key(KEY_D, {}, 100))
-		_check(s.selected == 1, "W moves up and D moves right")
-		game._unhandled_input(_key(KEY_A, {}, 97))
-		_check(s.selected == 0, "A moves left")
+	if rects.size() == 6 and s.menu[5].get("disabled", false):
+		_check(dock._command_at(rects[5].get_center()) == -1, "an empty ITEM button cannot be hovered or clicked")
+	_check(rects[0].position.y == rects[2].position.y and rects[3].position.y > rects[0].position.y and rects[3].position.x == rects[0].position.x, "combat commands occupy three columns")
+	s.selected = 0
+	game._unhandled_input(_key(KEY_S, {}, 115))
+	_check(s.selected == 3, "S moves down a row")
+	game._unhandled_input(_key(KEY_W, {}, 119))
+	game._unhandled_input(_key(KEY_D, {}, 100))
+	_check(s.selected == 1, "W moves up and D moves right")
+	game._unhandled_input(_key(KEY_A, {}, 97))
+	_check(s.selected == 0, "A moves left")
 	var picks := []
 	dock.hovered.connect(func(i): picks.append(i))
 	dock._gui_input(_move(rects[2].get_center()))
@@ -597,12 +594,11 @@ func _sub_text_wraps(game) -> void:
 	_check(longest > 900.0 and longest < 1100.0, "SPARE's help is about 980 px wide at the dock's font (%d)" % longest)
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
-	var grid: bool = game.flow.feature("combat-grid")
-	var dock_height: float = Hud.DOCK_H + (Hud.GRID_SLOT_H - Hud.SLOT_H + Hud.SUB_LINE_H if grid else 0.0)
+	var dock_height: float = Hud.DOCK_H + Hud.GRID_SLOT_H - Hud.SLOT_H + Hud.SUB_LINE_H
 	_check(not dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "in a wide window it is one line and the dock keeps its height")
 	dock.size = Vector2(800, 200)
 	dock._process(0.0)
-	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height + (0.0 if grid else Hud.SUB_LINE_H)), "in a narrow one there is room for the wrapped help")
+	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "in a narrow one there is room for the wrapped help")
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
 	_check(is_equal_approx(dock.custom_minimum_size.y, dock_height), "and goes back when the window is wide again")
@@ -669,8 +665,6 @@ func _echo(code: int) -> InputEventKey:
 
 
 func _keys_after_a_fight(game) -> void:
-	if not game.flow.feature("input-cooldown"):
-		return
 	var stood := await _end_a_fight(game)
 	var s = game.flow.state
 	game._unhandled_input(_echo(KEY_UP))

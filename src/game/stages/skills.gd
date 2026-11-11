@@ -44,7 +44,7 @@ func pick(flow, index: int) -> void:
 	var attacks: bool = Skills.damage(f, id, m.boss) > 0
 	var bonus := 0
 	if attacks:
-		bonus = (Social.strike_bonus(m) if flow.feature("initiated-dialogue") else 0) + (Combat.party_aid(s.party_size()) if flow.feature("party-aid") else 0) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
+		bonus = (Social.strike_bonus(m) if flow.feature("initiated-dialogue") else 0) + (0 if flow.on_slice() else Combat.party_aid(s.party_size())) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
 	var did: Dictionary = Skills.use(f, id, m.boss, bonus)
 	print("skills: %s on %s: %s, %d energy left" % [id, m.name, did, f.energy])
 	var words := []

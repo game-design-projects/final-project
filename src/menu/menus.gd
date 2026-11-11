@@ -224,8 +224,8 @@ static func effects() -> Dictionary:
 
 
 static func gameplay() -> Dictionary:
-	var sizes := [_setting("text_size", "TEXT SIZE", "The log and what monsters say, wherever the larger size fits")] if Flags.enabled("text-size") else []
-	return {"title": "GAMEPLAY", "hint": ADJUST_HINT, "items": sizes + [
+	return {"title": "GAMEPLAY", "hint": ADJUST_HINT, "items": [
+		_setting("text_size", "TEXT SIZE", "The log and what monsters say, wherever the larger size fits"),
 		_setting("easy", "EASY DODGE", "Attacks come slower, with longer warnings"),
 		_setting("tips", "TIPS", "Short tips the first time you meet something; off skips the tutorial"),
 		{"label": "SHOW THE TIPS AGAIN", "sub": "Forget which tips you have seen", "act": func(): Settings.set_value("seen_tips", [])},

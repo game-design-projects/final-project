@@ -68,7 +68,7 @@ var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
 var skill_fight = null # this fight's energy, cooldowns, block and bruises (Skills.new_fight), with the feature skill-combat; null without it
 var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
-var rotate_mini_games := false # every third attack is a mini-game (the feature mini-games)
+var rotate_mini_games := false # every third attack is a mini-game (not on the personality slice)
 var social_offer := {} # only the social stage owns this popup
 var social_typing := false
 var social_note := ""
