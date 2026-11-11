@@ -99,10 +99,7 @@ func _flags() -> void:
 		_check(not Flags.enabled(f), "no-%s turns it off" % f)
 		_use([f + "=off"])
 		_check(not Flags.enabled(f), "%s=off turns it off" % f)
-		_use(["classic"])
-		_check(not Flags.enabled(f), "classic turns %s off" % f)
-		Flags.set_args(PackedStringArray(["nosave", "nosound", "classic", f]))
-		_check(Flags.enabled(f), "classic %s brings it back" % f)
+	_check(not Flags.KNOWN.has("classic"), "there is no switch that turns every feature off at once")
 	_use()
 
 
@@ -250,13 +247,13 @@ func _real_floors() -> void:
 	await again.press("1")
 	_check(again.state != ended and again.state.depth == 1, "and NEW RUN starts over on B1F")
 
-	var classic = _flow(11, ["personality-slice"])
-	await classic.new_run()
-	await _reach_stairs(classic)
-	_check(classic.state.stage == "end" and classic.state.run_over, "the personality slice: the stairs end the run")
-	var kept = classic.state
-	await classic.press("1")
-	_check(classic.state != kept and classic.state.depth == 1, "the personality slice: NEW FLOOR starts over")
+	var reference = _flow(11, ["personality-slice"])
+	await reference.new_run()
+	await _reach_stairs(reference)
+	_check(reference.state.stage == "end" and reference.state.run_over, "the personality slice: the stairs end the run")
+	var kept = reference.state
+	await reference.press("1")
+	_check(reference.state != kept and reference.state.depth == 1, "the personality slice: NEW FLOOR starts over")
 	_use()
 
 
@@ -1642,9 +1639,6 @@ func _heavy_strike() -> void:
 	var off = _flow(64, ["no-heavy-strike"])
 	await _at_menu(off, "rock")
 	_check(off.state.menu.size() == 5 and off.state.menu[4].label == "ITEM" and off.state.menu[4].disabled, "no-heavy-strike: the four commands and disabled ITEM remain")
-	var classic = _flow(65, ["classic"])
-	await _at_menu(classic, "rock")
-	_check(classic.state.menu.size() == 5 and not classic.state.menu.any(func(c): return c.label == "HEAVY"), "classic: the four commands and ITEM, no HEAVY")
 	var slice = _flow(68, ["personality-slice"])
 	await slice.new_run()
 	await slice.tick(slice.clock + 5000.0)

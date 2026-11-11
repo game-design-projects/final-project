@@ -304,7 +304,7 @@ func _models_match_their_sprites() -> void:
 	unknown.free()
 
 
-## The set builds what the game says to show (the suite in classic has sprite-look off).
+## The set builds what the game says to show.
 func _stage_wears_the_look() -> void:
 	var flow = await _walk(31)
 	var s = flow.state

@@ -4,8 +4,7 @@
 ## Every flag is declared in KNOWN. Asking for one that isn't is a bug in the caller and is reported at once,
 ## and an unknown word on the command line is warned about, so a typo never silently does nothing.
 ##
-## The game's features are declared in FEATURES and are on unless switched off: `no-<name>` or `<name>=off` turns one off,
-## `classic` turns them all off (`classic <name>` then brings that one back), which is the game as it was before they came.
+## The game's features are declared in FEATURES and are on unless switched off: `no-<name>` or `<name>=off` turns one off.
 ## The few in OPT_IN are the exception: experiments that replace part of the game, off unless named (`skill-combat`).
 extends RefCounted
 
@@ -32,7 +31,6 @@ const KNOWN := {
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
 	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
-	"classic": "every feature in FEATURES off (name one after it to bring it back)",
 }
 
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.
@@ -55,7 +53,7 @@ const FEATURES := {
 	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",
 }
 
-## Features that are off unless named on the command line (`skill-combat`, or `classic skill-combat`): experiments that replace part
+## Features that are off unless named on the command line (`skill-combat`): experiments that replace part
 ## of the game, to be tried beside it rather than in place of it.
 const OPT_IN := ["skill-combat"]
 
@@ -65,7 +63,7 @@ static var _flags = null # Dictionary name -> value ("" for a bare flag); null u
 
 
 ## Replace the flags with these words (for tools and scenario scripts that pretend a different command line).
-## What the real command line says about features stays, so a test suite can run with `classic` however it sets its other flags.
+## What the real command line says about features stays, so a test suite run with `no-<name>` keeps it however it sets its other flags.
 static func set_args(words: PackedStringArray) -> void:
 	_flags = _parse(words)
 	var real := _parse(OS.get_cmdline_user_args())
@@ -85,7 +83,7 @@ static func value(name: String, default := "") -> String:
 	return v if v != "" else default
 
 
-## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>`, `<name>=off` or `classic`. One in OPT_IN is on
+## Whether a feature is on: declared in FEATURES, and not switched off by `no-<name>` or `<name>=off`. One in OPT_IN is on
 ## only when named.
 static func enabled(name: String) -> bool:
 	if not FEATURES.has(name):
@@ -96,9 +94,7 @@ static func enabled(name: String) -> bool:
 		return false
 	if all.has(name):
 		return not str(all[name]) in OFF_WORDS
-	if OPT_IN.has(name):
-		return false
-	return not all.has("classic")
+	return not OPT_IN.has(name)
 
 
 ## The features that are on now, for the logs.
@@ -107,7 +103,7 @@ static func enabled_features() -> Array:
 
 
 static func _is_feature_word(name: String) -> bool:
-	return name == "classic" or FEATURES.has(name) or (name.begins_with("no-") and FEATURES.has(name.substr(3)))
+	return FEATURES.has(name) or (name.begins_with("no-") and FEATURES.has(name.substr(3)))
 
 
 static func _declared(name: String) -> String:
