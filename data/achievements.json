@@ -7,6 +7,8 @@
   "champion_won": {"label": "CHAMPION'S FRIEND", "text": "You won a champion over."},
   "champion_slain": {"label": "CHAMPION'S END", "text": "You cut a champion down."},
   "chest": {"label": "BEHIND THE CRACK", "text": "You found what a cracked wall was hiding."},
+  "lore": {"label": "WRITING ON THE WALL", "text": "You read what someone left on a wall."},
+  "lore_all": {"label": "EVERY WALL READ", "text": "All of the writing: warm halls, wary ones and cold."},
   "heavy": {"label": "WHERE IT HURTS", "text": "A heavy strike showed you how something takes one."},
   "deep": {"label": "THE LAST FLOOR", "text": "You got all the way down."},
   "door": {"label": "THE LAST DOOR", "text": "It opened, because you weren't alone."},

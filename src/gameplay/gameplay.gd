@@ -113,6 +113,8 @@ func _ready() -> void:
 	for id in Progress.earned():
 		flow.trophies.earned[str(id)] = true
 	flow.legacy_ranks = Progress.ranks()
+	for id in Progress.lore_read():
+		flow.lore_read[id] = true
 	_fit_picture()
 	_debug = Flags.on("debug")
 	print("gameplay: features on: %s" % [Flags.enabled_features()])
@@ -524,6 +526,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 			Settings.set_value("seen_tips", flow.coach.seen.keys())
 		"trophy":
 			Progress.earn(data.id)
+		"found":
+			if data.what == "lore":
+				Progress.read_lore(data.id)
 		"run_closed":
 			Progress.pay(s.run_seed, data.embers)
 			flow.legacy_ranks = Progress.ranks()

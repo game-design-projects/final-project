@@ -1,6 +1,7 @@
 ## The things on the walls as drawings: the same placements as decor.gd, flat on the wall, one mesh and one atlas,
 ## and flames on quads that face you. They answer how warm the halls are (rules/warmth.gd): the torches look at you, look away, shut their
 ## eyes; a skull nods, then stares; a cracked wall that gives is a guilty smile, then only a crack. At the coldest the flames are the wire ones.
+## The writing (rules/lore.gd) is a banner in the accent colour, larger than the plain ones.
 extends RefCounted
 
 const Decor = preload("res://src/view/decor.gd")
@@ -10,6 +11,8 @@ const MeshKit = preload("res://src/view/mesh_kit.gd")
 const Sprites = preload("res://src/view/sprites.gd")
 
 const LIFT := 0.012 # how far a drawing stands off the wall
+const LORE_SIZE := 1.2 # the banner with the writing on it, against a plain banner's SIZE
+const LORE_DOWN := 0.42 # and hung lower, about at eye height, so it stays on the wall
 const SIZE := {"torch": 0.74, "chains": 0.86, "banner": 0.96, "crack": 0.9, "window": 1.12, "skull": 1.06, "skull_nod": 1.06, "skull_hollow": 1.06, "guilty": 1.5, "fissure": 1.5, "moss": 0.66, "bat": 0.52}
 const DOWN := {"torch": 0.44, "chains": 0.26, "banner": 0.3, "crack": 0.48, "window": 0.42, "skull": 0.5, "skull_nod": 0.5, "skull_hollow": 0.5, "guilty": 0.46, "fissure": 0.46, "moss": 0.82, "bat": 0.16}
 const TORCH_BOWL := Vector2(0.13, 0.18) # where a flame stands, off the middle of the torch's drawing, as a share of its size
@@ -46,6 +49,8 @@ static func build(floor_map, wall_color: Color, accent: Color, torches: Array, l
 					_draw_on(art, face, "skull", ink, p.roll, "skull_nod" if level >= SKULL_NODS_FROM else "")
 			"fissure":
 				_draw_on(art, face, "guilty" if level >= GUILTY_FROM else "fissure", MeshKit.color(accent), p.roll)
+			"lore":
+				_draw_on(art, face, "banner", MeshKit.color(accent), p.roll, "", LORE_SIZE, LORE_DOWN)
 	if not art.is_empty():
 		var shapes := MeshInstance3D.new()
 		shapes.name = "Props"
@@ -66,9 +71,10 @@ static func build(floor_map, wall_color: Color, accent: Color, torches: Array, l
 
 
 # A drawing flat on the wall. `alt` is a second drawing it swaps to now and then while you are near (shaders/wall_art.gdshader).
-static func _draw_on(art: MeshKit.Builder, face, drawing: String, tint: Color, roll: float, alt := "") -> void:
-	var size: float = SIZE[drawing]
-	var f: Transform3D = face.frame(0.5, DOWN[drawing], LIFT)
+static func _draw_on(art: MeshKit.Builder, face, drawing: String, tint: Color, roll: float, alt := "", size := -1.0, down := -1.0) -> void:
+	if size <= 0.0:
+		size = SIZE[drawing]
+	var f: Transform3D = face.frame(0.5, DOWN[drawing] if down < 0.0 else down, LIFT)
 	var r := Sprites.uv_rect("decor", Sprites.drawing_rect("decor", drawing))
 	var other := 0.0
 	if alt != "":

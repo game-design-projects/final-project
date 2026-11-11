@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Writing on the walls (#77, #56): one piece on every floor, on the closed end of a quiet corridor, read by stepping up to it; the floor and how warm the halls are when you read it (warm, wary or cold) pick one of fifteen in `data/lore.json`, so it takes about three runs to read them all. It is marked on the map, kept in a save, counted across runs in the Store (`lore_read`), and earns two achievements.
 - Clan hostility (#77): kills climb a clan through ANGRY, FURIOUS and ENRAGED (standing -18, -36, -72 in `data/clans.json`), a banner says each move up or down, and sparing its side or a favour cools it.
 - Nemesis elites (#77): a FURIOUS clan's kind comes as elites on every floor made after (not champions): +25% HP, faster attacks, +1 damage per hit, tagged ELITE over their heads, in the header and on their card, and kept in a save.
 - ENRAGED clans refuse mercy (#77): SPARE greys out and says why, the odds read 0% whatever the mind says, no gold cut and no monster offer, and a champion of the Hoard can't be won over.

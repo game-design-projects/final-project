@@ -81,6 +81,8 @@ var coach # the first-time tips
 var trophies # the achievements
 ## The boons bought between runs (boon id -> rank), which the scene hands in: the game doesn't read what is kept itself.
 var legacy_ranks := {}
+## The writing read on any run so far (piece id -> true, rules/lore.gd), which the scene hands in and hears of through the event "found".
+var lore_read := {}
 var easy_dodge := false
 ## The monsters still to fight, back to back, with no walk between (the social-demo playtest). A new floor, a load or fleeing
 ## clears it.
@@ -282,6 +284,7 @@ func _make_floor(way := {}) -> void:
 		plan.shop = Items.shop_on(state.depth) or way.get("shop", false)
 		plan.lurkers = true
 		plan.request = Requests.due(state.depth)
+		plan.lore = true
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 		_send_elites()
 	state.palette_id = Floors.palette(state.floor_map.biome, state.floor_map.seed_value)

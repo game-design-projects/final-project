@@ -40,6 +40,10 @@ static func earned_by(event: String, data: Dictionary, state) -> Array:
 		"found":
 			if data.what == "chest":
 				out.append("chest")
+			elif data.what == "lore":
+				out.append("lore")
+				if int(data.get("read", 0)) >= int(data.get("total", 0)) and int(data.get("total", 0)) > 0:
+					out.append("lore_all")
 		"strike":
 			if not state.heavy_known.is_empty():
 				out.append("heavy")

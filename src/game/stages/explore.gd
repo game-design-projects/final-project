@@ -1,6 +1,6 @@
 ## Walking the floor. Up and down step forward and back, left and right turn on the spot. Walking into a monster starts
 ## a fight, walking into a cracked wall breaks it, and reaching the stairs ends the floor. A chest is opened and a pad carries you
-## off as soon as you step on it.
+## off as soon as you step on it, and the writing on a wall is read as soon as you step up to it.
 extends "res://src/game/stages/stage.gd"
 
 const Content = preload("res://src/rules/content.gd")
@@ -8,6 +8,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
+const Lore = preload("res://src/rules/lore.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
 
@@ -154,6 +155,8 @@ func _find_secrets(flow) -> void:
 			flow.event("sound", {"name": "good"})
 		else:
 			s.say([State.sys_line(Items.line("full") % name)])
+	if s.floor_map.lore_at(s.cell) and not s.floor_map.lore.read:
+		_read_the_wall(flow)
 	var there = s.floor_map.pad_partner(s.cell)
 	if there != null:
 		print("explore: pad from %s to %s" % [s.cell, there])
@@ -162,6 +165,22 @@ func _find_secrets(flow) -> void:
 		s.look()
 		s.say([State.sys_line(Floors.secret_line("pad"))])
 		flow.event("sound", {"name": "holy"})
+
+
+## The writing on the wall here. Which piece it is depends on the floor and on how the halls feel about you as you read it, so another
+## run, kinder or crueller, reads another one here. What has been read on any run is counted in the log.
+func _read_the_wall(flow) -> void:
+	var s = flow.state
+	var piece := Lore.piece(s.depth, Lore.tone(s))
+	s.floor_map.lore.read = true
+	var again: bool = flow.lore_read.has(piece.id)
+	flow.lore_read[piece.id] = true
+	var read: int = flow.lore_read.size()
+	flow.announce(piece.title, piece.text)
+	s.say([State.sys_line(piece.text), State.sys_line(Lore.found_line(read))])
+	print("explore: read the writing %s at %s%s, %d of %d over all runs" % [piece.id, s.cell, " again" if again else "", read, Lore.total()])
+	flow.event("found", {"what": "lore", "id": piece.id, "read": read, "total": Lore.total()})
+	flow.event("sound", {"name": "holy"})
 
 
 ## The first time a cracked wall is right in front of you, or something new is down the line you face, say what it is.
@@ -180,4 +199,7 @@ func _notice(flow) -> void:
 			return
 		if s.floor_map.quester_at(at):
 			flow.coach.say("request")
+			return
+		if s.floor_map.lore_at(at) and not s.floor_map.lore.read:
+			flow.coach.say("lore")
 			return

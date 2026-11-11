@@ -20,7 +20,7 @@
 数据与资源：`data`（物种、台词、数值）、`assets`（音乐、字体、语音、手绘图集）、`flags`（启动参数）。
 外部：`proxy`（持有密钥）→ Jev LLM。本地语音识别（`native/asr`）和按住说话暂未带回。
 
-`game` 里的阶段都在 `game/stages/`，一张转移表（`transitions.gd`）管住能从哪到哪，每个阶段算战斗还是行走（`FIGHT` / `WALK`，选指令的是 `PICKING`）也只在这里写，画面和提示从这里读，事件的字段在 `events.gd` 里校验。小游戏一个文件一个，在 `rules/minigames/`；地图生成器也是，在 `rules/maps/`。跨局留下的东西（成就、余烬、加成）存在 `menu/progress.gd`，由 `gameplay` 交给 `game`；`game` 只发事件（`trophy`、`run_closed`），不碰存储。
+`game` 里的阶段都在 `game/stages/`，一张转移表（`transitions.gd`）管住能从哪到哪，每个阶段算战斗还是行走（`FIGHT` / `WALK`，选指令的是 `PICKING`）也只在这里写，画面和提示从这里读，事件的字段在 `events.gd` 里校验。小游戏一个文件一个，在 `rules/minigames/`；地图生成器也是，在 `rules/maps/`。跨局留下的东西（成就、余烬、加成、读过的墙上文字）存在 `menu/progress.gd`，由 `gameplay` 交给 `game`；`game` 只发事件（`trophy`、`run_closed`、`found` 里的 `lore`），不碰存储。
 
 ## 约定
 

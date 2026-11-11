@@ -1,6 +1,7 @@
 ## What a floor hides, in passes over its finished layout: a chest behind a cracked wall, which breaks when you walk into it, and
 ## pairs of pads that carry you between a place near the start and a place far from it. A pad takes you away the moment you
-## step on it, so one never stands where it would cut the floor in two. Everything is drawn from the floor's generator.
+## step on it, so one never stands where it would cut the floor in two. Writing goes on a wall at the end of a quiet corridor.
+## Everything is drawn from the generator it is handed.
 extends RefCounted
 
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -164,6 +165,35 @@ static func quiet_spot(rng, f, walk: Dictionary, hall: Vector2i, also := {}) -> 
 	if not ends.is_empty():
 		return rng.pick(ends)
 	return rng.pick(others) if not others.is_empty() else null
+
+
+## Where the writing goes: a quiet cell (see `quiet_spot`) and a plain wall of it, the one you face walking in when it is the end of
+## a corridor. {cell, side}, or null on a floor with no such place. `also` is more cells to keep off.
+static func lore_spot(rng, f, walk: Dictionary, hall: Vector2i, also := {}) -> Variant:
+	var keep_off: Dictionary = also.duplicate()
+	for _i in SAFE_TRIES:
+		var cell: Variant = quiet_spot(rng, f, walk, hall, keep_off)
+		if cell == null:
+			return null
+		var sides := _plain_walls(f, cell)
+		if not sides.is_empty():
+			var ahead := -1
+			var open := _open_sides(f, cell)
+			if open.size() == 1:
+				ahead = (FloorMap.DIRS.find(open[0] - cell) + 2) % 4
+			return {"cell": cell, "side": ahead if sides.has(ahead) else sides[0]}
+		keep_off[cell] = true
+	return null
+
+
+## The sides of a cell that are wall, and not a cracked one.
+static func _plain_walls(f, c: Vector2i) -> Array:
+	var out := []
+	for side in 4:
+		var n: Vector2i = c + FloorMap.DIRS[side]
+		if not f.is_open(n) and not f.is_cracked(n):
+			out.append(side)
+	return out
 
 
 ## A spot for a pad in the first of these stretches of the walk that has one.
