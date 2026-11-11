@@ -82,6 +82,11 @@ func _declared() -> void:
 		_check(Flags.FEATURES.has(f), "%s is a feature" % f)
 	_check(Transitions.allowed("explore", "camp") and Transitions.allowed("camp", "explore"), "you can sit down and get up")
 	_check(not Transitions.allowed("menu", "camp"), "but not in the middle of a fight")
+	for stage in Transitions.stages():
+		_check(int(stage in Transitions.FIGHT) + int(stage in Transitions.WALK) == 1, "%s is either a fight or a walk, not both" % stage)
+	for stage in Transitions.FIGHT + Transitions.WALK + Transitions.PICKING:
+		_check(Transitions.ALLOWED.has(stage), "%s, named as a kind of stage, is a stage" % stage)
+	_check(Transitions.PICKING.all(func(s): return s in Transitions.FIGHT), "picking a command only happens in a fight")
 	for id in Achievements.ids():
 		var info: Dictionary = Achievements.info(id)
 		_check(str(info.label) != "" and str(info.text) != "", "%s says what it is" % id)

@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows [Kee
 - The `tutorial`, `tutorial-floor`, `story` and `intro-cg` feature flags: part of the game now, and `classic` no longer turns them off. The TIPS setting still skips the tips, the slow first fights and the practice floor, and the new `notips` flag does the same for tests and playtests (it replaces `no-tutorial`). The personality slice has no tips, no practice floor and its old opening line.
 - The `hand-drawn`, `warmth`, `sprite-look`, `close-camera` and `wide-view` feature flags: part of the game now, and `classic` no longer turns them off (the old plain title card is gone with them). The personality slice keeps the wire look, the far camera and the 448:288 picture. 41 flags are gone in all; the 16 that remain are listed in `docs/DEVELOPMENT.md`, and a new feature no longer gets a flag unless it has to be tried beside the old behaviour.
 
+### Changed
+- Which stages are a fight, a walk or a choice of command is written once, in `src/game/transitions.gd` (`FIGHT`, `WALK`, `PICKING`), instead of in five copies across the flow, the overlay, the tooltips and the gameplay scene; `meta_test` checks every stage is exactly one of a fight or a walk, and the gameplay log names the features that are on.
+
 ### Fixed
 - Dynamic mood pressure bounds preserve the full heavy-strike miss penalty.
 - No sound at all in a run on an output slower than 40 kHz, such as Bluetooth headphones in call mode (24 kHz): the music's low-pass opened to 20 kHz, past what that output can carry, turned unstable and silenced the whole mix. It now opens to at most 0.46 of the output's rate, which leaves 44.1 and 48 kHz as they were. The opening film, which plays before those buses exist, was never affected.

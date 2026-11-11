@@ -34,6 +34,16 @@ const ALLOWED := {
 	"end": ["explore"],
 }
 
+## What kind of moment each stage is, for whoever has to tell them apart (the flow, the picture, the tooltips). Every stage is
+## in exactly one of FIGHT and WALK, which meta_test checks, so a new stage must say which it is here and nowhere else.
+## In a fight: a foe stands before you and the battle screen covers the halls.
+const FIGHT := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
+## On the floor, out of a fight: the automap shows, and the map's card may open.
+const WALK := ["explore", "end", "trade", "request", "camp"]
+## The fight is waiting for the player to pick something: the foe's card and the chat card may open, and a spareable foe shows
+## its bubble.
+const PICKING := ["intro", "menu", "act", "items", "skills", "talk"]
+
 
 static func stages() -> Array:
 	return ALLOWED.keys().filter(func(s): return s != "")

@@ -17,6 +17,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Sprites = preload("res://src/view/sprites.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 
 const W := 448.0
 const H := 288.0
@@ -24,7 +25,6 @@ const H := 288.0
 const FOE_RECT := Rect2(110, 20, 228, 258)
 const AUTOMAP_MARGIN := 10.0 # screen pixels from the picture's corner, as gameplay.gd places it
 ## The stages in which the foe's card is worth reading: the fight waits on you.
-const CARD_STAGES := ["intro", "menu", "act", "items", "skills", "talk"]
 const CHAT_SHOWN := 8
 const MIND_ROWS_SHOWN := 2 # the card shows the last answers; the debug panel all of them
 
@@ -163,11 +163,11 @@ func _allowed(key: String) -> bool:
 	if state == null or state.floor_map == null:
 		return false
 	if key == "foe":
-		return state.foe != null and state.stage in CARD_STAGES
+		return state.foe != null and state.stage in Transitions.PICKING
 	if key == "map":
-		return state.stage in ["explore", "end", "trade", "request", "camp"]
+		return state.stage in Transitions.WALK
 	if key == "chat":
-		return not state.chat.is_empty() and state.stage in CARD_STAGES
+		return not state.chat.is_empty() and state.stage in Transitions.PICKING
 	if key.begins_with("ally"):
 		return int(key.substr(4)) < state.allies.size()
 	if key.begins_with("command"):

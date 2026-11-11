@@ -12,6 +12,7 @@ const Dodge = preload("res://src/rules/dodge.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 
 const W := 448.0
 const H := 288.0
@@ -21,7 +22,6 @@ const BOX_CELL := 28.0
 const BOX_X := (W - Dodge.COLS * BOX_CELL) / 2.0
 const BOX_Y := 82.0
 
-const FIGHT_STAGES := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 const HEALTH_OK := Color("#9ed36b")
 const LANTERN := Color("#fff3b0")
 const GRID := Color("#1c1c20")
@@ -46,7 +46,6 @@ const SPEECH_STAGES := ["intro", "menu", "ask", "act", "items", "skills", "talk"
 const FLY_MS := 550.0
 const HEARD_MS := 950.0 # the listening dots stay this long after the words were sent, however fast the answer
 const EMOTE_MS := 1100.0
-const BUBBLE_STAGES := ["intro", "menu", "act", "items", "skills", "talk"]
 const BANNER_FADE_MS := 220.0
 const BANNER_W := 264.0
 const BANNER_H := 44.0
@@ -104,7 +103,7 @@ func emote_tone() -> String:
 
 ## True while the flat battle screen is showing (the 3D set is hidden behind it).
 func in_fight() -> bool:
-	return state != null and state.foe != null and state.stage in FIGHT_STAGES
+	return state != null and state.foe != null and state.stage in Transitions.FIGHT
 
 
 ## How strong the white flash of a fight beginning is now (0 once it has faded).
@@ -244,7 +243,7 @@ func bubble() -> Dictionary:
 		return {"text": ".".repeat(1 + int(clock_ms / 300.0) % 3)}
 	if not _emote.is_empty() and clock_ms - _emote.born < EMOTE_MS:
 		return {"tone": _emote.tone}
-	if can_spare() and state.stage in BUBBLE_STAGES:
+	if can_spare() and state.stage in Transitions.PICKING:
 		return {"text": "WANNA JOIN?"}
 	return {}
 

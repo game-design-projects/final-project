@@ -39,7 +39,6 @@ const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on h
 const WICK_BANNER_MS := 4500.0
 const WARMTH_TITLE := "THE HALLS"
 const WALK_HEAL_STEPS := 6
-const FIGHT_STAGES := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
@@ -339,7 +338,7 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
-	if to == "explore" and from in FIGHT_STAGES and not on_slice():
+	if to == "explore" and from in Transitions.FIGHT and not on_slice():
 		_keys_back_at = clock + AFTER_FIGHT_MS
 		_held_over = true
 	state.stage = to

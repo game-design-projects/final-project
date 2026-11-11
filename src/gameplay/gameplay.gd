@@ -30,6 +30,7 @@ const Settings = preload("res://src/menu/settings.gd")
 const StageScript = preload("res://src/view/stage.gd")
 const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 const MENU_SCENE := "res://src/menu/main_menu.tscn"
@@ -116,6 +117,7 @@ func _ready() -> void:
 	flow.legacy_ranks = Progress.ranks()
 	_fit_picture()
 	_debug = Flags.on("debug")
+	print("gameplay: features on: %s" % [Flags.enabled_features()])
 	_tips.debug = _debug
 	_tips.mind_label = flow.mind.label()
 	_bind_views()
@@ -326,7 +328,7 @@ func _process(dt: float) -> void:
 	_stage.calm = Settings.get_value("calm")
 	_stage.update(s, _clock_ms / 1000.0, dt)
 	_overlay.clock_ms = _clock_ms
-	_automap.visible = s.floor_map != null and s.stage in ["explore", "end", "trade", "request", "camp"]
+	_automap.visible = s.floor_map != null and s.stage in Transitions.WALK
 	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
 	if s.viewing("warmth"):
