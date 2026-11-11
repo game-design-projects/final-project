@@ -1,6 +1,6 @@
 ## The draws behind the chances of an interaction (a cut, a feeling, mercy, joining, an ally's verdict). It hands out the
-## seeded generator's numbers, or, while pinned, always that one number: the personality slice pins it so the same actions
-## give the same outcomes. Odds and Allies take a Dice and not a Rng, so a draw cannot go around the pin.
+## seeded generator's numbers, or, while pinned, always that one number: a test pins it so the same actions give the same
+## outcomes. Odds and Allies take a Dice and not a Rng, so a draw cannot go around the pin.
 extends RefCounted
 
 const Rng = preload("res://src/utils/rng.gd")
@@ -52,6 +52,6 @@ func int_between(a: int, b: int) -> int:
 
 
 ## A reproducible draw for a saved context (social scheduling), independent of animation timing and earlier rolls.
-## It still goes through this flow's dice and honours the personality slice's pin.
+## It still goes through this flow's dice and honours a pin.
 func keyed(seed_value: int) -> float:
 	return _pinned if _has_pin else Rng.new(seed_value).real()

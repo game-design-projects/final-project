@@ -52,7 +52,6 @@ func _run() -> void:
 	s.floor_map.monsters = s.floor_map.monsters.slice(0, 1)
 	var m = s.floor_map.monsters[0]
 	m.boss = false
-	print("flicker: sprite-look %s" % s.viewing("sprite-look"))
 	print("flicker: species distance blink jump")
 	var only := Flags.value("only")
 	var worst := 0

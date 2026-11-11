@@ -20,7 +20,6 @@ const Overlay = preload("res://src/view/overlay.gd")
 const Pad = preload("res://src/view/pad.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Progress = preload("res://src/menu/progress.gd")
-const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const PostFx = preload("res://src/view/postfx.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
@@ -103,9 +102,8 @@ func _ready() -> void:
 	if not pending.is_empty():
 		request = pending
 	_build_screen()
-	var slice := PersonalitySlice.pending()
-	_rng = Rng.new(PersonalitySlice.seed_value()) if slice else Rng.new()
-	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), slice or Flags.on("social-demo")))
+	_rng = Rng.new()
+	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), Flags.on("social-demo")))
 	audio = Audio.new()
 	add_child(audio)
 	audio.bind(flow)
@@ -125,7 +123,7 @@ func _ready() -> void:
 		_rise_from_film()
 	if _debug:
 		print("gameplay: debug on, the foe's mind panel stays open and every game event is logged")
-	if request.is_empty() and Flags.value("meet") == "" and not slice and not Flags.on("social-demo"):
+	if request.is_empty() and Flags.value("meet") == "" and not Flags.on("social-demo"):
 		_on_title = true
 		_overlay.title_card = true
 		_tips.visible = false
@@ -174,14 +172,11 @@ func _practice_due() -> bool:
 	return Settings.get_value("tips") and not flow.coach.seen.has(flow.PRACTICE_SEEN)
 
 
-## Handle the testing flags `meet=<species>` and `personality-slice`. It runs as an exclusive action: a tick must not run a
+## Handle the testing flags `meet=<species>` and `social-demo`. It runs as an exclusive action: a tick must not run a
 ## stage's own tick while the mind is still answering the stage's `enter`.
 func _after_start() -> void:
 	if Flags.on("social-demo") and request.get("kind", "new") == "new":
 		await SocialDemo.start(flow)
-		return
-	if PersonalitySlice.pending() and request.get("kind", "new") == "new":
-		await PersonalitySlice.start(flow)
 		return
 	var species := Flags.value("meet")
 	if species != "":
@@ -331,8 +326,7 @@ func _process(dt: float) -> void:
 	_automap.visible = s.floor_map != null and s.stage in Transitions.WALK
 	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
-	if s.viewing("warmth"):
-		_postfx.set_warmth(Warmth.of(s))
+	_postfx.set_warmth(Warmth.of(s))
 	_postfx.update(dt)
 
 
@@ -428,7 +422,7 @@ func _in_picture(at: Vector2) -> Vector2:
 func _fit_picture() -> void:
 	if flow == null:
 		return
-	var width: int = VIEW_W if flow.on_slice() else picture_width(_room.size)
+	var width: int = picture_width(_room.size)
 	if width == _viewport.size.x:
 		return
 	_viewport.size = Vector2i(width, VIEW_H)
@@ -478,7 +472,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"state_replaced":
 			_fit_picture()
 			_bind_views()
-			_fresh_floor = data.how in ["new", "floor"] and not PersonalitySlice.pending() # the slice marks its floor after it starts: never saved
+			_fresh_floor = data.how in ["new", "floor"]
 			if data.how == "new":
 				if flow.film_seen:
 					print("gameplay: the opening film showed Wick, she doesn't hop in again")
@@ -628,12 +622,11 @@ func _bind_views() -> void:
 	_tips.state = flow.state
 
 
-## Hand-drawn, the frame round everything is the colour of this run's walls, with soft corners, instead of plain white.
+## The frame round everything is the colour of this run's walls, dimmed, with soft corners.
 func _dress_frame() -> void:
-	var drawn: bool = flow.state.viewing("hand-drawn")
-	var line: Color = Palette.for_run(flow.state.palette_id).wall.darkened(FRAME_DIM) if drawn else Palette.INK
+	var line: Color = Palette.for_run(flow.state.palette_id).wall.darkened(FRAME_DIM)
 	_frame_box.border_color = line
-	_frame_box.set_corner_radius_all(FRAME_ROUND if drawn else 0)
+	_frame_box.set_corner_radius_all(FRAME_ROUND)
 	_rule.color = line
 
 

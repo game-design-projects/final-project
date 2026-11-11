@@ -14,8 +14,8 @@ const CASHES_IN := ["bandit", "snake"] # these two can be paid off
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
-	var items := [{"label": "CHECK", "sub": "Free: read one thing about it" if not flow.on_slice() else "Free: read it"}]
-	for a in _acts(m, flow):
+	var items := [{"label": "CHECK", "sub": "Free: read one thing about it"}]
+	for a in _acts(m):
 		var pays: bool = m.species in CASHES_IN and a.intent == "gold"
 		items.append({"label": a.label, "sub": Texts.GOLD_ACT_TIP if pays else ""})
 	if m.spoke:
@@ -29,12 +29,9 @@ func enter(flow, _args: Dictionary) -> void:
 func pick(flow, index: int) -> void:
 	var s = flow.state
 	var m = s.foe
-	var acts := _acts(m, flow)
+	var acts := _acts(m)
 	if index == CHECK:
-		if not flow.on_slice():
-			s.say([State.sys_line(Texts.check_piece(m, Reveal.next_piece(m)))])
-		else:
-			s.say([State.sys_line(Texts.check(m, m.clues()))])
+		s.say([State.sys_line(Texts.check_piece(m, Reveal.next_piece(m)))])
 		await flow.go("menu")
 	elif index <= acts.size():
 		await _do_act(flow, acts[index - 1])
@@ -49,14 +46,11 @@ func cancel(flow) -> void:
 	await flow.go("menu")
 
 
-## This species' ACTs; `flow` is asked whether every monster gets a way to be befriended (some species' only friendly act
+## This species' ACTs, with its kind ones, so every monster gets a way to be befriended (some species' only friendly act
 ## otherwise is one a good share of them dislike).
-func _acts(m, flow = null) -> Array:
+func _acts(m) -> Array:
 	var enc: Dictionary = Content.table("encounter")
-	var acts: Array = enc.acts[m.species]
-	if flow != null and not flow.on_slice():
-		return acts + enc.kind_acts.get(m.species, [])
-	return acts
+	return enc.acts[m.species] + enc.kind_acts.get(m.species, [])
 
 
 func _do_act(flow, act: Dictionary) -> void:

@@ -112,7 +112,7 @@ func _across_the_floor(s, m) -> void:
 		s.look()
 		if not s.in_sight.has(to):
 			continue
-		var eye := Vector2(from) + Vector2(0.5, 0.5) - Vector2(FloorMap.DIRS[s.facing]) * Vision.back
+		var eye := Vector2(from) + Vector2(0.5, 0.5) - Vector2(FloorMap.DIRS[s.facing]) * Vision.BACK
 		if not Vision.sees_body(f, eye, to):
 			continue
 		m.cell = to

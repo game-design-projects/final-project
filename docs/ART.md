@@ -4,7 +4,7 @@
 
 > 可爱不是换皮。它是玩家能保住、也能亲手弄坏的东西。
 
-这份文档写的是游戏里实际做成的样子，以及它和最初方案的差别。手绘的画面和世界对你的态度（warmth）已经是游戏本身，没有开关；`wick`（第一个朋友）和 `dungeon-reveal` 还有开关（`no-wick`、`no-dungeon-reveal`）；性格切片（`personality-slice`）保持旧的线框。
+这份文档写的是游戏里实际做成的样子，以及它和最初方案的差别。手绘的画面和世界对你的态度（warmth）已经是游戏本身，没有开关；`wick`（第一个朋友）和 `dungeon-reveal` 还有开关（`no-wick`、`no-dungeon-reveal`）。
 
 ## 为什么这样做
 

@@ -23,15 +23,12 @@ func enter(flow, args: Dictionary) -> void:
 	var genre: String = flow.encounter.foe_genre(m)
 	if flow.feature("initiated-dialogue") and int(m.social.get("trial", 0)) > 0:
 		genre = "gates" # the dragon's telegraphed walls trial, even on a mini-game turn
-	var pace := 1.0
-	if not flow.on_slice():
-		pace = Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
-		if flow.coach.active(): # the TIPS setting: someone who knows the game gets no slow start either
-			pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
-		print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size()])
+	var pace := Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
+	if flow.coach.active(): # the TIPS setting: someone who knows the game gets no slow start either
+		pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
+	print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size()])
 	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace)
-	if not flow.on_slice():
-		s.dodge.guard = Combat.party_guard(s.allies.size())
+	s.dodge.guard = Combat.party_guard(s.allies.size())
 	_hits = 0
 	s.menu = []
 	_rule = Content.table("encounter").genres[genre]

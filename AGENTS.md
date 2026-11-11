@@ -21,7 +21,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). No `class_name`: modules are u
 - Don't name a static function `reload` on a script: it shadows `Script.reload()` and wipes static variables.
 - A new sound name needs a recipe in `src/audio/sfx.gd`; `tools/audio_test.gd` scans for this.
 - Tests can't judge how it looks or sounds. Take screenshots with `tools/screenshots.gd` and read them; `tools/flicker_check.gd`, `tools/far_check.gd` and `tools/hold_check.gd` measure the real picture and the real scene.
-- A new feature is part of the game and gets no flag; one that has to be tried beside the old behaviour goes in `FEATURES` in `src/utils/flags.gd`, on by default (the few in `OPT_IN` are off unless named, see docs/DEVELOPMENT.md). Each one must still work switched off on its own (`no-<name>`), the personality slice (`flow.on_slice()`) stays what it was, and an old save must still load.
+- A new feature is part of the game and gets no flag; one that has to be tried beside the old behaviour goes in `FEATURES` in `src/utils/flags.gd`, on by default (the few in `OPT_IN` are off unless named, see docs/DEVELOPMENT.md). Each one must still work switched off on its own (`no-<name>`), and an old save must still load.
 - Commit a script's `.uid` file with it (Godot writes one beside every `.gd` on import); every script has one tracked.
 - A `-s` tool script can't `preload` anything that uses the `Store` autoload (`src/menu/progress.gd`): `load()` it at run time.
 - The art is cut by `tools/art/process.py`: change a source sheet or `tools/art/sheets.json` and run it, rather than editing `assets/art/*.png` or `data/sprites.json` by hand. See [docs/ART.md](docs/ART.md).

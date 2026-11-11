@@ -12,12 +12,11 @@ extends RefCounted
 const KNOWN := {
 	"social-demo": "reproducible Bandit and Slime social-combat playtest",
 	"debug": "keep the foe's mind panel open (every row of the mind's last answers) in a fight, and log every game event",
-	"mock": "monsters think with the seeded mind instead of calling Jev (not in the personality slice, which always uses the local rules)",
+	"mock": "monsters think with the seeded mind instead of calling Jev (not in social-demo, which always uses the local rules)",
 	"jev": "jev=<url>: ask Jev through the proxy at this address (without it the rule-based mind answers)",
 	"seed": "seed=N: fixed random seed for the floor and the monsters (0 to 9223372036854775807, as the game prints it)",
 	"floor": "floor=N: start the run on floor N",
 	"meet": "meet=<species>: start in a fight with that monster",
-	"personality-slice": "the two-bandit playtest (ROOK, then VEX) at fixed rolls; seed=N picks the seed (default 7042)",
 	"nofx": "no post-processing shader",
 	"pacifist": "for tools/autoplay.gd: never strike, only ACT and SPARE",
 	"practice": "for tools/autoplay.gd: start each game on the practice floor, as a first run does",

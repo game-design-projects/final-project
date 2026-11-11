@@ -25,10 +25,10 @@ func _init(owner) -> void:
 	flow.happened.connect(_on_event)
 
 
-## Whether tips are given: not with the TIPS setting off, on the personality slice or with `notips`. The slow first fights
-## (stages/dodge.gd) and the practice floor go with them.
+## Whether tips are given: not with the TIPS setting off or with `notips`. The slow first fights (stages/dodge.gd) and the
+## practice floor go with them.
 func active() -> bool:
-	return enabled and not flow.on_slice() and not Flags.on("notips")
+	return enabled and not Flags.on("notips")
 
 
 ## Show this tip, if it is due. True when it went up.
@@ -73,7 +73,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 func _on_stage(to: String) -> void:
 	match to:
 		"explore":
-			if not flow.state.deeds.is_empty(): # only the clans write deeds, and not on the slice
+			if not flow.state.deeds.is_empty(): # only the clans write deeds
 				say("clans")
 		"menu":
 			if not say("menu") and not (flow.feature("heavy-strike") and flow.state.skill_fight == null and say("heavy")) and seen.has("act") and (seen.has("strike") or seen.has("skills")):
@@ -95,4 +95,4 @@ func _on_stage(to: String) -> void:
 ## Whether this foe meets you with its face already gone (the warmth's blank faces): that reads like the drawing
 ## lost its eyes unless something says why.
 func _blank(m) -> bool:
-	return m != null and not flow.on_slice() and Moods.hollow(m, Warmth.of(flow.state))
+	return m != null and Moods.hollow(m, Warmth.of(flow.state))

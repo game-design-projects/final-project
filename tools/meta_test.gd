@@ -270,13 +270,6 @@ func _hunger() -> void:
 	s.hunger = 5.0
 	Survival.rest(s)
 	_check(s.hunger == 0.0, "which goes no lower than fed")
-	var off = _flow(5, ["personality-slice"])
-	await off.new_run()
-	await _pace(off, 4)
-	_check(off.state.hunger == 0.0, "the personality slice: nobody gets hungry")
-	await off.press("confirm")
-	_check(off.state.stage == "explore", "nor can anyone make camp")
-	_check(off.state.hint == load("res://src/game/stages/explore.gd").HINT, "and the hint has no camp on it")
 	var plan_on: Dictionary = {"food": true}
 	var pick := Items.floor_finds(Rng.new(3), plan_on)
 	_check(pick.has(Survival.RATION), "a floor has food lying about (%s)" % [pick])

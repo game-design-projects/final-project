@@ -2,7 +2,7 @@
 ## so you can always stop and look. What it does comes from who it is (data/roaming.json), and how it feels can override that: an
 ## angry one or one whose clan you wronged hunts you, a frightened one backs away, a friendly one comes close and stops short.
 ##
-## A move is never drawn from `Dice` or the game's generator: those aren't saved, and in the slice `Dice` gives one fixed number, so
+## A move is never drawn from `Dice` or the game's generator: those aren't saved, and a pinned `Dice` gives one fixed number, so
 ## it would shift the fights and change after a load. It is worked out from the floor's seed, the monster's place in the list and the
 ## floor's saved count of steps (AGENTS.md has this as the one exception).
 extends RefCounted
@@ -18,7 +18,7 @@ static func table() -> Dictionary:
 	return Content.table("roaming")
 
 
-## Everybody takes a turn. `options` are {revenge, boss_chase}, what the flags say. Returns {caught, noticed, moved}: the monster that
+## Everybody takes a turn. `options` are {revenge, boss_chase}: both on in the game, off by default so a test can watch one rule at a time. Returns {caught, noticed, moved}: the monster that
 ## walked into you (the rest stay put), or null, those that have just started hunting you, and those that moved.
 static func turn(state, options := {}) -> Dictionary:
 	var f = state.floor_map

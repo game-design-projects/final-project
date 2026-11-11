@@ -27,7 +27,7 @@ static func start(flow) -> void:
 		var m = Monster.given({"species": c.species, "genre": "chess" if c.species == "bandit" else "bullet", "hp": 45 if c.species == "dragon" else 38, "boss": i == CAST.size() - 1}, s.floor_map.monsters[i].cell, c.name, c.traits, {"friendliness": 20.0, "anger": 25.0, "fear": c.fear})
 		m.mood = {"id": c.species, "goal": Content.table("moods")[c.species].goal}
 		s.floor_map.monsters[i] = m
-	flow.slice_queue = s.floor_map.monsters.slice(1, CAST.size()) # existing encounter chaining, without disabling features
+	flow.fight_queue = s.floor_map.monsters.slice(1, CAST.size()) # one fight after another, with no walk between
 	await flow.go("intro", {"foe": s.floor_map.monsters[0]})
 	print("social-demo: PIP -> BRASS -> MALLOW -> QUIVER -> CINDER; 18 gold, 40 HP; feature %s" % flow.feature("initiated-dialogue"))
 

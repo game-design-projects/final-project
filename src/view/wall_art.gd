@@ -20,7 +20,7 @@ const GUILTY_FROM := 2
 const OTHER_CRACKS := ["crack", "crack", "moss", "bat"] # what a plain crack may be instead, by the roll that placed it
 
 
-## A node holding the drawings of `floor_map` at warmth level `level`. `torches` (an Array) gets {"pos", "seed"} per torch, as Decor.build's does.
+## A node holding the drawings of `floor_map` at warmth level `level`. `torches` (an Array) gets {"pos": Vector3, "seed": float} per torch, for the caller to light the walls with.
 static func build(floor_map, wall_color: Color, accent: Color, torches: Array, level: int) -> Node3D:
 	var root := Node3D.new()
 	var art := MeshKit.Builder.new()

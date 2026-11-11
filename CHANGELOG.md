@@ -5,20 +5,24 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
-- Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals; disabled in classic and the reference personality slice.
+- Dynamic monster moods: saved contextual intentions, species-specific cues and bounded attack-pressure changes at turn-based intervals.
 - `initiated-dialogue`: contextual monster offers, species-specific social combat, action/resource tradeoffs, remembered promises, a keyboard/mouse popup and a reproducible `social-demo` playtest.
-- `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `classic` keeps the old music (refs #49).
+- `hum-theme`: Abdulla's hum theme is the game's music: its exploring loop while you walk and its combat loop in every fight, in place of the passacaglia and the four battle themes. The victory and stairs stings stay, and `no-hum-theme` keeps the old music (refs #49).
 
 ### Removed
+- The personality slice, the fixed reference run from the 0.5.3 playtest: the `personality-slice` flag, `src/game/personality_slice.gd`, `tools/slice_test.gd` and its CI step. Every run now plays the whole game, and `social-demo` is the reproducible playtest.
+- The wire-look monster models only the slice still showed (`src/view/monster_model.gd`, `src/view/sprite_models.gd`, `tools/model_shots.gd`), the 3D wall decorations (`Decor.build`), the far camera (`Vision.CLOSE_BACK` is now `Vision.BACK`), and the mesh shapes only they used.
 - The `classic` flag, which switched every remaining feature off at once, and the second pass of every suite with it in `tools/run_tests.sh` and CI: each feature is still turned off on its own with `no-<name>`, and the checks that ran only under `classic` now run every time with the `no-<name>` they stood for.
-- The `combat-grid`, `choice-grid`, `dialogue-buffer`, `input-cooldown`, `text-size`, `party-aid`, `mini-games`, `gentle-dodge`, `piece-icons` and `smooth-fight` feature flags: all ten are part of the game now, and `classic` no longer turns them off. The personality slice keeps the rules that change a fight (`dialogue-buffer`, `input-cooldown`, `party-aid`, `mini-games`, `gentle-dodge`) off, as before. The chess attacks' old letter display and rule text (`rule` in `data/encounter.json`) are gone.
-- The `real-floors`, `map-gen`, `boss-at-exit`, `boss-chase`, `boss-reward`, `secrets`, `lurkers` and `ambush` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice keeps its 13x13 maze, with no secrets or lurkers, a champion that stays in its hall, no ambush and no boss reward, as before.
-- The `recruit-step`, `clans`, `mercy-link`, `mood-cues`, `reveal`, `chat`, `show-mind` and `clear-hp` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice keeps its three ACTs, a spare that rolls by itself, no clan news and a CHECK that tells everything at once; `no-show-mind` is gone with the rest.
-- The `items`, `shop`, `npcs`, `hunger`, `walk-heal` and `butcher` feature flags: part of the game now, and `classic` no longer turns them off. The personality slice still has no items, traders, requests, hunger, camp or walking cure.
-- The `tutorial`, `tutorial-floor`, `story` and `intro-cg` feature flags: part of the game now, and `classic` no longer turns them off. The TIPS setting still skips the tips, the slow first fights and the practice floor, and the new `notips` flag does the same for tests and playtests (it replaces `no-tutorial`). The personality slice has no tips, no practice floor and its old opening line.
-- The `hand-drawn`, `warmth`, `sprite-look`, `close-camera` and `wide-view` feature flags: part of the game now, and `classic` no longer turns them off (the old plain title card is gone with them). The personality slice keeps the wire look, the far camera and the 448:288 picture. 41 flags are gone in all; the 16 that remain are listed in `docs/DEVELOPMENT.md`, and a new feature no longer gets a flag unless it has to be tried beside the old behaviour.
+- The `combat-grid`, `choice-grid`, `dialogue-buffer`, `input-cooldown`, `text-size`, `party-aid`, `mini-games`, `gentle-dodge`, `piece-icons` and `smooth-fight` feature flags: all ten are part of the game now, and `classic` no longer turns them off. The chess attacks' old letter display and rule text (`rule` in `data/encounter.json`) are gone.
+- The `real-floors`, `map-gen`, `boss-at-exit`, `boss-chase`, `boss-reward`, `secrets`, `lurkers` and `ambush` feature flags: part of the game now, and `classic` no longer turns them off.
+- The `recruit-step`, `clans`, `mercy-link`, `mood-cues`, `reveal`, `chat`, `show-mind` and `clear-hp` feature flags: part of the game now, and `classic` no longer turns them off. `no-show-mind` is gone with the rest.
+- The `items`, `shop`, `npcs`, `hunger`, `walk-heal` and `butcher` feature flags: part of the game now, and `classic` no longer turns them off.
+- The `tutorial`, `tutorial-floor`, `story` and `intro-cg` feature flags: part of the game now, and `classic` no longer turns them off. The TIPS setting still skips the tips, the slow first fights and the practice floor, and the new `notips` flag does the same for tests and playtests (it replaces `no-tutorial`).
+- The `hand-drawn`, `warmth`, `sprite-look`, `close-camera` and `wide-view` feature flags: part of the game now, and `classic` no longer turns them off (the old plain title card is gone with them). 41 flags are gone in all; the 16 that remain are listed in `docs/DEVELOPMENT.md`, and a new feature no longer gets a flag unless it has to be tried beside the old behaviour.
 
 ### Changed
+- Save validation moves out of `src/game/state.gd` into `src/game/save_check.gd`; `State.from_dict` and `State.is_playable` ask it.
+- `docs/PERSONALITY_PLAYTEST.md` is now `docs/MOODS.md`, with only its dynamic moods section.
 - Which stages are a fight, a walk or a choice of command is written once, in `src/game/transitions.gd` (`FIGHT`, `WALK`, `PICKING`), instead of in five copies across the flow, the overlay, the tooltips and the gameplay scene; `meta_test` checks every stage is exactly one of a fight or a walk, and the gameplay log names the features that are on.
 
 ### Fixed

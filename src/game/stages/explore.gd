@@ -13,15 +13,14 @@ const Survival = preload("res://src/rules/survival.gd")
 
 const SIGHT_AHEAD := 6 # how many cells down a straight line the first-time tips look
 
-const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · I INFO · ESC MENU"
-const CAMP_HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · ENTER CAMP · I INFO · ESC MENU"
+const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · ENTER CAMP · I INFO · ESC MENU"
 
 
 func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	s.foe = null
 	s.menu = []
-	s.hint = CAMP_HINT if _can_camp(flow) else HINT
+	s.hint = HINT
 	if args.has("lines"):
 		s.say(args.lines)
 
@@ -40,14 +39,9 @@ func handle(flow, key: String) -> void:
 			s.turn(1)
 			_notice(flow)
 		"confirm":
-			if _can_camp(flow):
-				await flow.go("camp")
+			await flow.go("camp")
 		"cancel":
 			flow.event("pause_requested")
-
-
-func _can_camp(flow) -> bool:
-	return not flow.on_slice()
 
 
 func _step(flow, backwards: bool) -> void:
@@ -77,12 +71,11 @@ func _step(flow, backwards: bool) -> void:
 	s.visited[next] = true
 	s.look()
 	flow.event("step")
-	if not flow.on_slice(): # the slice has no hunger, and no cure by walking
-		var fed := Survival.heals(s)
-		_get_hungrier(flow)
-		s.steps += 1
-		if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
-			s.hp += 1
+	var fed := Survival.heals(s)
+	_get_hungrier(flow)
+	s.steps += 1
+	if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
+		s.hp += 1
 	_find_secrets(flow)
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
@@ -106,13 +99,12 @@ func _get_hungrier(flow) -> void:
 func _monsters_move(flow) -> bool:
 	var s = flow.state
 	var t0 := Time.get_ticks_usec()
-	var done := Roaming.turn(s, {"revenge": not flow.on_slice(), "boss_chase": not flow.on_slice()})
+	var done := Roaming.turn(s, {"revenge": true, "boss_chase": true})
 	s.spot()
 	print_verbose("explore: the monsters' turn took %d us" % (Time.get_ticks_usec() - t0))
 	if done.caught != null:
-		var ambush: bool = not flow.on_slice()
 		var said: String = Roaming.table().caught % done.caught.name
-		await flow.go("intro", {"foe": done.caught, "ambush": ambush, "before": [State.sys_line(said + " " + str(Roaming.table().first) if ambush else said)]})
+		await flow.go("intro", {"foe": done.caught, "ambush": true, "before": [State.sys_line(said + " " + str(Roaming.table().first))]})
 		return true
 	if done.noticed.any(func(m): return s.in_sight.has(m.cell)):
 		flow.event("sound", {"name": "alert"})

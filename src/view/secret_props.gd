@@ -21,22 +21,16 @@ const STIR_MOTE := 0.07
 
 
 ## A node holding them all, or an empty one for a floor that hides nothing.
-static func build(floor_map, wall_color: Color, accent: Color, drawn := false) -> Node3D:
+static func build(floor_map, wall_color: Color, accent: Color) -> Node3D:
 	var root := Node3D.new()
 	var b := MeshKit.Builder.new()
 	for t in floor_map.teleports:
 		_pad(b, DungeonMesh.center(t.a), accent)
 		_pad(b, DungeonMesh.center(t.b), accent)
 	for t in floor_map.treasure:
-		if drawn:
-			_standing(root, "chest", accent, DRAWN_CHEST, t.cell)
-		else:
-			_chest(b, DungeonMesh.center(t.cell), wall_color, accent)
+		_standing(root, "chest", accent, DRAWN_CHEST, t.cell)
 	for p in floor_map.pickups:
-		if drawn:
-			_standing(root, "sack", wall_color, DRAWN_SACK, p.cell)
-		else:
-			_sack(b, DungeonMesh.center(p.cell), wall_color, accent)
+		_standing(root, "sack", wall_color, DRAWN_SACK, p.cell)
 	if not b.is_empty():
 		var shapes := MeshInstance3D.new()
 		shapes.name = "Secrets"
@@ -69,12 +63,6 @@ static func stir(color: Color) -> MeshInstance3D:
 	return out
 
 
-## A small sack with a bright tie, sat on the floor.
-static func _sack(b: MeshKit.Builder, mid: Vector3, wall_color: Color, accent: Color) -> void:
-	b.sphere(Transform3D(Basis(), mid + Vector3(0, 0.2, 0)), Vector3(0.24, 0.2, 0.24), MeshKit.color(wall_color), 10, 6)
-	b.box(Transform3D(Basis(), mid + Vector3(0, 0.42, 0)), Vector3(0.14, 0.06, 0.14), MeshKit.color(accent, true))
-
-
 static func _pad(b: MeshKit.Builder, mid: Vector3, accent: Color) -> void:
 	var col := MeshKit.color(accent, true)
 	for ring in PAD_RINGS:
@@ -83,18 +71,3 @@ static func _pad(b: MeshKit.Builder, mid: Vector3, accent: Color) -> void:
 		var y := LIFT
 		for r in [[-o, -o, o, -n], [-o, n, o, o], [-o, -n, -n, n], [n, -n, o, n]]:
 			b.quad(mid + Vector3(r[0], y, r[1]), mid + Vector3(r[2], y, r[1]), mid + Vector3(r[2], y, r[3]), mid + Vector3(r[0], y, r[3]), col)
-
-
-static func _chest(b: MeshKit.Builder, mid: Vector3, wall_color: Color, accent: Color) -> void:
-	var ink := MeshKit.color(wall_color)
-	var gold := MeshKit.color(accent, true)
-	b.box(Transform3D(Basis(), mid + Vector3(0, CHEST.y / 2.0, 0)), CHEST, ink)
-	b.box(Transform3D(Basis(), mid + Vector3(0, CHEST.y + LID_H / 2.0, 0)), Vector3(CHEST.x + 0.06, LID_H, CHEST.z + 0.06), ink)
-	var top := CHEST.y + LID_H + 0.005
-	var lid := Vector3(CHEST.x * 0.42, 0.0, CHEST.z * 0.36)
-	b.quad(mid + Vector3(-lid.x, top, -lid.z), mid + Vector3(lid.x, top, -lid.z), mid + Vector3(lid.x, top, lid.z), mid + Vector3(-lid.x, top, lid.z), gold) # a lid that catches the eye from the door
-	for side in 4: # a clasp on every face: you may come at it from any side
-		var out := Vector3(FloorMap.DIRS[side].x, 0, FloorMap.DIRS[side].y)
-		var reach: float = (CHEST.z if side % 2 == 0 else CHEST.x) / 2.0 + 0.04
-		var size := Vector3(0.16, 0.22, 0.02) if side % 2 == 0 else Vector3(0.02, 0.22, 0.16)
-		b.box(Transform3D(Basis(), mid + out * reach + Vector3(0, CHEST.y, 0)), size, gold)

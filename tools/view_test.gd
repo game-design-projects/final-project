@@ -1,5 +1,5 @@
 ## Checks what the 3D view shows, with no window: which cells the automap learns (the camera's field of view, down a corridor
-## however far, through a side opening, not behind a wall or behind you), the models' detail and movement, that every monster
+## however far, through a side opening, not behind a wall or behind you), that the set shows each monster's drawing, that every monster
 ## stands on the set for the walls to hide, the camera's timing, the name tags, the set's parts, and the marks on the map.
 ## Prints one line per check and exits with 1 if any failed.
 ##   godot --headless --path . -s res://tools/view_test.gd
@@ -10,7 +10,6 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Minds = preload("res://src/mind/minds.gd")
-const MonsterModel = preload("res://src/view/monster_model.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
@@ -32,10 +31,6 @@ const FRAME := 1.0 / 60.0
 # FloorMap.DIRS: 0 north, 1 east, 2 south, 3 west
 const EAST := 1
 const SOUTH := 2
-
-const FACE_MARGIN := 0.02 # how far in front of the body a face part must reach, in world units
-const SPRITE_SHAPE := {"slime": 1.2, "bandit": 0.98, "snake": 1.2, "rock": 1.35} # width over height of the sprites in art.gd
-const BEFORE_TRIS := {"slime": 1308, "bandit": 1572, "snake": 2384, "rock": 762, "dragon": 2356} # what the models had before the rewrite
 
 
 ## Stands in for a Monster where only its place matters.
@@ -60,13 +55,7 @@ func _run() -> void:
 	_sight_across_a_hall()
 	_sight_through_a_side_opening()
 	_sight_on_real_floors()
-	for like_sprite in [false, true]:
-		_faces_are_not_buried(like_sprite)
-		_models_have_their_detail(like_sprite)
-	_models_match_their_sprites()
 	await _stage_wears_the_look()
-	_models_move_by_species()
-	_far_monsters_stay_readable()
 	await _camera_keeps_turning()
 	await _camera_glides_in_fixed_time()
 	await _camera_lunges_at_a_wall()
@@ -155,7 +144,7 @@ func _sight_across_a_hall() -> void:
 	_check(absf(Vision.VIEW_TAN - tan(deg_to_rad(Stage.FOV / 2.0)) * 448.0 / 288.0) < 0.001, "the field of view on the floor plan is the camera's")
 	var stage = Stage.new()
 	var where: Dictionary = stage._camera_target(Vector2i(3, 3), EAST)
-	_check(is_equal_approx(where.pos.x, DungeonMesh.center(Vector2i(3, 3)).x - Vision.back * DungeonMesh.CELL), "and so is where it stands")
+	_check(is_equal_approx(where.pos.x, DungeonMesh.center(Vector2i(3, 3)).x - Vision.BACK * DungeonMesh.CELL), "and so is where it stands")
 	stage.free()
 
 
@@ -206,104 +195,6 @@ func _sight_on_real_floors() -> void:
 	_check(hidden_far == 0, "a champion more than six cells down a straight line is seen from its far end (%d unseen)" % hidden_far)
 
 
-## A monster faces +Z. Every eye, mouth and crack (the solid-coloured parts) must stick out of the body in front of it by a
-## little, or the body's black fill hides it and the monster looks faceless from the front.
-func _faces_are_not_buried(like_sprite: bool) -> void:
-	for species in BEFORE_TRIS:
-		var model: Node3D = MonsterModel.build(species, Color.WHITE, like_sprite)
-		var black := []
-		var features := []
-		for part in model.get_node("Rig").get_children():
-			var arrays: Array = part.mesh.surface_get_arrays(0)
-			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-			var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
-			var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-			for i in range(0, idx.size(), 3):
-				if colors[idx[i]].a > 0.25:
-					black.append([part.transform * verts[idx[i]], part.transform * verts[idx[i + 1]], part.transform * verts[idx[i + 2]]])
-			for group in _solid_groups(verts, colors, idx):
-				features.append(group.map(func(v): return part.transform * v))
-		var buried := []
-		for feature in features:
-			var front: Vector3 = feature[0]
-			for v in feature:
-				if v.z > front.z:
-					front = v
-			for t in black:
-				if Geometry3D.ray_intersects_triangle(front - Vector3(0.0, 0.0, FACE_MARGIN), Vector3(0, 0, 1), t[0], t[1], t[2]) != null:
-					buried.append(front)
-					break
-		_check(features.size() > 0 and buried.is_empty(), "the %s's %d face parts all stand out of its body (buried: %s)" % [species, features.size(), buried])
-		model.free()
-
-
-## The solid-coloured vertices of a mesh, one list per connected piece (an eye, a slit, a crack). Faces of a box don't share
-## vertices, only their places, so a piece is told by where its corners are.
-func _solid_groups(verts: PackedVector3Array, colors: PackedColorArray, idx: PackedInt32Array) -> Array:
-	var root_of := {}
-	var find := func(find_ref: Callable, k: Vector3) -> Vector3:
-		if not root_of.has(k):
-			root_of[k] = k
-		if root_of[k] != k:
-			root_of[k] = find_ref.call(find_ref, root_of[k])
-		return root_of[k]
-	for i in range(0, idx.size(), 3):
-		if colors[idx[i]].a < 0.25:
-			var a: Vector3 = find.call(find, verts[idx[i]].snappedf(0.001))
-			root_of[find.call(find, verts[idx[i + 1]].snappedf(0.001))] = a
-			root_of[find.call(find, verts[idx[i + 2]].snappedf(0.001))] = a
-	var groups := {}
-	for k in root_of.keys():
-		var r: Vector3 = find.call(find, k)
-		if not groups.has(r):
-			groups[r] = []
-		groups[r].append(k)
-	return groups.values()
-
-
-## Every species at the detail it had before the rewrite (near BEFORE_TRIS triangles), under the ceiling.
-func _models_have_their_detail(like_sprite: bool) -> void:
-	for species in BEFORE_TRIS:
-		var model: Node3D = MonsterModel.build(species, Color.WHITE, like_sprite)
-		var tris := 0
-		for part in model.get_node("Rig").get_children():
-			tris += part.mesh.surface_get_array_index_len(0) / 3
-		_check(tris >= int(BEFORE_TRIS[species] * 0.95), "the %s keeps its detail (%d triangles, it had %d)" % [species, tris, BEFORE_TRIS[species]])
-		var top := MonsterModel.top_of(model)
-		_check(top > 0.5 and top < DungeonMesh.WALL_H, "the %s stands under the ceiling (top at %.2f)" % [species, top])
-		model.free()
-
-
-## With sprite-look a model from the front has the shape of its sprite. The dragon's (1.63) has wings and a tail too wide for a
-## corridor, drawn in along x, so it is only held to staying wider than it is tall.
-func _models_match_their_sprites() -> void:
-	for species in BEFORE_TRIS:
-		var model: Node3D = MonsterModel.build(species, Color.WHITE, true)
-		var box := AABB()
-		var first := true
-		for part in model.get_node("Rig").get_children():
-			var verts: PackedVector3Array = part.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
-			for v in verts:
-				var at: Vector3 = part.transform * v
-				box = AABB(at, Vector3.ZERO) if first else box.expand(at)
-				first = false
-		var shape: float = box.size.x / box.size.y
-		var want: float = SPRITE_SHAPE.get(species, shape if shape > 1.0 else 1.0)
-		_check(absf(shape - want) < 0.1 and (species != "dragon" or shape > 1.0), "the %s from the front is the sprite's shape (%.2f wide per tall, the sprite %.2f)" % [species, shape, want])
-		var widest: float = maxf(absf(box.position.x), absf(box.end.x)) * model.scale.x
-		_check(widest < DungeonMesh.CELL / 2.0, "the %s stays out of the walls of a corridor (%.2f from its middle)" % [species, widest])
-		model.free()
-	for species in BEFORE_TRIS:
-		var plain: Node3D = MonsterModel.build(species, Color.WHITE)
-		var drawn: Node3D = MonsterModel.build(species, Color.WHITE, true)
-		_check(plain.get_node("Rig").get_child_count() == drawn.get_node("Rig").get_child_count(), "the %s moves the same parts in either look" % species)
-		plain.free()
-		drawn.free()
-	var unknown: Node3D = MonsterModel.build("no such thing", Color.WHITE, true)
-	_check(unknown.get_node("Rig").get_child_count() > 0, "a species with no sprite shape gets a block too")
-	unknown.free()
-
-
 ## The set builds what the game says to show.
 func _stage_wears_the_look() -> void:
 	var flow = await _walk(31)
@@ -311,57 +202,8 @@ func _stage_wears_the_look() -> void:
 	var stage = _stage_for(s)
 	stage.update(s, 0.0, FRAME)
 	var m = s.floor_map.monsters.filter(func(x): return stage._models.has(x)).front()
-	if s.viewing("hand-drawn"):
-		_check(stage._models[m].get_meta("species") == m.species and stage._models[m].sheet == m.species, "the set shows its drawing (hand-drawn)")
-	else:
-		var wanted: Array = MonsterModel._parts_of(m.species, Palette.monster(m), s.viewing("sprite-look"))
-		_check(stage._models[m].get_node("Rig").get_child(0).mesh == wanted[0][1], "the set shows the look the game asks for (sprite-look %s)" % s.viewing("sprite-look"))
+	_check(stage._models[m].get_meta("species") == m.species and stage._models[m].sheet == m.species, "the set shows its drawing")
 	stage.free()
-
-
-## Each species moves its own way: the slime wobbles, the snake sways, the rock breathes, the bandit shifts, the dragon
-## flaps and nods. A pose at any time is a transform of the parts, never a rebuild.
-func _models_move_by_species() -> void:
-	var parts := {"slime": "Body", "bandit": "Body", "snake": "Upper", "rock": "Upper", "dragon": "WingL"}
-	for species in parts:
-		var model: Node3D = MonsterModel.build(species, Color.WHITE)
-		MonsterModel.pose(model, 0.2, 0.0)
-		var before: Transform3D = MonsterModel.part(model, parts[species]).transform
-		MonsterModel.pose(model, 0.9, 0.0)
-		_check(not before.is_equal_approx(MonsterModel.part(model, parts[species]).transform), "the %s's %s moves on its own" % [species, parts[species]])
-		model.free()
-	var dragon: Node3D = MonsterModel.build("dragon", Color.WHITE)
-	MonsterModel.pose(dragon, 0.0, 0.0)
-	var head_rest: Transform3D = MonsterModel.part(dragon, "Head").transform
-	MonsterModel.pose(dragon, 1.4, 0.0)
-	_check(not head_rest.is_equal_approx(MonsterModel.part(dragon, "Head").transform), "the dragon's head bobs")
-	dragon.free()
-	var snake: Node3D = MonsterModel.build("snake", Color.WHITE)
-	var shown := {}
-	var lengths := {}
-	for i in 200:
-		MonsterModel.pose(snake, i * 0.02, 0.0)
-		var tongue := MonsterModel.part(snake, "Tongue")
-		shown[tongue.visible] = true
-		if tongue.visible:
-			lengths[snappedf(tongue.basis.get_scale().y, 0.1)] = true
-	_check(shown.size() == 2, "the snake's tongue goes in and out")
-	_check(lengths.size() >= 4, "sliding, not blinking on and off (%s)" % [lengths.keys()])
-	snake.free()
-	var unknown: Node3D = MonsterModel.build("no such thing", Color.WHITE)
-	MonsterModel.pose(unknown, 1.0, 1.0)
-	_check(unknown.get_node("Rig").get_child_count() > 0, "a species with no model gets a block, and a pose doesn't break it")
-	unknown.free()
-
-
-## A monster down a long corridor stays readable: its lines fade only to 0.55, the walls' keep fading to 0.15.
-func _far_monsters_stay_readable() -> void:
-	var model: Node3D = MonsterModel.build("slime", Color.WHITE)
-	var fill: ShaderMaterial = model.get_node("Rig").get_child(0).material_override
-	_check(is_equal_approx(fill.get_shader_parameter("fade_floor"), 0.55), "a walking monster's fill fades no lower than 0.55")
-	_check(is_equal_approx(fill.next_pass.get_shader_parameter("fade_floor"), 0.55), "nor do its lines")
-	_check(is_equal_approx(fill.next_pass.get_shader_parameter("ink_px"), 2.5), "its lines are 2.5 pixels wide")
-	model.free()
 
 
 ## A run on a given seed: the flow, ready to walk.
@@ -560,7 +402,7 @@ func _name_tags() -> void:
 	var tag: Label3D = stage._tags[near]
 	_check(tag.fixed_size and tag.no_depth_test and tag.texture_filter == BaseMaterial3D.TEXTURE_FILTER_NEAREST, "a tag is the same size near or far, sharp, and no wall edge slices it")
 	var model: Node3D = stage._models[far]
-	_check(is_equal_approx(stage._tags[far].position.y, MonsterModel.top_of(model) + Stage.TAG_GAP), "a tag floats just over its model's real top")
+	_check(is_equal_approx(stage._tags[far].position.y, model.top() + Stage.TAG_GAP), "a tag floats just over its model's real top")
 	_check(stage._tags[far].position.y != tag.position.y, "so a tall monster's sits higher than a slime's")
 	_check(tag.visible and tag.modulate.a > stage._tags[far].modulate.a, "a nearer tag is brighter than a farther one (%.2f, %.2f)" % [tag.modulate.a, stage._tags[far].modulate.a])
 	_check(not stage._tags[walled].visible, "a monster behind a wall shows no name")
@@ -627,11 +469,10 @@ func _the_set_has_its_parts() -> void:
 	var share := float(decorated) / faces
 	_check(absf(share - 0.32) < 0.05, "about a third of the wall faces carry a decoration (%.2f)" % share)
 	_check(Decor.placements(f) == Decor.placements(f), "a floor is decorated the same every time")
-	# a decoration is a real shape, off the wall, and fades like the walls' lines; a torch has a flame and lights the wall
+	# a decoration is a drawing on the wall, and fades like the walls' lines; a torch has a flame and lights the wall
 	var props: MeshInstance3D = stage._decor.get_node("Props")
 	var shapes: int = props.mesh.surface_get_array_index_len(0) / 3
-	var least := 2 * Decor.placements(f).size() if s.viewing("hand-drawn") else 1000
-	_check(shapes >= least, "decorations are all there: drawings when hand-drawn, or else real 3D shapes (%d triangles)" % shapes)
+	_check(shapes >= 2 * Decor.placements(f).size(), "decorations are all there, a drawing each (%d triangles)" % shapes)
 	_check(is_equal_approx(props.material_override.get_shader_parameter("fade_floor"), 0.15), "they fade with distance like the walls")
 	var torches := Decor.placements(f).filter(func(p): return p.kind == "torch").size()
 	_check(stage._torches.size() == torches and torches > 0, "every torch is known to the stage (%d)" % torches)
@@ -819,7 +660,7 @@ func _no_name_without_a_body() -> void:
 	for i in 30:
 		t += FRAME
 		stage.update(s, t, FRAME)
-	var eye := Vector2(3.5 - Vision.back, 1.5)
+	var eye := Vector2(3.5 - Vision.BACK, 1.5)
 	_check(Vision.reaches(f, eye, m.cell) and not Vision.sees_body(f, eye, m.cell), "from here a corner of its cell shows and the monster doesn't")
 	_check(not stage._tags[m].get_meta("wanted"), "a monster you can't see has no name hanging over the wall")
 	s.cell = Vector2i(4, 1)

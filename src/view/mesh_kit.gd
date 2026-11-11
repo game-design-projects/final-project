@@ -1,11 +1,9 @@
 ## Builds 3D meshes by hand: a `Builder` collects triangles (positions, normals, vertex colours, UV, UV2) and turns them
-## into one ArrayMesh, so a whole monster part or every decoration of a floor is one mesh with one material. Shapes come
-## from Godot's primitive meshes (sphere, box, cylinder, torus) moved by a Transform3D and given one colour; quads and
-## triangles are added directly.
+## into one ArrayMesh, so every drawing on a floor's walls, or its stairs, is one mesh with one material. A box comes from
+## Godot's BoxMesh moved by a Transform3D and given one colour; quads and single vertices are added directly.
 ##
 ## A vertex colour's alpha says how the part is drawn (shaders/solid, shaders/ink): 1 is black with an outline in the colour,
-## 0 is solid in the colour (a dot, a slit, a crack), 0.15 is solid with no outline (a line as thin as it is drawn), 0.5 is black with
-## no outline (a two-sided membrane).
+## 0 is solid in the colour (a dot, a slit, a crack).
 ##
 ## Winding: Godot draws faces whose corners run clockwise as you look at them, so `quad(a, b, c, d)` takes the corners
 ## clockwise seen from the front (top left, top right, bottom right, bottom left).
@@ -15,16 +13,6 @@ extends RefCounted
 ## A colour for lines (alpha 1), or for a part drawn `solid` (alpha 0).
 static func color(c: Color, solid := false) -> Color:
 	return Color(c.r, c.g, c.b, 0.0 if solid else 1.0)
-
-
-## A colour for a line: solid, and no wider than its mesh.
-static func drawn(c: Color) -> Color:
-	return Color(c.r, c.g, c.b, 0.15)
-
-
-## A colour for a part drawn black with no outline: a two-sided membrane, whose outline pass would show it whole.
-static func bare(c: Color) -> Color:
-	return Color(c.r, c.g, c.b, 0.5)
 
 
 ## A colour scaled toward black (k < 1), keeping its alpha.
@@ -69,11 +57,6 @@ class Builder:
 		indices.append(b)
 		indices.append(c)
 
-	## A flat triangle, corners clockwise seen from the front.
-	func tri(a: Vector3, b: Vector3, c: Vector3, col: Color) -> void:
-		var n := (c - a).cross(b - a).normalized()
-		tri_idx(vertex(a, n, col), vertex(b, n, col), vertex(c, n, col))
-
 	## A flat quad, corners clockwise seen from the front.
 	func quad(a: Vector3, b: Vector3, c: Vector3, d: Vector3, col: Color) -> void:
 		var n := (c - a).cross(b - a).normalized()
@@ -102,17 +85,6 @@ class Builder:
 			else:
 				tri_idx(base + pi[i], base + pi[i + 1], base + pi[i + 2])
 
-	## An ellipsoid: a sphere of radius 1 stretched to `radii`, then moved by `xf`.
-	func sphere(xf: Transform3D, radii: Vector3, col: Color, segs := 16, rings := 8) -> void:
-		var arr := _arrays("sphere:%d:%d" % [segs, rings], func():
-			var m := SphereMesh.new()
-			m.radius = 1.0
-			m.height = 2.0
-			m.radial_segments = segs
-			m.rings = rings
-			return m)
-		add_arrays(arr, xf * Transform3D(Basis.from_scale(radii), Vector3.ZERO), col)
-
 	## A box of `size`, centred on `xf`'s origin.
 	func box(xf: Transform3D, size: Vector3, col: Color) -> void:
 		var arr := _arrays("box", func():
@@ -120,46 +92,6 @@ class Builder:
 			m.size = Vector3.ONE
 			return m)
 		add_arrays(arr, xf * Transform3D(Basis.from_scale(size), Vector3.ZERO), col)
-
-	## A cylinder (or a cone, with one radius 0) standing on `xf`'s origin along its +Y, `h` tall.
-	func cylinder(xf: Transform3D, r_bottom: float, r_top: float, h: float, col: Color, segs := 12) -> void:
-		var r := maxf(r_bottom, r_top)
-		if r <= 0.0:
-			return
-		var rb := snappedf(r_bottom / r, 0.01)
-		var rt := snappedf(r_top / r, 0.01)
-		var arr := _arrays("cyl:%d:%s:%s" % [segs, rb, rt], func():
-			var m := CylinderMesh.new()
-			m.bottom_radius = rb
-			m.top_radius = rt
-			m.height = 1.0
-			m.radial_segments = segs
-			m.rings = 1
-			return m)
-		add_arrays(arr, xf * Transform3D(Basis.from_scale(Vector3(r, h, r)), Vector3(0, h / 2.0, 0)), col)
-
-	## A cylinder from point a to point b (a limb, a bar, a club).
-	func limb(a: Vector3, b: Vector3, r_a: float, r_b: float, col: Color, segs := 10) -> void:
-		var d := b - a
-		var h := d.length()
-		if h < 1e-5:
-			return
-		var y := d / h
-		var x := y.cross(Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
-		var z := x.cross(y)
-		cylinder(Transform3D(Basis(x, y, z), a), r_a, r_b, h, col, segs)
-
-	## A ring in `xf`'s XZ plane (its axis is +Y), `rings` segments round and `sides` round its tube.
-	func torus(xf: Transform3D, r_in: float, r_out: float, col: Color, rings := 16, sides := 8) -> void:
-		var k := snappedf(r_in / r_out, 0.01)
-		var arr := _arrays("torus:%s:%d:%d" % [k, rings, sides], func():
-			var m := TorusMesh.new()
-			m.inner_radius = k
-			m.outer_radius = 1.0
-			m.rings = rings
-			m.ring_segments = sides
-			return m)
-		add_arrays(arr, xf * Transform3D(Basis.from_scale(Vector3.ONE * r_out), Vector3.ZERO), col)
 
 	## The whole lot as one ArrayMesh (null if nothing was added).
 	func commit() -> ArrayMesh:

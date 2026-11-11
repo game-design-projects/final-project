@@ -18,7 +18,6 @@ const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
-const PersonalitySlice = preload("res://src/game/personality_slice.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -32,7 +31,6 @@ const Warmth = preload("res://src/rules/warmth.gd")
 
 ## The features the picture and the HUD show, which they read from the state (see State.views).
 const VIEW_FEATURES := ["dungeon-reveal", "roaming", "wick"]
-const SLICE_HIDES := ["reveal", "items", "npcs", "hand-drawn", "warmth", "sprite-look"] # views that are on everywhere but the personality slice
 const BANNER_MS := 3000.0
 const WICK_LOYALTY := 75.0
 const DOOR_THEN_WICK_MS := 3000.0 # the words about the door, with a friend on her way
@@ -70,7 +68,7 @@ signal happened(name: String, data: Dictionary)
 
 var state # State
 var rng
-## Where the chances of an interaction are drawn (see dice.gd); the slice pins it.
+## Where the chances of an interaction are drawn (see dice.gd); a test may pin it.
 var dice: Dice
 var mind
 var encounter
@@ -83,12 +81,9 @@ var trophies # the achievements
 ## The boons bought between runs (boon id -> rank), which the scene hands in: the game doesn't read what is kept itself.
 var legacy_ranks := {}
 var easy_dodge := false
-## The personality slice (personality_slice.gd): while `dice` is pinned, every chance of an interaction (the cut,
-## the answer, a feeling, mercy, joining, an ally's verdict and starting loyalty) is drawn at it, and `slice_queue` holds
-## the monsters still to fight. `slice_floor` marks the floor the slice was made on, which is never autosaved; a new floor
-## or a load clears it.
-var slice_queue: Array = []
-var slice_floor := false
+## The monsters still to fight, back to back, with no walk between (the social-demo playtest). A new floor, a load or fleeing
+## clears it.
+var fight_queue: Array = []
 
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
@@ -110,25 +105,18 @@ func _init(game_rng, game_mind) -> void:
 	for name in STAGES:
 		_stages[name] = STAGES[name].new()
 	state = State.new()
-	_place_camera() # a save looks about it as it loads, so this is in place before that
 
 
-## True on the personality slice, the reference run: what the game added since stays off there (the rules that change a fight),
-## so its routes stay fixed and its sessions can be compared.
-func on_slice() -> bool:
-	return slice_floor or PersonalitySlice.pending()
-
-
-## Whether a feature is on for this game: the flag (flags.gd), and not on the personality slice.
+## Whether a feature is on for this game (flags.gd).
 func feature(name: String) -> bool:
-	return Flags.enabled(name) and not on_slice()
+	return Flags.enabled(name)
 
 
 ## A fresh run: a new floor, standing at its start. With `practice` (the scene asks for it until it has been played once) and
 ## the tips on, the run starts on the practice floor above B1F (rules/practice.gd).
 func new_run(practice := false) -> void:
 	await _leave_current()
-	_forget_slice()
+	fight_queue = []
 	state = State.new()
 	state.depth = maxi(1, int(Flags.value("floor", "1")))
 	state.run_seed = rng.seed_value
@@ -147,10 +135,9 @@ func new_run(practice := false) -> void:
 	print("flow: new run, seed %d%s" % [rng.seed_value, ", on the practice floor" if state.practice else ""])
 	event("state_replaced", {"how": "new"})
 	var lines := _arrival()
-	if not on_slice():
-		var premise: Dictionary = Floors.premise()
-		lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
-		announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
+	var premise: Dictionary = Floors.premise()
+	lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
+	announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
 	if feature("wick"):
 		_wick_comes = true
 		_teach_walk = state.practice
@@ -160,7 +147,7 @@ func new_run(practice := false) -> void:
 ## Whether a run may start on the practice floor: it needs floors to go down to and the tips to teach it, and a run told to start
 ## deeper (`floor=N`) or to meet a given species (`meet=`) skips it.
 func practice_allowed() -> bool:
-	if on_slice() or Flags.on("notips"):
+	if Flags.on("notips"):
 		return false
 	if Flags.value("floor") != "" or Flags.value("meet") != "" or Flags.on("social-demo"):
 		print("flow: no practice floor, the flags ask for another start")
@@ -208,8 +195,7 @@ func next_floor(way := {}) -> void:
 	state.foe = null
 	state.hp = mini(state.max_hp, state.hp + Floors.rest_heal() + int(way.get("rest", 0)))
 	state.gold += int(way.get("gold", 0))
-	if not on_slice():
-		Survival.rest(state)
+	Survival.rest(state)
 	_make_floor(way)
 	encounter.pending_notes = []
 	encounter.pending_rows = []
@@ -234,44 +220,32 @@ func close_run(cleared: bool) -> int:
 	return embers
 
 
-## What the views read from the state rather than ask the flags, because the personality slice has them off.
+## What the views read from the state rather than ask the flags.
 func _apply_features() -> void:
-	state.rotate_mini_games = not on_slice()
-	state.floors_of = 0 if on_slice() else Floors.run_floors()
-	_place_camera()
+	state.rotate_mini_games = true
+	state.floors_of = Floors.run_floors()
 	for name in VIEW_FEATURES:
 		state.views[name] = feature(name)
-	for name in SLICE_HIDES:
-		state.views[name] = not on_slice()
 	if feature("skill-combat") and state.skills.is_empty(): # a new run, or a save from before: the starting skills
 		state.skills = Skills.start()
 
 
-func _place_camera() -> void:
-	Vision.back = Vision.BACK if on_slice() else Vision.CLOSE_BACK
-
-
 ## What the log says on arriving on this floor.
 func _arrival() -> Array:
-	var lines := []
 	if state.practice:
 		return [State.sys_line(Practice.line("line"))]
-	if not on_slice():
-		lines.append(State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion)))
-	else:
-		lines.append(State.sys_line(Texts.new_floor(state.depth)))
+	var lines := [State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion))]
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
 		lines.append(State.sys_line(biome.line))
 	return lines
 
 
-## The floor for `state.depth`, with the party at its start. On the personality slice it is the classic one, drawn from the game's
-## generator as it always was, so old seeds make the same floor.
+## The floor for `state.depth`, with the party at its start.
 func _make_floor(way := {}) -> void:
 	if state.practice:
 		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)))
-	elif not on_slice():
+	else:
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
 		plan.boss_at_exit = true
@@ -283,8 +257,6 @@ func _make_floor(way := {}) -> void:
 		plan.lurkers = true
 		plan.request = Requests.due(state.depth)
 		state.floor_map = FloorGen.generate(floor_rng, plan)
-	else:
-		state.floor_map = FloorGen.generate(rng)
 	state.palette_id = Floors.palette(state.floor_map.biome, state.floor_map.seed_value)
 	state.cell = state.floor_map.start
 	state.facing = state.floor_map.start_facing()
@@ -301,7 +273,7 @@ func load_state(saved: Dictionary) -> bool:
 	if loaded == null:
 		return false
 	await _leave_current()
-	_forget_slice()
+	fight_queue = []
 	state = loaded
 	_apply_features()
 	encounter.pending_notes = []
@@ -312,23 +284,9 @@ func load_state(saved: Dictionary) -> bool:
 	return true
 
 
-## Whether the scene may write the AUTO save when the walk resumes: not on the slice's floor.
+## Whether the scene may write the AUTO save when the walk resumes: not in the social-demo playtest.
 func autosave_allowed() -> bool:
-	return not slice_floor and not Flags.on("social-demo")
-
-
-## A floor that replaces the current one (new run, loaded save) is an ordinary floor: no slice, no mark.
-func _forget_slice() -> void:
-	end_slice()
-	slice_floor = false
-
-
-## Back to ordinary rolls (and no queued fight).
-func end_slice() -> void:
-	if dice.is_pinned():
-		print("flow: personality slice over")
-	dice.unpin()
-	slice_queue = []
+	return not Flags.on("social-demo")
 
 
 ## Move to another stage. Moves the table doesn't allow are refused and reported.
@@ -338,7 +296,7 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
-	if to == "explore" and from in Transitions.FIGHT and not on_slice():
+	if to == "explore" and from in Transitions.FIGHT:
 		_keys_back_at = clock + AFTER_FIGHT_MS
 		_held_over = true
 	state.stage = to
@@ -353,8 +311,6 @@ func go(to: String, args := {}) -> void:
 
 ## The halls have changed their mind about you: say so on the way back from whatever did it.
 func _note_warmth() -> void:
-	if on_slice():
-		return
 	var now := Warmth.level(Warmth.of(state))
 	var was: int = state.warmth_level
 	state.warmth_level = now

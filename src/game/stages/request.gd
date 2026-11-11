@@ -55,7 +55,7 @@ func _paid(flow) -> void:
 	var s = flow.state
 	var q: Dictionary = s.floor_map.quester
 	var t := Requests.table()
-	var got := Requests.settle(q, s, not flow.on_slice())
+	var got := Requests.settle(q, s)
 	flow.announce(t.done_title, t.done_line % [got.gold, got.healed])
 	flow.event("sound", {"name": "good"})
 	var thanks: String = t.kinds[q.kind].thanks
