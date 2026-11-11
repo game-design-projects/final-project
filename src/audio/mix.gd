@@ -15,6 +15,9 @@ const SFX := "SFX"
 const ROOM := "SFXRoom"
 const OPEN_HZ := 20000.0
 const CLOSED_HZ := 650.0
+## How far under the output's top frequency (half its rate) the filter may open. Past that line the filter turns unstable
+## and silences everything after it: Bluetooth headphones in call mode run at 24 kHz, where 20 kHz is already past it.
+const NYQUIST_SHARE := 0.46 # 20 kHz still fits at 44.1 kHz (20.3), so the usual outputs are as they were
 
 ## The compressor's make-up gain for its curve (threshold -6 dB, ratio 12), which the hard limiter below then holds under 0 dB.
 const LIMITER_MAKEUP_DB := 2.56
@@ -48,7 +51,7 @@ static func build_buses() -> void:
 		print_verbose("mix: Master has a compressor and a limiter")
 	if AudioServer.get_bus_index(MUSIC) < 0:
 		var low := AudioEffectLowPassFilter.new()
-		low.cutoff_hz = OPEN_HZ
+		low.cutoff_hz = open_hz()
 		_add_bus(MUSIC, "Master", low)
 	if AudioServer.get_bus_index(MUSIC_IN) < 0:
 		_add_bus(MUSIC_IN, MUSIC)
@@ -87,7 +90,13 @@ static func set_danger(danger: float) -> void:
 	if idx < 0:
 		return
 	var low := AudioServer.get_bus_effect(idx, 0) as AudioEffectLowPassFilter
-	low.cutoff_hz = OPEN_HZ * pow(CLOSED_HZ / OPEN_HZ, clampf(danger, 0.0, 1.0))
+	var top := open_hz()
+	low.cutoff_hz = top * pow(CLOSED_HZ / top, clampf(danger, 0.0, 1.0))
+
+
+## The music's low-pass wide open: OPEN_HZ, or less where the output's rate can't carry that high.
+static func open_hz(mix_rate := AudioServer.get_mix_rate()) -> float:
+	return minf(OPEN_HZ, mix_rate * NYQUIST_SHARE)
 
 
 static func _add_bus(bus_name: String, send: String, effect: AudioEffect = null) -> void:

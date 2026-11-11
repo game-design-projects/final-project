@@ -1,7 +1,9 @@
-# Hum theme: dungeon exploration and combat loops (on trial, issue #49)
+# Hum theme: dungeon exploration and combat loops (issue #49)
 
-Two finished loops built on a hummed melody, with their full source. They are **not in the game yet**:
-nothing in `src/` or `assets/` loads them. This folder is under `tools/music/`, which Godot ignores.
+Two finished loops built on a hummed melody, with their full source. **They are the game's music** (feature
+`hum-theme`, on by default): copied to `assets/audio/hum-explore.ogg` and `assets/audio/hum-combat.ogg`, played by
+`src/audio/music.gd`. After a rebuild here, copy the new `.ogg` files over those two. This folder is under
+`tools/music/`, which Godot ignores.
 
 | File | What |
 | --- | --- |
@@ -54,8 +56,8 @@ https://github.com/mrbumpy409/GeneralUser-GS). Its licence: "You may use General
 your own music creation, private or commercial." No attribution is required, though crediting it in
 `assets/CREDITS.txt` is good form if these ship. The soundfont itself (about 30 MB) is not committed.
 
-## To ship them
+## In the game
 
-Copy the `.ogg` files into `assets/audio/`, hook them up in `src/audio/music.gd` / `src/audio/ambient.gd`
-(set `loopSeconds` to 174.55 and 65.45), credit GeneralUser GS in `assets/CREDITS.txt`, and run
-`tools/audio_test.gd`.
+`assets/audio/hum-explore.ogg` and `assets/audio/hum-combat.ogg` are byte-for-byte copies of `donjon_voice.ogg` and
+`donjon_combat.ogg`. `src/audio/music.gd` plays them (`HUM_EXPLORE`, `HUM_BATTLES`), GeneralUser GS is credited in
+`assets/CREDITS.txt`, and `tools/audio_test.gd` checks that both loop whole at 174.55 s and 65.45 s.

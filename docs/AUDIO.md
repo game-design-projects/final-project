@@ -4,6 +4,18 @@
 
 The music follows the moment (`src/audio/music.gd`). `nomusic` turns it off, and the Settings sound page sets the level.
 
+### The hum theme (the default, feature `hum-theme`)
+
+Abdulla's hum theme plays by default: two loops on one hummed melody, "Cantiga take C", an 8-bar tune in modal C minor. Their source, MIDI and render script are in `tools/music/hum-theme/` (see its README), rendered with the GeneralUser GS soundfont.
+
+- **Exploring: `hum-explore.ogg`**, 64 bars of 4/4 at 88 BPM, 174.55 s, one exact loop. A slow a-cappella "ooh" voice with echoes sings the theme a phrase at a time over a soft drum, bowed bass, pad, a faint choir, piano tolls and tremolo strings. It keeps the same pacing as before: a stretch of music, then a rest, then it picks up where it left off.
+- **Fights: `hum-combat.ogg`**, 48 bars at 176 BPM, 65.45 s, one exact loop, in every fight. The same melody and chords on driving low strings, horns and violins, with choir, taiko, timpani and toms, and a breakdown with the echoing voice.
+- **Stings:** the `victory` and `fanfare` stings below are kept.
+
+The loops are mastered 1 dB hotter than the old music (−18 and −16 dBFS RMS), so `HUM_TRIM_DB` plays them 1 dB under the same volumes. `no-hum-theme` or `classic` brings back the old music below.
+
+### The old music (`classic`, or `no-hum-theme`)
+
 All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: one small band of real samples (harpsichord, church organ, strings, choir, music box and tubular bells, from the MusyngKite soundfont) plus synthesised kettle drums and a tabor, all in the same stone hall. Every piece is built on the game's own melody, **A B C D D D E D E D C C C D D D**, with its repeated notes short-short-long. The pieces are rendered offline and ship as Ogg Vorbis files in `assets/audio/` (about 5 MB in all).
 
 **Exploring: `ambient.ogg`**, a passacaglia in D minor: 112.5 seconds, 3/4 at 64 BPM, five variations on an eight-bar ground bass (the lament D C B♭ A, then B♭ A D A). The melody lies over it note for note (Dm | C | B♭ | F/A | Gm/B♭ | A7 | Dm | A) and comes and goes. Variation I has no melody, only organ, low strings, harpsichord and a far bell. Then the melody passes to the music box, the strings, and the harpsichord over a swelling choir, and in the last variation a fragment on high strings while the texture thins back to the start. The ambient also comes and goes in time: about a minute and a half of music, then a minute or two of quiet before it drifts back. It fades in over two seconds, two seconds after a fight ends.
