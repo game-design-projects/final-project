@@ -17,8 +17,6 @@ boot_splash/bg_color=Color(0, 0, 0, 1)
 
 [audio]
 
-driver/enable_input=true
-driver/enable_input.web=false
 general/text_to_speech=true
 
 [autoload]
