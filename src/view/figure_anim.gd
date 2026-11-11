@@ -1,6 +1,7 @@
 ## How a drawn figure moves, for the walk and the battle screen alike: which frame of which action shows now, and what its body does on top
 ## (a breath, a hop's arc, a shake). Every reaction in the art starts from the resting pose, so a change of mood plays the old one
-## backwards to rest and the new one forwards, and the eyes never jump. A hit or a lunge cuts in, as a hit does.
+## backwards to rest and the new one forwards, and the eyes never jump. A hit or a lunge cuts in, as a hit does; on a blank face
+## (`hollow`) it is drawn in code instead, because the hurt and lunge drawings have eyes.
 extends RefCounted
 
 const Sprites = preload("res://src/view/sprites.gd")
@@ -15,6 +16,10 @@ const HOP_LIFT := 0.22 # how high it goes, as a share of the body
 const LAND_S := 0.13
 const NOTICE_FRAME := 2 # how far into `happy` a start goes: the eyes wide and the lines over the head
 const SHAKE_S := 0.4
+const FLINCH_S := 0.22 # a blank face takes a hit by squashing, not by the hurt drawing
+const FLINCH := 0.14
+const LURCH_S := 0.42 # and lunges by swelling toward you, not by the lunge drawing
+const LURCH := 0.16
 
 var sheet := ""
 var body_h := 1.0 # the body's height in whatever the caller measures in, for the hop drawn in code
@@ -31,6 +36,8 @@ var _land := -10.0
 var _next_blink := 0.0
 var _phase := 0.0 # so two of a kind don't breathe together
 var _shake := -10.0
+var _flinch := -10.0
+var _lurch := -10.0
 
 
 func _init(sheet_name: String, seed_value := 0) -> void:
@@ -87,13 +94,27 @@ func notice(now: float) -> void:
 	_code_hop = now
 
 
+## A hit: the hurt drawing cuts in, shaking. A blank face keeps its blank frame and only shakes and flinches, so no eyes come back.
 func hurt(now: float) -> void:
-	play("hurt", now)
 	_shake = now
+	if blank():
+		_flinch = now
+		print_verbose("figure_anim: %s hurt with a blank face, drawn in code" % sheet)
+		return
+	play("hurt", now)
 
 
+## An attack: the lunge drawing, or on a blank face a lurch toward you drawn in code.
 func lunge(now: float) -> void:
+	if blank():
+		_lurch = now
+		return
 	play("lunge", now)
+
+
+## Whether the face it is showing, or turning to, is the blank one.
+func blank() -> bool:
+	return _want == "hollow"
 
 
 func _in_air(now: float) -> bool:
@@ -119,6 +140,16 @@ func tick(now: float) -> Dictionary:
 	var shake_p := (now - _shake) / SHAKE_S
 	if shake_p >= 0.0 and shake_p < 1.0:
 		out.shake = sin(now * 47.0) * (1.0 - shake_p)
+	var flinch_p := (now - _flinch) / FLINCH_S
+	if flinch_p >= 0.0 and flinch_p < 1.0:
+		var give := sin(flinch_p * PI) * FLINCH
+		out.sy *= 1.0 - give
+		out.sx *= 1.0 + give * 0.6
+	var lurch_p := (now - _lurch) / LURCH_S
+	if lurch_p >= 0.0 and lurch_p < 1.0:
+		var swell := sin(lurch_p * PI) * LURCH
+		out.sx *= 1.0 + swell
+		out.sy *= 1.0 + swell
 	return out
 
 
