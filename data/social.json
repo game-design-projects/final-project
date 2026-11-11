@@ -23,7 +23,8 @@
           "CHALLENGE",
           "Gain a strike opening, but pride can make the next attack fierce."
         ]
-      ]
+      ],
+      "warned": "My clan warned me about you. Six gold buys a truce. Dare you refuse?"
     },
     "slime": {
       "goal": "feel safe with someone",
@@ -44,7 +45,11 @@
           "REJECT",
           "Gain an opening against its hurt surprise; expect a panicked attack."
         ]
-      ]
+      ],
+      "afraid": {
+        "goal": "survive without being hurt",
+        "speech": "Please, no more. Can I trust you to put that weapon down?"
+      }
     },
     "snake": {
       "goal": "exchange useful knowledge",
@@ -109,5 +114,10 @@
         ]
       ]
     }
+  },
+  "lines": {
+    "remembered_betrayal": "I remember your broken promise. Keep that weapon away.",
+    "remembered_promise": "You promised not to hurt me. I remember.",
+    "broke_word": "You broke your word before."
   }
 }

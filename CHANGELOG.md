@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The `hand-drawn`, `warmth`, `sprite-look`, `close-camera` and `wide-view` feature flags: part of the game now, and `classic` no longer turns them off (the old plain title card is gone with them). 41 flags are gone in all; the 16 that remain are listed in `docs/DEVELOPMENT.md`, and a new feature no longer gets a flag unless it has to be tried beside the old behaviour.
 
 ### Changed
+- `initiated-dialogue` is switched in two places, where a fight's social state is made (`stages/intro.gd` and `Encounter.after_player`), instead of fourteen across seven files; the menu, strikes, skills, dodges and greetings read that state and do nothing without it. The frightened Slime's and warned Bandit's offers and the lines about a promise on meeting again move from code to `data/social.json`.
 - Save validation moves out of `src/game/state.gd` into `src/game/save_check.gd`; `State.from_dict` and `State.is_playable` ask it.
 - `docs/PERSONALITY_PLAYTEST.md` is now `docs/MOODS.md`, with only its dynamic moods section.
 - Which stages are a fight, a walk or a choice of command is written once, in `src/game/transitions.gd` (`FIGHT`, `WALK`, `PICKING`), instead of in five copies across the flow, the overlay, the tooltips and the gameplay scene; `meta_test` checks every stage is exactly one of a fight or a walk, and the gameplay log names the features that are on.

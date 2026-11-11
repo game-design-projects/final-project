@@ -23,13 +23,13 @@ const SKILLS := "SKILLS"
 func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var mercy: float = await flow.mind.mercy(s.foe)
-	if flow.feature("initiated-dialogue") and s.foe.social.get("promise", false) and not s.foe.social.get("betrayed", false) and not s.foe.boss:
+	if Social.promised(s.foe):
 		mercy = 1.0
 		s.mind_rows = s.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "PROMISE KEPT: WILL IT ACCEPT MERCY?", "answer": mercy}]
 	var skilled: bool = s.skill_fight != null
 	if skilled and s.skill_fight.turn_over:
 		Skills.start_turn(s.skill_fight)
-	if flow.feature("initiated-dialogue") and Social.ready(s.foe, s):
+	if Social.ready(s.foe, s):
 		await flow.go("social")
 		return
 	s.menu = [
@@ -44,7 +44,7 @@ func enter(flow, _args: Dictionary) -> void:
 		var known: bool = s.heavy_known.has(s.foe.species)
 		s.menu.append({"label": HEAVY, "sub": Texts.heavy_tip(s.foe, known), "gold": known and Combat.heavy_weakness(s.foe.species) > 1.0})
 	s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
-	if flow.feature("initiated-dialogue") and int(s.foe.social.get("opening", 0)) > 0:
+	if int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
 	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
@@ -108,7 +108,7 @@ func _spare(flow) -> void:
 	var s = flow.state
 	var m = s.foe
 	var odds: float = await flow.mind.mercy(m)
-	if flow.feature("initiated-dialogue") and m.social.get("promise", false) and not m.social.get("betrayed", false) and not m.boss:
+	if Social.promised(m):
 		odds = 1.0
 	var accepted := Odds.succeeds(flow.dice, odds)
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": odds, "picked": accepted}]

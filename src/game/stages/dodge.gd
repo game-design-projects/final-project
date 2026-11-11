@@ -21,7 +21,7 @@ func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
 	var genre: String = flow.encounter.foe_genre(m)
-	if flow.feature("initiated-dialogue") and int(m.social.get("trial", 0)) > 0:
+	if int(m.social.get("trial", 0)) > 0:
 		genre = "gates" # the dragon's telegraphed walls trial, even on a mini-game turn
 	var pace := Pace.of(m, s.depth, s.struggle, s.party_size(), flow.easy_dodge)
 	if flow.coach.active(): # the TIPS setting: someone who knows the game gets no slow start either
@@ -88,6 +88,6 @@ func tick(flow, t: float) -> void:
 		s.foe.turn += 1
 		s.struggle = Pace.after_dodge(s.struggle, _hits)
 		var spareable: bool = await flow.encounter.spareable(s.foe)
-		var trial := Social.trial_over(s.foe, s) if flow.feature("initiated-dialogue") else ""
+		var trial := Social.trial_over(s.foe, s)
 		s.say([State.sys_line(trial if trial != "" else Texts.pauses(s.foe, spareable))])
 		await flow.go("menu")

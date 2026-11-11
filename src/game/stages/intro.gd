@@ -28,7 +28,7 @@ func enter(flow, args: Dictionary) -> void:
 	s.social_offer = {}
 	s.social_typing = false
 	s.social_note = ""
-	if flow.feature("initiated-dialogue"):
+	if flow.feature("initiated-dialogue"): # without it the fight keeps no social state, so nothing downstream acts on one
 		Social.begin(m, s, flow.dice)
 		SocialDemo.tune(m)
 	s.menu = []

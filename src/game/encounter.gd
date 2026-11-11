@@ -58,15 +58,10 @@ static func _spoken(a_name: String) -> String:
 ## it, or its usual greeting when it has heard nothing new.
 func greeting(m):
 	var memory = null
-	if flow.feature("initiated-dialogue"):
-		var remembered := ""
-		if m.social.get("betrayed", false):
-			remembered = "I remember your broken promise. Keep that weapon away."
-		elif m.social.get("promise", false):
-			remembered = "You promised not to hurt me. I remember."
-		if remembered != "":
-			flow.event("shout", {"text": remembered, "species": m.species, "boss": m.boss})
-			memory = State.speech(m.name, remembered)
+	var remembered := Social.remembered(m)
+	if remembered != "":
+		flow.event("shout", {"text": remembered, "species": m.species, "boss": m.boss})
+		memory = State.speech(m.name, remembered)
 	var news: Dictionary = Clans.hear(m, flow.state)
 	if news.is_empty():
 		return memory if memory != null else foe_line(m, "converse")
@@ -145,7 +140,7 @@ func after_player(lines: Array, decision: Dictionary, show_attack_line := true) 
 		# Mood bounds apply to the monster; missing a heavy strike still adds its full penalty.
 		var bonus := float(decision.get("pressure_bonus", 0.0))
 		decision.pressure = clampf(float(decision.pressure) - bonus + Moods.shift(flow.state.foe, "pressure"), 0.0, 3.0) + bonus
-	if flow.feature("initiated-dialogue"):
+	if flow.feature("initiated-dialogue"): # one of the feature's two switches (the other is intro.gd's): no offer is ever queued without it
 		Social.observe(flow.state.foe, flow.state, flow.dice, 1.0 if Flags.on("social-demo") else -1.0)
 		if not decision.pacified:
 			decision.pressure = Social.pressure(flow.state.foe, float(decision.pressure))

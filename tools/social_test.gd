@@ -37,6 +37,7 @@ func _popup(flow) -> void:
 
 func _run() -> void:
 	await _without_it()
+	await _speech_from_data()
 	await _bandits()
 	await _slimes()
 	await _scheduler()
@@ -366,6 +367,41 @@ func _without_it() -> void:
 	_check(s.stage == "talk", "without it, TALK is the ordinary one")
 	await flow.submit_text("Hello friend")
 	_check(s.foe.spoke and s.stage in ["wait", "menu"], "without it, TALK resolves normally")
+	# the switch is only at the two places that make social state (intro.gd, encounter.gd): every other use reads that state
+	var m = Monster.given({"species": "slime", "genre": "bullet", "hp": 20}, Vector2i.ZERO, "BLANK", ["shy"], {"friendliness": 10.0, "anger": 10.0, "fear": 10.0})
+	var gold: int = s.gold
+	_check(Social.strike_bonus(m) == 0 and Social.hit(m) == "" and Social.trial_over(m, s) == "" and s.gold == gold, "with no social state a hit gets no bonus, breaks no promise and ends no trial")
+	_check(Social.remembered(m) == "" and not Social.promised(m) and not Social.ready(m, s), "remembers nothing, owes no mercy and has nothing to say")
+	_check(m.social.is_empty(), "and reading it leaves it empty")
+	_check(Social.pressure(m, 1.7) == 1.7 and m.social.get("pressure", 0.0) == 0.0, "an attack keeps its pressure")
+
+
+## What the monsters say comes from data/social.json, the variants too.
+func _speech_from_data() -> void:
+	var flow = await _fresh("slime", ["shy"])
+	var s = flow.state
+	var t: Dictionary = Social.table()
+	var m = s.foe
+	m.social.promise = true
+	_check(Social.remembered(m) == t.lines.remembered_promise, "a promise is remembered in the words of the data")
+	var said = flow.encounter.greeting(m)
+	_check(said.kind == "say" and said.text == t.lines.remembered_promise, "and said on meeting again (%s)" % said.text)
+	m.social.betrayed = true
+	_check(Social.remembered(m) == t.lines.remembered_betrayal and not Social.promised(m), "a broken one too, and it owes no mercy")
+	_check(str(Social.offer(m, s).speech).begins_with(t.lines.broke_word + " "), "its offer starts by saying so")
+	m.social = {}
+	m.meters.fear = 60.0
+	var scared: Dictionary = Social.offer(m, s)
+	_check(scared.goal == t.events.slime.afraid.goal and scared.speech == t.events.slime.afraid.speech, "a frightened slime asks to survive")
+	_check(not scared.has("afraid") and not scared.has("warned"), "and the offer carries only what the popup shows")
+	m.meters.fear = 10.0
+	_check(Social.offer(m, s).speech == t.events.slime.speech, "a calm one asks for company")
+	flow = await _fresh("bandit", ["greedy"])
+	s = flow.state
+	s.foe.heard = {"standing": -20}
+	_check(Social.offer(s.foe, s).speech == t.events.bandit.warned, "a bandit whose clan warned it says so")
+	s.foe.heard = {}
+	_check(Social.offer(s.foe, s).speech == t.events.bandit.speech, "one that heard nothing makes the usual offer")
 
 
 func _safe_queue() -> void:

@@ -46,8 +46,7 @@ func _strike(flow, t: float) -> void:
 		result = Combat.strike(x, m.boss, s.has_ally("dragon"), aid + s.sharpened)
 	if not result.miss:
 		s.sharpened = 0
-		if flow.feature("initiated-dialogue"):
-			result.damage += Social.strike_bonus(m)
+		result.damage += Social.strike_bonus(m)
 	if result.miss:
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")
@@ -56,7 +55,7 @@ func _strike(flow, t: float) -> void:
 			swung.pressure += Combat.HEAVY_MISS_PRESSURE
 		await flow.encounter.after_player([State.sys_line("%s %s is %s." % [Texts.HEAVY_MISS if heavy else Texts.miss(), m.name, swung.feeling.label])], swung)
 		return
-	var betrayal := Social.hit(m) if flow.feature("initiated-dialogue") else ""
+	var betrayal := Social.hit(m)
 	m.hp = maxi(0, m.hp - result.damage)
 	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy}) # a heavy hit sounds and flashes like a big one
 	var found: String = _learn_how_it_takes_it(flow, m) if heavy else ""
