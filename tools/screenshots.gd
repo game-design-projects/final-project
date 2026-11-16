@@ -9,6 +9,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Ally = preload("res://src/game/ally.gd")
 const Decor = preload("res://src/view/decor.gd")
 const Flags = preload("res://src/utils/flags.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 
 var _out := ""
 var _game
@@ -109,11 +110,12 @@ func _stand_before(m, steps: int) -> bool:
 
 
 ## Each species close up and far away, whatever stands where: `m` wears the species for the picture. Close up shows the model's
-## detail, two cells out and from afar its readable lines and tag.
+## detail, two cells out and from afar its readable lines and tag. Then each of the other kinds close up (data/kinds.json).
 func _species() -> void:
 	var s = _game.flow.state
 	var m = s.floor_map.monsters[0]
 	var worn: String = m.species
+	var worn_kind: String = m.kind
 	var far := -1
 	for steps in [8, 7, 6, 5, 4]:
 		if _stand_before(m, steps):
@@ -122,6 +124,7 @@ func _species() -> void:
 	for species in ["slime", "bandit", "snake", "rock", "dragon"]:
 		_forget(m)
 		m.species = species
+		m.kind = Kinds.base_of(species)
 		_stand_before(m, 1)
 		await _wait(0.5)
 		await _shot("02s_%s_close" % species)
@@ -132,8 +135,18 @@ func _species() -> void:
 			_stand_before(m, far)
 			await _wait(0.5)
 			await _shot("02s_%s_far_%d_cells" % [species, far])
+	for kind in Kinds.all():
+		if kind == Kinds.base_of(str(Kinds.info(kind).species)):
+			continue
+		_forget(m)
+		m.species = str(Kinds.info(kind).species)
+		m.kind = kind
+		_stand_before(m, 1)
+		await _wait(0.5)
+		await _shot("02k_B%dF_%s_close" % [int(Kinds.info(kind).depth), kind])
 	_forget(m)
 	m.species = worn
+	m.kind = worn_kind
 
 
 ## The set builds a monster's model once; drop it, so a changed species shows.
@@ -242,8 +255,19 @@ func _walk_and_fight() -> void:
 	s.max_hp = 9999 # the camera isn't here to survive, only to look
 	s.rotate_mini_games = false # each picture shows the attack it names
 	s.hp = 9999
-	for genre in ["bullet", "chess", "shadow", "gates", "stars", "dance", "rhythm"]:
+	var genres := ["bullet", "chess", "shadow", "gates", "stars", "dance"]
+	for kind in Kinds.all(): # and every kind's own, worn by `m` so its drawing and colour show too
+		if not genres.has(Kinds.info(kind).genre) and Kinds.info(kind).genre != "rhythm":
+			genres.append(Kinds.info(kind).genre)
+	genres.append("rhythm")
+	var by_genre := {}
+	for kind in Kinds.all():
+		by_genre[Kinds.info(kind).genre] = kind
+	for genre in genres:
 		m.genre = genre
+		if by_genre.has(genre):
+			m.kind = by_genre[genre]
+			m.species = str(Kinds.info(m.kind).species)
 		if genre == "rhythm": # the last one shows the charms
 			s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]
 		await _until("menu", 40.0)
@@ -252,6 +276,9 @@ func _walk_and_fight() -> void:
 			await _until("dodge", 20.0)
 			await _wait(1.6)
 			await _shot("08_dodge_%s" % genre)
+			if not ["bullet", "chess", "shadow", "gates", "stars", "dance", "rhythm"].has(genre):
+				await _wait(1.4)
+				await _shot("08_dodge_%s_later" % genre)
 	# the champion
 	var boss = monsters[-1]
 	_stand_before(boss, 1)
