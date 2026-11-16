@@ -1703,7 +1703,8 @@ func _map_gen() -> void:
 		_check(s.floor_map.biome == biome.id and s.floor_map.size == int(biome.size), "B%dF is %s at %d (%s at %d)" % [depth, biome.id, biome.size, s.floor_map.biome, s.floor_map.size])
 		_check(biome.palettes.map(func(v): return int(v)).has(s.palette_id), "in the colours of its biome")
 		var standing: Array = s.floor_map.monsters.filter(func(m): return not m.lurking)
-		_check(standing.size() == Content.table("encounter").roster.size() + 1 + maxi(0, (int(biome.size) - 13) / 3), "with more monsters the bigger it is (%d at %d)" % [standing.size(), biome.size])
+		var kinds_here: int = Content.table("kinds").kinds.values().filter(func(k): return int(k.depth) == depth).size()
+		_check(standing.size() == kinds_here + 1 + maxi(0, (int(biome.size) - 13) / 3), "with its %d kinds and more monsters the bigger it is (%d at %d)" % [kinds_here, standing.size(), biome.size])
 		kinds[biome.id] = true
 		if depth < Floors.run_floors():
 			s.foe = null

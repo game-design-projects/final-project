@@ -13,6 +13,7 @@ const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Sprites = preload("res://src/view/sprites.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 const W := 448.0

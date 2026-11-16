@@ -153,6 +153,17 @@ func clues() -> Array:
 	return out
 
 
+## It turns into kind `id` (meet=<kind>, to try a kind on a floor it doesn't live on): look, colour, attack and health.
+func become_kind(id: String) -> void:
+	var k := Kinds.line(id)
+	kind = id
+	species = k.species
+	genre = k.genre
+	max_hp = int(k.hp)
+	hp = max_hp
+	threshold = float(Content.species(species).joinThreshold)
+
+
 ## Its clan sends it as one of its elites: more health, and harder attacks (the dodge reads `elite`). Once only.
 func become_elite(hp_scale: float) -> void:
 	if elite or boss:

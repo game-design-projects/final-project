@@ -17,7 +17,7 @@ const KNOWN := {
 	"nojev": "monsters think with the local rules and never call Jev (the tools and tests always do)",
 	"seed": "seed=N: fixed random seed for the floor and the monsters (0 to 9223372036854775807, as the game prints it)",
 	"floor": "floor=N: start the run on floor N",
-	"meet": "meet=<species>: start in a fight with that monster",
+	"meet": "meet=<species or kind>: start in a fight with that monster (a kind from another floor is tried on one of this floor's)",
 	"nofx": "no post-processing shader",
 	"pacifist": "for tools/autoplay.gd: never strike, only ACT and SPARE",
 	"practice": "for tools/autoplay.gd: start each game on the practice floor, as a first run does",
