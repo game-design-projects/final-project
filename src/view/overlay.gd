@@ -711,15 +711,16 @@ func nerve_spark() -> float:
 	return clampf(1.0 - (clock_ms - state.dodge.nerve_flash) / NERVE_SPARK_MS, 0.0, 1.0)
 
 
-## Where the nerve's pips go, the first one's middle: right of the box in a dodge, up under the kind of fight otherwise.
+## Where the nerve's pips go, the first one's middle: right of the box in a dodge, otherwise up on the right, under the kind of
+## fight and clear of the mercy odds beside the health bar.
 func nerve_at() -> Vector2:
 	if state.dodge != null:
 		return NERVE_BESIDE_BOX + Vector2(4.0, 12.0)
-	return Vector2(W - 12.0 - NERVE_PIP * (Combat.NERVE_MAX - 1) - 4.0, 32.0)
+	return Vector2(W - 12.0 - NERVE_PIP * (Combat.NERVE_MAX - 1) - 4.0, 42.0)
 
 
-## Your nerve: a pip for each point held, hollow for the rest. In a dodge it always shows (it is earned there); elsewhere only
-## once you hold some, with what it is worth to a strike and to a SPARE.
+## Your nerve: a pip for each point held, hollow for the rest. In a dodge it always shows (it is earned there), with what it is
+## worth to a strike and to a SPARE; elsewhere only once you hold some, and the commands say what it adds.
 func _nerve() -> void:
 	if not state.viewing("nerve") or state.foe == null or state.foe.is_gone():
 		return
@@ -730,8 +731,8 @@ func _nerve() -> void:
 	var pulse := clampf(1.0 - (clock_ms - _nerve_moved_at) / NERVE_PULSE_MS, 0.0, 1.0)
 	if state.dodge != null:
 		_text(_title, "NERVE", NERVE_BESIDE_BOX, 7, Palette.YOU if held > 0 else Palette.DIM)
-	else:
-		_text(_title, "NERVE", Vector2(0.0, first.y + 3.0), 7, Palette.YOU, HORIZONTAL_ALIGNMENT_RIGHT, first.x - 10.0)
+	else: # over its pips, so neither runs into the mercy odds
+		_text(_title, "NERVE", Vector2(0.0, first.y - 7.0), 7, Palette.YOU, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
 	for i in Combat.NERVE_MAX:
 		var at := first + Vector2(i * NERVE_PIP, 0.0)
 		var r := 3.5 + (2.5 * pulse if i == held - 1 else 0.0)
@@ -741,13 +742,10 @@ func _nerve() -> void:
 		else:
 			pip.append(pip[0])
 			draw_polyline(pip, Palette.FAINT, 1.0)
-	if held > 0:
+	if held > 0 and state.dodge != null:
 		var worth := first + Vector2(-4.0, 16.0)
-		if state.dodge == null:
-			_text(_title, "+%d STRIKE · +%d%% MERCY" % [Combat.nerve_damage(held), roundi(Combat.nerve_mercy(held) * 100.0)], Vector2(0.0, worth.y), 6, Palette.DIM, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
-		else:
-			_text(_title, "+%d STRIKE" % Combat.nerve_damage(held), worth, 6, Palette.DIM)
-			_text(_title, "+%d%% MERCY" % roundi(Combat.nerve_mercy(held) * 100.0), worth + Vector2(0.0, 10.0), 6, Palette.DIM)
+		_text(_title, "+%d STRIKE" % Combat.nerve_damage(held), worth, 6, Palette.DIM)
+		_text(_title, "+%d%% MERCY" % roundi(Combat.nerve_mercy(held) * 100.0), worth + Vector2(0.0, 10.0), 6, Palette.DIM)
 
 
 ## A heart a friendly monster dropped: it falls to its square and waits there a moment to be caught.

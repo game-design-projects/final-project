@@ -73,6 +73,10 @@ Every third attack is a mini-game instead: **walls** (be at the gap when one arr
 
 You start with 20 HP. A hit costs 3, or 4 from the champion. If you die you can try the fight again at full health.
 
+**Nerve** is what holding your ground earns. A dodge with no hit in it gives a point, and so does every close call: stepping off a square in its last moments before it lands (its outline turns white for the last 0.3 seconds, and a ring flies off you when you make it). You hold up to five, shown as pips beside the box. The next FIGHT or HEAVY that lands spends them all for 2 more damage a point, or SPARE spends them for 8% better odds a point; a miss keeps them, and a hit shakes one out of you. A wall's columns count as one thing, so there is one close call in a wall.
+
+**How it feels shows in its attack.** The word by a monster's name (WARY, ANGRY, AFRAID, FRIENDLY) is read off its meters. A friendly one's attack drops a heart now and then on a square nothing is coming for: catch it and it heals you 1 and pleases the monster, which moves its mercy with no deed of yours. A frightened one falters: one hazard in three never comes, and it breaks off a quarter early. An angry one presses harder, as before.
+
 ## The mind
 
 Every monster has a species' tastes, its own traits and a motive, and meters for friendliness, anger and fear. Each act asks the mind how it feels, whether it would accept mercy and how hard it attacks. Hover the foe or press **I** to see its mood, what you have found out about it, and the mind's answers. Its health and mood sit over its head, and a bubble shows how a deed landed. The info key also keeps the talk so far.

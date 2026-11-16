@@ -44,7 +44,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `far_check` | Every species at every distance down the longest line of each floor, and across floors: is it seen, and is a name ever over nothing |
 | `hold_check` | Each arrow held in the real game scene: cells, turns, bumps, whether the camera turned back, the slowest frame |
 | `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
-| `screenshots`, `camera_shots`, `map_shots` | Pictures to look at |
+| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
@@ -53,7 +53,7 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.
 
-`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
+`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>` · `nofocus`
 
 ## Playing from source with Jev
 
@@ -66,7 +66,7 @@ The default applies only to the game. A headless run or a `-s` tool script (ever
 
 ## Features
 
-What shipped from 0.6.1 on is simply the game now. Sixteen features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy` and the opt-in `skill-combat`. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off; there is no switch for all of them at once.
+What shipped from 0.6.1 on is simply the game now. Eighteen features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy`, `nerve`, `mood-attacks` and the opt-in `skill-combat`. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off; there is no switch for all of them at once.
 
 The exception is `OPT_IN`: experiments that replace part of the game and are tried beside it, off unless named. Today that is `skill-combat` (`godot --path . -- skill-combat`, or `?skill-combat` on the web build): SKILLS takes FIGHT's place. Its numbers are in `data/skills.json`.
 
