@@ -73,6 +73,8 @@ func _run() -> void:
 	await _roaming()
 	await _input_cooldown()
 	await _heavy_strike()
+	await _nerve()
+	await _mood_attacks()
 	await _skill_combat()
 	_close_camera()
 	_finish()
@@ -104,6 +106,217 @@ func _flags() -> void:
 		_use([f + "=off"])
 		_check(not Flags.enabled(f), "%s=off turns it off" % f)
 	_check(not Flags.KNOWN.has("classic"), "there is no switch that turns every feature off at once")
+	_use()
+
+
+## nerve: a close call and a clean dodge earn it, a hit shakes one out, a strike that lands or a SPARE spends it.
+func _nerve() -> void:
+	# the rule, on a run alone: stepping off a square in its last moments
+	var run = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+	var here := Dodge.index(run.soul.x, run.soul.y)
+	run.add_hazard(0.0, [here], 1000.0, 300.0, "goo")
+	run.move(1, 0, 400.0)
+	_check(run.close_calls == 0, "stepping off a square long before it lands is no close call")
+	run.move(-1, 0, 500.0)
+	run.move(1, 0, 1000.0 - Combat.NERVE_WINDOW_MS + 50.0)
+	_check(run.close_calls == 1, "stepping off it in its last moments is one")
+	_check(run.update(900.0, Rng.new(1)).any(func(e): return e.type == "nerve"), "and the run says so")
+	run.move(-1, 0, 920.0)
+	run.move(1, 0, 950.0)
+	_check(run.close_calls == 1, "the same hazard gives no second one")
+	var plain = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+	plain.add_hazard(0.0, [here], 100.0, 300.0, "goo")
+	plain.move(1, 0)
+	_check(plain.close_calls == 0, "a step with no time given is only a step")
+	var wide = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+	wide.add_hazard(0.0, [here, here + 1], 1000.0, 300.0, "goo")
+	wide.move(1, 0, 900.0)
+	_check(wide.close_calls == 0, "stepping onto another of its squares is none")
+	wide.add_hazard(0.0, [here + 1], 1000.0, 300.0, "star")
+	wide.move(1, 0, 900.0)
+	_check(wide.close_calls == 1, "it is one once you are clear of it, and a star to catch is never one")
+	var wall = DodgeRun.start("gates", 1.0, false, 0, 0.0, {}, 1.0)
+	wall.update(400.0, Rng.new(3))
+	var groups := {}
+	for h in wall.hazards:
+		groups[h.group] = true
+	_check(wall.hazards.size() == Dodge.COLS and groups.size() == 1, "the columns of a wall are one thing: one close call for the lot (%d hazards, %d groups)" % [wall.hazards.size(), groups.size()])
+	_check(Combat.nerve_damage(2) == 2 * Combat.NERVE_DAMAGE and Combat.nerve_damage(99) == Combat.NERVE_MAX * Combat.NERVE_DAMAGE, "each point adds to a strike, up to the most you can hold")
+	_check(is_equal_approx(Combat.nerve_mercy(3), 3 * Combat.NERVE_MERCY), "and to the odds of a SPARE")
+
+	# in a fight
+	var flow = _flow(81)
+	var m = await _at_menu(flow, "rock")
+	var s = flow.state
+	var heard := []
+	flow.happened.connect(func(name, data): if name in ["nerve", "strike"]: heard.append([name, data]))
+	m.max_hp = 200
+	m.hp = 200
+	_check(s.nerve == 0 and s.viewing("nerve"), "a fight starts with none")
+	await _into_dodge(flow)
+	_end_dodge(flow)
+	await flow.tick(flow.clock + 20.0)
+	_check(s.stage == "menu" and s.nerve == 1, "a dodge with no hit in it earns a point (%s, %d)" % [s.stage, s.nerve])
+	_check(heard.any(func(e): return e[0] == "nerve" and e[1].how == "clean" and e[1].total == 1), "and says so")
+	_check(str(s.menu[0].sub).contains("NERVE +%d" % Combat.NERVE_DAMAGE), "FIGHT says what it adds (%s)" % s.menu[0].sub)
+	_check(str(s.menu[2].sub).begins_with("NERVE +%d%%" % roundi(Combat.NERVE_MERCY * 100.0)), "and so does SPARE (%s)" % s.menu[2].sub)
+	await _into_dodge(flow)
+	here = Dodge.index(s.dodge.soul.x, s.dodge.soul.y)
+	s.dodge.hazards = []
+	s.dodge.add_hazard(flow.clock, [here], 100.0, 300.0, "goo") # lands within the window whatever the pace
+	await flow.press("right")
+	await flow.tick(flow.clock + 16.0)
+	_check(s.nerve == 2 and heard.any(func(e): return e[0] == "nerve" and e[1].how == "close"), "a close call in the box earns another (%d)" % s.nerve)
+	s.dodge.hazards = []
+	s.dodge.add_hazard(flow.clock, [Dodge.index(s.dodge.soul.x, s.dodge.soul.y)], 0.0, 300.0, "goo")
+	s.dodge.iframes = 0.0
+	await flow.tick(flow.clock + 16.0)
+	_check(s.nerve == 1 and heard.any(func(e): return e[0] == "nerve" and e[1].how == "lost"), "a hit shakes one out of you (%d)" % s.nerve)
+	_end_dodge(flow)
+	await flow.tick(flow.clock + 20.0)
+	_check(s.stage == "menu" and s.nerve == 1, "and a dodge with a hit in it earns nothing (%d)" % s.nerve)
+	# a miss keeps it, a strike that lands spends it
+	s.nerve = 3
+	await flow.press("1")
+	_check(s.stage == "fightbar" and s.hint.contains("NERVE +%d" % (3 * Combat.NERVE_DAMAGE)), "the strike bar says what is riding on it (%s)" % s.hint)
+	await flow.tick(s.bar.t0 + s.bar.dur + 10.0)
+	_check(s.nerve == 3 and m.hp == 200, "a miss keeps the nerve (%d)" % s.nerve)
+	await _through_dodge(flow)
+	s.nerve = 3
+	await flow.go("menu")
+	await flow.press("1")
+	flow.clock = s.bar.t0 + s.bar.dur / 2.0
+	await flow.press("confirm")
+	var plain_hit: int = Combat.strike(0.5, false, false).damage
+	_check(m.hp == 200 - plain_hit - 3 * Combat.NERVE_DAMAGE and s.nerve == 0, "a strike that lands spends it all for a harder hit (%d left)" % m.hp)
+	_check(heard.any(func(e): return e[0] == "strike" and e[1].nerve == 3 * Combat.NERVE_DAMAGE), "the strike says how much of it was nerve")
+	# SPARE spends it for better odds
+	await _through_dodge(flow)
+	s.nerve = Combat.NERVE_MAX
+	flow.dice.pin(0.99) # refused, whatever the odds: they are what is checked
+	var before: float = await flow.encounter.mercy(m)
+	await flow.go("menu")
+	await flow.press("3")
+	var rolled: float = s.mind_rows.filter(func(row): return row.id == "mercy").front().answer
+	_check(is_equal_approx(rolled, minf(1.0, before + Combat.nerve_mercy(Combat.NERVE_MAX))) and s.nerve == 0, "SPARE spends it for better odds (%.2f from %.2f)" % [rolled, before])
+	flow.dice.unpin()
+	# the next fight starts with none
+	await _through_dodge(flow)
+	s.nerve = 4
+	await flow.go("explore")
+	await flow.go("intro", {"foe": m})
+	_check(s.nerve == 0, "the next fight starts with none (%d)" % s.nerve)
+
+	# without it
+	var off = _flow(82, ["no-nerve"])
+	var foe = await _at_menu(off, "rock")
+	foe.max_hp = 200
+	foe.hp = 200
+	await _into_dodge(off)
+	_end_dodge(off)
+	await off.tick(off.clock + 20.0)
+	_check(off.state.stage == "menu" and off.state.nerve == 0 and not off.state.viewing("nerve"), "no-nerve: a clean dodge earns nothing, and nothing is shown")
+	await _into_dodge(off)
+	off.state.dodge.hazards = []
+	off.state.dodge.add_hazard(off.clock, [Dodge.index(off.state.dodge.soul.x, off.state.dodge.soul.y)], 100.0, 300.0, "goo")
+	await off.press("right")
+	await off.tick(off.clock + 16.0)
+	_check(off.state.nerve == 0 and off.state.dodge.close_calls == 0, "nor does a close call")
+	_use()
+
+
+## From the fight's menu into its dodge.
+func _into_dodge(flow) -> void:
+	var s = flow.state
+	s.max_hp = 999
+	s.hp = 999
+	await flow.go("wait", {"pressure": 1.0})
+	for i in 60:
+		if s.stage == "dodge":
+			return
+		if s.hint == "ANY KEY CONTINUE":
+			await flow.press("confirm")
+		await flow.tick(flow.clock + 50.0)
+
+
+## Call the dodge over at the next tick, with nothing left in the box.
+func _end_dodge(flow) -> void:
+	flow.state.dodge.hazards = []
+	flow.state.dodge.end_t = flow.clock
+
+
+## mood-attacks: how the foe feels shows in its attack. A friendly one drops hearts, a frightened one falters and breaks off early.
+func _mood_attacks() -> void:
+	var entry := {"species": "slime", "genre": "bullet", "hp": 18}
+	var feels := func(meters: Dictionary) -> String: return Feelings.mood(Monster.given(entry, Vector2i(1, 1), "TEST", ["shy"], meters))
+	_check(feels.call({"friendliness": 10.0, "anger": 70.0, "fear": 70.0}) == "angry", "anger comes first")
+	_check(feels.call({"friendliness": 90.0, "anger": 10.0, "fear": 70.0}) == "afraid", "then fear")
+	_check(feels.call({"friendliness": 90.0, "anger": 10.0, "fear": 10.0}) == "friendly", "then whether it likes you")
+	_check(feels.call({"friendliness": 0.0, "anger": 10.0, "fear": 10.0}) == "wary", "and otherwise it is wary")
+	# a friendly one drops hearts, on squares nothing is coming for
+	var kind = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0, {}, "friendly")
+	var rng := Rng.new(5)
+	var t := 0.0
+	while t < DodgeRun.GIFT_FIRST_MS + 50.0:
+		t += 16.0
+		kind.update(t, rng)
+	var hearts: Array = kind.hazards.filter(func(h): return h.kind == "heart")
+	_check(hearts.size() == 1, "a friendly monster's attack drops a heart (%d)" % hearts.size())
+	var heart: Dictionary = hearts[0]
+	_check(not kind.hazards.any(func(h): return h.kind != "heart" and h.warn < heart.warn and h.cells.has(heart.at)), "on a square nothing was coming for")
+	kind.soul = Vector2i(int(heart.at) % Dodge.COLS, int(heart.at) / Dodge.COLS)
+	kind.hazards = [heart]
+	var caught: Array = kind.update(heart.hit + 10.0, rng)
+	_check(caught.any(func(e): return e.type == "heart") and not caught.any(func(e): return e.type == "hurt"), "standing on it catches it, and it never hurts")
+	var none = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+	t = 0.0
+	while t < 3000.0:
+		t += 16.0
+		none.update(t, Rng.new(5))
+	_check(not none.hazards.any(func(h): return h.kind == "heart"), "anyone else's has none")
+	# a frightened one falters and breaks off early
+	var scared = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0, {}, "afraid")
+	var steady = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+	_check(is_equal_approx(scared.end_t, steady.end_t * DodgeRun.AFRAID_DURATION), "a frightened monster breaks off early (%.0f ms of %.0f)" % [scared.end_t, steady.end_t])
+	for i in 6:
+		scared.add_hazard(0.0, [i], 1000.0, 300.0, "goo")
+		steady.add_hazard(0.0, [i], 1000.0, 300.0, "goo")
+	_check(scared.hazards.size() == 4 and steady.hazards.size() == 6, "and one hazard in three never comes (%d of 6)" % scared.hazards.size())
+	scared.add_hazard(0.0, [9], 1000.0, 300.0, "star")
+	scared.add_hazard(0.0, [10], 1000.0, 300.0, "star")
+	scared.add_hazard(0.0, [11], 1000.0, 300.0, "star")
+	_check(scared.hazards.size() == 7, "what is there to be caught always comes")
+	_check(Overlay.mood_word(Monster.given(entry, Vector2i(1, 1), "TEST", ["shy"], {"friendliness": 90.0, "anger": 10.0, "fear": 10.0}))[0] == "FRIENDLY", "the word by its name is the same mood")
+	_check(Overlay.heart_shape(7.0).size() == 3, "a heart has a shape")
+
+	# in a fight
+	var flow = _flow(83)
+	var m = await _at_menu(flow)
+	var s = flow.state
+	var heard := []
+	flow.happened.connect(func(name, _data): if name in ["heart", "mercy_changed"]: heard.append(name))
+	m.meters = {"friendliness": m.threshold + 1.0, "anger": 0.0, "fear": 0.0}
+	await _into_dodge(flow)
+	_check(s.dodge.mood == "friendly", "a foe that likes you attacks as a friend (%s)" % s.dodge.mood)
+	s.hp = 500
+	var here := Dodge.index(s.dodge.soul.x, s.dodge.soul.y)
+	s.dodge.hazards = []
+	s.dodge.add_hazard(flow.clock, [here], 0.0, 500.0, "heart", {"at": here})
+	await flow.tick(flow.clock + 16.0)
+	_check(s.hp == 500 + Combat.HEART_HEAL and heard.has("heart"), "a heart caught heals you (%d)" % s.hp)
+	_check(is_equal_approx(m.meters.friendliness, m.threshold + 1.0 + Combat.HEART_FRIENDLINESS), "and pleases it (%.0f)" % m.meters.friendliness)
+	_end_dodge(flow)
+	await flow.tick(flow.clock + 20.0)
+	_check(s.stage == "menu" and heard.has("mercy_changed"), "the mercy gauge moves for it, with no deed of yours")
+	m.meters = {"friendliness": 0.0, "anger": 0.0, "fear": 90.0}
+	await _into_dodge(flow)
+	_check(s.dodge.mood == "afraid", "a frightened one attacks as one (%s)" % s.dodge.mood)
+
+	var off = _flow(84, ["no-mood-attacks"])
+	var foe = await _at_menu(off)
+	foe.meters = {"friendliness": 100.0, "anger": 0.0, "fear": 0.0}
+	await _into_dodge(off)
+	_check(off.state.dodge.mood == "", "no-mood-attacks: every attack is the plain one")
 	_use()
 
 

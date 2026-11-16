@@ -55,6 +55,11 @@ static func spare_tip(mercy: float, boss: bool) -> String:
 	return "%s chance to accept. %s it likes raise the odds, and at 50%%+ its name turns gold. Spared, it may ask to join you as a passive charm." % [Combat.chance_label(mercy), opening]
 
 
+## What the nerve you hold adds to a SPARE, said before its tip ("" when you hold none).
+static func nerve_for_mercy(nerve: int) -> String:
+	return "" if nerve <= 0 else "NERVE +%d%%. " % roundi(Combat.nerve_mercy(nerve) * 100.0)
+
+
 static func not_ready(foe, odds: float) -> String:
 	return "%s isn't ready (%s chance). Do what it likes, then ask again." % [foe.name, Combat.chance_label(odds)]
 

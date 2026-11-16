@@ -28,7 +28,10 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(_out)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
-	DisplayServer.window_move_to_foreground()
+	if Flags.on("nofocus"): # someone is typing on this screen: stay visible, take no keys
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
+	else:
+		DisplayServer.window_move_to_foreground()
 	for biome in Content.table("biomes").biomes:
 		for seed_value in SEEDS:
 			_plan_picture(FloorGen.generate(Rng.new(seed_value), _plan(biome, 5)), "plan_%s_%d" % [biome.id, seed_value])

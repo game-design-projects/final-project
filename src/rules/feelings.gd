@@ -5,6 +5,7 @@ extends RefCounted
 const Content = preload("res://src/rules/content.gd")
 
 const WARM_UP := {"friendliness": 2.5, "anger": -1.0}
+const MOOD_STRONG := 60.0 # a meter this high names the mood
 
 
 static func all() -> Dictionary:
@@ -47,3 +48,15 @@ static func _shift(m, shift: Dictionary) -> void:
 static func pacifies(id: String) -> bool:
 	var cond: String = get_feeling(id).get("cond", "")
 	return cond != "" and Content.table("emotions").pacifying.has(cond)
+
+
+## How `m` feels now, in one word: "angry", "afraid", "friendly" (it likes you enough to join) or "wary". The battle screen says
+## it by the monster's name, and its attack shows it (rules/dodge_run.gd).
+static func mood(m) -> String:
+	if m.meters.anger >= MOOD_STRONG:
+		return "angry"
+	if m.meters.fear >= MOOD_STRONG:
+		return "afraid"
+	if m.meters.friendliness >= m.threshold:
+		return "friendly"
+	return "wary"

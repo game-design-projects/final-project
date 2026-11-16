@@ -9,6 +9,7 @@ const BattleArt = preload("res://src/view/battle_art.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
+const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -33,7 +34,6 @@ const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pi
 const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
 const STRIKE_BAR_H := 30.0
 const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
-const MOOD_STRONG := 60.0 # a meter this high names the mood
 const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
 const COMET_MS := 320.0
 const SOUL_GLIDE := 28.0 # how fast your soul catches up with its square: the share left after a second is e to minus this
@@ -51,6 +51,11 @@ const BANNER_W := 264.0
 const BANNER_H := 44.0
 const BANNER_PX := 13
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
+const MOOD_WORDS := {"angry": ["ANGRY", Palette.WARN], "afraid": ["AFRAID", Palette.YOU], "friendly": ["FRIENDLY", Palette.MERCY], "wary": ["WARY", Palette.DIM]}
+const NERVE_PIP := 11.0 # from one nerve pip to the next, in picture pixels
+const NERVE_BESIDE_BOX := Vector2(BOX_X + Dodge.COLS * BOX_CELL + 14.0, BOX_Y + 8.0) # the nerve's label, right of the dodge box
+const NERVE_SPARK_MS := 320.0 # how long a close call rings round your soul
+const NERVE_PULSE_MS := 420.0 # how long a pip just earned stays swollen
 # the receding corridor behind the title: how big each frame is against the picture
 const TITLE_BLINK_MS := 600.0
 
@@ -81,6 +86,8 @@ var _lantern_glow: GradientTexture2D
 var _soul_shown = null # where your soul is drawn now, null to start at its square
 var _was_fighting := false
 var _left_fight_at := -1e9
+var _nerve_seen := 0 # the nerve as last drawn, to see it move
+var _nerve_moved_at := -1e9
 
 
 func _ready() -> void:
@@ -267,6 +274,10 @@ func _process(dt: float) -> void:
 			_ghost = state.foe.hp_fraction()
 		_ghost = ghost_after(_ghost, state.foe.hp_fraction(), dt)
 	_follow_soul(dt)
+	if state != null and state.nerve != _nerve_seen:
+		if state.nerve > _nerve_seen:
+			_nerve_moved_at = clock_ms
+		_nerve_seen = state.nerve
 	if _was_fighting and not in_fight():
 		_left_fight_at = clock_ms
 	_was_fighting = in_fight()
@@ -377,6 +388,7 @@ func _battle() -> void:
 		else:
 			Art.draw(self, m.species, clock_ms, color, W / 2.0, 270.0, 0.85, hurt)
 	_name_and_health(m)
+	_nerve()
 	_bubble(Vector2(W / 2.0 + 36.0, 28.0) if small else Vector2(W / 2.0 + 74.0, 72.0))
 	_speech_box()
 	_flying_words()
@@ -399,13 +411,7 @@ func foe_bar() -> Rect2:
 
 ## A word for how the foe feels now, and its colour. Read off its meters, so it changes as they do.
 static func mood_word(m) -> Array:
-	if m.meters.anger >= MOOD_STRONG:
-		return ["ANGRY", Palette.WARN]
-	if m.meters.fear >= MOOD_STRONG:
-		return ["AFRAID", Palette.YOU]
-	if m.meters.friendliness >= m.threshold:
-		return ["FRIENDLY", Palette.MERCY]
-	return ["WARY", Palette.DIM]
+	return MOOD_WORDS[Feelings.mood(m)]
 
 
 ## How far the white trail behind a health bar has caught up with the real value after `dt` seconds.
@@ -548,6 +554,9 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	if h.kind == "pad":
 		_pad(h)
 		return
+	if h.kind == "heart":
+		_heart(h)
+		return
 	if h.has("glyph") and not live:
 		_rays(h, col)
 	for k in h.cells:
@@ -557,6 +566,8 @@ func _hazard(h: Dictionary, col: Color) -> void:
 		else:
 			draw_rect(cell.grow(-1), Color(col, warning_fill(h)))
 			draw_rect(cell.grow(-3.5), Color(col, 0.5 + 0.5 * absf(sin(clock_ms / 90.0))), false, 1.0)
+			if last_moment(h):
+				draw_rect(cell.grow(-2.0), Palette.INK, false, 1.5) # stepping off it now is a close call
 	if h.has("glyph"):
 		var at := _cell_rect(h.at).get_center()
 		draw_rect(Rect2(at - Vector2(11, 11), Vector2(22, 22)), Color.BLACK)
@@ -677,6 +688,95 @@ func _soul(run) -> void:
 	draw_colored_polygon([at + Vector2(0, -r), at + Vector2(r, 0), at + Vector2(0, r), at + Vector2(-r, 0)], col)
 	if run.shield:
 		draw_arc(at, r + 4.0, 0.0, TAU, 20, Color(Palette.MERCY, 0.9), 1.5)
+	var spark := nerve_spark()
+	if spark > 0.0: # a close call: a ring flies off you
+		var grown := 1.0 - spark
+		draw_arc(at, r + 3.0 + 20.0 * grown, 0.0, TAU, 24, Color(Palette.YOU, spark), 2.0)
+		for i in 4:
+			var way := Vector2.from_angle(PI / 4.0 + i * PI / 2.0)
+			draw_line(at + way * (r + 4.0 + 14.0 * grown), at + way * (r + 10.0 + 20.0 * grown), Color(Palette.INK, spark), 1.5)
+
+
+# ---------------------------------------------------------------- nerve and hearts
+
+## Whether this hazard is in its last moments before it lands: stepping off it now is a close call (the feature nerve).
+func last_moment(h: Dictionary) -> bool:
+	return state.viewing("nerve") and clock_ms < h.hit and h.hit - clock_ms <= Combat.NERVE_WINDOW_MS
+
+
+## How strong the ring of a close call still is round your soul (0 when there is none).
+func nerve_spark() -> float:
+	if state == null or state.dodge == null:
+		return 0.0
+	return clampf(1.0 - (clock_ms - state.dodge.nerve_flash) / NERVE_SPARK_MS, 0.0, 1.0)
+
+
+## Where the nerve's pips go, the first one's middle: right of the box in a dodge, up under the kind of fight otherwise.
+func nerve_at() -> Vector2:
+	if state.dodge != null:
+		return NERVE_BESIDE_BOX + Vector2(4.0, 12.0)
+	return Vector2(W - 12.0 - NERVE_PIP * (Combat.NERVE_MAX - 1) - 4.0, 32.0)
+
+
+## Your nerve: a pip for each point held, hollow for the rest. In a dodge it always shows (it is earned there); elsewhere only
+## once you hold some, with what it is worth to a strike and to a SPARE.
+func _nerve() -> void:
+	if not state.viewing("nerve") or state.foe == null or state.foe.is_gone():
+		return
+	var held: int = state.nerve
+	if held <= 0 and state.dodge == null:
+		return
+	var first := nerve_at()
+	var pulse := clampf(1.0 - (clock_ms - _nerve_moved_at) / NERVE_PULSE_MS, 0.0, 1.0)
+	if state.dodge != null:
+		_text(_title, "NERVE", NERVE_BESIDE_BOX, 7, Palette.YOU if held > 0 else Palette.DIM)
+	else:
+		_text(_title, "NERVE", Vector2(0.0, first.y + 3.0), 7, Palette.YOU, HORIZONTAL_ALIGNMENT_RIGHT, first.x - 10.0)
+	for i in Combat.NERVE_MAX:
+		var at := first + Vector2(i * NERVE_PIP, 0.0)
+		var r := 3.5 + (2.5 * pulse if i == held - 1 else 0.0)
+		var pip := PackedVector2Array([at + Vector2(0, -r), at + Vector2(r, 0), at + Vector2(0, r), at + Vector2(-r, 0)])
+		if i < held:
+			draw_colored_polygon(pip, Palette.YOU)
+		else:
+			pip.append(pip[0])
+			draw_polyline(pip, Palette.FAINT, 1.0)
+	if held > 0:
+		var worth := first + Vector2(-4.0, 16.0)
+		if state.dodge == null:
+			_text(_title, "+%d STRIKE · +%d%% MERCY" % [Combat.nerve_damage(held), roundi(Combat.nerve_mercy(held) * 100.0)], Vector2(0.0, worth.y), 6, Palette.DIM, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
+		else:
+			_text(_title, "+%d STRIKE" % Combat.nerve_damage(held), worth, 6, Palette.DIM)
+			_text(_title, "+%d%% MERCY" % roundi(Combat.nerve_mercy(held) * 100.0), worth + Vector2(0.0, 10.0), 6, Palette.DIM)
+
+
+## A heart a friendly monster dropped: it falls to its square and waits there a moment to be caught.
+func _heart(h: Dictionary) -> void:
+	if h.get("taken", false):
+		return
+	var live: bool = clock_ms >= h.hit
+	var to := _cell_rect(h.at).get_center()
+	var at := to if live else to - Vector2(0.0, (1.0 - clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)) * GOO_DROP)
+	if live:
+		draw_rect(_cell_rect(h.at).grow(-1), Color(Palette.MERCY, 0.3))
+	var beat := 1.0 + 0.12 * sin(clock_ms / 110.0)
+	for shape in heart_shape(7.0 * beat):
+		var pts := PackedVector2Array()
+		for p in shape:
+			pts.append(at + p)
+		draw_colored_polygon(pts, Palette.MERCY)
+
+
+## A heart `size` pixels from its middle to its side, as polygons round (0, 0): two lobes and the point below them.
+static func heart_shape(size: float) -> Array:
+	var lobes := []
+	for side in [-1.0, 1.0]:
+		var lobe := []
+		for i in 9:
+			var a := PI + i * PI / 8.0
+			lobe.append(Vector2(side * size * 0.5 + cos(a) * size * 0.5, -size * 0.2 + sin(a) * size * 0.5))
+		lobes.append(lobe)
+	return lobes + [[Vector2(-size, -size * 0.2), Vector2(size, -size * 0.2), Vector2(0.0, size * 0.95)]]
 
 
 # ---------------------------------------------------------------- the strike bar

@@ -17,6 +17,8 @@ func enter(flow, args: Dictionary) -> void:
 		s.hint += " · PARTY +%d" % Combat.party_aid(s.party_size())
 	if s.sharpened > 0:
 		s.hint += " · WHETTED +%d" % s.sharpened
+	if s.nerve > 0 and flow.feature("nerve"):
+		s.hint += " · NERVE +%d" % Combat.nerve_damage(s.nerve)
 	s.bar = {"t0": flow.clock, "dur": Combat.bar_ms(s.has_ally("rock")) * (Combat.HEAVY_BAR_SCALE if heavy else 1.0), "heavy": heavy}
 
 
@@ -44,9 +46,11 @@ func _strike(flow, t: float) -> void:
 		print("fightbar: heavy strike on %s at %.2f: %s" % [m.species, x, result])
 	else:
 		result = Combat.strike(x, m.boss, s.has_ally("dragon"), aid + s.sharpened)
+	var nerve := 0 # what nerve added to this strike
 	if not result.miss:
 		s.sharpened = 0
-		result.damage += Social.strike_bonus(m)
+		nerve = Combat.nerve_damage(flow.encounter.spend_nerve())
+		result.damage += Social.strike_bonus(m) + nerve
 	if result.miss:
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")
@@ -57,7 +61,7 @@ func _strike(flow, t: float) -> void:
 		return
 	var betrayal := Social.hit(m)
 	m.hp = maxi(0, m.hp - result.damage)
-	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy}) # a heavy hit sounds and flashes like a big one
+	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy, "nerve": nerve}) # a heavy hit sounds and flashes like a big one
 	var found: String = _learn_how_it_takes_it(flow, m) if heavy else ""
 	Combat.apply_hit_to_mood(m)
 	var begging: bool = await flow.encounter.spareable(m)

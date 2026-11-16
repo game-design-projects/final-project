@@ -23,7 +23,11 @@
   "shy": "Your first fight, and it's shy. Try ACT, then SPARE: a friend is worth more than a kill.",
   "skills": "Skills cost energy, which comes back each turn. END TURN when you're done.",
   "blank": "Its face is gone: down here, every kill is heard. Spare some and faces come back.",
-  "walk": "Arrows or WASD to walk. Turning is free: stop and look."
+  "walk": "Arrows or WASD to walk. Turning is free: stop and look.",
+  "nerve": "A clean dodge: NERVE. It adds to your next FIGHT that lands, or to SPARE.",
+  "nerve_close": "A close call! Stepping off a square at the last moment builds NERVE too.",
+  "heart": "It likes you: its attack drops hearts. Each one caught heals you and pleases it.",
+  "afraid": "It is frightened: its attack falters and ends early."
  },
  "wick": {
   "walk": "Arrows or WASD to walk. Turning is free, so stop and look around.",

@@ -29,6 +29,7 @@ const KNOWN := {
 	"nosave": "never touch saved data: the slots live in memory for this run and the player's saves stay as they are",
 	"frames": "frames=off: skip animation frame exports in tools/panel_reveal_demo.gd",
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
+	"nofocus": "for the screenshot tools: the window stays on top (so it renders at full speed) but never takes the keyboard",
 	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
 	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
 }
@@ -50,6 +51,8 @@ const FEATURES := {
 	"toll": "the gate on the third stairs drops unless someone holds its chain and stays: you pay in health, or leave a friend, which the Last Door may make you regret",
 	"wick": "a run opens with a very small witch hopping out of the dark to hand you a heart, and she is your first friend until you lose her",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
+	"nerve": "a dodge with no hit in it, and every close call (stepping off a square in its last moments before it lands), earns nerve: a strike that lands or a SPARE spends it for a harder hit or better odds, and a hit shakes one out of you",
+	"mood-attacks": "how a monster feels shows in its attack: a friendly one drops hearts to catch (each heals you and pleases it), a frightened one falters (one hazard in three never comes) and breaks off early",
 	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",
 }
 
