@@ -55,6 +55,15 @@ Flags change one run. From source they go after `--`; the list with descriptions
 
 `debug` · `mock` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
 
+## Playing from source with Jev
+
+From source, monsters think with the local rules unless you point the game at the Worker (`mock` is the seeded random mind, not Jev). Two ways:
+
+- One run: `godot --path . -- jev=https://donjon-api.lishuyustevenli.workers.dev`.
+- Every run on this machine: put `"jev_url": "https://donjon-api.lishuyustevenli.workers.dev"` in the Store file, `user://store.json` (on macOS `~/Library/Application Support/donjon/store.json`). `jev=<url>` on the command line still wins, and the headless suites (`autoplay`, the tests) never read the Store, so they stay on the local rules and spend no credits.
+
+`config/jev_url.txt` is how a build ships its address (`tools/build.sh --proxy`); it stays gitignored, because with it in the repo every test run would call Jev.
+
 ## Features
 
 What shipped from 0.6.1 on is simply the game now. Sixteen features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy` and the opt-in `skill-combat`. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off; there is no switch for all of them at once.

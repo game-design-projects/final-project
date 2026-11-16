@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- `.env.example` and `docs/DEVELOPMENT.md` said the game reads `.env` and that from source it runs on mock Jev; only `node proxy/dev.js` reads `.env`, and from source the monsters use the local rules. The docs now say how to play from source against Jev.
+
 ### Changed
 - The Jev Worker reaches Jev through the LLM gateway (`LLMGW_API_KEY`, a Jev-only key with a $2 daily budget) instead of holding an OpenRouter or TypeSafe key itself; those two secrets still work as fallbacks.
 
