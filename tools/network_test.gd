@@ -7,6 +7,7 @@ extends "res://tools/test_base.gd"
 
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
+const Minds = preload("res://src/mind/minds.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Network = preload("res://src/network/network.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -31,6 +32,7 @@ func _run() -> void:
 	await _batched_questions()
 	await _batch_failure_falls_back()
 	_local_minds_ask_one_then_the_other()
+	_default_proxy_is_for_the_game_only()
 	Network.transport = Callable()
 	Network.reset()
 	_finish()
@@ -160,3 +162,10 @@ func _local_minds_ask_one_then_the_other() -> void:
 	var mercy: float = b.mercy(m)
 	var pressure: float = b.pressure(m)
 	_check(both.mercy == mercy and both.pressure == pressure, "the seeded mind draws mercy first, then pressure, as before")
+
+
+func _default_proxy_is_for_the_game_only() -> void:
+	_check(Minds.default_url(false) == Minds.DEFAULT_URL and Minds.DEFAULT_URL.begins_with("https://"), "the game asks Jev through the default proxy over https")
+	_check(Minds.default_url(true) == "", "a tool run (headless or -s) has no default proxy, so the suites stay on the local rules")
+	var rng := Rng.new()
+	_check(Minds.create(rng, "", false, true).label() == Minds.create(rng).label(), "so a tool run's mind is the local one even when the game's create asks for the default")

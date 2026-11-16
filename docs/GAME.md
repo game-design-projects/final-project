@@ -77,7 +77,7 @@ You start with 20 HP. A hit costs 3, or 4 from the champion. If you die you can 
 
 Every monster has a species' tastes, its own traits and a motive, and meters for friendliness, anger and fear. Each act asks the mind how it feels, whether it would accept mercy and how hard it attacks. Hover the foe or press **I** to see its mood, what you have found out about it, and the mind's answers. Its health and mood sit over its head, and a bubble shows how a deed landed. The info key also keeps the talk so far.
 
-Monsters think through one interface (`src/mind/`): local rules, a seeded random mind (`mock`), or Jev through the proxy, falling back to the local rules whenever it can't answer.
+Monsters think through one interface (`src/mind/`): local rules, a seeded random mind (`mock`), or Jev through the proxy (the default, `nojev` turns it off), falling back to the local rules whenever it can't answer.
 
 ## Allies
 

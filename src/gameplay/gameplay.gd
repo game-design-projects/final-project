@@ -103,7 +103,7 @@ func _ready() -> void:
 		request = pending
 	_build_screen()
 	_rng = Rng.new()
-	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), Flags.on("social-demo")))
+	flow = Flow.new(_rng, Minds.create(_rng, str(Store.get_value("jev_url", "")), Flags.on("social-demo"), true))
 	audio = Audio.new()
 	add_child(audio)
 	audio.bind(flow)

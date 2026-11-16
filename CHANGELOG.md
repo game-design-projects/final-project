@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- The game asks Jev through the public proxy by default, also when run from source (`godot --path .`), so a fresh checkout plays like a build; `nojev` keeps the local rules, `jev=<url>` or the saved `jev_url` picks another proxy. The test suites, `autoplay` and the screenshot tools (headless or `-s`) never get the default.
+
 ### Fixed
 - `.env.example` and `docs/DEVELOPMENT.md` said the game reads `.env` and that from source it runs on mock Jev; only `node proxy/dev.js` reads `.env`, and from source the monsters use the local rules. The docs now say how to play from source against Jev.
 

@@ -53,16 +53,16 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.
 
-`debug` · `mock` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
+`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>`
 
 ## Playing from source with Jev
 
-From source, monsters think with the local rules unless you point the game at the Worker (`mock` is the seeded random mind, not Jev). Two ways:
+`godot --path .` asks Jev through the public proxy (`DEFAULT_URL` in `src/mind/minds.gd`, the Worker below) with no setup, the same as a build; the local rules answer whenever it can't be reached. To change that:
 
-- One run: `godot --path . -- jev=https://donjon-api.lishuyustevenli.workers.dev`.
-- Every run on this machine: put `"jev_url": "https://donjon-api.lishuyustevenli.workers.dev"` in the Store file, `user://store.json` (on macOS `~/Library/Application Support/donjon/store.json`). `jev=<url>` on the command line still wins, and the headless suites (`autoplay`, the tests) never read the Store, so they stay on the local rules and spend no credits.
+- `-- nojev`: the local rules, no network. `-- mock`: the seeded random mind.
+- `-- jev=<url>` or `"jev_url"` in the Store file (`user://store.json`, on macOS `~/Library/Application Support/donjon/store.json`): another proxy, such as `node proxy/dev.js` (`jev=http://localhost:5175`). The command line wins over the Store, and either wins over a build's shipped address.
 
-`config/jev_url.txt` is how a build ships its address (`tools/build.sh --proxy`); it stays gitignored, because with it in the repo every test run would call Jev.
+The default applies only to the game. A headless run or a `-s` tool script (every suite, `autoplay`, the screenshot tools) never gets it, so tests repeat exactly and spend no credits. `config/jev_url.txt` is how a build ships its address (`tools/build.sh --proxy`) and stays gitignored.
 
 ## Features
 
