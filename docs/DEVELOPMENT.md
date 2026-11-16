@@ -99,7 +99,7 @@ tools/art/reels.sh /some/dir docs/art/game 20       # its clips as GIFs
 
 ## The Worker (Jev)
 
-CI's builds point at `https://donjon-api.lishuyustevenli.workers.dev` (`JEV_API` in `ci.yml`). `.github/workflows/worker.yml` tests the Worker and deploys it from `main` when `proxy/` changes; pull requests only test it and bundle it, with no credentials. The deploy needs `CLOUDFLARE_API_TOKEN` (Workers Editor on this one Worker) and `CLOUDFLARE_ACCOUNT_ID` in the `cloudflare-production` environment. The Jev key never passes through GitHub: set it on the Worker by hand. After a deploy, a smoke test posts a request with no questions (no Jev call, no credits): 400 means the Worker is up with its key, 503 that it has none yet.
+CI's builds point at `https://donjon-api.lishuyustevenli.workers.dev` (`JEV_API` in `ci.yml`). `.github/workflows/worker.yml` tests the Worker and deploys it from `main` when `proxy/` changes; pull requests only test it and bundle it, with no credentials. The deploy needs `CLOUDFLARE_API_TOKEN` (Workers Editor on this one Worker) and `CLOUDFLARE_ACCOUNT_ID` in the `cloudflare-production` environment. The Jev key never passes through GitHub: set it on the Worker by hand. The live Worker holds `LLMGW_API_KEY`, an `sk-llmgw-` key from the LLM gateway (llm.lishuyu.app) limited to `~typesafe/jev-latest` and $2 a day; the Worker posts to the gateway's `/llm/v1/systemone`, which reaches Jev through OpenRouter. Of `LLMGW_API_KEY`, `OPENROUTER_API_KEY` and `TYPESAFE_API_KEY`, the first one set is used. After a deploy, a smoke test posts a request with no questions (no Jev call, no credits): 400 means the Worker is up with its key, 503 that it has none yet.
 
 To run your own:
 
@@ -107,7 +107,7 @@ To run your own:
 cd proxy
 npm ci --ignore-scripts                      # installs wrangler
 npx wrangler login                           # opens your browser to sign in to Cloudflare
-npx wrangler secret put OPENROUTER_API_KEY   # or TYPESAFE_API_KEY
+npx wrangler secret put OPENROUTER_API_KEY   # or LLMGW_API_KEY (gateway) or TYPESAFE_API_KEY
 npx wrangler deploy                          # prints https://donjon-api.<you>.workers.dev
 cd ..
 tools/build.sh --proxy https://donjon-api.<you>.workers.dev

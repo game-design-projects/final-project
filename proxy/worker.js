@@ -1,8 +1,10 @@
 // Cloudflare Worker (donjon-api) that holds the Jev key, so no build ships it, and forwards the game's Jev requests,
 // nothing else. The rules (what to ask, what the answers mean) run inside the game (src/mind/jev_mind.gd asks through here).
 //   POST /api/jev   { state, questions }  ->  Jev's reply, status and body untouched
-// Secret (set with `npx wrangler secret put`): OPENROUTER_API_KEY (a key with a credit limit; preferred when both are
-// set), or TYPESAFE_API_KEY. CI deploys it from .github/workflows/worker.yml with a token scoped to this one Worker.
+// Secret (set with `npx wrangler secret put`), first one set wins: LLMGW_API_KEY (an sk-llmgw- key for the LLM gateway,
+// llm.lishuyu.app, limited to Jev and a daily budget; the gateway reaches Jev through OpenRouter), OPENROUTER_API_KEY
+// (a key with a credit limit), or TYPESAFE_API_KEY. CI deploys it from .github/workflows/worker.yml with a token scoped
+// to this one Worker.
 // Local: `node proxy/dev.js`.
 
 const CORS = {
@@ -11,17 +13,18 @@ const CORS = {
   "access-control-allow-headers": "content-type",
   "access-control-max-age": "86400",
 };
-// Jev's two front doors.
+// Jev's front doors.
 export const UPSTREAM = {
+  gateway: { url: "https://api.lishuyu.app/llm/v1/systemone", model: "~typesafe/jev-latest", headers: {} },
   typesafe: { url: "https://api.typesafe.ai/v1/systemone", model: "jev-latest", headers: {} },
   openrouter: { url: "https://openrouter.ai/api/alpha/decisions", model: "~typesafe/jev-latest", headers: { "x-title": "Donjon" } },
 };
 // What a game request can hold. The biggest the game sends is a three-monster talk round (~75 questions, ~35 KB).
 export const LIMITS = { bytes: 64_000, questions: 120, types: ["noul", "choice", "score"] };
 
-// Outbound requests may only reach Jev's two front doors, over https, so nothing can send the key anywhere else.
+// Outbound requests may only reach Jev's front doors, over https, so nothing can send the key anywhere else.
 // A new provider host has to be added here on purpose.
-export const ALLOWED_HOSTS = new Set(["api.typesafe.ai", "openrouter.ai"]);
+export const ALLOWED_HOSTS = new Set(["api.lishuyu.app", "api.typesafe.ai", "openrouter.ai"]);
 const nativeFetch = globalThis.fetch.bind(globalThis);
 globalThis.fetch = (input, init) => {
   const { protocol, hostname } = new URL(input instanceof Request ? input.url : input);
@@ -48,7 +51,7 @@ function validQuestions(questions) {
 export default {
   async fetch(request, env) {
     // Fail closed: without the key configured, answer nothing.
-    const key = env.OPENROUTER_API_KEY || env.TYPESAFE_API_KEY;
+    const key = env.LLMGW_API_KEY || env.OPENROUTER_API_KEY || env.TYPESAFE_API_KEY;
     if (!key) return reply({ error: "Server not configured" }, 503);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     // Per-IP cap (LIMITER in wrangler.jsonc), so one script can't drain the key's credits. Preflights are free.
@@ -70,7 +73,7 @@ export default {
     if (!isObject(body?.state) || !isObject(body?.questions) || !validQuestions(body.questions)) return reply({ error: "Bad request" }, 400);
 
     // The model is pinned here, whatever the client sent: it spends this Worker's key
-    const up = env.OPENROUTER_API_KEY ? UPSTREAM.openrouter : UPSTREAM.typesafe;
+    const up = env.LLMGW_API_KEY ? UPSTREAM.gateway : env.OPENROUTER_API_KEY ? UPSTREAM.openrouter : UPSTREAM.typesafe;
     try {
       const res = await fetch(up.url, {
         method: "POST",

@@ -54,6 +54,14 @@ test("with an OpenRouter secret it goes through OpenRouter, which wins when both
   assert.equal(call.body.model, "~typesafe/jev-latest");
 });
 
+test("with a gateway key it goes through the LLM gateway's systemone, which wins over the other two", async () => {
+  await post(GOOD, { env: { TYPESAFE_API_KEY: "ts-secret", OPENROUTER_API_KEY: "or-secret", LLMGW_API_KEY: "sk-llmgw-secret" } });
+  const [call] = upstream.calls;
+  assert.equal(call.url, "https://api.lishuyu.app/llm/v1/systemone");
+  assert.equal(call.init.headers.authorization, "Bearer sk-llmgw-secret");
+  assert.deepEqual(call.body, { model: "~typesafe/jev-latest", state: GOOD.state, questions: GOOD.questions });
+});
+
 test("the upstream status and body pass through, so the game can back off on a 429", async () => {
   upstream.reply = () => new Response("slow down", { status: 429 });
   const res = await post(GOOD);
@@ -137,7 +145,7 @@ test("outbound requests go only to Jev, over https", async () => {
 
 test("every upstream host is allowed (a new front door has to be listed on purpose)", () => {
   for (const { url } of Object.values(UPSTREAM)) assert.ok(ALLOWED_HOSTS.has(new URL(url).hostname), url);
-  assert.deepEqual([...ALLOWED_HOSTS].sort(), ["api.typesafe.ai", "openrouter.ai"]);
+  assert.deepEqual([...ALLOWED_HOSTS].sort(), ["api.lishuyu.app", "api.typesafe.ai", "openrouter.ai"]);
 });
 
 test("a game request with both questions of one turn (mercy and pressure) is one request the Worker forwards whole", async () => {
