@@ -149,6 +149,8 @@ func _nerve() -> void:
 	_check(wall.hazards.size() == Dodge.COLS and groups.size() == 1, "the columns of a wall are one thing: one close call for the lot (%d hazards, %d groups)" % [wall.hazards.size(), groups.size()])
 	_check(Combat.nerve_damage(2) == 2 * Combat.NERVE_DAMAGE and Combat.nerve_damage(99) == Combat.NERVE_MAX * Combat.NERVE_DAMAGE, "each point adds to a strike, up to the most you can hold")
 	_check(is_equal_approx(Combat.nerve_mercy(3), 3 * Combat.NERVE_MERCY), "and to the odds of a SPARE")
+	var Texts = load("res://src/game/texts.gd")
+	_check(Texts.spare_chance(0.0, Combat.nerve_mercy(5), 5, false).contains("0% → 40%") and Texts.spare_chance(1.0, 1.0, 0, false).contains("100%"), "SPARE preview handles zero and certain probability boundaries")
 
 	# in a fight
 	var flow = _flow(81)
@@ -164,8 +166,8 @@ func _nerve() -> void:
 	await flow.tick(flow.clock + 20.0)
 	_check(s.stage == "menu" and s.nerve == 1, "a dodge with no hit in it earns a point (%s, %d)" % [s.stage, s.nerve])
 	_check(heard.any(func(e): return e[0] == "nerve" and e[1].how == "clean" and e[1].total == 1), "and says so")
-	_check(str(s.menu[0].sub).contains("NERVE +%d" % Combat.NERVE_DAMAGE), "FIGHT says what it adds (%s)" % s.menu[0].sub)
-	_check(str(s.menu[2].sub).begins_with("NERVE +%d%%" % roundi(Combat.NERVE_MERCY * 100.0)), "and so does SPARE (%s)" % s.menu[2].sub)
+	_check(str(s.menu[0].sub).contains("NERVE 1/5: +2 ON HIT"), "FIGHT says what it adds (%s)" % s.menu[0].sub)
+	_check(str(s.menu[2].sub).contains("spend 1 Nerve") and str(s.menu[2].sub).contains("→"), "SPARE compares odds before and after spending (%s)" % s.menu[2].sub)
 	await _into_dodge(flow)
 	here = Dodge.index(s.dodge.soul.x, s.dodge.soul.y)
 	s.dodge.hazards = []
@@ -184,7 +186,7 @@ func _nerve() -> void:
 	# a miss keeps it, a strike that lands spends it
 	s.nerve = 3
 	await flow.press("1")
-	_check(s.stage == "fightbar" and s.hint.contains("NERVE +%d" % (3 * Combat.NERVE_DAMAGE)), "the strike bar says what is riding on it (%s)" % s.hint)
+	_check(s.stage == "fightbar" and s.hint.contains("3/5 NERVE: +6 ON HIT"), "the strike bar says what is riding on it (%s)" % s.hint)
 	await flow.tick(s.bar.t0 + s.bar.dur + 10.0)
 	_check(s.nerve == 3 and m.hp == 200, "a miss keeps the nerve (%d)" % s.nerve)
 	await _through_dodge(flow)
@@ -202,6 +204,7 @@ func _nerve() -> void:
 	flow.dice.pin(0.99) # refused, whatever the odds: they are what is checked
 	var before: float = await flow.encounter.mercy(m)
 	await flow.go("menu")
+	_check(s.menu[0].sub.contains("NERVE 5/5") and s.menu[2].sub.contains("spend 5 Nerve") and s.menu[2].sub.contains("→"), "menu compares the damage and mercy uses before commitment")
 	await flow.press("3")
 	var rolled: float = s.mind_rows.filter(func(row): return row.id == "mercy").front().answer
 	_check(is_equal_approx(rolled, minf(1.0, before + Combat.nerve_mercy(Combat.NERVE_MAX))) and s.nerve == 0, "SPARE spends it for better odds (%.2f from %.2f)" % [rolled, before])
@@ -222,6 +225,7 @@ func _nerve() -> void:
 	_end_dodge(off)
 	await off.tick(off.clock + 20.0)
 	_check(off.state.stage == "menu" and off.state.nerve == 0 and not off.state.viewing("nerve"), "no-nerve: a clean dodge earns nothing, and nothing is shown")
+	_check(not off.state.menu[0].sub.contains("NERVE") and not off.state.menu[2].sub.contains("Nerve"), "no-nerve: menu does not mention the disabled resource")
 	await _into_dodge(off)
 	off.state.dodge.hazards = []
 	off.state.dodge.add_hazard(off.clock, [Dodge.index(off.state.dodge.soul.x, off.state.dodge.soul.y)], 100.0, 300.0, "goo")

@@ -116,8 +116,13 @@ func _slimes() -> void:
 	await _popup(flow)
 	await flow.press("2")
 	_check(s.stage == "menu" and s.foe.social.promise and s.menu[2].gold and s.mind_rows.any(func(row): return row.id == "mercy" and row.answer == 1.0), "promise holds back one turn and exposes mercy opportunity")
+	s.nerve = 3
+	var nerve_spent := {"value": false}
+	flow.happened.connect(func(name, data): if name == "nerve" and data.get("how", "") == "spent": nerve_spent.value = true)
+	await flow.go("menu")
+	_check(s.menu[2].sub.contains("No Nerve needed"), "guaranteed SPARE announces that Nerve will not be spent")
 	await flow.press("3")
-	_check(s.foe.gone == "spared" and s.stage == "ask", "kept promise enables existing recruitment decision")
+	_check(s.foe.gone == "spared" and s.stage == "ask" and not nerve_spent.value, "kept promise enables recruitment without spending Nerve")
 	flow = await _fresh("slime", ["shy"])
 	s = flow.state
 	await _popup(flow)
@@ -218,6 +223,16 @@ func _persistence() -> void:
 	var restored = State.from_dict(saved)
 	_check(restored != null and restored.floor_map.monsters[0].social.betrayed, "JSON save/load keeps structured promises and betrayals")
 	_check(restored.recent_social == "slime", "topic spacing persists through save/load")
+	var snake = await _fresh("snake", ["curious about humans"])
+	var snake_state = snake.state
+	await _popup(snake)
+	await snake.press("1")
+	var snake_saved: Dictionary = JSON.parse_string(JSON.stringify(snake_state.to_dict()))
+	var snake_restored = State.from_dict(snake_saved)
+	_check(snake_restored != null and snake_restored.floor_map.monsters[0].social.confided_mercy == false, "Snake's truthful disclosure persists through save/load")
+	snake_state.stage = "dead" # retry is a dead -> intro transition, as in the real game
+	await snake.encounter.retry_fight()
+	_check(not snake.state.foe.social.get("used", false) and Social.remembered(snake.state.foe) == "", "retry restores Snake's pre-disclosure memory")
 	var old: Dictionary = saved.duplicate(true)
 	for m in old.floor.monsters:
 		m.erase("social")
@@ -249,8 +264,36 @@ func _other_species() -> void:
 	s = flow.state
 	await _popup(flow)
 	var gold: int = s.gold
+	_check(s.menu[0].sub.contains("remembers") and s.menu[1].sub.contains("vague") and s.menu[2].sub.contains("2 gold"), "Snake popup states the three different costs before selection")
 	await flow.press("3")
-	_check(s.gold == gold - 2 and s.stage == "wait" and s.lines.any(func(l): return l.text.contains("stairs")), "Snake proof validates payment and reveals actual floor route")
+	_check(s.gold == gold - 2 and s.stage == "wait" and s.lines.any(func(l): return l.text.contains("stairs")) and s.foe.social.confided_mercy == null, "Snake proof validates payment, reveals route and keeps history private")
+	flow = await _fresh("snake", ["curious about humans"])
+	s = flow.state
+	s.floor_map.monsters[1].gone = "spared"
+	await _popup(flow)
+	gold = s.gold
+	var friendliness: float = s.foe.meters.friendliness
+	await flow.press("1")
+	_check(s.gold == gold and s.foe.social.confided_mercy == true and s.foe.meters.friendliness > friendliness and s.foe.social.soft_turns == 1, "curious Snake trusts a true confession and remembers the actual floor record")
+	_check(Social.remembered(s.foe).contains("spared someone"), "Snake can recall only what the player disclosed")
+	flow = await _fresh("snake", ["secretive"])
+	s = flow.state
+	await _popup(flow)
+	await flow.press("1")
+	_check(s.foe.social.confided_mercy == false, "Snake remembers a truthful report of no mercy on this floor")
+	Social.begin(s.foe, s, flow.dice)
+	_check(is_equal_approx(s.foe.social.pressure, 0.5) and Social.remembered(s.foe).contains("keep my distance"), "the disclosed lack of mercy makes this same Snake wary on a later meeting")
+	flow = await _fresh("snake", ["secretive"])
+	s = flow.state
+	await _popup(flow)
+	await flow.press("2")
+	_check(s.foe.social.confided_mercy == null and s.lines.any(func(l): return l.text.contains("somewhere on this floor")), "unwitnessed concealment gives only vague information without disclosing history")
+	flow = await _fresh("snake", ["secretive"])
+	s = flow.state
+	s.gold = 1
+	await _popup(flow)
+	await flow.press("3")
+	_check(s.stage == "social" and s.gold == 1 and not s.foe.social.used, "Snake cannot sell exact information when gold is insufficient")
 	flow = await _fresh("snake", ["secretive"])
 	s = flow.state
 	# A spared neighbour standing in the same cell is directly known, rather than an omniscient tally.
