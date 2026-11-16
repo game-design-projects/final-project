@@ -7,6 +7,7 @@ const Rng = preload("res://src/utils/rng.gd")
 
 const ENTER_MS := 800.0 # between new babies
 const HOP_MS := 560.0
+const HOP_MIN_MS := 380.0 # however fierce (a champion on B5F), a baby hops no faster than this
 const MAX_ALIVE := 3
 const MAX_ALIVE_FIERCE := 4
 const FIERCE := 1.3
@@ -15,18 +16,18 @@ const MIN_START := 3 # a baby enters at least this many cells (Chebyshev) from t
 const POP_WARN_MS := 450.0
 const POP_HIT_MS := 250.0
 const LEAD_HOPS := 1.3 # how many hops ahead a square is planned, and drawn
-const SHOWS_MIN_MS := 360.0 # a hop is planned this far ahead at least, so a person sees it in time
+const SHOWS_MIN_MS := 440.0 # a hop is planned this far ahead at least, so a person sees it in time to take two steps
 const NEIGHBOURS := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 
 
 static func begin(run, _rng: Rng) -> void:
 	run.mem = {"babies": [], "taken": []} # taken: {cell, from, to} squares a baby has claimed
-	print_verbose("brood: up to %d babies, a hop every %.0f ms" % [MAX_ALIVE_FIERCE if run.intensity >= FIERCE else MAX_ALIVE, HOP_MS / (run.intensity * run.pace)])
+	print_verbose("brood: up to %d babies, a hop every %.0f ms" % [MAX_ALIVE_FIERCE if run.intensity >= FIERCE else MAX_ALIVE, maxf(HOP_MS / (run.intensity * run.pace), HOP_MIN_MS)])
 
 
 static func spawn(run, t: float, rng: Rng, _events: Array) -> void:
 	var ip: float = run.intensity * run.pace
-	var hop := HOP_MS / ip
+	var hop := maxf(HOP_MS / ip, HOP_MIN_MS)
 	var lead := maxf(hop * LEAD_HOPS, SHOWS_MIN_MS) # how far ahead a hop is planned, and drawn
 	var mem: Dictionary = run.mem
 	mem.babies = mem.babies.filter(func(b): return t < b.gone)

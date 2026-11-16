@@ -84,7 +84,7 @@ You dodge on a 7×7 grid. Each kind attacks in its own way, and its pace follows
 | B4F | Splitter (slime) | Split | A big blob lands, then splits four ways |
 | B4F | Sapper (bandit) | Bombs | Bombs count down 3, 2, 1, then blow along their row and column |
 | B4F | Twinhead (snake) | Twin lanterns | Two lanterns flare in turn; hide from each behind a pillar |
-| B4F | Quakestone (rock) | Quake | A stomp rings out; stand in its crack, or far away |
+| B4F | Quakestone (rock) | Quake | A stomp rings out across the box but for a crack running from it; stand in the crack |
 | B4F | Crusher (rock) | Crush | The walls close in from two sides; be at the gap when they meet |
 | B5F | Brood mother (slime) | Brood | Her babies hop after you, then pop |
 | B5F | Tide (slime) | Tide | The tide floods all but an island, and the island moves |

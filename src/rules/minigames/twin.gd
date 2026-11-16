@@ -10,6 +10,8 @@ const FLARE_MS := 900.0 # between one lantern's flare and the other's
 const FIRST_MS := 300.0
 const WARN_MS := 850.0
 const HIT_MS := 300.0
+const STEP_MS := 200.0 # a person tapping an arrow five times a second
+const WARN_STRETCH := [1.0, 1.25, 1.5] # how much longer a flare may warn when its shade is far from you
 const MIN_SHADE := 6 # squares in shadow at every flare
 const TRIES := 12 # layouts drawn at random, then as many tried by moving one pillar of the best
 const FALLBACK := [Vector2i(2, 2), Vector2i(4, 4), Vector2i(5, 1), Vector2i(1, 4)]
@@ -138,11 +140,38 @@ static func spawn(run, t: float, _rng: Rng, _events: Array) -> void:
 	run.next_t = t + FLARE_MS / (run.intensity * run.pace)
 	var n: int = run.mem.flares
 	run.mem.flares += 1
-	var lantern := Dodge.lantern_at(t + WARN_MS / run.pace - run.t0, run.intensity, run.lanterns[n % 2])
-	var cells := []
-	for r in Dodge.ROWS:
-		for c in Dodge.COLS:
-			var k := Dodge.index(c, r)
-			if not run.blocked.has(k) and not Dodge.in_shadow(lantern, c, r, run.blocked):
-				cells.append(k)
-	run.add_hazard(t, cells, WARN_MS, HIT_MS, "light", {"lantern": lantern})
+	# a flare whose shade is further from you than you can walk before it lands waits longer, so the lantern moves on and the
+	# shade with it; one that still can't be reached is left out
+	for stretch in WARN_STRETCH:
+		var warn: float = WARN_MS * stretch
+		var lantern := Dodge.lantern_at(t + warn / run.pace - run.t0, run.intensity, run.lanterns[n % 2])
+		var cells := []
+		for r in Dodge.ROWS:
+			for c in Dodge.COLS:
+				var k := Dodge.index(c, r)
+				if not run.blocked.has(k) and not Dodge.in_shadow(lantern, c, r, run.blocked):
+					cells.append(k)
+		if _steps_to_shade(run, cells) * STEP_MS <= warn / run.pace:
+			run.add_hazard(t, cells, warn, HIT_MS, "light", {"lantern": lantern})
+			return
+	print_verbose("twin: flare %d left out, no shade within reach of %s" % [n, run.soul])
+
+
+## How many steps from the soul to the nearest square these `lit` squares leave dark (FAIL when there is none).
+static func _steps_to_shade(run, lit: Array) -> int:
+	var dark := {}
+	for k in Dodge.COLS * Dodge.ROWS:
+		if not run.blocked.has(k) and not lit.has(k):
+			dark[k] = true
+	var dist := {run.soul: 0}
+	var queue := [run.soul]
+	while not queue.is_empty():
+		var c: Vector2i = queue.pop_front()
+		if dark.has(Dodge.index(c.x, c.y)):
+			return dist[c]
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var nb: Vector2i = c + d
+			if Dodge.in_box(nb.x, nb.y) and not run.blocked.has(Dodge.index(nb.x, nb.y)) and not dist.has(nb):
+				dist[nb] = dist[c] + 1
+				queue.append(nb)
+	return FAIL

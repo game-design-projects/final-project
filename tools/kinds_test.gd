@@ -17,6 +17,7 @@ const Rng = preload("res://src/utils/rng.gd")
 const PER_FLOOR := 5
 const CLANS := ["slime", "bandit", "snake", "rock"]
 const REACT_MS := 300.0 # the least warning the square you stand on gets
+const STEP_MS := 200.0 # how fast a person taps an arrow: five steps a second
 const TICK_MS := 16.0
 const ROAMS := ["drift", "patrol", "stalk", "still"]
 
@@ -147,13 +148,14 @@ func _champion_cycle() -> void:
 # ---------------------------------------------------------------- the attacks
 
 ## Each attack played for a whole dodge at a low and a high pace of intensity, with the soul standing still and with it wandering:
-## it makes hazards, keeps its cells in the box, warns your square at least REACT_MS before it hurts, never lights every open square
-## at once, never puts a pillar on you and never shuts you into fewer than four squares.
+## it makes hazards, keeps its cells in the box, warns your square at least REACT_MS before it hurts, leaves a square you can walk
+## to at STEP_MS a step before it lands, never lights every open square at once, never puts a pillar on you and never shuts you
+## into fewer than four squares. The high pace is a champion's on B5F with the dodge pressed hard.
 func _every_attack() -> void:
 	var genres: Array = DodgeRun.MINI_GAMES.keys()
 	genres.sort()
 	for g in genres:
-		var worst := {"hazards": 0, "outside": 0, "blind": 0, "full": 0, "pinned": 0, "boxed": 0}
+		var worst := {"hazards": 0, "outside": 0, "blind": 0, "trapped": 0, "full": 0, "pinned": 0, "boxed": 0}
 		for intensity in [1.0, 1.6]:
 			for i in 6:
 				var r := _play(g, intensity, i, i % 2 == 1)
@@ -162,13 +164,14 @@ func _every_attack() -> void:
 		_check(worst.hazards > 0, "%s makes hazards (%d)" % [g, worst.hazards])
 		_check(worst.outside == 0, "%s keeps to the box" % g)
 		_check(worst.blind == 0 or g == "gates", "%s warns your square %d ms before it hurts (%d too late)" % [g, REACT_MS, worst.blind])
+		_check(worst.trapped == 0, "%s always leaves a way off your square in time at five steps a second (%d didn't)" % [g, worst.trapped])
 		_check(worst.full == 0, "%s never lights every open square at once (%d frames did)" % [g, worst.full])
 		_check(worst.pinned == 0, "%s never puts a pillar where you stand" % g)
 		_check(worst.boxed == 0, "%s never shuts you into fewer than four squares (%d frames did)" % [g, worst.boxed])
 
 
 func _play(genre: String, intensity: float, i: int, wander: bool) -> Dictionary:
-	var out := {"hazards": 0, "outside": 0, "blind": 0, "full": 0, "pinned": 0, "boxed": 0}
+	var out := {"hazards": 0, "outside": 0, "blind": 0, "trapped": 0, "full": 0, "pinned": 0, "boxed": 0}
 	var rng := Rng.new(77 + i)
 	var walk := Rng.new(500 + i)
 	var run = DodgeRun.start(genre, (intensity - 0.8) / 0.25, i == 5, i % 3, 0.0, {}, 1.0, {})
@@ -189,6 +192,11 @@ func _play(genre: String, intensity: float, i: int, wander: bool) -> Dictionary:
 				out.outside += 1
 			if h.cells.has(here) and h.hit - t < REACT_MS - TICK_MS and not ["star", "pad"].has(h.kind):
 				out.blind += 1
+			if h.cells.has(here) and not ["star", "pad"].has(h.kind):
+				var steps := _escape(run, h)
+				if steps < 0 or steps > floori((h.hit - t) / STEP_MS):
+					out.trapped += 1
+					print("kinds_test: %s at %.2f%s, seed %d: at %s, %d ms after it showed, %d steps out with %d ms to go" % [genre, intensity, " (champion)" if i == 5 else "", i, run.soul, int(t - h.warn), steps, int(h.hit - t)])
 		var live := {}
 		for h in run.hazards:
 			if t >= h.hit and t < h.end and not ["star", "pad"].has(h.kind):
@@ -206,6 +214,25 @@ func _play(genre: String, intensity: float, i: int, wander: bool) -> Dictionary:
 			run.move(d.x, d.y)
 		t += TICK_MS
 	return out
+
+
+## The fewest steps from the soul to a square that nothing hurts while `h` does, or -1.
+func _escape(run, h: Dictionary) -> int:
+	var dist := {run.soul: 0}
+	var queue := [run.soul]
+	while not queue.is_empty():
+		var c: Vector2i = queue.pop_front()
+		var k := Dodge.index(c.x, c.y)
+		# safe from `h` itself and from whatever else lands while `h` does (a wall that stays lit after it is not counted: you
+		# only have to be out of it by the time it lands, and the next one says where to go after)
+		if not run.hazards.any(func(o): return not ["star", "pad"].has(o.kind) and o.cells.has(k) and o.hit < minf(h.end, h.hit + STEP_MS) and o.end > h.hit):
+			return dist[c]
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = c + d
+			if Dodge.in_box(n.x, n.y) and not run.blocked.has(Dodge.index(n.x, n.y)) and not dist.has(n):
+				dist[n] = dist[c] + 1
+				queue.append(n)
+	return -1
 
 
 ## How many open squares the soul can walk to.
