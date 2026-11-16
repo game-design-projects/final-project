@@ -15,6 +15,8 @@ const FIELDS := {
 	"player_hurt": ["damage"], # a hazard hit you
 	"shield": [], # the slime's charm absorbed a hit
 	"star": [], # you caught a star in the mini-game
+	"heart": [], # you caught a heart a friendly monster dropped in its attack
+	"nerve": ["total", "how"], # your nerve moved to `total`: "close" (a close call), "clean" (a dodge with no hit in it), "lost" (a hit shook one out) or "spent" (a strike or a SPARE used it)
 	"sound": ["name"], # a hazard landed (hit, slash, holy)
 	"beat": [], # the rhythm beat
 	"menu_move": [], # the cursor moved in a list of choices

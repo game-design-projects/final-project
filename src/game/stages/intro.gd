@@ -25,6 +25,7 @@ func enter(flow, args: Dictionary) -> void:
 	_queued = false
 	s.foe = m
 	s.skill_fight = Skills.new_fight() if flow.feature("skill-combat") else null
+	s.nerve = 0
 	m.spoke = false
 	s.social_offer = {}
 	s.social_typing = false

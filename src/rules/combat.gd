@@ -37,6 +37,18 @@ const GUARD_FROM_ALLIES := 2 # this many allies take a point off every hit
 const DODGE_DAMAGE := 3
 const DODGE_DAMAGE_BOSS := 4
 
+# Nerve: what holding your ground in the dodge box is worth to your next move. A point for a dodge with no hit in it, and one
+# for every close call: stepping off a square in its last moments before it lands. A strike that lands or a SPARE spends it all.
+const NERVE_MAX := 5
+const NERVE_WINDOW_MS := 300.0 # stepping off a square this close to its landing is a close call
+const NERVE_DAMAGE := 2 # what each point adds to a strike that lands
+const NERVE_MERCY := 0.08 # and to the odds of a SPARE
+const NERVE_LOST_ON_HIT := 1 # a hit shakes one out of you
+
+# A friendly monster's attack drops hearts: each one caught heals you and pleases it.
+const HEART_HEAL := 1
+const HEART_FRIENDLINESS := 3.0
+
 # Real-time beats between the player's move and the next thing
 const INTRO_MS := 700.0
 const WINDUP_MS := 650.0
@@ -103,3 +115,13 @@ static func chance_label(p: float) -> String:
 	if p < 1.0 and p > 0.99:
 		return ">99%"
 	return "%d%%" % roundi(p * 100.0)
+
+
+## What `nerve` points add to a strike that lands.
+static func nerve_damage(nerve: int) -> int:
+	return clampi(nerve, 0, NERVE_MAX) * NERVE_DAMAGE
+
+
+## What `nerve` points add to the odds of a SPARE.
+static func nerve_mercy(nerve: int) -> float:
+	return clampi(nerve, 0, NERVE_MAX) * NERVE_MERCY

@@ -84,6 +84,7 @@ static func recipes() -> Dictionary:
 			"good": snd_good, "bad": snd_bad, "sad": snd_sad, "odd": snd_odd, "join": snd_join, "chime": snd_chime,
 			"encounter": snd_encounter, "boss": snd_boss, "flee": snd_flee, "bump": snd_bump, "stairs": snd_stairs,
 			"tick": snd_tick,
+			"nerve_1": snd_nerve.bind(0), "nerve_2": snd_nerve.bind(1), "nerve_3": snd_nerve.bind(2), "nerve_4": snd_nerve.bind(3), "nerve_5": snd_nerve.bind(4),
 			"voice_roar": snd_voice_roar, "voice_bark": snd_voice_bark, "voice_grunt": snd_voice_grunt,
 			"voice_growl": snd_voice_growl, "voice_hiss": snd_voice_hiss, "voice_squelch": snd_voice_squelch,
 			"voice_laugh": snd_voice_laugh, "voice_squeal": snd_voice_squeal, "voice_whimper": snd_voice_whimper,
@@ -335,6 +336,14 @@ static func snd_buff(s, t, _o = {}):
 	var notes := [72, 79, 84]
 	for i in notes.size():
 		s.tone(t + i * 0.05, {type = "triangle", f0 = note(notes[i]), dur = 0.7, vol = 0.1, attack = 0.08, room = 1, vibrato = {rate = 5, depth = 3}})
+
+
+## A point of nerve: a bright blip, a step higher for each point held (the bound `step`, 0 to 4), so a run of them climbs.
+static func snd_nerve(s, t, _o = {}, step := 0):
+	var n: int = [76, 79, 81, 84, 88][clampi(step, 0, 4)]
+	s.tone(t, {type = "triangle", f0 = note(n), dur = 0.14, vol = 0.2, room = 0.5})
+	s.tone(t + 0.03, {type = "sine", f0 = note(n + 12), dur = 0.22, vol = 0.1, room = 0.8})
+	s.noise(t, {dur = 0.05, vol = 0.1, f0 = 6000, f1 = 3000, q = 1.5, room = 0.3})
 
 
 static func snd_slash(s, t, _o = {}):

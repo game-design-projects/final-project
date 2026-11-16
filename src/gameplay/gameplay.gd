@@ -499,6 +499,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_shake()
 			_postfx.flash(Color.WHITE, (0.5 if data.crit else 0.25) * _softness())
 			_overlay.popup(("CRIT %d" if data.crit else "%d") % data.damage, Palette.MERCY if data.crit else Palette.INK, Vector2(224, 96))
+			if int(data.get("nerve", 0)) > 0:
+				_overlay.popup("NERVE +%d" % data.nerve, Palette.YOU, Vector2(224, 120))
 		"miss":
 			_overlay.popup("MISS", Palette.DIM, Vector2(224, 96))
 		"player_hurt":
@@ -508,6 +510,16 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_overlay.comet(_overlay.soul_at())
 		"shield":
 			_overlay.popup("BLOCKED", Palette.MERCY, Vector2(224, 200))
+		"nerve":
+			match data.how:
+				"close":
+					_overlay.popup("CLOSE CALL", Palette.YOU, _overlay.soul_at() + Vector2(0, -6))
+					_postfx.flash(Palette.YOU, 0.12 * _softness())
+				"clean":
+					_overlay.popup("CLEAN DODGE · NERVE +1", Palette.YOU, Vector2(224, 150))
+		"heart":
+			_overlay.popup("+1", Palette.MERCY, _overlay.soul_at() + Vector2(0, -6))
+			_postfx.flash(Palette.MERCY, 0.12 * _softness())
 		"beat":
 			_postfx.beat()
 		"spared":

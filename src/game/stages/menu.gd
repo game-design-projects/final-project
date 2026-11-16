@@ -28,6 +28,7 @@ func enter(flow, _args: Dictionary) -> void:
 	if Social.promised(s.foe) and not enraged:
 		mercy = 1.0
 		s.mind_rows = s.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "PROMISE KEPT: WILL IT ACCEPT MERCY?", "answer": mercy}]
+	var nerve: int = s.nerve if flow.feature("nerve") else 0
 	var skilled: bool = s.skill_fight != null
 	if skilled and s.skill_fight.turn_over:
 		Skills.start_turn(s.skill_fight)
@@ -37,7 +38,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
-		{"label": "SPARE", "sub": str(Clans.no_mercy().spare) if enraged else Texts.spare_tip(mercy, s.foe.boss), "gold": mercy >= 0.5, "disabled": enraged},
+		{"label": "SPARE", "sub": str(Clans.no_mercy().spare) if enraged else Texts.nerve_for_mercy(nerve) + Texts.spare_tip(mercy, s.foe.boss), "gold": mercy + Combat.nerve_mercy(nerve) >= 0.5, "disabled": enraged},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
 	if skilled:
@@ -48,6 +49,8 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
 	if int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
+	if nerve > 0:
+		s.menu[FIGHT].sub += " · NERVE +%d" % Combat.nerve_damage(nerve)
 	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
 
@@ -112,6 +115,7 @@ func _spare(flow) -> void:
 	if Clans.enraged(s, m): # SPARE is greyed out, and a key that still reaches it does nothing
 		return
 	var odds: float = await flow.encounter.mercy(m)
+	odds = minf(1.0, odds + Combat.nerve_mercy(flow.encounter.spend_nerve())) # it saw you stand your ground
 	if Social.promised(m):
 		odds = 1.0
 	var accepted := Odds.succeeds(flow.dice, odds)

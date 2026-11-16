@@ -136,6 +136,23 @@ func _mercy_moved(mercy: float) -> String:
 	return Texts.mercy_moved(before, mercy)
 
 
+## The mercy odds moved without a deed of yours (hearts caught in its attack): the gauge and the card follow, and the picture says
+## by how much.
+func note_mercy(odds: float) -> void:
+	_mercy_moved(odds)
+	flow.state.mind_rows = flow.state.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": odds}]
+
+
+## The nerve the player holds is spent on a strike that landed or a SPARE. Returns how many points it was (0 without the feature).
+func spend_nerve() -> int:
+	var s = flow.state
+	var held: int = s.nerve if flow.feature("nerve") else 0
+	if held > 0:
+		s.nerve = 0
+		flow.event("nerve", {"total": 0, "how": "spent"})
+	return held
+
+
 ## After the player acts: show what happened, then the monster either holds back or winds up its attack.
 func after_player(lines: Array, decision: Dictionary, show_attack_line := true) -> void:
 	if flow.state.skill_fight != null:

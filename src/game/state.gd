@@ -66,6 +66,7 @@ var foe # Monster, or null when not in a fight
 var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
 var skill_fight = null # this fight's energy, cooldowns, block and bruises (Skills.new_fight), with the feature skill-combat; null without it
+var nerve := 0 # what holding your ground in the dodge box has earned this fight, 0..Combat.NERVE_MAX: the next strike that lands or SPARE spends it (the feature nerve)
 var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
 var rotate_mini_games := false # every third attack is a mini-game (the flow turns it on; a test may leave it off)
 var social_offer := {} # only the social stage owns this popup

@@ -17,6 +17,8 @@ const SOUNDS := {
 	"dead": "dead", "menu_move": "move", "menu_pick": "pick",
 }
 
+const NERVE_NOTES := 5 # one rising note for each point of nerve (sfx.gd has nerve_1 to nerve_5)
+
 var _flow
 var _sfx
 var _music
@@ -79,6 +81,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_music.sting("fanfare")
 		"sound":
 			_sfx.play(data.name)
+		"nerve":
+			if data.how in ["close", "clean"]: # each point sounds a step higher than the last
+				_sfx.play("nerve_%d" % clampi(int(data.total), 1, NERVE_NOTES))
 		"shout":
 			_speak(data)
 		_:

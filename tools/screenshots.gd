@@ -21,7 +21,10 @@ func _initialize() -> void:
 	# macOS slows a window that is behind others to a crawl: keep this one on top and off vsync
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
-	DisplayServer.window_move_to_foreground()
+	if Flags.on("nofocus"): # someone is typing on this screen: stay visible, take no keys
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
+	else:
+		DisplayServer.window_move_to_foreground()
 	if Flags.on("social-demo"):
 		await _social_shots()
 		quit()
