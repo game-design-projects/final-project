@@ -31,6 +31,8 @@ const DURATION_BOSS_MS := 6200.0
 const FIRST_SPAWN_MS := 300.0
 const SAFE_MS := 700.0 # no second hit within this long of one
 const SAFE_SNAKE_MS := 1100.0 # with the snake's charm
+## What a hazard sounds like when it lands, by its kind; any other kind lands quietly (goo, venom, beams).
+const HIT_SOUNDS := {"stomp": "hit", "chess": "slash", "light": "holy", "wall": "tick", "bolt": "slash", "rock": "hit", "blast": "hit"}
 const WARN_BANDIT_SCALE := 1.3 # the bandit's charm keeps warnings lit longer (not stomps: those follow the beat)
 const CATCHES := ["star", "pad", "heart"] # what is there to be caught, not dodged
 const AFRAID_DURATION := 0.75 # a frightened monster breaks off early
@@ -169,7 +171,7 @@ func update(t: float, rng: Rng) -> Array:
 	for h in hazards:
 		if t >= h.hit and not h.sounded:
 			h.sounded = true
-			events.append({"type": "sound", "name": {"stomp": "hit", "chess": "slash", "light": "holy", "wall": "tick"}.get(h.kind, "")})
+			events.append({"type": "sound", "name": HIT_SOUNDS.get(h.kind, "")})
 		if h.kind in CATCHES:
 			if t >= h.hit and t < h.end and h.cells.has(here) and not h.get("taken", false):
 				h.taken = true
