@@ -7,6 +7,7 @@ extends Control
 
 const Audio = preload("res://src/audio/audio.gd")
 const Automap = preload("res://src/view/automap.gd")
+const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Hud = preload("res://src/view/hud.gd")
@@ -503,6 +504,10 @@ func _on_event(name: String, data: Dictionary) -> void:
 				_overlay.popup("NERVE +%d" % data.nerve, Palette.YOU, Vector2(224, 120))
 		"miss":
 			_overlay.popup("MISS", Palette.DIM, Vector2(224, 96))
+		"follow":
+			_stage.flash_foe(s.foe, now)
+			_overlay.hurt_until = _clock_ms + 200.0
+			_overlay.popup("%s %d" % [data.who, data.damage], Color(Content.species(data.species).color), Vector2(224, 78))
 		"player_hurt":
 			_shake()
 			_postfx.hurt()

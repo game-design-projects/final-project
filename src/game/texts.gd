@@ -205,6 +205,14 @@ static func hit(damage: int, crit: bool) -> String:
 	return "%s%d damage." % ["A perfect strike! " if crit else "", damage]
 
 
+## What the friends added after your strike ("" when none did), to go between the hit and how the foe took it.
+static func followed(names: Array, damage: int) -> String:
+	if names.is_empty():
+		return ""
+	var who: String = str(names[0]) if names.size() == 1 else "%s and %s" % [", ".join(names.slice(0, -1)), names[-1]]
+	return "%s %s through: %d more. " % [who, "follows" if names.size() == 1 else "follow", damage]
+
+
 static func flee(foe) -> String:
 	return "You back away. %s stays where it is." % foe.name
 

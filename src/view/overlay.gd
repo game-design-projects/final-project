@@ -794,6 +794,20 @@ func _strike_bar() -> void:
 		draw_rect(Rect2(rect.get_center().x - mark / 2.0, rect.position.y, mark, rect.size.y), Color(Palette.WARN, 0.4))
 	draw_rect(Rect2(rect.position.x + rect.size.x * 0.46, rect.position.y, rect.size.x * 0.08, rect.size.y), Color(Palette.MERCY, 0.35))
 	draw_line(Vector2(rect.get_center().x, rect.position.y), Vector2(rect.get_center().x, rect.end.y), Palette.MERCY, 2.0)
+	for mark in bar.get("marks", []): # each friend's mark, in its colour: lit once it lands, greyed once it is lost
+		var ink := Color(Content.species(mark.species).color)
+		var zone := Rect2(rect.position.x + rect.size.x * (float(mark.at) - Combat.FOLLOW_EDGE), rect.position.y, rect.size.x * Combat.FOLLOW_EDGE * 2.0, rect.size.y)
+		match str(mark.state):
+			"hit":
+				draw_rect(zone, Color(ink, 0.9))
+			"lost":
+				draw_rect(zone.grow(-1.0), Palette.FAINT, false, 1.0) # an empty frame: nothing to press for any more
+			_:
+				draw_rect(zone, Color(ink, 0.28 + 0.12 * absf(sin(clock_ms / 140.0))))
+				draw_line(Vector2(zone.get_center().x, zone.position.y), Vector2(zone.get_center().x, zone.end.y), ink, 2.0)
+	if float(bar.get("struck", -1.0)) >= 0.0: # where your own strike fell, while the line runs on
+		var sx: float = rect.position.x + rect.size.x * float(bar.struck)
+		draw_line(Vector2(sx, rect.position.y), Vector2(sx, rect.end.y), Color(Palette.MERCY, 0.9), 2.0)
 	var p := clampf((clock_ms - bar.t0) / bar.dur, 0.0, 1.0)
 	var x := rect.position.x + rect.size.x * p
 	draw_line(Vector2(x, rect.position.y - 3), Vector2(x, rect.end.y + 3), Palette.INK, 3.0)

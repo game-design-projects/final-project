@@ -27,7 +27,8 @@
   "nerve": "A clean dodge: NERVE. It adds to your next FIGHT that lands, or to SPARE.",
   "nerve_close": "A close call! Stepping off a square at the last moment builds NERVE too.",
   "heart": "It likes you: its attack drops hearts. Each one caught heals you and pleases it.",
-  "afraid": "It is frightened: its attack falters and ends early."
+  "afraid": "It is frightened: its attack falters and ends early.",
+  "follow": "Friends follow your strike: press again on each of their marks."
  },
  "wick": {
   "walk": "Arrows or WASD to walk. Turning is free, so stop and look around.",

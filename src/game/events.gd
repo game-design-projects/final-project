@@ -12,6 +12,7 @@ const FIELDS := {
 	"encounter": ["boss"], # a fight begins
 	"strike": ["damage", "crit"], # your hit landed
 	"miss": [], # your swing missed
+	"follow": ["who", "species", "damage"], # a friend's strike landed after yours (the feature follow-through)
 	"player_hurt": ["damage"], # a hazard hit you
 	"shield": [], # the slime's charm absorbed a hit
 	"star": [], # you caught a star in the mini-game

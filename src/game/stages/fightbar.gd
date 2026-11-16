@@ -1,11 +1,21 @@
 ## FIGHT: a line sweeps along a bar and you stop it near the middle. Too early or too late is a miss; the middle is a
 ## perfect strike. A hit hurts the monster and sours its mood, and may end the fight.
+##
+## With friends (the feature follow-through) a strike that lands doesn't stop the line: each friend has a mark further along the
+## bar, and each press after yours is the next friend's: on its mark it lands, off it that friend's moment is gone (so hammering
+## the key gets nothing). None of it costs anything. A HEAVY blow is too quick for them to follow.
 extends "res://src/game/stages/stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
+const Content = preload("res://src/rules/content.gd")
 const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
+
+var _landed := {} # your strike that landed, while the friends' marks are still to come: {result, found, betrayal}
+var _followed: Array = [] # the friends whose strikes landed after it
+var _follow_damage := 0 # and what they did in all
+var _pressed_at := -1e9 # when the last press that counted was, to let a slip of the finger go
 
 
 func enter(flow, args: Dictionary) -> void:
@@ -19,18 +29,43 @@ func enter(flow, args: Dictionary) -> void:
 		s.hint += " · WHETTED +%d" % s.sharpened
 	if s.nerve > 0 and flow.feature("nerve"):
 		s.hint += " · NERVE +%d" % Combat.nerve_damage(s.nerve)
-	s.bar = {"t0": flow.clock, "dur": Combat.bar_ms(s.has_ally("rock")) * (Combat.HEAVY_BAR_SCALE if heavy else 1.0), "heavy": heavy}
+	_landed = {}
+	_followed = []
+	_follow_damage = 0
+	var marks := []
+	if not heavy and flow.feature("follow-through"):
+		var friends: Array = s.allies.filter(func(a): return not Content.table("friends").has(a.species)) # the monsters among them, as party_size counts
+		for i in mini(friends.size(), Combat.FOLLOW_MARKS.size()):
+			marks.append({"at": Combat.FOLLOW_MARKS[i], "who": friends[i].name, "species": friends[i].species, "state": ""})
+		if not marks.is_empty():
+			s.hint += " · AGAIN ON EACH FRIEND'S MARK"
+			flow.coach.say("follow")
+	s.bar = {"t0": flow.clock, "dur": Combat.bar_ms(s.has_ally("rock")) * (Combat.HEAVY_BAR_SCALE if heavy else 1.0), "heavy": heavy, "marks": marks, "struck": -1.0}
 
 
 func handle(flow, key: String) -> void:
-	if key == "confirm" and flow.state.bar != null:
+	if key != "confirm" or flow.state.bar == null:
+		return
+	if _landed.is_empty():
 		await _strike(flow, flow.clock)
+	else:
+		await _follow(flow, flow.clock)
 
 
 func tick(flow, t: float) -> void:
 	var bar = flow.state.bar
-	if bar != null and (t - bar.t0) / bar.dur >= 1.0:
-		await _strike(flow, t) # too late: it swings wide
+	if bar == null:
+		return
+	var p: float = (t - bar.t0) / bar.dur
+	if _landed.is_empty():
+		if p >= 1.0:
+			await _strike(flow, t) # too late: it swings wide
+		return
+	for mark in bar.marks:
+		if mark.state == "" and p > float(mark.at) + Combat.FOLLOW_EDGE:
+			mark.state = "lost" # the line has left it behind
+	if p >= 1.0 or bar.marks.all(func(mark): return mark.state != ""):
+		await _finish(flow)
 
 
 func _strike(flow, t: float) -> void:
@@ -38,7 +73,6 @@ func _strike(flow, t: float) -> void:
 	var m = s.foe
 	var x := clampf((t - s.bar.t0) / s.bar.dur, 0.0, 1.0)
 	var heavy: bool = s.bar.heavy
-	s.bar = null
 	var aid: int = Combat.party_aid(s.party_size())
 	var result: Dictionary
 	if heavy:
@@ -52,6 +86,7 @@ func _strike(flow, t: float) -> void:
 		nerve = Combat.nerve_damage(flow.encounter.spend_nerve())
 		result.damage += Social.strike_bonus(m) + nerve
 	if result.miss:
+		s.bar = null
 		flow.event("miss")
 		var swung: Dictionary = await flow.encounter.decide(m, "fight", "YOU SWUNG")
 		if heavy:
@@ -63,6 +98,48 @@ func _strike(flow, t: float) -> void:
 	m.hp = maxi(0, m.hp - result.damage)
 	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy, "nerve": nerve}) # a heavy hit sounds and flashes like a big one
 	var found: String = _learn_how_it_takes_it(flow, m) if heavy else ""
+	_landed = {"result": result, "found": found, "betrayal": betrayal}
+	_pressed_at = t
+	if m.hp <= 0 or s.bar.marks.is_empty():
+		await _finish(flow)
+		return
+	s.bar.struck = x # the picture marks where it fell; the line runs on to the friends' marks
+
+
+## A press after your strike landed is the next friend's: their strike if the line is on their mark, their moment gone if it is
+## not. A press right on top of the last one is a slip of the finger and does nothing.
+func _follow(flow, t: float) -> void:
+	if t - _pressed_at < Combat.FOLLOW_SLIP_MS:
+		return
+	_pressed_at = t
+	var s = flow.state
+	var m = s.foe
+	var p: float = (t - s.bar.t0) / s.bar.dur
+	for mark in s.bar.marks:
+		if mark.state != "":
+			continue
+		if absf(p - float(mark.at)) <= Combat.FOLLOW_EDGE:
+			mark.state = "hit"
+			m.hp = maxi(0, m.hp - Combat.FOLLOW_DAMAGE)
+			_followed.append(mark.who)
+			_follow_damage += Combat.FOLLOW_DAMAGE
+			print_verbose("fightbar: %s follows through at %.2f" % [mark.who, p])
+			flow.event("follow", {"who": mark.who, "species": mark.species, "damage": Combat.FOLLOW_DAMAGE})
+		else:
+			mark.state = "lost"
+			flow.event("sound", {"name": "miss"})
+		break
+	if m.hp <= 0:
+		await _finish(flow)
+
+
+## The strike is over, yours and theirs: the monster takes it in, and falls or winds up its answer.
+func _finish(flow) -> void:
+	var s = flow.state
+	var m = s.foe
+	var landed := _landed
+	_landed = {}
+	s.bar = null
 	Combat.apply_hit_to_mood(m)
 	var begging: bool = await flow.encounter.spareable(m)
 	if m.hp <= 0:
@@ -72,9 +149,9 @@ func _strike(flow, t: float) -> void:
 	var decision: Dictionary = await flow.encounter.decide(m, "fight", "YOU HIT IT")
 	if begging:
 		flow.encounter.judge("slay_begging")
-	var line := "%s %s%s" % [Texts.hit(result.damage, result.crit), found, Texts.foe_feels(m, decision.feeling)]
-	if betrayal != "":
-		line = betrayal + " " + line
+	var line := "%s %s%s%s" % [Texts.hit(landed.result.damage, landed.result.crit), Texts.followed(_followed, _follow_damage), landed.found, Texts.foe_feels(m, decision.feeling)]
+	if landed.betrayal != "":
+		line = str(landed.betrayal) + " " + line
 		decision.pacified = false
 	await flow.encounter.after_player([State.sys_line(line)], decision)
 

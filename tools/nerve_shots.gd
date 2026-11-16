@@ -1,9 +1,11 @@
-## Pictures of nerve and of what a foe's mood does to its attack, to look at: the pips beside the dodge box, a square in its last
-## moments, the ring of a close call, a heart to catch, and the fight menu with nerve to spend. It needs a real window:
+## Pictures of nerve, of what a foe's mood does to its attack and of the friends' marks on the strike bar, to look at: the pips
+## beside the dodge box, a square in its last moments, the ring of a close call, a heart to catch, the fight menu with nerve to
+## spend, and a strike the friends follow. It needs a real window:
 ##   godot --path . -s res://tools/nerve_shots.gd -- out=/some/dir [nofocus]
 ## Nothing reaches the player's saves (`nosave` is always on).
 extends SceneTree
 
+const Ally = preload("res://src/game/ally.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const Flags = preload("res://src/utils/flags.gd")
 
@@ -69,6 +71,21 @@ func _initialize() -> void:
 	run.add_hazard(flow.clock, [here + 2], 0.0, 4000.0, "heart", {"at": here + 2})
 	await _wait(0.35)
 	await _shot("5_hearts")
+	# the strike bar with friends: your strike has landed, the first friend's too, and the line is on its way to the second mark
+	run.hazards = []
+	run.end_t = flow.clock
+	await _until("menu")
+	s.banner = null
+	s.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0), Ally.make("rock", "OLD SHALE", 60.0)]
+	await flow.press("1")
+	await _wait(0.1)
+	s.bar.dur = 600000.0 # hold the line still for the picture
+	s.bar.t0 = flow.clock - s.bar.dur * 0.5
+	await flow.press("confirm")
+	s.bar.marks[0].state = "hit"
+	s.bar.t0 = flow.clock - s.bar.dur * 0.75
+	await _wait(0.2)
+	await _shot("6_follow_through")
 	print("nerve_shots: written to %s" % _out)
 	quit()
 
