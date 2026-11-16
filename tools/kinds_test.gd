@@ -157,7 +157,7 @@ func _every_attack() -> void:
 	for g in genres:
 		var worst := {"hazards": 0, "outside": 0, "blind": 0, "trapped": 0, "full": 0, "pinned": 0, "boxed": 0}
 		for intensity in [1.0, 1.6]:
-			for i in 6:
+			for i in 8:
 				var r := _play(g, intensity, i, i % 2 == 1)
 				for key in worst:
 					worst[key] = worst[key] + r[key]
@@ -174,7 +174,8 @@ func _play(genre: String, intensity: float, i: int, wander: bool) -> Dictionary:
 	var out := {"hazards": 0, "outside": 0, "blind": 0, "trapped": 0, "full": 0, "pinned": 0, "boxed": 0}
 	var rng := Rng.new(77 + i)
 	var walk := Rng.new(500 + i)
-	var run = DodgeRun.start(genre, (intensity - 0.8) / 0.25, i == 5, i % 3, 0.0, {}, 1.0, {})
+	# the last two are a frightened and a friendly foe (DodgeRun mood): hazards that never come, and hearts, must not break it
+	var run = DodgeRun.start(genre, (intensity - 0.8) / 0.25, i == 5, i % 3, 0.0, {}, 1.0, {}, ["", "", "", "", "", "", "afraid", "friendly"][i])
 	var t := 0.0
 	var next_step := 0.0
 	while not run.is_over(t):
@@ -190,16 +191,16 @@ func _play(genre: String, intensity: float, i: int, wander: bool) -> Dictionary:
 			out.hazards += 1
 			if h.cells.keys().any(func(k): return int(k) < 0 or int(k) >= Dodge.COLS * Dodge.ROWS):
 				out.outside += 1
-			if h.cells.has(here) and h.hit - t < REACT_MS - TICK_MS and not ["star", "pad"].has(h.kind):
+			if h.cells.has(here) and h.hit - t < REACT_MS - TICK_MS and not DodgeRun.CATCHES.has(h.kind):
 				out.blind += 1
-			if h.cells.has(here) and not ["star", "pad"].has(h.kind):
+			if h.cells.has(here) and not DodgeRun.CATCHES.has(h.kind):
 				var steps := _escape(run, h)
 				if steps < 0 or steps > floori((h.hit - t) / STEP_MS):
 					out.trapped += 1
 					print("kinds_test: %s at %.2f%s, seed %d: at %s, %d ms after it showed, %d steps out with %d ms to go" % [genre, intensity, " (champion)" if i == 5 else "", i, run.soul, int(t - h.warn), steps, int(h.hit - t)])
 		var live := {}
 		for h in run.hazards:
-			if t >= h.hit and t < h.end and not ["star", "pad"].has(h.kind):
+			if t >= h.hit and t < h.end and not DodgeRun.CATCHES.has(h.kind):
 				live.merge(h.cells)
 		var open: int = Dodge.COLS * Dodge.ROWS - run.blocked.size()
 		if live.size() >= open:
@@ -225,7 +226,7 @@ func _escape(run, h: Dictionary) -> int:
 		var k := Dodge.index(c.x, c.y)
 		# safe from `h` itself and from whatever else lands while `h` does (a wall that stays lit after it is not counted: you
 		# only have to be out of it by the time it lands, and the next one says where to go after)
-		if not run.hazards.any(func(o): return not ["star", "pad"].has(o.kind) and o.cells.has(k) and o.hit < minf(h.end, h.hit + STEP_MS) and o.end > h.hit):
+		if not run.hazards.any(func(o): return not DodgeRun.CATCHES.has(o.kind) and o.cells.has(k) and o.hit < minf(h.end, h.hit + STEP_MS) and o.end > h.hit):
 			return dist[c]
 		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 			var n: Vector2i = c + d

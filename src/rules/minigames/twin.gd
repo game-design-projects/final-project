@@ -159,19 +159,5 @@ static func spawn(run, t: float, _rng: Rng, _events: Array) -> void:
 
 ## How many steps from the soul to the nearest square these `lit` squares leave dark (FAIL when there is none).
 static func _steps_to_shade(run, lit: Array) -> int:
-	var dark := {}
-	for k in Dodge.COLS * Dodge.ROWS:
-		if not run.blocked.has(k) and not lit.has(k):
-			dark[k] = true
-	var dist := {run.soul: 0}
-	var queue := [run.soul]
-	while not queue.is_empty():
-		var c: Vector2i = queue.pop_front()
-		if dark.has(Dodge.index(c.x, c.y)):
-			return dist[c]
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var nb: Vector2i = c + d
-			if Dodge.in_box(nb.x, nb.y) and not run.blocked.has(Dodge.index(nb.x, nb.y)) and not dist.has(nb):
-				dist[nb] = dist[c] + 1
-				queue.append(nb)
-	return FAIL
+	var steps := Dodge.steps_to_clear(run.soul, lit, run.blocked)
+	return FAIL if steps < 0 else steps

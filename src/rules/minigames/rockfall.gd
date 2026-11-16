@@ -49,8 +49,10 @@ static func spawn(run, t: float, rng: Rng, _events: Array) -> void:
 			break
 	if cells.is_empty():
 		return
+	var before: int = run.hazards.size()
 	run.add_hazard(t, cells, WARN_MS, HIT_MS, "rock", {"at": cells[0], "mark": "rock"})
-	run.mem.pending.append({"at": run.hazards.back().end, "cells": cells})
+	if run.hazards.size() > before: # a frightened monster's stone may never come (DodgeRun mood), and then nothing lands
+		run.mem.pending.append({"at": run.hazards.back().end, "cells": cells})
 
 
 ## A stone that has landed leaves its squares blocked, unless that would box the soul in.

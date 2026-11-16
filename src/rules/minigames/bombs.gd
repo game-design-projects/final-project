@@ -64,7 +64,10 @@ static func _set_down(run, t: float, rng: Rng) -> void:
 		print_verbose("bombs: bomb at %s would leave no way out, trying another" % at)
 	if _near_safe(run, cells) < NEAR_SAFE:
 		return
+	var before: int = run.hazards.size()
 	run.add_hazard(t, cells, FUSE_BEATS * beat_ms * run.pace, HIT_MS, "blast", {"at": Dodge.index(at.x, at.y), "mark": "bomb", "mark_warn": true})
+	if run.hazards.size() == before:
+		return # a frightened sapper's bomb may never come (DodgeRun mood)
 	var h: Dictionary = run.hazards.back()
 	h["beat"] = (h.hit - h.warn) / FUSE_BEATS # so it reads 3, 2, 1 even when the pace stretches the fuse
 	print_verbose("bombs: bomb at %s, reach %d, %d squares, beat %d ms" % [at, reach, cells.size(), h.beat])

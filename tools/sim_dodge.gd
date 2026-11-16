@@ -85,7 +85,7 @@ func _measure(genre: String, intensity: float, seeds: int, latency: float, decid
 					hazards += 1
 				if not h.has("_drawn") and t >= _drawn_from(h):
 					h._drawn = true
-					if h.cells.has(Dodge.index(run.soul.x, run.soul.y)) and h.hit - t < REACT_MS and not ["star", "pad"].has(h.kind):
+					if h.cells.has(Dodge.index(run.soul.x, run.soul.y)) and h.hit - t < REACT_MS and not DodgeRun.CATCHES.has(h.kind):
 						blind += 1
 			var open := 0
 			var live := {}
@@ -93,7 +93,7 @@ func _measure(genre: String, intensity: float, seeds: int, latency: float, decid
 				if not run.blocked.has(k):
 					open += 1
 			for h in run.hazards:
-				if t >= h.hit and t < h.end and not ["star", "pad"].has(h.kind):
+				if t >= h.hit and t < h.end and not DodgeRun.CATCHES.has(h.kind):
 					for k in h.cells:
 						live[k] = true
 			var share := float(live.size()) / maxf(1.0, open)
@@ -150,7 +150,7 @@ func _danger(run, c: Vector2i, from: float, to: float, latency: float, now := -1
 	var k := Dodge.index(c.x, c.y)
 	var out := 0.0
 	for h in run.hazards:
-		if ["star", "pad"].has(h.kind) or looking < _drawn_from(h) + latency:
+		if DodgeRun.CATCHES.has(h.kind) or looking < _drawn_from(h) + latency:
 			continue
 		if h.cells.has(k) and h.hit < to and h.end > from:
 			out += 1.0

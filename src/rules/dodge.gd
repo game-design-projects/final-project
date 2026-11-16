@@ -137,6 +137,27 @@ static func in_shadow(lantern: Vector2, c: int, r: int, blocked: Dictionary) -> 
 	return false
 
 
+## How many steps from `soul` to the nearest open square not in `lit` (cell indices), walking round `blocked`; -1 when there
+## is none. A flare uses it to warn long enough for you to reach its shade.
+static func steps_to_clear(soul: Vector2i, lit: Array, blocked: Dictionary) -> int:
+	var dark := {}
+	for k in COLS * ROWS:
+		if not blocked.has(k) and not lit.has(k):
+			dark[k] = true
+	var dist := {soul: 0}
+	var queue := [soul]
+	while not queue.is_empty():
+		var c: Vector2i = queue.pop_front()
+		if dark.has(index(c.x, c.y)):
+			return dist[c]
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var n: Vector2i = c + d
+			if in_box(n.x, n.y) and not blocked.has(index(n.x, n.y)) and not dist.has(n):
+				dist[n] = dist[c] + 1
+				queue.append(n)
+	return -1
+
+
 static func pillar_set() -> Dictionary:
 	var out := {}
 	for p in PILLARS:
