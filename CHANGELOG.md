@@ -9,8 +9,19 @@ All notable changes to this project are documented here. The format follows [Kee
 - `mood-attacks`: how a monster feels shows in its attack, whichever it is: a friendly one drops hearts to catch (each heals 1 and pleases it, and the mercy gauge follows), a frightened one falters (one hazard in three never comes) and breaks off a quarter early.
 - `follow-through`: with monsters in the party, a FIGHT that lands doesn't stop the line: each friend has a mark further along the strike bar, and each press after yours is the next friend's strike for 3 (on its mark) or its moment gone (off it). A HEAVY blow is too quick for them, and not pressing costs nothing.
 - `tools/nerve_shots.gd` takes pictures of all three, and the screenshot tools take `nofocus`: the window stays on top to render at full speed but never takes the keyboard.
+- 25 kinds of monster, five to a floor and none on two floors (`data/kinds.json`, `src/rules/kinds.gd`): B1F keeps the slime, bandit, snake and rock and adds the gumdrop; B2F to B5F have five new kinds each, with every clan on every floor.
+- 21 new attacks in the box, one per new kind (`src/rules/minigames/`): bounce, spit, traps, crossfire, slither, rockfall, puddles, queen, gaze, venom, roll, split, bombs, twin lanterns, quake, crush, brood, tide, pawns, hypnosis and fists.
+- Hand-drawn figures for the 21 new kinds, drawn with Codex and cut by `tools/art/process.py`; each kind wears its own colour, and a kind without a drawing falls back on its species'.
+- Kinds have their own ways of getting about (`roam` in `data/kinds.json`): some never stop moving, some follow you, some hold their ground.
+- The box draws marks (globs, stones, snake heads, bombs that count down, bolts, fists, an eye), queen and pawn pieces, traps that hide after a flash, two lanterns, and a MIRRORED tag when moves are turned round.
+- `tools/sim_dodge.gd`: a bot that reads the warnings plays every attack over many seeds and intensities and prints how often it is hit, how much of the box is lit, and any moment with no way out.
+- `tools/kinds_test.gd`: five kinds to a floor, a floor's monsters and champion, warrens, old saves, and every attack warns your square 0.3 s ahead and never lights the whole box or walls you in.
 
 ### Changed
+- A champion fights in its floor's five attacks, one a turn, instead of the same four on every floor.
+- The name over a monster's head, its card and the map's legend name its kind; the legend lists the floor's five kinds with their attacks.
+- A warren holds every kind of its clan met so far, the floor's own first, as many monsters as the floor would have.
+- `meet=` takes a kind as well as a species, and tries a kind from another floor on one of this floor's monsters.
 - The game asks Jev through the public proxy by default, also when run from source (`godot --path .`), so a fresh checkout plays like a build; `nojev` keeps the local rules, `jev=<url>` or the saved `jev_url` picks another proxy. The test suites, `autoplay` and the screenshot tools (headless or `-s`) never get the default.
 
 ### Fixed

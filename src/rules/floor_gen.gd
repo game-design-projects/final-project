@@ -7,6 +7,7 @@ const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Items = preload("res://src/rules/items.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
@@ -91,9 +92,7 @@ static func _write_on_a_wall(f, walk: Dictionary, hall: Vector2i) -> void:
 ## Whoever stirs in these cells: a monster like the floor's others, with a purse. The champion stays the last of the list.
 static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
 	var numbers: Dictionary = Content.table("npcs").lurkers
-	var roster: Array = Content.table("encounter").roster
-	if str(plan.get("only_species", "")) != "":
-		roster = roster.filter(func(e): return e.species == plan.only_species)
+	var roster: Array = _kinds_here(plan)
 	var champion = f.monsters.pop_back()
 	for c: Vector2i in cells:
 		var m = Monster.make(rng, _at_depth(_one_of(roster, plan.get("biome", {}).get("weights", {}), rng), plan), c)
@@ -185,7 +184,7 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 	candidates.sort_custom(func(a, b): return a.dist < b.dist or (a.dist == b.dist and a.order < b.order))
 	var monsters := []
 	var used: Array = []
-	var roster: Array = _roster_for(enc.roster, plan, rng)
+	var roster: Array = _roster_for(_kinds_here(plan), plan, rng)
 	for i in roster.size():
 		var target := floori(float(i + 1) / (roster.size() + 1) * candidates.size())
 		var spot: Vector2i = candidates[target % candidates.size()].cell
@@ -199,21 +198,36 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 	var boss: Dictionary = enc.boss
 	var champion: Dictionary = plan.get("champion", boss)
 	var post: Vector2i = walk.farthest if plan.get("boss_at_exit", false) else hall
-	monsters.append(Monster.make(rng, {"species": boss.species, "genre": boss.genres[0], "hp": champion.hp, "name": champion.name, "boss": true}, post))
+	var genres: Array = Kinds.genres_at(int(plan.get("depth", 1)))
+	if genres.is_empty():
+		genres = boss.genres
+	monsters.append(Monster.make(rng, {"species": boss.species, "genre": genres[0], "genres": genres, "hp": champion.hp, "name": champion.name, "boss": true}, post))
 	return monsters
 
 
-## Who lives on this floor: the whole roster, more on a bigger floor (the biome says of what), or what the way down left of it.
+## The roster lines that live on this floor: its depth's five kinds (rules/kinds.gd), or down a warren every kind of that clan met so
+## far, the floor's own first.
+static func _kinds_here(plan: Dictionary) -> Array:
+	var depth := int(plan.get("depth", 1))
+	var only := str(plan.get("only_species", ""))
+	var out: Array = Kinds.of_species(only, depth) if only != "" else Kinds.at_depth(depth)
+	if out.is_empty():
+		push_error("floor: no kinds of monster for depth %d%s" % [depth, " (%s)" % only if only != "" else ""])
+		out = Content.table("encounter").roster
+	return out
+
+
+## Who lives on this floor: one of each of its kinds, more on a bigger floor (the biome says of which clans), or fewer down a quiet
+## way. A warren's roster is already all one clan.
 static func _roster_for(roster: Array, plan: Dictionary, rng: Rng) -> Array:
 	var out := roster
+	if str(plan.get("only_species", "")) != "": # as many as a floor has kinds, round the clan's
+		out = range(Kinds.at_depth(int(plan.get("depth", 1))).size()).map(func(i): return roster[i % roster.size()])
 	var biome: Dictionary = plan.get("biome", {})
 	if not biome.is_empty():
-		out = roster.duplicate()
+		out = out.duplicate()
 		for _i in maxi(0, (int(biome.size) - SIZE) / EXTRA_MONSTER_CELLS):
 			out.append(_one_of(roster, biome.get("weights", {}), rng))
-	if str(plan.get("only_species", "")) != "":
-		var kind: Array = roster.filter(func(e): return e.species == plan.only_species)
-		out = out.map(func(_e): return kind[0])
 	if int(plan.get("count", -1)) > 0:
 		var scale := float(biome.get("size", SIZE)) / SIZE
 		out = out.slice(0, ceili(int(plan.count) * scale))

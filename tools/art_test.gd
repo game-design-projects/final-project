@@ -27,7 +27,7 @@ const State = preload("res://src/game/state.gd")
 const WallArt = preload("res://src/view/wall_art.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
-const FIGURES := ["slime", "bandit", "snake", "rock", "dragon", "witch"]
+const FIGURES := ["slime", "bandit", "snake", "rock", "dragon", "witch"] # and every kind in data/kinds.json (_figures)
 const ACTIONS := ["idle", "hop", "happy", "scared", "angry", "hurt", "lunge", "hollow"]
 const FRAME := 1.0 / 60.0
 
@@ -65,8 +65,17 @@ func _monster(species := "slime", boss := false):
 	return m
 
 
+## Every figure that fights or walks with you: the species', Wick, and each kind of monster's own drawing.
+static func _figures() -> Array:
+	var out: Array = FIGURES.duplicate()
+	for kind in Content.table("kinds").kinds:
+		if not out.has(kind):
+			out.append(kind)
+	return out
+
+
 func _the_atlases_are_whole() -> void:
-	for name in FIGURES:
+	for name in _figures():
 		var sheet := Sprites.sheet(name)
 		var tex := Sprites.texture(name)
 		_check(tex != null and tex.get_size() == Vector2(sheet.size[0], sheet.size[1]), "%s's atlas is the size its table says" % name)
@@ -155,7 +164,7 @@ func _a_figure_moves_without_jumps() -> void:
 	anim.lunge(4.0)
 	_check(anim.tick(4.01).act == "lunge", "and so does a lunge")
 
-	for species in FIGURES:
+	for species in _figures():
 		anim = FigureAnim.new(species, 1)
 		anim.set_mood("hollow", 0.0)
 		_watch(anim, 0.0, 3.0)

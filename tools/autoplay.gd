@@ -177,6 +177,8 @@ func _dodge_key(s, t: float) -> String:
 		if score < best_score:
 			best_score = score
 			best_key = option[0]
+	if run.mirror: # the box says MIRRORED: press the other way to go this way
+		return {"up": "down", "down": "up", "left": "right", "right": "left"}.get(best_key, best_key)
 	return best_key
 
 

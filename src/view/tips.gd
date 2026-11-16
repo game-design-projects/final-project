@@ -14,6 +14,7 @@ const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 const Lore = preload("res://src/rules/lore.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Sprites = preload("res://src/view/sprites.gd")
@@ -202,8 +203,10 @@ func _blocks_for(key: String) -> Array:
 ## The foe: who it is, what it seems like, how it feels, and the last `shown` answers of the mind (0 for all of them).
 ## `gradual` says only what the player has found out (CHECK reads one thing at a time), with ??? for the rest.
 static func foe_blocks(m, rows: Array, shown := MIND_ROWS_SHOWN, label := "", gradual := false, s = null) -> Array:
-	var kind := str(Content.species(m.species).label).to_upper()
+	var kind := Kinds.title(m)
 	var out := [{"kind": "head", "left": m.name, "right": ("ELITE " + kind) if m.elite else kind}]
+	if Kinds.note(m) != "":
+		out.append({"kind": "note", "text": Kinds.note(m)})
 	if gradual:
 		out.append({"kind": "text", "text": found_text(m)})
 	elif not m.traits.is_empty():
@@ -293,15 +296,16 @@ static func ally_blocks(a) -> Array:
 static func map_blocks(roaming := false, s = null) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
 	var genres: Dictionary = Content.table("encounter").genres
-	var fights := {}
-	for entry in Content.table("encounter").roster:
-		fights[entry.species] = str(genres[entry.genre].name).to_lower()
-	fights[Content.table("encounter").boss.species] = "all four"
-	for id in Content.table("species"):
-		var right: String = fights.get(id, "")
-		if s != null and Clans.of(id) != "":
-			right += (" · " if right != "" else "") + Clans.mood_word(Clans.standing_of(s, id))
-		out.append({"kind": "swatch", "color": Palette.BOSS if id == Content.table("encounter").boss.species else Color(Content.species(id).color), "left": id.to_upper(), "right": right})
+	var depth: int = s.depth if s != null and not s.practice else 1
+	for entry in Kinds.at_depth(depth): # this floor's five kinds, each with its attack and how its clan feels
+		var right := str(genres[entry.genre].name).to_lower()
+		if s != null and Clans.of(entry.species) != "":
+			right += " · " + Clans.mood_word(Clans.standing_of(s, entry.species))
+		out.append({"kind": "swatch", "color": Color(Kinds.info(entry.kind).color), "left": str(Kinds.info(entry.kind).title), "right": right})
+	var boss_right := "every attack above"
+	if s != null:
+		boss_right += " · " + Clans.mood_word(Clans.standing_of(s, Content.table("encounter").boss.species))
+	out.append({"kind": "swatch", "color": Palette.BOSS, "left": "CHAMPION", "right": boss_right})
 	out.append({"kind": "swatch", "color": Palette.YOU, "left": "PAD", "right": "carries you away"})
 	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "CHEST", "right": "behind a cracked wall"})
 	out.append({"kind": "swatch", "color": Palette.MERCY, "left": "ITEM", "right": "walk over it"})

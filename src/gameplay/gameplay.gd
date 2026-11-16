@@ -11,6 +11,7 @@ const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Hud = preload("res://src/view/hud.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 const Menus = preload("res://src/menu/menus.gd")
 const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const Minds = preload("res://src/mind/minds.gd")
@@ -175,18 +176,33 @@ func _practice_due() -> bool:
 	return Settings.get_value("tips") and not flow.coach.seen.has(flow.PRACTICE_SEEN)
 
 
-## Handle the testing flags `meet=<species>` and `social-demo`. It runs as an exclusive action: a tick must not run a
-## stage's own tick while the mind is still answering the stage's `enter`.
+## Handle the testing flags `meet=<species or kind>` and `social-demo`. It runs as an exclusive action: a tick must not run a
+## stage's own tick while the mind is still answering the stage's `enter`. A kind that doesn't live on this floor is tried on a
+## monster that does (one of its species if there is one).
 func _after_start() -> void:
 	if Flags.on("social-demo") and request.get("kind", "new") == "new":
 		await SocialDemo.start(flow)
 		return
-	var species := Flags.value("meet")
-	if species != "":
-		for m in flow.state.floor_map.monsters:
-			if m.species == species and not m.is_gone():
-				await flow.go("intro", {"foe": m})
-				break
+	var wanted := Flags.value("meet")
+	if wanted == "":
+		return
+	var alive: Array = flow.state.floor_map.monsters.filter(func(m): return not m.is_gone())
+	var foe = null
+	for m in alive:
+		if m.kind == wanted or (m.species == wanted and not Kinds.has(wanted)) or (m.boss and wanted == m.species):
+			foe = m
+			break
+	if foe == null and Kinds.has(wanted):
+		var others: Array = alive.filter(func(m): return not m.boss)
+		var same: Array = others.filter(func(m): return m.species == Kinds.info(wanted).species)
+		foe = same[0] if not same.is_empty() else (others[0] if not others.is_empty() else null)
+		if foe != null:
+			foe.become_kind(wanted)
+			print("meet: %s is a %s for this run" % [foe.name, wanted])
+	if foe != null:
+		await flow.go("intro", {"foe": foe})
+	else:
+		push_warning("meet: nobody here is a %s" % wanted)
 
 
 func _build_screen() -> void:

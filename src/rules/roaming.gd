@@ -10,6 +10,7 @@ extends RefCounted
 const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 
 const FAR := 1 << 30 # not within reach
 
@@ -74,7 +75,9 @@ static func _intent(m, f, to_you: Dictionary, state, options: Dictionary) -> Str
 		return "hunt"
 	if m.meters.friendliness >= float(t.friendly_at) and near <= int(t.friendly_sense):
 		return "come"
-	var way: Dictionary = t.species.get(m.species, {"kind": "still"})
+	var way: Dictionary = Kinds.roam(m)
+	if way.is_empty():
+		way = t.species.get(m.species, {"kind": "still"})
 	match str(way.kind):
 		"drift":
 			return "drift" if f.steps % int(way.every) == 0 else "still"

@@ -26,6 +26,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `menu_test` | Menu pages and their keys, the opening film is there and plays |
 | `saves_test` | Save slots, `nosave`, refusing a bad save |
 | `rules_test` | Strike, odds, dodge cells, word reading, hints |
+| `kinds_test` | Five kinds to a floor and none on two, each clan on every floor, a floor's monsters and champion, warrens, old saves, and every attack: it makes hazards, warns your square 0.3 s ahead, never lights the whole box or walls you in |
 | `network_test` | Timeouts, retries, Jev's answers |
 | `view_test` | Models, sight, camera, automap, palettes |
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
@@ -46,6 +47,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
 | `screenshots`, `camera_shots`, `map_shots`, `nerve_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
+| `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`); it prints hits, how much of the box is lit, and moments with no way out |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
 
@@ -53,7 +55,7 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.
 
-`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>` · `nofocus`
+`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species or kind>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>` · `nofocus`
 
 ## Playing from source with Jev
 

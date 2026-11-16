@@ -15,6 +15,12 @@ static func has(name: String) -> bool:
 	return Content.table("sprites").has(name)
 
 
+## Which sheet draws monster `m`: its kind's (data/kinds.json), or its species' while its kind has none.
+static func look_of(m) -> String:
+	var kind := str(m.kind)
+	return kind if kind != "" and has(kind) else str(m.species)
+
+
 static func texture(name: String) -> Texture2D:
 	if not _textures.has(name):
 		_textures[name] = load(str(sheet(name).file))

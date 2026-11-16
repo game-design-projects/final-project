@@ -13,6 +13,7 @@ const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Sprites = preload("res://src/view/sprites.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 
 const W := 448.0
@@ -98,7 +99,7 @@ func _ready() -> void:
 
 ## Whether the monster in this fight is the drawing (battle_art.gd), with the halls dimmed behind it, rather than line art on black.
 func drawn_foe() -> bool:
-	return state != null and state.foe != null and BattleArt.can_draw(state.foe.species)
+	return state != null and state.foe != null and BattleArt.can_draw(Sprites.look_of(state.foe))
 
 
 ## How a deed landed, for as long as that shows: "" otherwise.
@@ -167,10 +168,10 @@ func goo_ball(h: Dictionary) -> Vector2:
 	return to - Vector2(0.0, (1.0 - clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)) * GOO_DROP)
 
 
-## Where the lantern is now, in picture pixels: it orbits all through a shadow dodge.
-func lantern_spot() -> Vector2:
+## Where a lantern is now, in picture pixels: it orbits all through a shadow dodge. `start` is where on its orbit it began.
+func lantern_spot(start := Dodge.LANTERN_START_ANGLE) -> Vector2:
 	var run = state.dodge
-	return Vector2(BOX_X, BOX_Y) + Dodge.lantern_at(clock_ms - run.t0, run.intensity) * BOX_CELL
+	return Vector2(BOX_X, BOX_Y) + Dodge.lantern_at(clock_ms - run.t0, run.intensity, start) * BOX_CELL
 
 
 ## The charms beside the box, [{name, color, y}]; the slime's greys out once its shield is used.
@@ -530,8 +531,10 @@ func _dodge_box(accent: Color) -> void:
 			draw_rect(_cell_rect(k), GRID, false, 1.0)
 	for h in run.hazards:
 		_hazard(h, LANTERN if h.kind == "light" else accent)
-	if run.genre == "shadow":
-		_lantern()
+	for start in run.lanterns:
+		_lantern(start)
+	if run.mirror:
+		_text(_title, "MIRRORED: LEFT IS RIGHT", Vector2(0, BOX_Y - 8.0), 7, Palette.YOU, HORIZONTAL_ALIGNMENT_CENTER, W)
 	var pulse: float = maxf(0.0, 1.0 - (clock_ms - run.pulse) / 180.0) if run.pulse > 0.0 else 0.0
 	draw_rect(box.grow(3), Palette.INK, false, 2.0 + pulse * 3.0)
 	_soul(run)
@@ -548,6 +551,8 @@ func _hazard(h: Dictionary, col: Color) -> void:
 	var live: bool = clock_ms >= h.hit
 	if h.has("shows") and not live and h.hit - clock_ms > h.shows:
 		return # a wall flying in shows only its next column, so it reads as moving
+	if h.has("flash") and not live and clock_ms - h.warn > h.flash:
+		return # a trap shows itself for a moment, then you have to remember it
 	if h.kind == "star":
 		_star(h)
 		return
@@ -574,6 +579,61 @@ func _hazard(h: Dictionary, col: Color) -> void:
 		_piece(h.glyph, at, Color.WHITE)
 	if h.kind == "goo" and not live:
 		draw_circle(goo_ball(h), 5.0, col)
+	if h.has("mark") and h.has("at") and (live or h.get("mark_warn", false)) and clock_ms < h.end:
+		_mark(h, live)
+
+
+## What a hazard's thing looks like on its square: black inside a white line, so it reads on a lit square and a dark one.
+func _mark(h: Dictionary, live: bool) -> void:
+	var at := _cell_rect(h.at).get_center()
+	var dir: Vector2 = Vector2(h.get("dir", Vector2i.RIGHT)).normalized()
+	var side := Vector2(-dir.y, dir.x)
+	var ink := Color.WHITE
+	match str(h.mark):
+		"ball":
+			draw_circle(at, 7.5, Color.BLACK)
+			draw_arc(at, 7.0, 0.0, TAU, 20, ink, 1.5)
+		"rock":
+			var pts := PackedVector2Array()
+			for i in 7:
+				var a := TAU * i / 7.0 + 0.3
+				pts.append(at + Vector2(cos(a), sin(a)) * (9.0 if i % 2 == 0 else 7.0))
+			draw_colored_polygon(pts, Color.BLACK)
+			pts.append(pts[0])
+			draw_polyline(pts, ink, 1.5)
+		"head":
+			var pts := PackedVector2Array([at + dir * 10.0, at + side * 7.0, at - dir * 6.0, at - side * 7.0, at + dir * 10.0])
+			draw_colored_polygon(pts.slice(0, 4), Color.BLACK)
+			draw_polyline(pts, ink, 1.5)
+			draw_circle(at + dir * 2.0 + side * 3.0, 1.6, ink)
+			draw_circle(at + dir * 2.0 - side * 3.0, 1.6, ink)
+		"bomb":
+			draw_circle(at + Vector2(0, 1), 8.0, Color.BLACK)
+			draw_arc(at + Vector2(0, 1), 7.5, 0.0, TAU, 20, ink, 1.5)
+			draw_line(at + Vector2(4, -6), at + Vector2(7, -10), ink, 1.5)
+			if not live:
+				var beat: float = float(h.get("beat", 1000.0))
+				var left := ceili(maxf(0.0, h.hit - clock_ms) / beat)
+				_text(_title, str(left), at + Vector2(-10, 5), 8, ink, HORIZONTAL_ALIGNMENT_CENTER, 20.0)
+		"eye":
+			var pts := PackedVector2Array([at + Vector2(-10, 0), at + Vector2(0, -6), at + Vector2(10, 0), at + Vector2(0, 6)])
+			draw_colored_polygon(pts, Color.BLACK)
+			pts.append(pts[0])
+			draw_polyline(pts, ink, 1.5)
+			draw_circle(at, 2.5, ink)
+		"arrow":
+			var pts := PackedVector2Array([at + dir * 10.0, at + side * 6.0 - dir * 2.0, at + side * 2.5 - dir * 2.0, at + side * 2.5 - dir * 10.0, at - side * 2.5 - dir * 10.0, at - side * 2.5 - dir * 2.0, at - side * 6.0 - dir * 2.0])
+			draw_colored_polygon(pts, Color.BLACK)
+			pts.append(pts[0])
+			draw_polyline(pts, ink, 1.5)
+		"fist":
+			var r := Rect2(at - Vector2(9, 8), Vector2(18, 16))
+			draw_rect(r, Color.BLACK)
+			draw_rect(r, ink, false, 1.5)
+			for i in 3:
+				draw_line(r.position + Vector2(4.5 + i * 4.5, 0), r.position + Vector2(4.5 + i * 4.5, 5), ink, 1.0)
+		_:
+			push_error("overlay: no mark called '%s'" % h.mark)
 
 
 ## A chess piece as a shape, so it can't be taken for a key to press: a tower, a pointed hat, a horse's head.
@@ -598,6 +658,17 @@ static func piece_shape(glyph: String) -> Array:
 			return [
 				[Vector2(-8, 9), Vector2(8, 9), Vector2(8, 6), Vector2(-8, 6)],
 				[Vector2(-3, 6), Vector2(3, 6), Vector2(5, -2), Vector2(0, -9), Vector2(-5, -2)],
+			]
+		"Q": # a crown
+			return [
+				[Vector2(-8, 9), Vector2(8, 9), Vector2(8, 6), Vector2(-8, 6)],
+				[Vector2(-6, 6), Vector2(6, 6), Vector2(8, -8), Vector2(4, -2), Vector2(0, -9), Vector2(-4, -2), Vector2(-8, -8)],
+			]
+		"P": # a little round head on a stem
+			return [
+				[Vector2(-7, 9), Vector2(7, 9), Vector2(7, 6), Vector2(-7, 6)],
+				[Vector2(-3, 6), Vector2(3, 6), Vector2(2, -1), Vector2(-2, -1)],
+				[Vector2(0, -9), Vector2(3.5, -7.5), Vector2(4.5, -4), Vector2(3, -1), Vector2(-3, -1), Vector2(-4.5, -4), Vector2(-3.5, -7.5)],
 			]
 		_:
 			return [
@@ -644,8 +715,8 @@ func _pad(h: Dictionary) -> void:
 	draw_rect(cell.grow((1.0 - coming) * cell.size.x * 0.35), Color(Palette.MERCY, coming), false, 2.0)
 
 
-## The lantern, all through a shadow dodge: a soft glow and the small flame in it.
-func _lantern() -> void:
+## A lantern, all through a shadow dodge: a soft glow and the small flame in it. `start` is where on its orbit it began.
+func _lantern(start := Dodge.LANTERN_START_ANGLE) -> void:
 	if _lantern_glow == null:
 		var gradient := Gradient.new()
 		gradient.set_color(0, Color(LANTERN, 0.9))
@@ -657,7 +728,7 @@ func _lantern() -> void:
 		_lantern_glow.fill_to = Vector2(1.0, 0.5)
 		_lantern_glow.width = 64
 		_lantern_glow.height = 64
-	var at := lantern_spot()
+	var at := lantern_spot(start)
 	draw_texture_rect(_lantern_glow, Rect2(at - Vector2.ONE * LANTERN_GLOW_R, Vector2.ONE * LANTERN_GLOW_R * 2.0), false)
 	draw_rect(Rect2(at - Vector2(3, 5), Vector2(6, 10)), LANTERN)
 

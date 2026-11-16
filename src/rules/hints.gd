@@ -63,7 +63,7 @@ static func _champion_answer(champion, q: String, by_name: Array, by_species: Ar
 	if champion.is_gone():
 		return "...the champion has already fallen."
 	var enc := Content.table("encounter")
-	var genres: Array = enc.boss.genres
+	var genres: Array = champion.genres if not champion.genres.is_empty() else enc.boss.genres
 	return "...%s starts with %s, then shifts to %s." % [champion.name, str(enc.genres[genres[0]].name).to_lower(), str(enc.genres[genres[1]].name).to_lower()]
 
 
