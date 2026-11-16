@@ -455,7 +455,7 @@ func _hover_and_tips(game) -> void:
 	_check(text.contains("FRIENDLY") and text.contains("ANGER") and text.contains("FEAR"), "the card has the three meters")
 	_check(text.contains(str(roundi(m.meters.friendliness))) and text.contains("Seems %s." % " and ".join(m.traits)), "with their numbers and 'Seems X and Y.' (%s)" % text.left(120))
 	_check(m.clues().all(func(c): return text.contains(c)), "and each clue the traits give")
-	_check(text.contains(m.name) and text.contains(str(load("res://src/rules/content.gd").species(m.species).label).to_upper()), "and who it is")
+	_check(text.contains(m.name) and text.contains(load("res://src/rules/kinds.gd").title(m)), "and who it is: its name and its kind")
 	var rows: Array = s.mind_rows
 	_check(rows.size() >= 2 and tips.blocks().filter(func(b): return b.kind == "question").size() == 2, "and the last two answers of the mind as questions (%d rows in all)" % rows.size())
 	_check(tips.blocks().filter(func(b): return b.kind == "question").all(func(q): return q.bars.size() > 0 or str(q.get("note", "")) != ""), "each with its bars")
@@ -508,7 +508,9 @@ func _hover_and_tips(game) -> void:
 	tips.hover(Vector2(400, 30))
 	_check(tips.shown() == "map", "the mouse over the automap shows what its colours mean")
 	text = _text_of(tips.blocks())
-	_check(["SLIME", "BANDIT", "SNAKE", "ROCK", "DRAGON"].all(func(n): return text.contains(n)) and text.contains("goo rain") and text.contains("chess") and text.contains("all four"), "every monster's colour with its kind of fight")
+	var kinds_here: Array = load("res://src/rules/kinds.gd").at_depth(s.depth)
+	var genres: Dictionary = load("res://src/rules/content.gd").table("encounter").genres
+	_check(kinds_here.size() == 5 and kinds_here.all(func(e): return text.contains(str(load("res://src/rules/kinds.gd").info(e.kind).title)) and text.contains(str(genres[e.genre].name).to_lower())) and text.contains("CHAMPION"), "the floor's five kinds, each with its colour and its attack, and the champion")
 	tips.hover(Vector2(5, 140))
 	game._unhandled_input(_key(KEY_I, {}, 105))
 	_check(tips.shown() == "ally0", "walking, I looks at the first ally")
