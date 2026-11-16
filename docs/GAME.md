@@ -64,36 +64,36 @@ A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does
 
 You dodge on a 7×7 grid. Each kind attacks in its own way, and its pace follows its friendliness, the floor, how you are doing and the EASY DODGE setting; your first fights go slower. The attacks get trickier as you go down: B1F teaches the four old ones, B2F adds things that move and traps to remember, B3F shapes that stay, B4F two-step tricks, and B5F mixes them.
 
-| Floor | Kind (clan) | Attack | How it attacks |
-| --- | --- | --- | --- |
-| B1F | Slime (slime) | Goo rain | Falling goo; watch where it will land |
-| B1F | Gumdrop (slime) | Bounce | Gumdrops bounce round the box off the walls, squashing along a wall as they hit it |
-| B1F | Bandit (bandit) | Chess | Rook (row and column), bishop (diagonals), knight (L-jumps), each shown by its shape and reach |
-| B1F | Snake (snake) | Shadow | A lantern flares; hide in a pillar's shadow |
-| B1F | Rock (rock) | Rhythm | It stomps on the beat; move between beats |
-| B2F | Spitter (slime) | Spit | Globs fly down rows and columns; step out of a lane that glows |
-| B2F | Pickpocket (bandit) | Traps | Traps flash for a moment, then hide until they spring; remember them |
-| B2F | Lookout (bandit) | Crossfire | Bolts down your row, then your column, then your row again |
-| B2F | Adder (snake) | Slither | A snake slithers after you; its head and body hurt |
-| B2F | Pebbles (rock) | Rockfall | Stones land, then stay in your way for a while |
-| B3F | Ooze (slime) | Puddles | Goo lands and stays as puddles; don't get cornered |
-| B3F | Duelist (bandit) | Queen | A queen takes her row, column and both diagonals |
-| B3F | Gazer (snake) | Gaze | A beam turns round the middle like a lighthouse, and turns back |
-| B3F | Cobra (snake) | Venom | A ring closes round you; get out through its gap |
-| B3F | Boulder (rock) | Roll | Boulders two lanes wide roll across |
-| B4F | Splitter (slime) | Split | A big blob lands, then splits four ways |
-| B4F | Sapper (bandit) | Bombs | Bombs count down 3, 2, 1, then blow along their row and column |
-| B4F | Twinhead (snake) | Twin lanterns | Two lanterns flare in turn; hide from each behind a pillar |
-| B4F | Quakestone (rock) | Quake | A stomp rings out across the box but for a crack running from it; stand in the crack |
-| B4F | Crusher (rock) | Crush | The walls close in from two sides; be at the gap when they meet |
-| B5F | Brood mother (slime) | Brood | Her babies hop after you, then pop |
-| B5F | Tide (slime) | Tide | The tide floods all but an island, and the island moves |
-| B5F | Captain (bandit) | Pawns | A rank of pawns marches at you, taking the squares diagonally ahead |
-| B5F | Hypnocoil (snake) | Hypnosis | Left is right and up is down, and goo lands where it glows |
-| B5F | Golem (rock) | Fists | Its fists land where you stand, on the beat, then a sweep |
-| Any | Champion (the Hoard) | All five | Every attack of its floor's kinds, one a turn |
+| Floor | Kind (clan) | Attack | How it attacks | Bot hits |
+| --- | --- | --- | --- | --- |
+| B1F | Slime (slime) | Goo rain | Falling goo; watch where it will land | 0.75 |
+| B1F | Gumdrop (slime) | Bounce | Gumdrops bounce round the box off the walls, squashing along a wall as they hit it | 0.40 |
+| B1F | Bandit (bandit) | Chess | Rook (row and column), bishop (diagonals), knight (L-jumps), each shown by its shape and reach | 0.72 |
+| B1F | Snake (snake) | Shadow | A lantern flares; hide in a pillar's shadow | 0.00 |
+| B1F | Rock (rock) | Rhythm | It stomps on the beat; move between beats | 0.00 |
+| B2F | Spitter (slime) | Spit | Globs fly down rows and columns; step out of a lane that glows | 0.45 |
+| B2F | Pickpocket (bandit) | Traps | Traps flash for a moment, then hide until they spring; remember them | 0.00 (not its memory) |
+| B2F | Lookout (bandit) | Crossfire | Bolts down your row, then your column, then your row again | 0.55 |
+| B2F | Adder (snake) | Slither | A snake slithers after you; its head and body hurt | 0.38 |
+| B2F | Pebbles (rock) | Rockfall | Stones land, then stay in your way for a while | 0.33 |
+| B3F | Ooze (slime) | Puddles | Goo lands and stays as puddles; don't get cornered | 0.70 |
+| B3F | Duelist (bandit) | Queen | A queen takes her row, column and both diagonals | 1.05 |
+| B3F | Gazer (snake) | Gaze | A beam turns round the middle like a lighthouse, and turns back | 1.00 |
+| B3F | Cobra (snake) | Venom | A ring closes round you; get out through its gap | 1.00 |
+| B3F | Boulder (rock) | Roll | Boulders two lanes wide roll across | 0.85 |
+| B4F | Splitter (slime) | Split | A big blob lands, then splits four ways | 0.97 |
+| B4F | Sapper (bandit) | Bombs | Bombs count down 3, 2, 1, then blow along their row and column | 0.45 |
+| B4F | Twinhead (snake) | Twin lanterns | Two lanterns flare in turn; hide from each behind a pillar | 1.02 |
+| B4F | Quakestone (rock) | Quake | A stomp rings out across the box but for a crack running from it; stand in the crack | 0.65 |
+| B4F | Crusher (rock) | Crush | The walls close in from two sides; be at the gap when they meet | 0.97 |
+| B5F | Brood mother (slime) | Brood | Her babies hop after you, then pop | 1.38 |
+| B5F | Tide (slime) | Tide | The tide floods all but an island, and the island moves | 1.30 |
+| B5F | Captain (bandit) | Pawns | A rank of pawns marches at you, taking the squares diagonally ahead | 1.80 |
+| B5F | Hypnocoil (snake) | Hypnosis | Left is right and up is down, and goo lands where it glows | 1.20 (not its mirror) |
+| B5F | Golem (rock) | Fists | Its fists land where you stand, on the beat, then a sweep | 0.55 |
+| Any | Champion (the Hoard) | All five | Every attack of its floor's kinds, one a turn | – |
 
-`tools/sim_dodge.gd` plays every attack with a bot that reads the warnings, over many seeds, and prints how often it is hit, how much of the box is lit, and whether any moment left no way out; `tools/kinds_test.gd` fails an attack that lights the whole box, walls you in, or lands on your square with less than 0.3 s of warning.
+Bot hits is how often a slow bot (it sees a warning 0.38 s after it shows and steps every 0.26 s) is hit in one dodge at the pace of a monster pressed a little (intensity 1.3), over 40 dodges; by floor it averages 0.37, 0.34, 0.92, 0.81 and 1.25. `tools/sim_dodge.gd` plays every attack with a bot that reads the warnings, over many seeds, and prints how often it is hit, how much of the box is lit, and whether any moment left no way out; `tools/kinds_test.gd` fails an attack that lights the whole box, walls you in, or lands on your square with less than 0.3 s of warning.
 
 Every third attack is a mini-game instead: **walls** (be at the gap when one arrives), **stars** (catch them to heal, keep off the red) or **dance** (be on the light when the beat lands, to heal).
 
