@@ -20,6 +20,8 @@ static func line(id: String) -> String:
 
 ## What `m` says on meeting you again about a promise you made it, or "".
 static func remembered(m) -> String:
+	if m.species == "snake" and m.social.get("confided_mercy", null) is bool:
+		return line("remembered_mercy") if m.social.confided_mercy else line("remembered_none")
 	if m.social.get("betrayed", false):
 		return line("remembered_betrayal")
 	if m.social.get("promise", false):
@@ -36,10 +38,12 @@ static func begin(m, s, dice: Dice) -> void:
 	var history: Array = m.social.get("history", [])
 	var promise: bool = m.social.get("promise", false)
 	var betrayed: bool = m.social.get("betrayed", false)
+	var confided = m.social.get("confided_mercy", null)
 	var seed_id := "%d:%d:%s:%s" % [s.run_seed, s.depth, m.name, m.cell]
 	m.social = {"used": used, "history": history, "promise": promise, "betrayed": betrayed,
+		"confided_mercy": confided,
 		"rounds": 0, "due": 2 + int(dice.keyed(absi(seed_id.hash())) * 3), "checked": -1, "pending": false,
-		"seed": absi(seed_id.hash()), "was_low": m.hp_fraction() < 0.35, "pressure": 0.0,
+		"seed": absi(seed_id.hash()), "was_low": m.hp_fraction() < 0.35, "pressure": 0.5 if confided == false else 0.0,
 		"soft_turns": 0, "opening": 0, "trial": 0}
 	if s.recent_social == m.species:
 		m.social.due = int(m.social.due) + int(table().cooldown)
@@ -184,13 +188,17 @@ static func resolve(m, s, e: Dictionary, id: String) -> Dictionary:
 			var spared: bool = s.floor_map.monsters.any(func(o): return o.gone == "spared")
 			var caught: bool = id == "lie" and spared and e.get("witness", false)
 			out.intent = "insult" if caught else "question"
-			m.social.pressure = 1.0 if caught else 0.3
+			m.social.pressure = 1.0 if caught else (0.2 if id == "lie" else 0.0)
 			if caught:
-				out.text = "I watched you spare my neighbour. That was a lie. My next attack is stronger."
+				out.text = "I watched you spare my neighbour. That was a lie. No route; my next attack is stronger."
 			else:
-				out.text = ("Your record is useful. " if id == "truth" else "I cannot verify that. Take the route, but I remain wary. ") + Hints.answer(s.floor_map, s.cell, m, "where are the stairs").trim_prefix("...")
 				if id == "truth":
-					m.social.soft_turns = 2 if spared else 1
+					m.social.confided_mercy = spared
+					m.social.soft_turns = 2
+					m.meters.friendliness = minf(100.0, m.meters.friendliness + (18.0 if m.has_trait("curious about humans") else 10.0))
+					out.text = "You told me %s. I will remember; my next two attacks soften. " % ("you spared someone here" if spared else "you spared nobody here") + Hints.answer(s.floor_map, s.cell, m, "where are the stairs").trim_prefix("...")
+				else:
+					out.text = "I cannot verify that. I keep my distance; the stairs are somewhere on this floor."
 		"proof":
 			out.intent = "gold"
 			m.social.soft_turns = 1

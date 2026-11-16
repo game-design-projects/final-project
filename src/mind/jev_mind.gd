@@ -117,7 +117,10 @@ func _choice(state: Dictionary, question: String, options: Dictionary):
 	var out := {}
 	var total := 0.0
 	for k in options:
-		var p := float(answer.probabilities.get(k, 0.0))
+		var value = answer.probabilities.get(k)
+		if not _valid_number(value, 0.0, 1.0):
+			return null
+		var p := float(value)
 		out[k] = p
 		total += p
 	if total <= 0.0:
@@ -130,7 +133,7 @@ func _choice(state: Dictionary, question: String, options: Dictionary):
 ## A yes/no question: 0..1, or -1 when Jev didn't answer.
 func _noul(state: Dictionary, question: String) -> float:
 	var answer = _answer(await Network.post_json(_url, {"state": state, "questions": {"q": {"type": "noul", "instructions": question}}}))
-	if answer is Dictionary and answer.has("noul"):
+	if answer is Dictionary and _valid_number(answer.get("noul"), 0.0, 1.0):
 		return clampf(float(answer.noul), 0.0, 1.0)
 	return -1.0
 
@@ -145,12 +148,19 @@ static func _answer(r: Dictionary, id := "q"):
 
 ## Yes/no as 0..1, or -1 when the answer is not one.
 static func _odds(answer) -> float:
-	return clampf(float(answer.noul), 0.0, 1.0) if answer is Dictionary and answer.has("noul") else -1.0
+	return float(answer.noul) if answer is Dictionary and _valid_number(answer.get("noul"), 0.0, 1.0) else -1.0
 
 
 ## A 0..3 score, or -1 when the answer is not one.
 static func _score(answer) -> float:
-	return clampf(float(answer.score), 0.0, 3.0) if answer is Dictionary and answer.has("score") else -1.0
+	return float(answer.score) if answer is Dictionary and _valid_number(answer.get("score"), 0.0, 3.0) else -1.0
+
+
+static func _valid_number(value, low: float, high: float) -> bool:
+	if not (value is float or value is int):
+		return false
+	var number := float(value)
+	return is_finite(number) and number >= low and number <= high
 
 
 func _key(kind: String, m) -> String:

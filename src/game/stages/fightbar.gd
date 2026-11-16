@@ -28,7 +28,7 @@ func enter(flow, args: Dictionary) -> void:
 	if s.sharpened > 0:
 		s.hint += " · WHETTED +%d" % s.sharpened
 	if s.nerve > 0 and flow.feature("nerve"):
-		s.hint += " · NERVE +%d" % Combat.nerve_damage(s.nerve)
+		s.hint += " · %d/%d NERVE: +%d ON HIT" % [s.nerve, Combat.NERVE_MAX, Combat.nerve_damage(s.nerve)]
 	_landed = {}
 	_followed = []
 	_follow_damage = 0
@@ -98,7 +98,7 @@ func _strike(flow, t: float) -> void:
 	m.hp = maxi(0, m.hp - result.damage)
 	flow.event("strike", {"damage": result.damage, "crit": result.crit or heavy, "nerve": nerve}) # a heavy hit sounds and flashes like a big one
 	var found: String = _learn_how_it_takes_it(flow, m) if heavy else ""
-	_landed = {"result": result, "found": found, "betrayal": betrayal}
+	_landed = {"result": result, "found": found, "betrayal": betrayal, "nerve": nerve}
 	_pressed_at = t
 	if m.hp <= 0 or s.bar.marks.is_empty():
 		await _finish(flow)
@@ -150,6 +150,8 @@ func _finish(flow) -> void:
 	if begging:
 		flow.encounter.judge("slay_begging")
 	var line := "%s %s%s%s" % [Texts.hit(landed.result.damage, landed.result.crit), Texts.followed(_followed, _follow_damage), landed.found, Texts.foe_feels(m, decision.feeling)]
+	if landed.nerve > 0:
+		line += " Nerve added %d damage." % landed.nerve
 	if landed.betrayal != "":
 		line = str(landed.betrayal) + " " + line
 		decision.pacified = false

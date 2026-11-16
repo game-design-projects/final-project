@@ -31,6 +31,7 @@ func _run() -> void:
 	await _waiting_is_visible()
 	await _batched_questions()
 	await _batch_failure_falls_back()
+	await _malformed_numbers_fall_back()
 	_local_minds_ask_one_then_the_other()
 	_default_proxy_is_for_the_game_only()
 	Network.transport = Callable()
@@ -147,6 +148,25 @@ func _batch_failure_falls_back() -> void:
 	_check(_requests.size() == 1, "a refused batch is not asked again question by question (%d requests)" % _requests.size())
 	_check(is_equal_approx(both.mercy, local.mercy(m)) and is_equal_approx(both.pressure, local.pressure(m)), "the local rules answer both, as they would alone")
 	_check(await mind.mercy(m) == local.mercy(m) or _requests.size() > 1, "and a failure is not remembered as an answer")
+
+
+func _malformed_numbers_fall_back() -> void:
+	var local := LocalMind.new()
+	var m = _monster()
+	_check(not JevMind._valid_number(INF, 0.0, 1.0) and not JevMind._valid_number(NAN, 0.0, 1.0), "non-finite numbers are rejected before reaching game rules")
+	for bad in ["0.7", -0.1, null]:
+		var mind := JevMind.new("https://proxy.invalid", local)
+		_begin([{"status": 200, "text": JSON.stringify({"answers": {"mercy": {"noul": bad}, "pressure": {"score": bad}}})}])
+		var both: Dictionary = await mind.mercy_and_pressure(m)
+		_check(is_equal_approx(both.mercy, local.mercy(m)) and is_equal_approx(both.pressure, local.pressure(m)), "malformed or out-of-range Jev numbers fall back locally (%s)" % str(bad))
+	var over := JevMind.new("https://proxy.invalid", local)
+	_begin([{"status": 200, "text": '{"answers":{"mercy":{"noul":1.1},"pressure":{"score":3.1}}}'}])
+	var exceeded: Dictionary = await over.mercy_and_pressure(m)
+	_check(is_equal_approx(exceeded.mercy, local.mercy(m)) and is_equal_approx(exceeded.pressure, local.pressure(m)), "values above each field's upper bound fall back locally")
+	var mind := JevMind.new("https://proxy.invalid", local)
+	_begin([{"status": 200, "text": '{"answers":{"q":{"probabilities":{"good":-0.2,"bad":1.2}}}}'}])
+	var feelings: Dictionary = await mind.feeling_when_hit(m)
+	_check(feelings == local.feeling_when_hit(m), "invalid choice probabilities use the local feeling rules")
 
 
 ## The minds that do not call out answer the pair the way two questions in a row would, in the same order: the seeded one draws

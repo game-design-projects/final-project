@@ -25,10 +25,13 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var mercy: float = await flow.encounter.mercy(s.foe)
 	var enraged := Clans.enraged(s, s.foe)
-	if Social.promised(s.foe) and not enraged:
+	var guaranteed: bool = Social.promised(s.foe) and not enraged
+	if guaranteed:
 		mercy = 1.0
 		s.mind_rows = s.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "PROMISE KEPT: WILL IT ACCEPT MERCY?", "answer": mercy}]
 	var nerve: int = s.nerve if flow.feature("nerve") else 0
+	var spare_nerve: int = 0 if guaranteed or mercy >= 1.0 else nerve
+	var spare_odds: float = minf(1.0, mercy + Combat.nerve_mercy(spare_nerve))
 	var skilled: bool = s.skill_fight != null
 	if skilled and s.skill_fight.turn_over:
 		Skills.start_turn(s.skill_fight)
@@ -38,7 +41,7 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu = [
 		{"label": "FIGHT", "sub": "Time the strike"},
 		{"label": "ACT", "sub": "Say or do something"},
-		{"label": "SPARE", "sub": str(Clans.no_mercy().spare) if enraged else Texts.nerve_for_mercy(nerve) + Texts.spare_tip(mercy, s.foe.boss), "gold": mercy + Combat.nerve_mercy(nerve) >= 0.5, "disabled": enraged},
+		{"label": "SPARE", "sub": str(Clans.no_mercy().spare) if enraged else (Texts.spare_chance(mercy, spare_odds, spare_nerve, guaranteed) if flow.feature("nerve") else Texts.spare_tip(mercy, s.foe.boss)), "gold": spare_odds >= 0.5, "disabled": enraged},
 		{"label": "FLEE", "sub": "Champions block the way" if s.foe.boss else ("Back away: costs gold, and it won't forget" if flow.feature("flee-cost") else "Back away")},
 	]
 	if skilled:
@@ -49,8 +52,8 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
 	if int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
-	if nerve > 0:
-		s.menu[FIGHT].sub += " · NERVE +%d" % Combat.nerve_damage(nerve)
+	if flow.feature("nerve"):
+		s.menu[FIGHT].sub += " · NERVE %d/%d: +%d ON HIT; SPARE %s" % [nerve, Combat.NERVE_MAX, Combat.nerve_damage(nerve), Combat.chance_label(spare_odds)]
 	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
 
@@ -115,9 +118,16 @@ func _spare(flow) -> void:
 	if Clans.enraged(s, m): # SPARE is greyed out, and a key that still reaches it does nothing
 		return
 	var odds: float = await flow.encounter.mercy(m)
-	odds = minf(1.0, odds + Combat.nerve_mercy(flow.encounter.spend_nerve())) # it saw you stand your ground
-	if Social.promised(m):
+	var before: float = odds
+	var guaranteed: bool = Social.promised(m)
+	var spent := 0
+	if not guaranteed and odds < 1.0:
+		spent = flow.encounter.spend_nerve()
+		odds = minf(1.0, odds + Combat.nerve_mercy(spent)) # it saw you stand your ground
+	if guaranteed:
 		odds = 1.0
+	if spent > 0:
+		s.add_chat("YOU", "Spent %d Nerve: SPARE chance %s → %s." % [spent, Combat.chance_label(before), Combat.chance_label(odds)])
 	var accepted := Odds.succeeds(flow.dice, odds)
 	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": odds, "picked": accepted}]
 	if accepted:
