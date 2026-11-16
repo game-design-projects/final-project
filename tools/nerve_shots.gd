@@ -1,6 +1,7 @@
-## Pictures of nerve, of what a foe's mood does to its attack and of the friends' marks on the strike bar, to look at: the pips
-## beside the dodge box, a square in its last moments, the ring of a close call, a heart to catch, the fight menu with nerve to
-## spend, and a strike the friends follow. It needs a real window:
+## Pictures of nerve, of what a foe's mood does to its attack, of the friends' marks on the strike bar and of keepsakes, to look
+## at: the pips beside the dodge box, a square in its last moments, the ring of a close call, a heart to catch, the fight menu
+## with nerve to spend, a strike the friends follow, a champion's three keepsakes and what they show in a fight. It needs a real
+## window:
 ##   godot --path . -s res://tools/nerve_shots.gd -- out=/some/dir [nofocus]
 ## Nothing reaches the player's saves (`nosave` is always on).
 extends SceneTree
@@ -86,6 +87,44 @@ func _initialize() -> void:
 	s.bar.t0 = flow.clock - s.bar.dur * 0.75
 	await _wait(0.2)
 	await _shot("6_follow_through")
+	# a champion out of the way leaves three keepsakes; one is taken
+	s.bar = null
+	s.allies = []
+	await flow.go("explore", {"lines": []})
+	var boss = s.floor_map.monsters.filter(func(x): return x.boss).front()
+	await flow.go("intro", {"foe": boss})
+	await _until("menu")
+	await flow.encounter.defeat(boss, "slain")
+	await _wait(1.2)
+	await _shot("7_keepsake")
+	await flow.press("right")
+	await _wait(0.2)
+	await _shot("7b_keepsake_second_picked")
+	await flow.press("confirm")
+	await _wait(0.5)
+	await _shot("8_keepsake_taken")
+	# what you carry shows beside the box, and a steady hand widens the perfect mark
+	s.keepsakes = ["steady_hand", "thick_hide", "second_wind", "lucky_coin"]
+	await flow.go("camp")
+	await _wait(0.3)
+	await _shot("9_camp_says_what_you_carry")
+	await flow.press("cancel")
+	await flow.go("intro", {"foe": m})
+	await _until("menu")
+	s.banner = null
+	await flow.press("1")
+	await _wait(0.1)
+	s.bar.dur = 600000.0
+	s.bar.t0 = flow.clock - s.bar.dur * 0.3
+	await _wait(0.2)
+	await _shot("10_steady_hand")
+	s.bar = null
+	s.nerve = 3
+	await flow.go("wait", {"pressure": 1.0})
+	await _until("dodge")
+	s.dodge.end_t = flow.clock + 60000.0
+	await _wait(0.8)
+	await _shot("11_keepsakes_beside_box")
 	print("nerve_shots: written to %s" % _out)
 	quit()
 

@@ -10,6 +10,7 @@ const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Moods = preload("res://src/rules/moods.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
@@ -76,11 +77,15 @@ func spareable(m) -> bool:
 	return await mercy(m) >= 0.5
 
 
-## The odds `m` takes mercy now: the mind's, or none at all when its clan is enraged (rules/clans.gd), whatever the mind says.
+## The odds `m` takes mercy now: the mind's (and what the keepsake open hand adds), or none at all when its clan is enraged
+## (rules/clans.gd), whatever the mind says.
 func mercy(m) -> float:
 	if Clans.enraged(flow.state, m):
 		return 0.0
-	return await flow.mind.mercy(m)
+	var odds: float = await flow.mind.mercy(m)
+	if Keepsakes.has(flow.state, "open_hand"):
+		odds = minf(1.0, odds + Keepsakes.OPEN_MERCY)
+	return odds
 
 
 ## One round of the mind: how `m` feels about `act` ("fight", or [{intent, w}] for an ACT button or typed words), and how
@@ -271,14 +276,16 @@ func _open_purse(m) -> void:
 		return
 	var s = flow.state
 	var numbers: Dictionary = Content.table("npcs").lurkers
-	s.gold += m.purse
-	print("encounter: %s leaves %d gold" % [m.name, m.purse])
+	var purse := Keepsakes.gold(s, int(m.purse))
+	s.gold += purse
+	print("encounter: %s leaves %d gold" % [m.name, purse])
 	if not flow.banner_up():
-		flow.announce(numbers.purse_title, numbers.purse_line % [m.name, m.purse])
+		flow.announce(numbers.purse_title, numbers.purse_line % [m.name, purse])
 	m.purse = 0
 
 
-## A champion beaten or won over leaves you stronger, however it ended.
+## A champion beaten or won over leaves you stronger, however it ended, and leaves keepsakes to choose from when the fight is
+## over (the feature keepsakes; not on the last floor, where nothing is left to use one on, nor on the practice floor).
 func _reward_for_champion(m) -> void:
 	var s = flow.state
 	var reward: Dictionary = Floors.boss_reward()
@@ -286,6 +293,8 @@ func _reward_for_champion(m) -> void:
 	var healed := _heal(reward.heal)
 	flow.announce(Texts.champion_down(m), Texts.stronger(int(reward.max_hp), healed))
 	print("encounter: %s is out of the way: max HP %d, healed %d" % [m.name, s.max_hp, healed])
+	if flow.feature("keepsakes") and not s.practice and not Floors.is_last(s.depth):
+		s.keepsake_due = m.name
 
 
 ## The answer at the ask stage: it comes along. Nothing is rolled: it asked and you said yes.
@@ -323,8 +332,17 @@ func _heal(amount) -> int:
 
 
 ## The fight is over: the log says how, and the party is back to walking, or with a fight queued (social-demo) on to the
-## next one (the intro keeps the line that says how this fight ended). There is no screen to confirm in between.
+## next one (the intro keeps the line that says how this fight ended). There is no screen to confirm in between, except after
+## a champion, which leaves keepsakes: one is taken first (stages/keepsake.gd), and that stage comes back here.
 func leave_fight(lines: Array) -> void:
+	var s = flow.state
+	if s.keepsake_due != "":
+		var from: String = s.keepsake_due
+		s.keepsake_due = ""
+		var offered := Keepsakes.offer(s.run_seed, s.depth, s.keepsakes, flow.feature("nerve"))
+		if not offered.is_empty():
+			await flow.go("keepsake", {"offered": offered, "from": from, "lines": lines})
+			return
 	if not flow.fight_queue.is_empty():
 		await flow.go("intro", {"foe": flow.fight_queue.pop_front(), "before": lines})
 		return

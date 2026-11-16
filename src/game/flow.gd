@@ -39,6 +39,7 @@ const WICK_BANNER_MS := 4500.0
 const WARMTH_TITLE := "THE HALLS"
 const WALK_HEAL_STEPS := 6
 const AFTER_FIGHT_MS := 350.0 # how long keys do nothing once a fight is over
+const BEFORE_KEEPSAKE_MS := 900.0 # and longer before a keepsake is chosen: a press meant for the strike bar must not take one unread
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
 const PRACTICE_SEEN := "practice" # its id among the tips seen
@@ -57,6 +58,7 @@ const STAGES := {
 	"request": preload("res://src/game/stages/request.gd"),
 	"talk": preload("res://src/game/stages/talk.gd"),
 	"fightbar": preload("res://src/game/stages/fightbar.gd"),
+	"keepsake": preload("res://src/game/stages/keepsake.gd"),
 	"wait": preload("res://src/game/stages/wait.gd"),
 	"dodge": preload("res://src/game/stages/dodge.gd"),
 	"dead": preload("res://src/game/stages/dead.gd"),
@@ -231,6 +233,9 @@ func _apply_features() -> void:
 		state.views[name] = feature(name)
 	if feature("skill-combat") and state.skills.is_empty(): # a new run, or a save from before: the starting skills
 		state.skills = Skills.start()
+	if not feature("keepsakes") and not state.keepsakes.is_empty(): # a save made with them, played without: they stay behind
+		print("flow: keepsakes are off, leaving %s behind" % [state.keepsakes])
+		state.keepsakes = []
 
 
 ## What the log says on arriving on this floor.
@@ -326,8 +331,8 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
-	if to == "explore" and from in Transitions.FIGHT:
-		_keys_back_at = clock + AFTER_FIGHT_MS
+	if to in ["explore", "keepsake"] and from in Transitions.FIGHT:
+		_keys_back_at = clock + (BEFORE_KEEPSAKE_MS if to == "keepsake" else AFTER_FIGHT_MS)
 		_held_over = true
 	state.stage = to
 	_since = clock

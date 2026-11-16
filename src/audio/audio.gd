@@ -14,7 +14,7 @@ const Voices = preload("res://src/audio/voices.gd")
 const SOUNDS := {
 	"step": "step", "bump": "bump", "miss": "miss", "player_hurt": "hurt", "shield": "shield",
 	"beat": "beat", "mercy_refused": "mercy_refused", "recruited": "recruited", "wants_join": "chime", "ally_left": "ally_left",
-	"dead": "dead", "menu_move": "move", "menu_pick": "pick", "follow": "strike",
+	"dead": "dead", "menu_move": "move", "menu_pick": "pick", "follow": "strike", "second_wind": "shield", "keepsake": "chime",
 }
 
 const NERVE_NOTES := 5 # one rising note for each point of nerve (sfx.gd has nerve_1 to nerve_5)
@@ -66,7 +66,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 		return
 	match name:
 		"stage":
-			if data.to == "explore" or data.to == "end":
+			if data.to in ["explore", "end", "keepsake"]:
 				_music.set_mode("explore")
 		"encounter":
 			_sfx.play("boss" if data.boss else "encounter")

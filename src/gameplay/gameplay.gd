@@ -498,7 +498,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 				else:
 					_stage.play_opening(now)
 		"stage":
-			if data.to == "explore":
+			if data.to in ["explore", "keepsake"]:
 				_postfx.set_accent(Palette.for_run(s.palette_id).accent) # back from a fight, the monster's colour goes
 			if data.to == "explore" and (data.from != "" or _fresh_floor):
 				_fresh_floor = false
@@ -531,6 +531,11 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_overlay.comet(_overlay.soul_at())
 		"shield":
 			_overlay.popup("BLOCKED", Palette.MERCY, Vector2(224, 200))
+		"second_wind":
+			_overlay.popup("SECOND WIND", Palette.MERCY, Vector2(224, 176))
+			_postfx.flash(Palette.MERCY, 0.35 * _softness())
+		"keepsake":
+			_postfx.flash(Palette.MERCY, 0.3 * _softness())
 		"nerve":
 			match data.how:
 				"close":

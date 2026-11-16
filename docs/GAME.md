@@ -20,6 +20,20 @@ Each floor belongs to a biome with its own generator, colours and monsters, and 
 
 The camera glides from cell to cell, and the automap in the corner learns what the camera sees. A champion stands on the stairs of every floor, hidden from the map until seen, so there is no way down without facing it. Beaten or won over, it leaves you stronger: 4 more max HP and 6 health back.
 
+**A champion leaves keepsakes.** On every floor but the last, the champion out of your way leaves three keepsakes and you take one, yours for the rest of the run. The same run offers the same three on the same floor, and never one you already hold, so four champions make four choices out of nine. What you carry is listed beside the dodge box, and sitting down (Enter on the walk) says it too.
+
+| Keepsake | What it does |
+| --- | --- |
+| EMBER HEART | 6 more max HP, and all your health back |
+| SHARP TOOTH | Every strike of yours that lands does 2 more |
+| STEADY HAND | The perfect mark on the strike bar is twice as wide |
+| THICK HIDE | Every hit in the box costs 1 less (never less than 1) |
+| QUICK FEET | A close call counts from 0.45 seconds out instead of 0.3, so nerve comes easier |
+| DEEP BREATH | Every fight starts with 2 nerve |
+| OPEN HAND | Every monster is 15% likelier to take mercy |
+| LUCKY COIN | Half again as much gold from every purse and chest |
+| SECOND WIND | Once a fight, the hit that would fell you leaves you on 1 HP |
+
 Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and on some floors someone who asks for a favour instead of a fight. Floors 2 and 4 have a trader.
 
 **Monsters move when you move**, and turning is free. Slimes drift, bandits patrol, snakes follow for a while, and rocks and dragons stay put, and some kinds have their own ways: a gumdrop or a tide never stops moving, an adder, a pickpocket or a hypnocoil follows you, a boulder patrols, and spitters, lookouts, gazers, cobras, sappers, crushers, brood mothers and golems hold their ground; an angry monster, or one whose clan you have wronged, comes after you. One that has seen you is tagged HUNTING with an alert sound, one in sight makes a soft step as it moves, and an arrow at its feet shows the way it went. A monster that catches you starts the fight and strikes first.

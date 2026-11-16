@@ -8,6 +8,7 @@ extends "res://src/game/stages/stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
@@ -29,6 +30,8 @@ func enter(flow, args: Dictionary) -> void:
 		s.hint += " · WHETTED +%d" % s.sharpened
 	if s.nerve > 0 and flow.feature("nerve"):
 		s.hint += " · NERVE +%d" % Combat.nerve_damage(s.nerve)
+	if Keepsakes.has(s, "sharp_tooth"):
+		s.hint += " · TOOTH +%d" % Keepsakes.TOOTH_DAMAGE
 	_landed = {}
 	_followed = []
 	_follow_damage = 0
@@ -72,6 +75,8 @@ func _strike(flow, t: float) -> void:
 	var s = flow.state
 	var m = s.foe
 	var x := clampf((t - s.bar.t0) / s.bar.dur, 0.0, 1.0)
+	if Keepsakes.has(s, "steady_hand") and absf(x - 0.5) * 2.0 < Combat.CRIT_EDGE * Keepsakes.STEADY_SCALE:
+		x = 0.5 # the steady hand: anywhere on the wider mark is the middle
 	var heavy: bool = s.bar.heavy
 	var aid: int = Combat.party_aid(s.party_size())
 	var result: Dictionary
@@ -84,7 +89,7 @@ func _strike(flow, t: float) -> void:
 	if not result.miss:
 		s.sharpened = 0
 		nerve = Combat.nerve_damage(flow.encounter.spend_nerve())
-		result.damage += Social.strike_bonus(m) + nerve
+		result.damage += Social.strike_bonus(m) + nerve + (Keepsakes.TOOTH_DAMAGE if Keepsakes.has(s, "sharp_tooth") else 0)
 	if result.miss:
 		s.bar = null
 		flow.event("miss")

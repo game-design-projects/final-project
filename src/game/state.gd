@@ -9,6 +9,7 @@ const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Items = preload("res://src/rules/items.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const SaveCheck = preload("res://src/game/save_check.gd")
 const Skills = preload("res://src/rules/skills.gd")
@@ -52,6 +53,7 @@ var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
+var keepsakes: Array = [] # the keepsakes taken from champions this run, in the order taken (rules/keepsakes.gd, the feature keepsakes)
 var skills: Array = [] # the skills held (rules/skills.gd): given by the feature skill-combat, kept in a save made with it
 var hunger := 0.0 # 0 fed .. rules/survival.gd's starving_at
 var starved_steps := 0 # steps walked starving
@@ -67,6 +69,8 @@ var dodge # DodgeRun while the stage is "dodge"
 var bar = null # {t0, dur} while the strike bar sweeps
 var skill_fight = null # this fight's energy, cooldowns, block and bruises (Skills.new_fight), with the feature skill-combat; null without it
 var nerve := 0 # what holding your ground in the dodge box has earned this fight, 0..Combat.NERVE_MAX: the next strike that lands or SPARE spends it (the feature nerve)
+var second_wind_used := false # the keepsake second wind has kept you standing once this fight
+var keepsake_due := "" # the name of a champion just put out of the way, until the fight's end offers its keepsakes
 var struggle := 0.0 # how much the player has been hit lately: the dodge eases off (rules/pace.gd)
 var rotate_mini_games := false # every third attack is a mini-game (the flow turns it on; a test may leave it off)
 var social_offer := {} # only the social stage owns this popup
@@ -186,6 +190,8 @@ func to_dict() -> Dictionary:
 		out.practice = true # only then, so a save from any other floor reads as it always did
 	if not skills.is_empty(): # a save made without skill-combat stays as it was
 		out.skills = skills.duplicate()
+	if not keepsakes.is_empty(): # and so does one with no keepsake taken
+		out.keepsakes = keepsakes.duplicate()
 	return out
 
 
@@ -234,6 +240,9 @@ static func from_dict(d: Dictionary):
 	s.sharpened = maxi(0, SaveCheck.to_int(d.sharpened)) if SaveCheck.is_num(d.get("sharpened")) else 0
 	for id in d.get("skills", []) if d.get("skills") is Array else []:
 		Skills.learn(s.skills, str(id))
+	for id in d.get("keepsakes", []) if d.get("keepsakes") is Array else []:
+		if id is String and Keepsakes.known(id) and not s.keepsakes.has(id): # what the ember heart gave is in maxHp already
+			s.keepsakes.append(id)
 	for species in d.get("heavyKnown", []) if d.get("heavyKnown") is Array else []:
 		if Combat.HEAVY_WEAK.has(str(species)):
 			s.heavy_known[str(species)] = true

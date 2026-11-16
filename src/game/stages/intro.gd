@@ -7,6 +7,7 @@ extends "res://src/game/stages/stage.gd"
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const SocialDemo = preload("res://src/game/social_demo.gd")
 const Social = preload("res://src/rules/social.gd")
 const Skills = preload("res://src/rules/skills.gd")
@@ -25,7 +26,8 @@ func enter(flow, args: Dictionary) -> void:
 	_queued = false
 	s.foe = m
 	s.skill_fight = Skills.new_fight() if flow.feature("skill-combat") else null
-	s.nerve = 0
+	s.nerve = Keepsakes.DEEP_NERVE if flow.feature("nerve") and Keepsakes.has(s, "deep_breath") else 0
+	s.second_wind_used = false
 	m.spoke = false
 	s.social_offer = {}
 	s.social_typing = false

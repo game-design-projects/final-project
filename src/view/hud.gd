@@ -28,6 +28,9 @@ const LOG_PX := 20
 const LOG_SIZES_LARGE := [26, 24, 22]
 static var large_text := false # the TEXT SIZE setting (the scene keeps this up to date)
 const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
+const SUB_STAGES := ["menu", "act", "skills"] # where the line under the key hints says what the picked command does
+const CARD_STAGES := ["keepsake"] # where each choice is a card, as tall as the slot, with what it does written under its name: all of them read at once
+const CARD_SUB_PX := 18
 const THINKING_AFTER_MS := 250 # a question out this long shows as "thinking"; a quick answer doesn't flicker it
 const SAY_BUTTON := -2 # what `_hover_at` says over the talk box's button
 const PAGE_BACK := -3
@@ -172,7 +175,12 @@ func _command_at(at: Vector2) -> int:
 
 
 func _grid() -> bool:
-	return state != null and not state.menu.is_empty() and (state.stage == "menu" or state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end"])
+	return state != null and not state.menu.is_empty() and (state.stage == "menu" or state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end", "keepsake"])
+
+
+## Whether each choice is a card (CARD_STAGES).
+func _cards() -> bool:
+	return _grid() and state.stage in CARD_STAGES
 
 
 ## Reserve the same space while walking and in menus, so opening a grid never resizes the picture.
@@ -211,6 +219,8 @@ func command_rects() -> Array[Rect2]:
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	var cols := mini(3, state.menu.size()) if _grid() else clampi(state.menu.size(), 1, 4)
 	var button_h := (GRID_SLOT_H - GAP) / 2.0 if _grid() else BUTTON_H
+	if _cards():
+		button_h = GRID_SLOT_H
 	var w := (slot.size.x - GAP * (cols - 1)) / cols
 	var first_row := _first_grid_row(cols) if _grid() else 0
 	for i in state.menu.size():
@@ -450,6 +460,9 @@ func _commands(_slot: Rect2) -> void:
 		draw_rect(r, Color.BLACK)
 		draw_rect(r.grow(-1.0), Palette.INK if picked_one or i == _hover else Palette.FAINT, false, 2.0)
 		var base := r.position + Vector2(12.0, r.size.y * 0.5 + (6.0 if _grid() else 4.0))
+		if _cards():
+			base = r.position + Vector2(12.0, 28.0) # the name at the top, what it does under it
+			draw_multiline_string(_body, r.position + Vector2(14.0, 52.0), str(items[i].get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 26.0, CARD_SUB_PX, 3, Palette.INK if picked_one else Palette.DIM)
 		if picked_one:
 			draw_colored_polygon([base + Vector2(0, -8), base + Vector2(8, -4), base + Vector2(0, 0)], Palette.YOU)
 		var px := 14 if _grid() else 9
@@ -508,14 +521,14 @@ func _keys(area: Rect2) -> void:
 
 ## What the picked command does, for the line under the key hints ("" when there is nothing to say).
 func sub_text() -> String:
-	if state == null or not state.stage in ["menu", "act", "skills"] or state.menu.is_empty():
+	if state == null or not state.stage in SUB_STAGES or state.menu.is_empty():
 		return ""
 	return str(state.menu[clampi(state.selected, 0, state.menu.size() - 1)].get("sub", ""))
 
 
 ## Does any command's help in this menu run past the dock's width (a narrow window)? Then the dock has room for a second line.
 func _sub_wraps() -> bool:
-	if not state.stage in ["menu", "act", "skills"]:
+	if not state.stage in SUB_STAGES:
 		return false
 	for item in state.menu:
 		if _body.get_string_size(str(item.get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x > size.x:
