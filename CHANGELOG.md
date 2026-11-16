@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-16
+
 ### Added
 - `nerve`: a dodge with no hit in it, and every close call (stepping off a square in its last 0.3 seconds before it lands), earns a point of nerve, up to five; a FIGHT or HEAVY that lands spends them for 2 more damage each, a SPARE for 8% better odds each, and a hit shakes one out. Pips beside the box and under the kind of fight, a white outline on a square in its last moments, a ring and a rising note for each close call.
 - `mood-attacks`: how a monster feels shows in its attack, whichever it is: a friendly one drops hearts to catch (each heals 1 and pleases it, and the mercy gauge follows), a frightened one falters (one hazard in three never comes) and breaks off a quarter early.
@@ -24,12 +26,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - A warren holds every kind of its clan met so far, the floor's own first, as many monsters as the floor would have.
 - `meet=` takes a kind as well as a species, and tries a kind from another floor on one of this floor's monsters.
 - The game asks Jev through the public proxy by default, also when run from source (`godot --path .`), so a fresh checkout plays like a build; `nojev` keeps the local rules, `jev=<url>` or the saved `jev_url` picks another proxy. The test suites, `autoplay` and the screenshot tools (headless or `-s`) never get the default.
+- The Jev Worker reaches Jev through the LLM gateway (`LLMGW_API_KEY`, a Jev-only key with a $2 daily budget) instead of holding an OpenRouter or TypeSafe key itself; those two secrets still work as fallbacks.
 
 ### Fixed
 - `.env.example` and `docs/DEVELOPMENT.md` said the game reads `.env` and that from source it runs on mock Jev; only `node proxy/dev.js` reads `.env`, and from source the monsters use the local rules. The docs now say how to play from source against Jev.
-
-### Changed
-- The Jev Worker reaches Jev through the LLM gateway (`LLMGW_API_KEY`, a Jev-only key with a $2 daily budget) instead of holding an OpenRouter or TypeSafe key itself; those two secrets still work as fallbacks.
 
 ## [0.8.1] - 2026-11-11
 
@@ -423,7 +423,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.8.1...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.0...main
+[0.9.0]: https://github.com/game-design-projects/final-project/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/game-design-projects/final-project/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/game-design-projects/final-project/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/game-design-projects/final-project/compare/v0.6.1...v0.7.0
