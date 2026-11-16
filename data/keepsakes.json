@@ -1,0 +1,16 @@
+{
+ "ask": "%s leaves three keepsakes. Take one: it is yours for the rest of the run.",
+ "taken": "You take the %s: %s.",
+ "held": "You carry the %s.",
+ "keepsakes": {
+  "ember_heart": {"name": "EMBER HEART", "text": "6 more max HP, and all your health back"},
+  "sharp_tooth": {"name": "SHARP TOOTH", "text": "every strike of yours that lands does 2 more"},
+  "steady_hand": {"name": "STEADY HAND", "text": "the perfect mark on the strike bar is twice as wide"},
+  "thick_hide": {"name": "THICK HIDE", "text": "every hit in the box costs 1 less"},
+  "quick_feet": {"name": "QUICK FEET", "text": "close calls count from further out, so nerve comes easier"},
+  "deep_breath": {"name": "DEEP BREATH", "text": "every fight starts with 2 nerve"},
+  "open_hand": {"name": "OPEN HAND", "text": "every monster is 15% likelier to take mercy"},
+  "lucky_coin": {"name": "LUCKY COIN", "text": "half again as much gold from every purse and chest"},
+  "second_wind": {"name": "SECOND WIND", "text": "once a fight, the hit that would fell you leaves you on 1 HP"}
+ }
+}

@@ -15,6 +15,8 @@ const FIELDS := {
 	"follow": ["who", "species", "damage"], # a friend's strike landed after yours (the feature follow-through)
 	"player_hurt": ["damage"], # a hazard hit you
 	"shield": [], # the slime's charm absorbed a hit
+	"second_wind": [], # the keepsake second wind kept you standing through the hit that would have felled you
+	"keepsake": ["id"], # you took a keepsake a champion left (the feature keepsakes)
 	"star": [], # you caught a star in the mini-game
 	"heart": [], # you caught a heart a friendly monster dropped in its attack
 	"nerve": ["total", "how"], # your nerve moved to `total`: "close" (a close call), "clean" (a dodge with no hit in it), "lost" (a hit shook one out) or "spent" (a strike or a SPARE used it)

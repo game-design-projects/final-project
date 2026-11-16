@@ -3,6 +3,7 @@
 extends "res://src/game/stages/list_stage.gd"
 
 const Items = preload("res://src/rules/items.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
 
@@ -12,7 +13,10 @@ var _asking = null # the ally about to be butchered, while it asks
 
 func enter(flow, _args: Dictionary) -> void:
 	_asking = null
-	flow.state.say([State.sys_line(Survival.line("camp"))])
+	var lines := [State.sys_line(Survival.line("camp"))]
+	if not flow.state.keepsakes.is_empty(): # a look at what the champions left
+		lines.append(State.sys_line(str(Keepsakes.table().held) % Keepsakes.held_words(flow.state)))
+	flow.state.say(lines)
 	_fill(flow)
 
 

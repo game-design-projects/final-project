@@ -26,6 +26,8 @@ const Hud = preload("res://src/view/hud.gd")
 const Items = preload("res://src/rules/items.gd")
 const Lore = preload("res://src/rules/lore.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
+const KeepsakeStage = preload("res://src/game/stages/keepsake.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
@@ -38,6 +40,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Vision = preload("res://src/rules/vision.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Tips = preload("res://src/view/tips.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 
 const BASE := ["nosave", "nosound", "no-wick"] # she has a test of her own; every other check starts alone
 
@@ -77,6 +80,7 @@ func _run() -> void:
 	await _nerve()
 	await _mood_attacks()
 	await _follow_through()
+	await _keepsakes()
 	await _skill_combat()
 	_close_camera()
 	_finish()
@@ -415,6 +419,237 @@ func _follow_through() -> void:
 	off.clock = off.state.bar.t0 + off.state.bar.dur / 2.0
 	await off.press("confirm")
 	_check(off.state.stage != "fightbar" and off.state.bar == null, "and a strike ends the bar at once, as it did")
+	_use()
+
+
+## Into a fight with `m` on the run as it stands (`_at_menu` starts a new run), up to the menu.
+func _meet(flow, m) -> void:
+	var s = flow.state
+	if s.stage != "explore":
+		await flow.go("explore", {"lines": []})
+	await flow.go("intro", {"foe": m})
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro" and s.hint == "ANY KEY CONTINUE":
+		await flow.press("confirm")
+	if s.stage == "social":
+		await flow.press("cancel")
+
+
+## keepsakes: a champion out of your way leaves three, of which you take one for the rest of the run.
+func _keepsakes() -> void:
+	# what is offered
+	var all: Array = Keepsakes.ids()
+	_check(all.size() == 9 and all.all(func(id): return Keepsakes.name_of(id) != "" and Keepsakes.text_of(id) != ""), "nine keepsakes, each with a name and what it does")
+	_check(all.all(func(id): return Overlay.banner_fits(KeepsakeStage.sentence(Keepsakes.text_of(id)))), "and what each does fits the banner")
+	var first: Array = Keepsakes.offer(11, 1, [])
+	_check(first.size() == Keepsakes.OFFERED and first == Keepsakes.offer(11, 1, []), "three are offered, the same three for the same run and floor (%s)" % [first])
+	_check(first[0] != first[1] and first[1] != first[2] and first[0] != first[2], "no two alike")
+	_check(range(1, 30).any(func(i): return Keepsakes.offer(11 + i, 1, []) != first) and range(2, 6).any(func(d): return Keepsakes.offer(11, d, []) != first), "another run or another floor offers others")
+	_check(Keepsakes.offer(11, 1, first).all(func(id): return not first.has(id)), "one already held is never offered again")
+	_check(Keepsakes.offer(11, 1, all.slice(0, 7)).size() == 2 and Keepsakes.offer(11, 1, all).is_empty(), "with few left fewer are offered, and with none left none")
+	_check(range(40).all(func(i): return Keepsakes.offer(i, 1, [], false).all(func(id): return not Keepsakes.NEEDS_NERVE.has(id))), "a game without nerve is never offered the ones that feed it")
+	_check(Transitions.allowed("fightbar", "keepsake") and Transitions.allowed("ask", "keepsake") and Transitions.allowed("keepsake", "explore") and not Transitions.allowed("explore", "keepsake"), "the choice comes at the end of a fight and nowhere else")
+	_check(Transitions.WALK.has("keepsake") and Hud.CARD_STAGES.has("keepsake"), "it is made on the floor, the fight behind you, and each is a card that says what it does")
+
+	# a champion slain leaves them
+	var flow = _flow(86)
+	await flow.new_run()
+	var s = flow.state
+	var took := []
+	var paused := [0]
+	flow.happened.connect(func(name, data):
+		if name == "keepsake":
+			took.append(data.id)
+		if name == "pause_requested":
+			paused[0] += 1)
+	_check(not s.to_dict().has("keepsakes"), "a run with none saves as it always did")
+	var boss = s.floor_map.monsters.filter(func(x): return x.boss).front()
+	await _meet(flow, boss)
+	await flow.encounter.defeat(boss, "slain")
+	var offered: Array = Keepsakes.offer(s.run_seed, s.depth, [])
+	_check(s.stage == "keepsake" and s.foe == null and s.keepsake_due == "", "a champion slain leaves keepsakes before the walk goes on (%s)" % s.stage)
+	_check(s.menu.map(func(item): return item.label) == offered.map(func(id): return Keepsakes.name_of(id)) and s.menu.all(func(item): return str(item.sub).ends_with(".")), "the three of this run and floor, each saying what it does (%s)" % [s.menu])
+	_check(s.lines.any(func(l): return str(l.text).contains(boss.name) and str(l.text).contains("keepsakes")), "the log says who left them (%s)" % str(s.lines.map(func(l): return l.text)))
+	_check(s.banner != null and str(s.banner.text).contains("stronger"), "and the picture still says the champion made you stronger")
+	await flow.press("confirm")
+	_check(s.stage == "keepsake" and s.keepsakes.is_empty(), "a key still down from the fight takes nothing")
+	await flow.tick(flow.clock + Flow.AFTER_FIGHT_MS + 1.0)
+	await flow.press("confirm")
+	_check(s.stage == "keepsake" and s.keepsakes.is_empty(), "nor one pressed a moment later: there is time to read")
+	await flow.tick(flow.clock + Flow.BEFORE_KEEPSAKE_MS)
+	await flow.press("cancel")
+	_check(s.stage == "keepsake" and paused[0] == 1, "Esc is the pause menu, and the choice waits")
+	await flow.press("right")
+	_check(s.selected == 1, "the arrows move along them")
+	var max_before: int = s.max_hp
+	await flow.press("confirm")
+	var mine: String = offered[1]
+	_check(s.stage == "explore" and s.keepsakes == [mine] and took == [mine], "Enter takes the picked one and the walk goes on (%s, %s)" % [s.stage, s.keepsakes])
+	_check(s.banner != null and s.banner.title == Keepsakes.name_of(mine) and s.lines.any(func(l): return str(l.text).begins_with("You take the %s" % Keepsakes.name_of(mine))), "the picture and the log say which")
+	_check(s.max_hp == max_before + (Keepsakes.EMBER_MAX_HP if mine == "ember_heart" else 0), "(only the ember heart changes your health)")
+
+	# kept in a save, down the stairs, and never offered twice
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	var back = State.from_dict(saved)
+	_check(back != null and back.keepsakes == [mine] and back.max_hp == s.max_hp, "a save keeps them")
+	var odd: Dictionary = saved.duplicate(true)
+	odd.keepsakes = ["nonsense", mine, mine, 7.0]
+	_check(State.from_dict(odd).keepsakes == [mine], "and only the ones there are, once each")
+	odd.keepsakes = "all of them"
+	_check(State.from_dict(odd).keepsakes.is_empty(), "(a save that says something else about them holds none)")
+	await flow.tick(flow.clock + 1000.0)
+	await flow.go("camp")
+	_check(s.lines.any(func(l): return str(l.text) == "You carry the %s." % Keepsakes.name_of(mine)), "sitting down says what you carry (%s)" % str(s.lines.map(func(l): return l.text)))
+	await flow.press("cancel")
+	await flow.next_floor()
+	_check(s.keepsakes == [mine] and s.depth == 2, "they come down the stairs with you")
+	var boss2 = s.floor_map.monsters.filter(func(x): return x.boss).front()
+	var other = s.floor_map.monsters.filter(func(x): return not x.boss).front()
+	await _meet(flow, boss2)
+	flow.fight_queue = [other]
+	await flow.encounter.defeat(boss2, "spared", false)
+	_check(s.stage == "keepsake" and s.menu.size() == 3 and s.menu.all(func(item): return item.label != Keepsakes.name_of(mine)), "the next champion, spared, leaves three others (%s)" % [s.menu.map(func(item): return item.label)])
+	await flow.tick(flow.clock + Flow.BEFORE_KEEPSAKE_MS + 1.0)
+	await flow.press("3")
+	_check(s.keepsakes.size() == 2 and s.stage == "intro" and s.foe == other, "a digit takes one too, and a fight that was queued comes after the choice (%s)" % s.stage)
+	_check(Keepsakes.held_words(s) == "%s and the %s" % [Keepsakes.name_of(s.keepsakes[0]), Keepsakes.name_of(s.keepsakes[1])], "(two are named as two)")
+
+	# a champion won over at the ask stage leaves them as well
+	var kind = _flow(87)
+	await kind.new_run()
+	var ks = kind.state
+	var kboss = ks.floor_map.monsters.filter(func(x): return x.boss).front()
+	await _meet(kind, kboss)
+	_won_over(kboss)
+	await kind.encounter.defeat(kboss, "spared")
+	_check(ks.stage == "ask" and ks.keepsake_due == kboss.name, "a champion spared asks its question first (%s)" % ks.stage)
+	await kind.press(str(ks.menu.size())) # GO IN PEACE
+	_check(ks.stage == "keepsake", "and its keepsakes come after the answer (%s)" % ks.stage)
+
+	# none where there is nothing to use one on, and none with the feature off
+	for how in ["last", "practice", "off"]:
+		var none = _flow(88, ["no-keepsakes"] if how == "off" else [])
+		await none.new_run()
+		var ns = none.state
+		var nboss = ns.floor_map.monsters.filter(func(x): return x.boss).front()
+		await _meet(none, nboss)
+		if how == "last":
+			ns.depth = Floors.run_floors()
+		ns.practice = how == "practice"
+		await none.encounter.defeat(nboss, "slain")
+		_check(ns.stage == "explore" and ns.keepsake_due == "" and ns.keepsakes.is_empty(), "no keepsake: %s (%s)" % [how, ns.stage])
+		ns.practice = false
+		if how == "off":
+			_check(await none.load_state(saved) and none.state.keepsakes.is_empty(), "and a save made with keepsakes is played without them")
+	_use()
+
+	# what each one does
+	var f = _flow(89, ["no-initiated-dialogue"]) # so no strike carries a bonus the last one earned
+	var m = await _at_menu(f, "rock")
+	var fs = f.state
+	var struck := []
+	var winds := [0]
+	f.happened.connect(func(name, data):
+		if name == "strike":
+			struck.append(data)
+		if name == "second_wind":
+			winds[0] += 1)
+	m.max_hp = 900
+	m.hp = 900
+	var strike := func(x: float) -> Dictionary:
+		fs.nerve = 0
+		await f.press("1")
+		f.clock = fs.bar.t0 + fs.bar.dur * x
+		await f.press("confirm")
+		await _through_dodge(f)
+		return struck[-1]
+	var off_middle: float = 0.5 + Combat.CRIT_EDGE * 0.75 # outside the perfect mark, inside one twice as wide
+	var plain: Dictionary = await strike.call(0.5)
+	var near: Dictionary = await strike.call(off_middle)
+	_check(plain.crit and not near.crit and near.damage < plain.damage, "(without keepsakes: the middle is perfect, a little off is not)")
+	Keepsakes.take(fs, "sharp_tooth")
+	await f.press("1")
+	_check(fs.hint.contains("TOOTH +%d" % Keepsakes.TOOTH_DAMAGE), "the sharp tooth shows on the strike bar (%s)" % fs.hint)
+	f.clock = fs.bar.t0 + fs.bar.dur * 0.5
+	fs.nerve = 0
+	await f.press("confirm")
+	await _through_dodge(f)
+	_check(struck[-1].damage == plain.damage + Keepsakes.TOOTH_DAMAGE, "and every strike that lands does that much more (%d, %d)" % [struck[-1].damage, plain.damage])
+	fs.keepsakes = []
+	Keepsakes.take(fs, "steady_hand")
+	var steady: Dictionary = await strike.call(off_middle)
+	_check(steady.crit and steady.damage == plain.damage, "the steady hand makes a strike a little off the middle perfect (%s)" % [steady])
+	var far: Dictionary = await strike.call(0.5 + Combat.CRIT_EDGE * 1.25)
+	_check(not far.crit, "but not one off the wider mark")
+	fs.keepsakes = []
+	var hp_was: int = fs.max_hp
+	fs.max_hp = 20
+	fs.hp = 7
+	Keepsakes.take(fs, "ember_heart")
+	Keepsakes.take(fs, "ember_heart")
+	_check(fs.max_hp == 20 + Keepsakes.EMBER_MAX_HP and fs.hp == fs.max_hp and fs.keepsakes == ["ember_heart"], "the ember heart is more health and all of it back, once (%d/%d)" % [fs.hp, fs.max_hp])
+	fs.max_hp = hp_was
+	fs.keepsakes = []
+	await _into_dodge(f)
+	var bare: int = fs.dodge.guard
+	_check(is_equal_approx(fs.dodge.nerve_window, Combat.NERVE_WINDOW_MS), "(without keepsakes a close call is as close as ever)")
+	_end_dodge(f)
+	await _through_dodge(f)
+	fs.keepsakes = ["thick_hide", "quick_feet", "second_wind"]
+	await _into_dodge(f)
+	_check(fs.dodge.guard == bare + Keepsakes.THICK_GUARD, "the thick hide takes one off every hit")
+	_check(is_equal_approx(fs.dodge.nerve_window, Combat.NERVE_WINDOW_MS * Keepsakes.QUICK_WINDOW), "quick feet make a close call of a step from further out")
+	var early: float = Combat.NERVE_WINDOW_MS * 1.25 # too early for a close call without quick feet
+	for quick in [false, true]:
+		var run = DodgeRun.start("bullet", 1.0, false, 0, 0.0, {}, 1.0)
+		if quick:
+			run.nerve_window = Combat.NERVE_WINDOW_MS * Keepsakes.QUICK_WINDOW
+		run.add_hazard(0.0, [Dodge.index(run.soul.x, run.soul.y)], 1000.0, 300.0, "goo")
+		run.move(1, 0, 1000.0 - early)
+		_check(run.close_calls == (1 if quick else 0), "a step %d ms before it lands is %s" % [roundi(early), "a close call with quick feet" if quick else "none without"])
+	# the second wind: the hit that would fell you leaves you standing, once a fight
+	var box = fs.dodge
+	box.hazards = []
+	box.next_t = f.clock + 1e7
+	box.end_t = f.clock + 1e7
+	box.mood = ""
+	box.add_hazard(f.clock, [Dodge.index(box.soul.x, box.soul.y)], 0.0, 1e6, "goo")
+	fs.hp = 2
+	await f.tick(f.clock + 20.0)
+	_check(fs.hp == 1 and fs.stage == "dodge" and winds[0] == 1 and fs.second_wind_used, "second wind: the hit that would fell you leaves you on 1 HP (%d, %s)" % [fs.hp, fs.stage])
+	await f.tick(f.clock + DodgeRun.SAFE_SNAKE_MS + 100.0)
+	_check(fs.stage == "dead" and winds[0] == 1, "but only once a fight (%s)" % fs.stage)
+	await f.go("intro", {"foe": m})
+	_check(not fs.second_wind_used, "and the next fight has it again")
+	_check(fs.nerve == 0, "(no deep breath, no nerve to start with)")
+
+	# deep breath, open hand, lucky coin
+	for with_nerve in [true, false]:
+		var d = _flow(90, [] if with_nerve else ["no-nerve"])
+		await d.new_run()
+		d.state.keepsakes = ["deep_breath"]
+		await _meet(d, d.state.floor_map.monsters.filter(func(x): return not x.boss).front())
+		_check(d.state.nerve == (Keepsakes.DEEP_NERVE if with_nerve else 0), "deep breath: a fight starts with %d nerve%s" % [d.state.nerve, "" if with_nerve else " in a game without it"])
+	_use()
+	var o = _flow(91)
+	var om = await _at_menu(o)
+	var os = o.state
+	om.meters.friendliness = 30.0
+	var closed: float = await o.encounter.mercy(om)
+	os.keepsakes = ["open_hand"]
+	var open: float = await o.encounter.mercy(om)
+	_check(closed < 1.0 - Keepsakes.OPEN_MERCY and is_equal_approx(open, closed + Keepsakes.OPEN_MERCY), "the open hand makes mercy likelier (%.2f, %.2f)" % [closed, open])
+	_won_over(om)
+	_check(await o.encounter.mercy(om) <= 1.0, "never past certain")
+	os.reputation[Clans.of(om.species)] = -Clans.STANDING_MAX
+	_check(Clans.enraged(os, om) and await o.encounter.mercy(om) == 0.0, "and an enraged clan still takes none")
+	os.reputation = {}
+	os.keepsakes = ["lucky_coin"]
+	_check(Keepsakes.gold(os, 10) == 15 and Keepsakes.gold(os, 5) == 8 and Keepsakes.gold(State.new(), 10) == 10, "the lucky coin makes gold worth half as much again")
+	var gold: int = os.gold
+	om.purse = 10
+	await o.encounter.defeat(om, "slain")
+	_check(os.gold == gold + 15, "a purse is worth that to you (%d)" % (os.gold - gold))
 	_use()
 
 
@@ -1235,6 +1470,8 @@ func _gate() -> void:
 	_check(s.max_hp == hp + Floors.boss_reward().max_hp and s.hp == 5 + Floors.boss_reward().heal, "beating a champion leaves you stronger (%d/%d)" % [s.hp, s.max_hp])
 	_check(s.banner != null and s.banner.text.contains("stronger"), "and says so")
 	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "keepsake": # it left keepsakes (the feature keepsakes has checks of its own)
+		await flow.press("1")
 	await _step_onto(flow, s.floor_map.stairs)
 	_check(s.stage == "end", "with it gone the stairs are open (%s)" % s.stage)
 

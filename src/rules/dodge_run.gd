@@ -98,6 +98,7 @@ var mood := "" # how the foe feels as it attacks (Feelings.mood), "" for a plain
 var close_calls := 0 # how many this dodge
 var hits := 0 # how many hits landed this dodge (a hit the slime's charm took is not one)
 var nerve_flash := -1e9 # when the last close call was
+var nerve_window: float = Combat.NERVE_WINDOW_MS # how long before a hazard lands a step off it is a close call
 var _nerved := {} # group -> true: what has given its close call
 var _pending: Array = [] # what a step taken between two updates has to say
 var _added := 0 # hazards asked for, for the faltering
@@ -145,7 +146,7 @@ func move(dc: int, dr: int, t := -1.0) -> void:
 ## Stepping from square `from` to `to` at `t`: a close call for each thing about to land on `from` that `to` is clear of.
 func _close_call(from: int, to: int, t: float) -> void:
 	for h in hazards:
-		if h.kind in CATCHES or t >= h.hit or h.hit - t > Combat.NERVE_WINDOW_MS:
+		if h.kind in CATCHES or t >= h.hit or h.hit - t > nerve_window:
 			continue
 		if not h.cells.has(from) or h.cells.has(to) or _nerved.has(h.group):
 			continue

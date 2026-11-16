@@ -9,6 +9,7 @@ const BattleArt = preload("res://src/view/battle_art.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Fonts = preload("res://src/view/fonts.gd")
@@ -55,6 +56,7 @@ const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says 
 const MOOD_WORDS := {"angry": ["ANGRY", Palette.WARN], "afraid": ["AFRAID", Palette.YOU], "friendly": ["FRIENDLY", Palette.MERCY], "wary": ["WARY", Palette.DIM]}
 const NERVE_PIP := 11.0 # from one nerve pip to the next, in picture pixels
 const NERVE_BESIDE_BOX := Vector2(BOX_X + Dodge.COLS * BOX_CELL + 14.0, BOX_Y + 8.0) # the nerve's label, right of the dodge box
+const KEEPSAKES_BESIDE_BOX := Vector2(BOX_X + Dodge.COLS * BOX_CELL + 14.0, BOX_Y + 70.0) # the keepsakes' label, under the nerve and what it is worth
 const NERVE_SPARK_MS := 320.0 # how long a close call rings round your soul
 const NERVE_PULSE_MS := 420.0 # how long a pip just earned stays swollen
 # the receding corridor behind the title: how big each frame is against the picture
@@ -539,6 +541,7 @@ func _dodge_box(accent: Color) -> void:
 	draw_rect(box.grow(3), Palette.INK, false, 2.0 + pulse * 3.0)
 	_soul(run)
 	_charms()
+	_keepsakes()
 	var bar := time_bar()
 	var left := clampf((run.end_t - clock_ms) / maxf(1.0, run.end_t - run.t0), 0.0, 1.0)
 	draw_rect(bar, Palette.FAINT)
@@ -747,6 +750,16 @@ func _charms() -> void:
 			_text(_title, "-%d HURT" % state.dodge.guard, Vector2(12, BOX_Y + 22.0 + rows.size() * 12.0 + 14.0), 6, Palette.DIM)
 
 
+## The keepsakes you carry, right of the box under the nerve: what a champion left is at work in this fight.
+func _keepsakes() -> void:
+	var names: Array = Keepsakes.held_names(state)
+	if names.is_empty():
+		return
+	_text(_title, "KEEPSAKES", KEEPSAKES_BESIDE_BOX, 7, Palette.DIM)
+	for i in names.size():
+		_text(_title, str(names[i]), KEEPSAKES_BESIDE_BOX + Vector2(0.0, 12.0 + i * 10.0), 6, Palette.MERCY)
+
+
 func _cell_rect(k: int) -> Rect2:
 	return Rect2(BOX_X + (k % Dodge.COLS) * BOX_CELL, BOX_Y + floori(float(k) / Dodge.COLS) * BOX_CELL, BOX_CELL, BOX_CELL)
 
@@ -772,7 +785,7 @@ func _soul(run) -> void:
 
 ## Whether this hazard is in its last moments before it lands: stepping off it now is a close call (the feature nerve).
 func last_moment(h: Dictionary) -> bool:
-	return state.viewing("nerve") and clock_ms < h.hit and h.hit - clock_ms <= Combat.NERVE_WINDOW_MS
+	return state.viewing("nerve") and clock_ms < h.hit and h.hit - clock_ms <= (state.dodge.nerve_window if state.dodge != null else Combat.NERVE_WINDOW_MS)
 
 
 ## How strong the ring of a close call still is round your soul (0 when there is none).
@@ -863,7 +876,8 @@ func _strike_bar() -> void:
 	if bar.get("heavy", false):
 		var mark := rect.size.x * Combat.HEAVY_MISS_EDGE
 		draw_rect(Rect2(rect.get_center().x - mark / 2.0, rect.position.y, mark, rect.size.y), Color(Palette.WARN, 0.4))
-	draw_rect(Rect2(rect.position.x + rect.size.x * 0.46, rect.position.y, rect.size.x * 0.08, rect.size.y), Color(Palette.MERCY, 0.35))
+	var perfect: float = Combat.CRIT_EDGE * (Keepsakes.STEADY_SCALE if Keepsakes.has(state, "steady_hand") else 1.0) # the perfect mark, as a share of the bar
+	draw_rect(Rect2(rect.position.x + rect.size.x * (0.5 - perfect / 2.0), rect.position.y, rect.size.x * perfect, rect.size.y), Color(Palette.MERCY, 0.35))
 	draw_line(Vector2(rect.get_center().x, rect.position.y), Vector2(rect.get_center().x, rect.end.y), Palette.MERCY, 2.0)
 	for mark in bar.get("marks", []): # each friend's mark, in its colour: lit once it lands, greyed once it is lost
 		var ink := Color(Content.species(mark.species).color)

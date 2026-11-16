@@ -8,6 +8,7 @@ const FloorMap = preload("res://src/rules/floor_map.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Lore = preload("res://src/rules/lore.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
@@ -136,7 +137,7 @@ func _break_wall(flow, wall: Vector2i) -> void:
 ## What the cell you just stepped on was hiding.
 func _find_secrets(flow) -> void:
 	var s = flow.state
-	var gold: int = s.floor_map.take_treasure(s.cell)
+	var gold: int = Keepsakes.gold(s, s.floor_map.take_treasure(s.cell))
 	if gold > 0:
 		s.gold += gold
 		s.say([State.sys_line(Floors.secret_line("chest") % gold)])

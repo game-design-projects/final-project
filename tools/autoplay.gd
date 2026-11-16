@@ -98,6 +98,8 @@ func _press_something(flow) -> void:
 			await flow.press("1" if str(s.menu[0].label).begins_with("EAT") else "cancel")
 		"trade", "request":
 			await flow.press("cancel")
+		"keepsake":
+			await flow.press(str(_autopilot.int_range(1, s.menu.size())))
 		"menu", "act":
 			if _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
 				await flow.press(str(_kindest_act(flow)))

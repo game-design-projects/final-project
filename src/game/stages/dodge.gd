@@ -10,6 +10,7 @@ const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Pace = preload("res://src/rules/pace.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
@@ -36,7 +37,9 @@ func enter(flow, args: Dictionary) -> void:
 	print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies%s)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size(), ", elite" if m.elite else ""])
 	var mood := Feelings.mood(m) if flow.feature("mood-attacks") else ""
 	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace, Clans.elite() if m.elite else {}, mood)
-	s.dodge.guard = Combat.party_guard(s.allies.size())
+	s.dodge.guard = Combat.party_guard(s.allies.size()) + (Keepsakes.THICK_GUARD if Keepsakes.has(s, "thick_hide") else 0)
+	if Keepsakes.has(s, "quick_feet"):
+		s.dodge.nerve_window = Combat.NERVE_WINDOW_MS * Keepsakes.QUICK_WINDOW
 	_hits = 0
 	_hearts = 0
 	if mood == "afraid":
@@ -77,6 +80,11 @@ func tick(flow, t: float) -> void:
 						flow.event("shield")
 						continue
 				s.hp -= e.damage
+				if s.hp <= 0 and Keepsakes.has(s, "second_wind") and not s.second_wind_used:
+					s.second_wind_used = true
+					s.hp = 1
+					print("dodge: second wind, still standing on 1 HP")
+					flow.event("second_wind")
 				_hits += 1
 				flow.event("player_hurt", {"damage": e.damage})
 				if s.nerve > 0:

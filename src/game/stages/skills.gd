@@ -4,6 +4,7 @@
 extends "res://src/game/stages/list_stage.gd"
 
 const Combat = preload("res://src/rules/combat.gd")
+const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
@@ -45,7 +46,7 @@ func pick(flow, index: int) -> void:
 	var bonus := 0
 	if attacks:
 		bonus = Social.strike_bonus(m) + Combat.party_aid(s.party_size()) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
-		bonus += Combat.nerve_damage(flow.encounter.spend_nerve())
+		bonus += Combat.nerve_damage(flow.encounter.spend_nerve()) + (Keepsakes.TOOTH_DAMAGE if Keepsakes.has(s, "sharp_tooth") else 0)
 	var did: Dictionary = Skills.use(f, id, m.boss, bonus)
 	print("skills: %s on %s: %s, %d energy left" % [id, m.name, did, f.energy])
 	var words := []

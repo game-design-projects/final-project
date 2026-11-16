@@ -11,6 +11,7 @@
 ##   HEAVY goes from menu to fightbar as FIGHT does. With skill-combat, SKILLS goes from menu to skills and on like an ACT. ITEM goes from menu to items and on like an ACT; walking into a trader goes from explore to trade and back, and into a monster with a request to request and back.
 ##   A fight that ends (spared, slain, a cut paid, fled) goes from menu, act, talk or fightbar straight back to explore,
 ##   or, with fights queued (social-demo), on to the next intro.
+##   A champion out of the way leaves keepsakes (the feature keepsakes): the fight ends in keepsake, and goes on from there as above.
 extends RefCounted
 
 const ALLOWED := {
@@ -18,16 +19,17 @@ const ALLOWED := {
 	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
 	"camp": ["explore"],
 	"intro": ["menu", "wait", "dodge"], # a monster that caught you strikes first
-	"social": ["menu", "wait", "explore", "intro"],
-	"menu": ["social", "act", "items", "skills", "fightbar", "wait", "explore", "intro", "menu", "ask"], # explore, intro: the fight is over; ask: it was spared
-	"items": ["menu", "wait", "explore", "intro"],
-	"skills": ["menu", "wait", "explore", "intro"], # skill-combat: back, its attack, or the fight is over
+	"social": ["menu", "wait", "explore", "intro", "keepsake"],
+	"menu": ["social", "act", "items", "skills", "fightbar", "wait", "explore", "intro", "menu", "ask", "keepsake"], # explore, intro: the fight is over; ask: it was spared; keepsake: it was a champion
+	"items": ["menu", "wait", "explore", "intro", "keepsake"],
+	"skills": ["menu", "wait", "explore", "intro", "keepsake"], # skill-combat: back, its attack, or the fight is over
 	"trade": ["explore"],
 	"request": ["explore"],
-	"ask": ["explore", "intro"],
-	"act": ["menu", "talk", "wait", "explore", "intro"],
-	"talk": ["act", "menu", "wait", "explore", "intro"],
-	"fightbar": ["wait", "explore", "intro", "menu"],
+	"ask": ["explore", "intro", "keepsake"],
+	"act": ["menu", "talk", "wait", "explore", "intro", "keepsake"],
+	"talk": ["act", "menu", "wait", "explore", "intro", "keepsake"],
+	"fightbar": ["wait", "explore", "intro", "menu", "keepsake"],
+	"keepsake": ["explore", "intro"], # one is taken, and the fight's end goes on
 	"wait": ["dodge"],
 	"dodge": ["menu", "dead"],
 	"dead": ["intro", "explore"],
@@ -39,7 +41,7 @@ const ALLOWED := {
 ## In a fight: a foe stands before you and the battle screen covers the halls.
 const FIGHT := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 ## On the floor, out of a fight: the automap shows, and the map's card may open.
-const WALK := ["explore", "end", "trade", "request", "camp"]
+const WALK := ["explore", "end", "trade", "request", "camp", "keepsake"]
 ## The fight is waiting for the player to pick something: the foe's card and the chat card may open, and a spareable foe shows
 ## its bubble.
 const PICKING := ["intro", "menu", "act", "items", "skills", "talk"]
