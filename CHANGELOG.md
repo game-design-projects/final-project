@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- The Jev Worker reaches Jev through the LLM gateway (`LLMGW_API_KEY`, a Jev-only key with a $2 daily budget) instead of holding an OpenRouter or TypeSafe key itself; those two secrets still work as fallbacks.
+
 ## [0.8.1] - 2026-11-11
 
 ### Added

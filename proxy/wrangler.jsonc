@@ -9,6 +9,6 @@
   "preview_urls": false,
   // Requests per IP per minute; a player makes a few per round. namespace_id is unique on the account.
   "ratelimits": [{ "name": "LIMITER", "namespace_id": "45531", "simple": { "limit": 60, "period": 60 } }],
-  // Secret (not in this file): OPENROUTER_API_KEY or TYPESAFE_API_KEY, set with `wrangler secret put`
+  // Secret (not in this file): LLMGW_API_KEY, OPENROUTER_API_KEY or TYPESAFE_API_KEY, set with `wrangler secret put`
   "observability": { "enabled": true }
 }
