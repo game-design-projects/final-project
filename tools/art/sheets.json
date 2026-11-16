@@ -82,6 +82,111 @@
   "world_h": 1.15,
   "tint": "#ffd84a"
  },
+ "gumdrop": {
+  "figure": true,
+  "world_h": 0.6,
+  "tint": "#ff9ec7"
+ },
+ "spitter": {
+  "figure": true,
+  "world_h": 0.8,
+  "tint": "#ffc43d"
+ },
+ "ooze": {
+  "figure": true,
+  "world_h": 0.6,
+  "tint": "#b8d94a"
+ },
+ "splitter": {
+  "figure": true,
+  "world_h": 0.75,
+  "tint": "#ff6a3d"
+ },
+ "brood": {
+  "figure": true,
+  "world_h": 1.0,
+  "tint": "#f7a8ff"
+ },
+ "tide": {
+  "figure": true,
+  "world_h": 0.95,
+  "tint": "#5fc8ff"
+ },
+ "pickpocket": {
+  "figure": true,
+  "world_h": 0.95,
+  "tint": "#c77dff"
+ },
+ "lookout": {
+  "figure": true,
+  "world_h": 1.05,
+  "tint": "#ff7f6e"
+ },
+ "duelist": {
+  "figure": true,
+  "world_h": 1.1,
+  "tint": "#ff4f8b"
+ },
+ "sapper": {
+  "figure": true,
+  "world_h": 1.0,
+  "tint": "#ffa94d"
+ },
+ "captain": {
+  "figure": true,
+  "world_h": 1.15,
+  "tint": "#ff5f5f"
+ },
+ "adder": {
+  "figure": true,
+  "world_h": 0.9,
+  "tint": "#c6e05f"
+ },
+ "gazer": {
+  "figure": true,
+  "world_h": 1.2,
+  "tint": "#4fe3c1"
+ },
+ "cobra": {
+  "figure": true,
+  "world_h": 1.1,
+  "tint": "#3fbf7f"
+ },
+ "twinhead": {
+  "figure": true,
+  "world_h": 1.1,
+  "tint": "#8be0e8"
+ },
+ "hypno": {
+  "figure": true,
+  "world_h": 1.1,
+  "tint": "#b48cff"
+ },
+ "pebble": {
+  "figure": true,
+  "world_h": 0.8,
+  "tint": "#d8c39a"
+ },
+ "boulder": {
+  "figure": true,
+  "world_h": 1.0,
+  "tint": "#9a9aaa"
+ },
+ "quake": {
+  "figure": true,
+  "world_h": 0.85,
+  "tint": "#d08a5a"
+ },
+ "crusher": {
+  "figure": true,
+  "world_h": 1.25,
+  "tint": "#9fb7d9"
+ },
+ "golem": {
+  "figure": true,
+  "world_h": 1.3,
+  "tint": "#e0c46a"
+ },
  "witch": {
   "figure": true,
   "world_h": 0.98,

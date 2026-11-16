@@ -5,7 +5,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 name=${1:?usage: generate.sh <name> [reference.png ...]}; shift
-figures=" slime bandit snake rock dragon witch trader "
+figures=" $(jq -r 'to_entries[] | select(.value.figure == true) | .key' "$here/sheets.json" | tr '\n' ' ') " # every figure in sheets.json
 mkdir -p "$here/raw"
 n=1; while [[ -e "$here/raw/$name-$n.png" ]]; do n=$((n + 1)); done
 out="$here/raw/$name-$n.png"

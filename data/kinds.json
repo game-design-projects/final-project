@@ -1,0 +1,34 @@
+{
+ "_doc": "Every kind of monster, five to a floor and none on two floors. A kind belongs to a species (its clan, its acts, its tastes, its words, the charm it gives as a friend) and brings its own look, colour, health and attack. hp is at B1F's toughness; the floor scales it. roam overrides the species' way of getting about (data/roaming.json). rules/kinds.gd reads this.",
+ "kinds": {
+  "slime":      {"species": "slime",  "depth": 1, "title": "SLIME",        "genre": "bullet",    "hp": 18, "color": "#ff8a1f", "note": "Drifts about and rains goo."},
+  "gumdrop":    {"species": "slime",  "depth": 1, "title": "GUMDROP",      "genre": "bounce",    "hp": 14, "color": "#ff9ec7", "note": "Never stops bouncing.", "roam": {"kind": "drift", "every": 1}},
+  "bandit":     {"species": "bandit", "depth": 1, "title": "BANDIT",       "genre": "chess",     "hp": 24, "color": "#e0524e", "note": "Walks a beat and fights like a chess piece."},
+  "snake":      {"species": "snake",  "depth": 1, "title": "SNAKE",        "genre": "shadow",    "hp": 22, "color": "#6bd36b", "note": "Follows you a while, then fights with a lantern."},
+  "rock":       {"species": "rock",   "depth": 1, "title": "ROCK",         "genre": "rhythm",    "hp": 30, "color": "#a7a39b", "note": "Stays put and stomps on the beat."},
+
+  "spitter":    {"species": "slime",  "depth": 2, "title": "SPITTER",      "genre": "spit",      "hp": 18, "color": "#ffc43d", "note": "Spits globs down the lanes.", "roam": {"kind": "still"}},
+  "pickpocket": {"species": "bandit", "depth": 2, "title": "PICKPOCKET",   "genre": "traps",     "hp": 22, "color": "#c77dff", "note": "Hides traps, and you have to remember where.", "roam": {"kind": "stalk", "sense": 6, "keeps_on": 4}},
+  "lookout":    {"species": "bandit", "depth": 2, "title": "LOOKOUT",      "genre": "crossfire", "hp": 24, "color": "#ff7f6e", "note": "Fires bolts down rows and columns, two at a time.", "roam": {"kind": "still"}},
+  "adder":      {"species": "snake",  "depth": 2, "title": "ADDER",        "genre": "slither",   "hp": 22, "color": "#c6e05f", "note": "Slithers through the box after you.", "roam": {"kind": "stalk", "sense": 6, "keeps_on": 5}},
+  "pebble":     {"species": "rock",   "depth": 2, "title": "PEBBLES",      "genre": "rockfall",  "hp": 26, "color": "#d8c39a", "note": "Drops stones that stay in your way.", "roam": {"kind": "drift", "every": 3}},
+
+  "ooze":       {"species": "slime",  "depth": 3, "title": "OOZE",         "genre": "puddles",   "hp": 22, "color": "#b8d94a", "note": "Leaves puddles that stay.", "roam": {"kind": "drift", "every": 3}},
+  "duelist":    {"species": "bandit", "depth": 3, "title": "DUELIST",      "genre": "queen",     "hp": 26, "color": "#ff4f8b", "note": "Moves like a queen: rows, columns and diagonals."},
+  "gazer":      {"species": "snake",  "depth": 3, "title": "GAZER",        "genre": "gaze",      "hp": 22, "color": "#4fe3c1", "note": "Its gaze sweeps the box like a lighthouse.", "roam": {"kind": "still"}},
+  "cobra":      {"species": "snake",  "depth": 3, "title": "COBRA",        "genre": "venom",     "hp": 24, "color": "#3fbf7f", "note": "Spits a ring of venom round you.", "roam": {"kind": "still"}},
+  "boulder":    {"species": "rock",   "depth": 3, "title": "BOULDER",      "genre": "roll",      "hp": 32, "color": "#9a9aaa", "note": "Rolls down the rows.", "roam": {"kind": "patrol"}},
+
+  "splitter":   {"species": "slime",  "depth": 4, "title": "SPLITTER",     "genre": "split",     "hp": 22, "color": "#ff6a3d", "note": "Lands big, then splits four ways."},
+  "sapper":     {"species": "bandit", "depth": 4, "title": "SAPPER",       "genre": "bombs",     "hp": 26, "color": "#ffa94d", "note": "Leaves bombs that tick down.", "roam": {"kind": "still"}},
+  "twinhead":   {"species": "snake",  "depth": 4, "title": "TWINHEAD",     "genre": "twin",      "hp": 26, "color": "#8be0e8", "note": "Two heads, two lanterns."},
+  "quake":      {"species": "rock",   "depth": 4, "title": "QUAKESTONE",   "genre": "quake",     "hp": 32, "color": "#d08a5a", "note": "Stomps, and the floor rings out from where it lands."},
+  "crusher":    {"species": "rock",   "depth": 4, "title": "CRUSHER",      "genre": "crush",     "hp": 34, "color": "#9fb7d9", "note": "Closes the walls in on you.", "roam": {"kind": "still"}},
+
+  "brood":      {"species": "slime",  "depth": 5, "title": "BROOD MOTHER", "genre": "brood",     "hp": 26, "color": "#f7a8ff", "note": "Her babies hop after you.", "roam": {"kind": "still"}},
+  "tide":       {"species": "slime",  "depth": 5, "title": "TIDE",         "genre": "tide",      "hp": 24, "color": "#5fc8ff", "note": "Floods the box but for one island.", "roam": {"kind": "drift", "every": 1}},
+  "captain":    {"species": "bandit", "depth": 5, "title": "CAPTAIN",      "genre": "pawns",     "hp": 30, "color": "#ff5f5f", "note": "Marches a rank of pawns at you."},
+  "hypno":      {"species": "snake",  "depth": 5, "title": "HYPNOCOIL",    "genre": "hypno",     "hp": 26, "color": "#b48cff", "note": "Turns left into right.", "roam": {"kind": "stalk", "sense": 5, "keeps_on": 3}},
+  "golem":      {"species": "rock",   "depth": 5, "title": "GOLEM",        "genre": "golem",     "hp": 38, "color": "#e0c46a", "note": "Brings its fists down on the beat.", "roam": {"kind": "still"}}
+ }
+}
