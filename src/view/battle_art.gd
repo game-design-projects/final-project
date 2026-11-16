@@ -26,6 +26,7 @@ var overlay # the Overlay it belongs to, set by it
 
 var _anim: FigureAnim
 var _foe = null
+var _look := "" # the sheet it is drawn from (Sprites.look_of)
 var _small := 0.0
 var _hurt_seen := 0.0
 var _dodging := false
@@ -39,9 +40,10 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## Whether this monster is drawn here (the overlay draws the old line art for any that isn't).
-static func can_draw(species: String) -> bool:
-	return Sprites.has(species) and Sprites.has_action(species, "idle")
+## Whether this monster is drawn here (the overlay draws the old line art for any that isn't). `look` is a sheet name
+## (Sprites.look_of).
+static func can_draw(look: String) -> bool:
+	return Sprites.has(look) and Sprites.has_action(look, "idle")
 
 
 ## What its face is showing now, for a test.
@@ -60,12 +62,13 @@ func _process(dt: float) -> void:
 	var now: float = overlay.clock_ms / 1000.0
 	if s.foe != _foe:
 		_foe = s.foe
-		_anim = FigureAnim.new(_foe.species, str(_foe.name).hash())
+		_look = Sprites.look_of(_foe)
+		_anim = FigureAnim.new(_look, str(_foe.name).hash())
 		_hurt_seen = overlay.hurt_until
 		_dodging = false
 		_small = 0.0
 		_say = ""
-		print("battle art: %s the %s" % [_foe.name, _foe.species])
+		print("battle art: %s the %s, drawn as %s" % [_foe.name, _foe.species, _look])
 	_small = move_toward(_small, 1.0 if s.dodge != null else 0.0, dt * SHRINK_PER_S)
 	# the hit first, with the face it had: a killing blow still hurts with its eyes before they go blank, and a face already
 	# blank (cold halls) stays blank through it (figure_anim.hurt)
@@ -124,7 +127,7 @@ func _draw() -> void:
 
 
 func _figure() -> void:
-	var sheet: Dictionary = Sprites.sheet(_foe.species)
+	var sheet: Dictionary = Sprites.sheet(_look)
 	var now: float = overlay.clock_ms / 1000.0
 	var at: Dictionary = _anim.tick(now)
 	var k: float = float(sheet.world_h) * PX_PER_WORLD / float(sheet.body_h) * lerpf(1.0, SMALL_SCALE, _small)
@@ -133,12 +136,12 @@ func _figure() -> void:
 	var jolt: Vector2 = overlay.shake_offset()
 	feet += jolt + Vector2(float(at.shake) * SHAKE_PX, -float(at.lift) * body_px)
 	var cell := Vector2(sheet.cell[0], sheet.cell[1])
-	var anchor := Sprites.feet(_foe.species)
+	var anchor := Sprites.feet(_look)
 	var tint: Color = Palette.monster(_foe)
 	if overlay.clock_ms < overlay.hurt_until:
 		tint = tint.lerp(Color.WHITE, 0.7)
 	draw_set_transform(feet, -float(at.lean), Vector2(float(at.sx), float(at.sy)) * k)
-	draw_texture_rect_region(Sprites.texture(_foe.species), Rect2(-anchor, cell), Sprites.frame_rect(_foe.species, at.act, at.frame), tint)
+	draw_texture_rect_region(Sprites.texture(_look), Rect2(-anchor, cell), Sprites.frame_rect(_look, at.act, at.frame), tint)
 	draw_set_transform(Vector2.ZERO)
 	_mark(feet, body_px, tint, now)
 

@@ -27,6 +27,90 @@
   "stars": {
    "name": "STARS",
    "plain": "CATCH THE STARS: EACH HEALS 1. KEEP OFF THE RED"
+  },
+  "bounce": {
+   "name": "BOUNCE",
+   "plain": "IT BOUNCES OFF THE WALLS. THE GLOW IS WHERE IT GOES NEXT"
+  },
+  "spit": {
+   "name": "SPIT",
+   "plain": "GLOBS FLY DOWN THE LANES. STEP OUT OF A LANE THAT GLOWS"
+  },
+  "traps": {
+   "name": "TRAPS",
+   "plain": "TRAPS FLASH, THEN HIDE. REMEMBER WHERE, AND KEEP OFF"
+  },
+  "crossfire": {
+   "name": "CROSSFIRE",
+   "plain": "BOLTS FLY DOWN ROWS AND COLUMNS, ONE AFTER ANOTHER"
+  },
+  "slither": {
+   "name": "SLITHER",
+   "plain": "IT SLITHERS AFTER YOU. KEEP OFF ITS HEAD AND ITS BODY"
+  },
+  "rockfall": {
+   "name": "ROCKFALL",
+   "plain": "STONES LAND WHERE IT GLOWS, AND STAY IN YOUR WAY"
+  },
+  "puddles": {
+   "name": "PUDDLES",
+   "plain": "GOO LANDS AND STAYS. DON'T GET CORNERED"
+  },
+  "queen": {
+   "name": "QUEEN",
+   "plain": "THE QUEEN TAKES ROWS, COLUMNS AND DIAGONALS. FIND A DARK SQUARE"
+  },
+  "gaze": {
+   "name": "GAZE",
+   "plain": "ITS GAZE SWEEPS ROUND. STAY OUT OF THE BEAM AND OFF THE MIDDLE"
+  },
+  "venom": {
+   "name": "VENOM",
+   "plain": "A RING CLOSES ROUND YOU. GET OUT THROUGH THE GAP"
+  },
+  "roll": {
+   "name": "ROLL",
+   "plain": "BOULDERS ROLL ACROSS. STEP OUT OF THEIR LANE"
+  },
+  "split": {
+   "name": "SPLIT",
+   "plain": "A BIG BLOB LANDS, THEN SPLITS FOUR WAYS. STAND OFF ITS LINES"
+  },
+  "bombs": {
+   "name": "BOMBS",
+   "plain": "BOMBS COUNT DOWN, THEN BLOW IN A CROSS. STAND OFF THEIR LINES"
+  },
+  "twin": {
+   "name": "TWIN LANTERNS",
+   "plain": "TWO LANTERNS FLARE IN TURN. HIDE FROM EACH BEHIND A PILLAR"
+  },
+  "quake": {
+   "name": "QUAKE",
+   "plain": "THE STOMP RINGS OUT FROM WHERE IT LANDS. BE FAR AWAY"
+  },
+  "crush": {
+   "name": "CRUSH",
+   "plain": "THE WALLS CLOSE IN. BE AT THE GAP WHEN THEY MEET"
+  },
+  "brood": {
+   "name": "BROOD",
+   "plain": "THE BABIES HOP AFTER YOU, THEN POP. KEEP AWAY"
+  },
+  "pawns": {
+   "name": "PAWNS",
+   "plain": "PAWNS TAKE DIAGONALLY AS THEY MARCH. DODGE THEIR CORNERS"
+  },
+  "hypno": {
+   "name": "HYPNOSIS",
+   "plain": "LEFT IS RIGHT AND UP IS DOWN. GOO LANDS WHERE IT GLOWS"
+  },
+  "golem": {
+   "name": "FISTS",
+   "plain": "ITS FISTS LAND ON THE BEAT, WHERE YOU STAND. MOVE"
+  },
+  "tide": {
+   "name": "TIDE",
+   "plain": "THE TIDE FLOODS ALL BUT AN ISLAND. GET TO THE ISLAND"
   }
  },
  "roster": [

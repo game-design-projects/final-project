@@ -23,6 +23,7 @@ const Sprites = preload("res://src/view/sprites.gd")
 const WallArt = preload("res://src/view/wall_art.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 const Content = preload("res://src/rules/content.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 const SecretProps = preload("res://src/view/secret_props.gd")
@@ -640,7 +641,7 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 
 
 func _add_monster(m) -> void:
-	var model := _body(m.species, Palette.monster(m), str(m.name).hash())
+	var model := _body(Sprites.look_of(m), Palette.monster(m), str(m.name).hash())
 	model.position = DungeonMesh.center(m.cell)
 	add_child(model)
 	_models[m] = model
@@ -664,11 +665,12 @@ func _add_monster(m) -> void:
 	tag.set_meta("wanted", false)
 
 
+## Over its head: what kind it is (each floor has five), or CHAMPION. Its attack is named on the fight's header.
 static func _plain_tag(m) -> String:
 	if m.boss:
 		return "CHAMPION"
-	var genre := str(Content.table("encounter").genres[m.genre].name)
-	return "ELITE " + genre if m.elite else genre
+	var title := Kinds.title(m)
+	return "ELITE " + title if m.elite else title
 
 
 ## Which tags show: its monster is in a straight line of open floor from the camera, and it doesn't overlap a nearer tag. The

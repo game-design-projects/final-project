@@ -3,6 +3,7 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 
 const BOSS := Color("#ff2a2a")
 const YOU := Color("#8fd3ff") # the soul, your health
@@ -32,4 +33,4 @@ static func for_run(id: int) -> Dictionary:
 
 
 static func monster(m) -> Color:
-	return BOSS if m.boss else Color(Content.species(m.species).color)
+	return BOSS if m.boss else Color(Kinds.color_of(m))

@@ -19,12 +19,13 @@ const LANTERN_SPEED := 0.75 # radians per second at intensity 1
 const SHADOW_STEPS := 40
 
 
-## The attack a monster on this turn fights with: a champion cycles through all of them. With `mini_games` every third turn is
-## a mini-game instead.
+## The attack a monster on this turn fights with: a champion cycles through its own list (its floor's kinds'), or `boss_genres`
+## when it has none (a save from before kinds). With `mini_games` every third turn is a mini-game instead.
 static func genre_on_turn(m, boss_genres: Array, mini_games: Array) -> String:
 	if not mini_games.is_empty() and m.turn % 3 == 2:
 		return mini_games[floori(m.turn / 3.0) % mini_games.size()]
-	return boss_genres[m.turn % boss_genres.size()] if m.boss else m.genre
+	var cycle: Array = m.genres if m.boss and not m.genres.is_empty() else boss_genres
+	return cycle[m.turn % cycle.size()] if m.boss else m.genre
 
 
 static func index(c: int, r: int) -> int:
@@ -115,9 +116,10 @@ static func _checker(parity: int) -> Array:
 	return out
 
 
-## Shadow. Where the lantern is, in cells, `ms` after the dodge began. `intensity` speeds it up.
-static func lantern_at(ms: float, intensity: float) -> Vector2:
-	var angle := (ms / 1000.0) * LANTERN_SPEED * intensity + LANTERN_START_ANGLE
+## Shadow. Where a lantern is, in cells, `ms` after the dodge began. `intensity` speeds it up; `start` is where on its orbit it
+## began (a second lantern starts elsewhere).
+static func lantern_at(ms: float, intensity: float, start := LANTERN_START_ANGLE) -> Vector2:
+	var angle := (ms / 1000.0) * LANTERN_SPEED * intensity + start
 	var centre := Vector2(COLS, ROWS) / 2.0
 	return centre + Vector2(cos(angle) * LANTERN_RADIUS.x, sin(angle) * LANTERN_RADIUS.y)
 

@@ -31,7 +31,9 @@ const KNOWN := {
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 	"nofocus": "for the screenshot tools: the window stays on top (so it renders at full speed) but never takes the keyboard",
 	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
-	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone",
+	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone; only=<attack,...>: for tools/sim_dodge.gd",
+	"seeds": "seeds=N: for tools/sim_dodge.gd, how many dodges per attack and intensity",
+	"csv": "csv=1: for tools/sim_dodge.gd, print CSV lines",
 }
 
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.

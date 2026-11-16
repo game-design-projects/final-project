@@ -3,12 +3,15 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
 const METER_MAX := 100.0
 
 var species := ""
+var kind := "" # which kind of its species it is (data/kinds.json): its look, colour and attack; "" for a champion
 var genre := "" # which attack style it fights in (a key of encounter.genres)
+var genres: Array = [] # a champion's attacks, one a turn (its floor's kinds'); empty: encounter.boss.genres
 var boss := false
 var elite := false # its clan was furious when its floor was made (rules/clans.gd): tougher, and it hits harder
 var name := ""
@@ -57,7 +60,7 @@ static func make(rng: Rng, entry: Dictionary, cell: Vector2i):
 	m.name = str(entry.get("name", "")) if m.boss else str(rng.pick(sp.names)).to_upper()
 	m.traits = _pick_traits(rng, m.species, sp)
 	m._roll_taste(rng)
-	print_verbose("monster: %s the %s %s, traits %s" % [m.name, m.species, "boss" if m.boss else "", m.traits])
+	print_verbose("monster: %s the %s (%s) %s, traits %s" % [m.name, m.species, m.kind, "boss" if m.boss else "", m.traits])
 	return m
 
 
@@ -67,6 +70,8 @@ static func _from_entry(entry: Dictionary, cell: Vector2i):
 	m.species = entry.species
 	m.genre = entry.genre
 	m.boss = entry.get("boss", false)
+	m.kind = "" if m.boss else str(entry.get("kind", Kinds.base_of(m.species)))
+	m.genres = entry.get("genres", []).duplicate() if m.boss else []
 	m.cell = cell
 	m.max_hp = int(entry.hp)
 	m.hp = m.max_hp
@@ -168,7 +173,7 @@ func is_gone() -> bool:
 
 func to_dict() -> Dictionary:
 	return {
-		"species": species, "genre": genre, "boss": boss, "elite": elite, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
+		"species": species, "kind": kind, "genre": genre, "genres": genres.duplicate(), "boss": boss, "elite": elite, "name": name, "cell": [cell.x, cell.y], "hp": hp, "maxHp": max_hp,
 		"meters": meters.duplicate(), "traits": traits.duplicate(), "taste": taste.duplicate(), "lastIntent": last_intent,
 		"social": social.duplicate(true), "mood": mood.duplicate(true), "spoke": spoke, "threshold": threshold, "turn": turn, "gone": gone,
 		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
@@ -182,6 +187,10 @@ static func from_dict(d: Dictionary):
 	m.species = str(d.get("species", ""))
 	m.genre = str(d.get("genre", ""))
 	m.boss = bool(d.get("boss", false))
+	var saved_kind := str(d.get("kind", ""))
+	m.kind = "" if m.boss else (saved_kind if Kinds.has(saved_kind) else Kinds.base_of(m.species)) # a save from before kinds: the species' own
+	var known: Dictionary = Content.table("encounter").genres
+	m.genres = (d.get("genres") if d.get("genres") is Array else []).filter(func(g): return known.has(str(g))).map(func(g): return str(g)) if m.boss else []
 	m.elite = d.get("elite") == true and not m.boss # a save from before elites has none
 	m.name = str(d.get("name", ""))
 	var c: Array = d.get("cell", [0, 0])
