@@ -55,7 +55,7 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.
 
-`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>` · `nofocus`
+`debug` · `mock` · `nojev` · `jev=<url>` · `seed=N` · `floor=N` · `meet=<species or kind>` · `social-demo` · `notips` · `nofx` · `pad` · `nosound` · `nosfx` · `nomusic` · `nosave` · `out=<dir>` · `nofocus`
 
 ## Playing from source with Jev
 
