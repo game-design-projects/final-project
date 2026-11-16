@@ -45,6 +45,13 @@ const NERVE_DAMAGE := 2 # what each point adds to a strike that lands
 const NERVE_MERCY := 0.08 # and to the odds of a SPARE
 const NERVE_LOST_ON_HIT := 1 # a hit shakes one out of you
 
+# Follow-through: after your strike lands the line runs on, and each friend has a mark on the bar where a press is their strike.
+# The marks sit past the middle, far enough apart to press one after another; a HEAVY blow is too quick for them.
+const FOLLOW_MARKS := [0.66, 0.8, 0.94] # where along the bar the first, second and third friend's mark is
+const FOLLOW_EDGE := 0.06 # a press this close to a mark (as a share of the bar) lands
+const FOLLOW_DAMAGE := 3 # what a friend's strike does
+const FOLLOW_SLIP_MS := 80.0 # a press this soon after the last one is a slip of the finger, and is let go
+
 # A friendly monster's attack drops hearts: each one caught heals you and pleases it.
 const HEART_HEAL := 1
 const HEART_FRIENDLINESS := 3.0

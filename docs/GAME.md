@@ -34,6 +34,7 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 
 - **FIGHT** is a timing bar: strike when the line crosses the middle. A hit sours the monster's mood.
 - **HEAVY** is a faster line and a smaller mark for a harder hit, which some monsters take worse than others.
+- **Friends follow through.** With monsters in your party, a FIGHT that lands doesn't stop the line: each friend has a mark further along the bar in its own colour, and each press after yours is the next friend's. On its mark that friend strikes for 3; off it, that friend's moment is gone, so hammering the key gets nothing. Not pressing costs nothing, and a HEAVY blow is too quick for them.
 - **ACT** has CHECK (free, one clue at a time), three acts for that species, and SAY SOMETHING: type a line and ask about the stairs, the champion or another monster, or just try to win it over. What a monster likes and hates is found by trying it, and it answers in its own words: pleased, stung, hurt, scared or puzzled. Bandits and snakes can take a 6-gold cut to stand down; you start with 8.
 - **ITEM** heals, sharpens your next strike, slips you out of the fight, or gives a gift a monster may love.
 - **SPARE** rolls against the monster's mercy, shown as a gauge by its health with how far each deed moved it. Its name turns gold when the odds are at least even. It then asks to come along, and you answer.

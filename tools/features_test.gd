@@ -36,6 +36,7 @@ const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Vision = preload("res://src/rules/vision.gd")
+const Texts = preload("res://src/game/texts.gd")
 const Tips = preload("res://src/view/tips.gd")
 
 const BASE := ["nosave", "nosound", "no-wick"] # she has a test of her own; every other check starts alone
@@ -75,6 +76,7 @@ func _run() -> void:
 	await _heavy_strike()
 	await _nerve()
 	await _mood_attacks()
+	await _follow_through()
 	await _skill_combat()
 	_close_camera()
 	_finish()
@@ -317,6 +319,102 @@ func _mood_attacks() -> void:
 	foe.meters = {"friendliness": 100.0, "anger": 0.0, "fear": 0.0}
 	await _into_dodge(off)
 	_check(off.state.dodge.mood == "", "no-mood-attacks: every attack is the plain one")
+	_use()
+
+
+## follow-through: with friends, a strike that lands leaves the line running, and a press on each friend's mark is that friend's strike.
+func _follow_through() -> void:
+	var flow = _flow(85)
+	var m = await _at_menu(flow, "rock")
+	var s = flow.state
+	var heard := []
+	flow.happened.connect(func(name, data): if name == "follow": heard.append(data))
+	m.max_hp = 400
+	m.hp = 400
+	# alone: as it always was
+	await flow.press("1")
+	_check(s.bar.marks.is_empty(), "alone there are no marks on the bar")
+	flow.clock = s.bar.t0 + s.bar.dur / 2.0
+	await flow.press("confirm")
+	_check(s.stage != "fightbar" and s.bar == null, "and the strike ends the bar at once (%s)" % s.stage)
+	await _through_dodge(flow)
+	# with two friends, and Wick, who is no one's strike
+	s.allies = [Ally.make("witch", "WICK", 75.0), Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]
+	await flow.press("1")
+	_check(s.bar.marks.size() == 2 and s.bar.marks[0].who == "GLOP" and s.bar.marks[1].who == "HISS", "each friend in the party has a mark, in order (%s)" % [s.bar.marks.map(func(k): return k.who)])
+	_check(s.hint.contains("FRIEND"), "and the hint says to press again (%s)" % s.hint)
+	var hp: int = m.hp
+	flow.clock = s.bar.t0 + s.bar.dur * 0.5
+	await flow.press("confirm")
+	var mine: int = hp - m.hp
+	_check(s.stage == "fightbar" and s.bar != null and is_equal_approx(s.bar.struck, 0.5) and mine > 0, "your strike lands and the line runs on (%s, %d)" % [s.stage, mine])
+	flow.clock = s.bar.t0 + s.bar.dur * 0.51
+	await flow.press("confirm")
+	_check(s.bar.marks[0].state == "" and m.hp == hp - mine, "a press right on top of the first is a slip of the finger, and does nothing")
+	flow.clock = s.bar.t0 + s.bar.dur * Combat.FOLLOW_MARKS[0]
+	await flow.press("confirm")
+	_check(s.bar.marks[0].state == "hit" and m.hp == hp - mine - Combat.FOLLOW_DAMAGE, "the next press, on the first mark, is that friend's strike (%d)" % m.hp)
+	_check(heard.size() == 1 and heard[0].who == "GLOP" and heard[0].species == "slime" and heard[0].damage == Combat.FOLLOW_DAMAGE, "and the game says whose")
+	flow.clock = s.bar.t0 + s.bar.dur * (Combat.FOLLOW_MARKS[1] + Combat.FOLLOW_EDGE * 0.9)
+	await flow.press("confirm")
+	_check(s.bar != null and s.bar.marks[1].state == "hit" and m.hp == hp - mine - 2 * Combat.FOLLOW_DAMAGE, "and the one after, anywhere on the second mark, the second friend's")
+	await flow.tick(flow.clock + 16.0)
+	_check(s.stage != "fightbar" and s.bar == null, "with every mark settled the strike is over (%s)" % s.stage)
+	_check(s.lines.any(func(l): return str(l.text).contains("GLOP and HISS follow through: %d more" % (2 * Combat.FOLLOW_DAMAGE))), "the log says who followed (%s)" % str(s.lines.map(func(l): return l.text)))
+	_check(Texts.followed(["A", "B", "C"], 9) == "A, B and C follow through: 9 more. " and Texts.followed(["A"], 3) == "A follows through: 3 more. " and Texts.followed([], 0) == "", "however many of them it was")
+	# a press off the mark loses that friend's moment, and a mark the line leaves behind is lost too
+	await _through_dodge(flow)
+	await flow.press("1")
+	hp = m.hp
+	flow.clock = s.bar.t0 + s.bar.dur * 0.5
+	await flow.press("confirm")
+	mine = hp - m.hp
+	flow.clock = s.bar.t0 + s.bar.dur * (Combat.FOLLOW_MARKS[0] - Combat.FOLLOW_EDGE - 0.01)
+	await flow.press("confirm")
+	_check(s.bar != null and s.bar.marks[0].state == "lost" and s.bar.marks[1].state == "" and m.hp == hp - mine, "a press off the mark loses that friend's moment")
+	await flow.tick(s.bar.t0 + s.bar.dur * (Combat.FOLLOW_MARKS[1] + Combat.FOLLOW_EDGE + 0.01))
+	_check(s.stage != "fightbar" and m.hp == hp - mine, "a mark the line leaves behind is lost, and with none left the strike is over (%s)" % s.stage)
+	# not pressing at all costs nothing: the end of the bar ends the strike
+	await _through_dodge(flow)
+	await flow.press("1")
+	hp = m.hp
+	flow.clock = s.bar.t0 + s.bar.dur * 0.5
+	await flow.press("confirm")
+	mine = hp - m.hp
+	await flow.tick(s.bar.t0 + s.bar.dur * 0.6)
+	_check(s.stage == "fightbar", "the line runs on to the marks")
+	await flow.tick(s.bar.t0 + s.bar.dur + 10.0)
+	_check(s.stage != "fightbar" and m.hp == hp - mine, "and not pressing at all costs nothing (%s)" % s.stage)
+	# three marks at most, each further along and clear of the one before
+	var marks: Array = Combat.FOLLOW_MARKS
+	_check(marks.size() == Combat.PARTY_MAX and marks[0] - Combat.FOLLOW_EDGE > 0.5 + Combat.CRIT_EDGE and marks[-1] + Combat.FOLLOW_EDGE <= 1.0, "a mark for each of a full party, all past the middle and on the bar")
+	_check(range(1, marks.size()).all(func(i): return marks[i] - marks[i - 1] >= Combat.FOLLOW_EDGE * 2.0), "and no two overlap")
+	# a HEAVY blow is too quick for them
+	await _through_dodge(flow)
+	await flow.press("5")
+	_check(s.bar.heavy and s.bar.marks.is_empty(), "a HEAVY blow has no marks")
+	flow.clock = s.bar.t0 + s.bar.dur / 2.0
+	await flow.press("confirm")
+	_check(s.stage != "fightbar", "and ends at once (%s)" % s.stage)
+	# a strike that fells it ends at once
+	await _through_dodge(flow)
+	m.hp = 1
+	await flow.press("1")
+	flow.clock = s.bar.t0 + s.bar.dur * 0.5
+	await flow.press("confirm")
+	_check(m.is_gone() and s.bar == null and s.stage != "fightbar", "a strike that fells it doesn't wait for the friends (%s)" % s.stage)
+
+	var off = _flow(86, ["no-follow-through"])
+	var foe = await _at_menu(off, "rock")
+	foe.max_hp = 400
+	foe.hp = 400
+	off.state.allies = [Ally.make("slime", "GLOP", 60.0), Ally.make("snake", "HISS", 60.0)]
+	await off.go("menu")
+	await off.press("1")
+	_check(off.state.bar.marks.is_empty(), "no-follow-through: no marks")
+	off.clock = off.state.bar.t0 + off.state.bar.dur / 2.0
+	await off.press("confirm")
+	_check(off.state.stage != "fightbar" and off.state.bar == null, "and a strike ends the bar at once, as it did")
 	_use()
 
 

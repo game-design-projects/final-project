@@ -7,7 +7,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - `nerve`: a dodge with no hit in it, and every close call (stepping off a square in its last 0.3 seconds before it lands), earns a point of nerve, up to five; a FIGHT or HEAVY that lands spends them for 2 more damage each, a SPARE for 8% better odds each, and a hit shakes one out. Pips beside the box and under the kind of fight, a white outline on a square in its last moments, a ring and a rising note for each close call.
 - `mood-attacks`: how a monster feels shows in its attack, whichever it is: a friendly one drops hearts to catch (each heals 1 and pleases it, and the mercy gauge follows), a frightened one falters (one hazard in three never comes) and breaks off a quarter early.
-- `tools/nerve_shots.gd` takes pictures of both, and the screenshot tools take `nofocus`: the window stays on top to render at full speed but never takes the keyboard.
+- `follow-through`: with monsters in the party, a FIGHT that lands doesn't stop the line: each friend has a mark further along the strike bar, and each press after yours is the next friend's strike for 3 (on its mark) or its moment gone (off it). A HEAVY blow is too quick for them, and not pressing costs nothing.
+- `tools/nerve_shots.gd` takes pictures of all three, and the screenshot tools take `nofocus`: the window stays on top to render at full speed but never takes the keyboard.
 
 ### Changed
 - The game asks Jev through the public proxy by default, also when run from source (`godot --path .`), so a fresh checkout plays like a build; `nojev` keeps the local rules, `jev=<url>` or the saved `jev_url` picks another proxy. The test suites, `autoplay` and the screenshot tools (headless or `-s`) never get the default.
