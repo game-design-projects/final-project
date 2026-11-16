@@ -52,6 +52,7 @@ static func waiting_ms() -> int:
 static func post_json(url: String, body: Dictionary, headers := {}, timeout_s := TIMEOUT_S) -> Dictionary:
 	if is_down():
 		return _fail("network is down, skipping %s" % url, 0, Time.get_ticks_msec())
+	print("network: -> %s asking %s" % [url, ", ".join(body.get("questions", {}).keys())])
 	_next_flight += 1
 	var id := _next_flight
 	_flights[id] = Time.get_ticks_msec()
@@ -90,7 +91,7 @@ static func _post(url: String, body: Dictionary, headers: Dictionary, timeout_s:
 			return _failed_for_good("the reply was not JSON", res.status, t0)
 		_failures = 0
 		var ms := Time.get_ticks_msec() - t0
-		print_verbose("network: %s -> %d in %d ms" % [url, res.status, ms])
+		print("network: %s -> %d in %d ms: %s" % [url, res.status, ms, str(res.text).left(300)])
 		return {"ok": true, "status": res.status, "json": parsed.data, "text": res.text, "error": "", "ms": ms}
 	return {}
 

@@ -112,6 +112,7 @@ func _choice(state: Dictionary, question: String, options: Dictionary):
 	var q := {"type": "choice", "instructions": question, "criteria": options}
 	var answer = _answer(await Network.post_json(_url, {"state": state, "questions": {"q": q}}))
 	if not (answer is Dictionary and answer.get("probabilities") is Dictionary):
+		print("jev: no usable answer to %s, local rules instead" % question)
 		return null
 	var out := {}
 	var total := 0.0
