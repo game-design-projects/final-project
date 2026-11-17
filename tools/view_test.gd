@@ -67,6 +67,7 @@ func _run() -> void:
 	await _palette_is_picked_and_saved()
 	await _held_key_waits_for_the_camera()
 	await _fight_staging()
+	await _every_attack_draws()
 	await _models_follow_their_monsters()
 	_style()
 	_postfx_decays()
@@ -669,6 +670,38 @@ func _no_name_without_a_body() -> void:
 		stage.update(s, t, FRAME)
 	_check(stage._tags[m].get_meta("wanted"), "and a step on, when it can be seen, it has")
 	stage.free()
+
+
+## Every attack's box draws while it warns and as it lands: a hazard with nothing on `at` (the puddles' goo) must not stop the picture.
+func _every_attack_draws() -> void:
+	var flow = await _walk(21)
+	var s = flow.state
+	var overlay = Overlay.new()
+	overlay.state = s
+	overlay.size = Vector2(Overlay.W, Overlay.H)
+	root.add_child(overlay)
+	s.foe = s.floor_map.monsters[0]
+	s.stage = "dodge"
+	var rng := Rng.new(7)
+	var drawn := 0
+	var bare_goo := 0
+	for g in DodgeRun.MINI_GAMES.keys():
+		var run = DodgeRun.start(g, 2.0, false, 1, 0.0, {})
+		s.dodge = run
+		var t := 0.0
+		while t < run.end_t:
+			run.update(t, rng)
+			overlay.clock_ms = t
+			overlay.queue_redraw()
+			await process_frame
+			drawn += run.hazards.size()
+			bare_goo += run.hazards.filter(func(h): return h.kind == "goo" and not h.has("at") and t < h.hit).size()
+			t += 150.0
+	_check(drawn > 0 and bare_goo > 0, "every attack's box was drawn, goo with no mark among it (%d hazards, %d bare goo)" % [drawn, bare_goo])
+	s.dodge = null
+	s.stage = "explore"
+	s.foe = null
+	overlay.queue_free()
 
 
 ## The flat battle screen: the flash as a fight begins, mercy by the name, and what the dodge box shows.
