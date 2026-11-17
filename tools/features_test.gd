@@ -161,6 +161,7 @@ func _nerve() -> void:
 	m.max_hp = 200
 	m.hp = 200
 	_check(s.nerve == 0 and s.viewing("nerve"), "a fight starts with none")
+	_check(not str(s.menu[0].sub).contains("NERVE"), "with none held FIGHT says nothing about a zero bonus (%s)" % s.menu[0].sub)
 	await _into_dodge(flow)
 	_end_dodge(flow)
 	await flow.tick(flow.clock + 20.0)

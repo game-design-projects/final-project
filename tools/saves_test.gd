@@ -103,6 +103,7 @@ func _state_is_checked() -> void:
 		"a monster outside the floor": func(d): d.floor.monsters[0].cell = [-4, 2],
 		"a monster whose traits are a word": func(d): d.floor.monsters[0].traits = "shy",
 		"a monster whose meters are a list": func(d): d.floor.monsters[0].meters = [1, 2],
+		"a monster whose mercy confession is a word": func(d): d.floor.monsters[0].social = {"confided_mercy": "spared"},
 		"health that is a word": func(d): d.hp = "full",
 		"health that is a list": func(d): d.hp = [20],
 		"health that is not a number": func(d): d.hp = NAN,

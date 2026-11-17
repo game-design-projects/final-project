@@ -4,6 +4,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+
 ### Added
 - No monster in a run takes a name met before it (the floor you leave, the deeds the clans remember, the party), so a second KESSHRA no longer talks about the KESSHRA you slew. Each species has 12 spare names (the dragon 8, `spare_names` in `data/species.json`), drawn once its recorded names are used up; their lines with the name in them use the synthesised voice until `tools/voices/render.py` renders them. Out of both, it counts on: GLOP II.
 - The Jev Worker answers with `server-timing` (the rate limiter and the way to Jev), and the game's log prints it beside its own time, so a slow answer says which hop was slow.
@@ -15,10 +16,17 @@ All notable changes to this project are documented here. The format follows [Kee
 - The THINKING line says who and what about ("NYSS IS THINKING: WILL IT ACCEPT MERCY"), and is not shown during a dodge; the strike's "ENTER STRIKE" hint goes away once the bar has.
 - SAY SOMETHING ELSE: Enter shows how your words are heard and keeps them in the box; Enter again on the same words says them. Words that answer none of the offer's choices are said as plain words (the offer ends, the monster reacts as to SAY SOMETHING, for your action) instead of "Not understood".
 - The champion-on-the-stairs measurement is now a test over 1,000 seeds: no floor can be finished without a fight, the champion holds the stairs on every one, and no seed is unreachable (#26).
+- Nerve is on screen where it is spent: the fight menu and the strike bar say how much you hold out of five and what a strike adds, SPARE shows its odds before and after spending, and a SPARE a kept promise already guarantees no longer spends any. The FIGHT command says nothing about nerve while you hold none, as the strike bar already did.
+- The Snake's offer trades clearer: the truth gives an exact route and two softer attacks and it remembers whether you spared anyone here (it meets you wary if you spared nobody), denying mercy keeps the record private at the price of a vague direction and a slightly stronger attack, and 2 gold buys an exact route with nothing revealed.
+- Jev's numbers are checked before the rules act on them: an answer out of range, not a number or not finite falls back on the local rules instead of moving a meter.
 
 ### Fixed
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
 - A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.
+
+- A restored save was not checked for a Snake's confession (`social.confided_mercy`): a word where true, false or nothing belongs is refused now, as the rest of a monster's social memory is.
+- `data/social.json` holds the wariness a confession earns, a denial's pressure and the trust of a true confession, instead of those numbers living in `src/rules/social.gd`.
+- `docs/SOCIAL_COMBAT.md` no longer promises a route for denying mercy (there is none) and names the new data fields.
 
 ## [0.9.0] - 2026-11-16
 

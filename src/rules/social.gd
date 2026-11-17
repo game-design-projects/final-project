@@ -39,11 +39,13 @@ static func begin(m, s, dice: Dice) -> void:
 	var promise: bool = m.social.get("promise", false)
 	var betrayed: bool = m.social.get("betrayed", false)
 	var confided = m.social.get("confided_mercy", null)
+	# It was told you spared nobody here: it keeps its distance the next time it meets you.
+	var wary: float = float(table().wary_pressure) if confided == false else 0.0
 	var seed_id := "%d:%d:%s:%s" % [s.run_seed, s.depth, m.name, m.cell]
 	m.social = {"used": used, "history": history, "promise": promise, "betrayed": betrayed,
 		"confided_mercy": confided,
 		"rounds": 0, "due": 2 + int(dice.keyed(absi(seed_id.hash())) * 3), "checked": -1, "pending": false,
-		"seed": absi(seed_id.hash()), "was_low": m.hp_fraction() < 0.35, "pressure": 0.5 if confided == false else 0.0,
+		"seed": absi(seed_id.hash()), "was_low": m.hp_fraction() < 0.35, "pressure": wary,
 		"soft_turns": 0, "opening": 0, "trial": 0}
 	if s.recent_social == m.species:
 		m.social.due = int(m.social.due) + int(table().cooldown)
@@ -188,14 +190,15 @@ static func resolve(m, s, e: Dictionary, id: String) -> Dictionary:
 			var spared: bool = s.floor_map.monsters.any(func(o): return o.gone == "spared")
 			var caught: bool = id == "lie" and spared and e.get("witness", false)
 			out.intent = "insult" if caught else "question"
-			m.social.pressure = 1.0 if caught else (0.2 if id == "lie" else 0.0)
+			m.social.pressure = 1.0 if caught else (float(table().lie_pressure) if id == "lie" else 0.0)
 			if caught:
 				out.text = "I watched you spare my neighbour. That was a lie. No route; my next attack is stronger."
 			else:
 				if id == "truth":
 					m.social.confided_mercy = spared
 					m.social.soft_turns = 2
-					m.meters.friendliness = minf(100.0, m.meters.friendliness + (18.0 if m.has_trait("curious about humans") else 10.0))
+					var trust: float = float(table().confide_friendliness_curious) if m.has_trait("curious about humans") else float(table().confide_friendliness)
+					m.meters.friendliness = minf(100.0, m.meters.friendliness + trust)
 					out.text = "You told me %s. I will remember; my next two attacks soften. " % ("you spared someone here" if spared else "you spared nobody here") + Hints.answer(s.floor_map, s.cell, m, "where are the stairs").trim_prefix("...")
 				else:
 					out.text = "I cannot verify that. I keep my distance; the stairs are somewhere on this floor."
