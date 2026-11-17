@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-11-17
+
 ### Added
 - The whole floor's map: **M**, or a click on the corner map, puts every cell of the floor over the picture with the floor's name and how much of it is seen; the arrows walk under it, and M, Esc or a click puts it away (#114).
 - Explorer's instinct: once 80% of a floor is seen, the rest of its layout and the stairs go onto the map (#115).
@@ -478,7 +480,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.2...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.3...main
+[0.9.3]: https://github.com/game-design-projects/final-project/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/game-design-projects/final-project/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/game-design-projects/final-project/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/game-design-projects/final-project/compare/v0.8.1...v0.9.0
