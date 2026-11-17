@@ -47,6 +47,14 @@ jobs:
           godot --headless --path . -s res://tools/autoplay.gd -- mock
           godot --headless --path . -s res://tools/autoplay.gd -- practice
           godot --headless --path . -s res://tools/autoplay.gd -- skill-combat
+      # Seeds where the two nearest monsters sat in opposite directions: the pilot used to step between two cells for the
+      # whole game, each step making the other monster the nearer one. It keeps the monster it chose until it is gone now.
+      - name: Play the seeds that used to stall the pilot
+        run: |
+          set -euo pipefail
+          for seed in 313 357 362 415 451 454; do
+            godot --headless --path . -s res://tools/autoplay.gd -- mock "seed=$seed"
+          done
       - name: Check initiated dialogue and dynamic moods
         run: |
           set -euo pipefail

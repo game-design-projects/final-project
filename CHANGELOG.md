@@ -30,6 +30,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `data/social.json` holds the wariness a confession earns, a denial's pressure and the trust of a true confession, instead of those numbers living in `src/rules/social.gd`.
 - `docs/SOCIAL_COMBAT.md` no longer promises a route for denying mercy (there is none) and names the new data fields.
 - An enraged clan's FIGHT line no longer promises a SPARE chance that clan will never take; the nerve a strike adds is still said.
+- The autopilot keeps the monster it walks to until it is gone: where the two nearest monsters sat in opposite directions, each step made the other one the nearer, so the walk stood between two cells for the whole game (seeds 313, 357, 362, 415, 451 and 454, which `run_tests.sh` and CI now play).
 
 ## [0.9.0] - 2026-11-16
 
