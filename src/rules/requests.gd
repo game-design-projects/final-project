@@ -36,7 +36,7 @@ static func fill(rng, f, plan: Dictionary) -> bool:
 	var roster: Array = Content.table("encounter").roster
 	var target = f.monsters[q.target]
 	q.species = target.species if q.kind == "spare" else str(rng.pick(roster).species)
-	q.name = _free_name(rng, f, q.species)
+	q.name = _free_name(rng, f, q.species, plan.get("taken", {}))
 	q.taken = false
 	if q.kind == "fetch":
 		q.target = -1
@@ -47,12 +47,21 @@ static func fill(rng, f, plan: Dictionary) -> bool:
 	return true
 
 
-## A name nobody on this floor has.
-static func _free_name(rng, f, species: String) -> String:
-	var taken: Array = f.monsters.map(func(m): return m.name)
+## A name nobody on this floor has, nor anyone met earlier in the run (`taken` is the run's names, upper case -> true: the one
+## asking is a monster of the run like the others, and a later floor keeps off its name through State.names_met). The recorded
+## names come first and the spare ones once those are used up, as a monster's do (Monster._fresh_name).
+static func _free_name(rng, f, species: String, taken: Dictionary) -> String:
+	var here: Array = f.monsters.map(func(m): return str(m.name).to_upper())
 	var sp: Dictionary = Content.species(species)
-	var free: Array = (sp.names + sp.get("spare_names", [])).map(func(n): return str(n).to_upper()).filter(func(n): return not taken.has(n))
+	var free: Array = _free_names(sp.names, here, taken)
+	if free.is_empty():
+		free = _free_names(sp.get("spare_names", []), here, taken)
 	return str(rng.pick(free)) if not free.is_empty() else "THE OLD ONE"
+
+
+## The names off `names` that neither this floor's monsters (`here`) nor the run (`taken`) have had.
+static func _free_names(names: Array, here: Array, taken: Dictionary) -> Array:
+	return names.map(func(n): return str(n).to_upper()).filter(func(n): return not here.has(n) and not taken.has(n))
 
 
 ## What it is about, as the words say it: the thing wanted, or who.

@@ -26,6 +26,7 @@ func _run() -> void:
 	await _title_card(game)
 	await game._begin()
 	_check(_bound(game), "the views read the first floor's state")
+	_names_met(game)
 	var first = game.flow.state
 	await game.flow.new_run()
 	_check(game.flow.state != first, "NEW FLOOR makes a new state")
@@ -213,6 +214,18 @@ func _wide_view(game) -> void:
 func _bound(game) -> bool:
 	var s = game.flow.state
 	return game._header.state == s and game._status.state == s and game._dock.state == s and game._overlay.state == s and game._tips.state == s
+
+
+## The one asking on a floor is a monster of the run like the others: the names met keep its name, so the floor after gives its
+## monsters other ones (State.names_met, read by the next floor's generator).
+func _names_met(game) -> void:
+	var s = game.flow.state
+	var m = s.floor_map.monsters[0]
+	_check(s.names_met().has(str(m.name).to_upper()), "the floor's monsters are names met (%s)" % m.name)
+	var was: Dictionary = s.floor_map.quester
+	s.floor_map.quester = {"cell": Vector2i(1, 1), "species": "slime", "name": "old chert", "kind": "fetch", "target": -1, "want": "", "taken": false}
+	_check(s.names_met().has("OLD CHERT"), "and the one asking on it, said aloud as the monsters' names are")
+	s.floor_map.quester = was
 
 
 # ---------------------------------------------------------------- helpers

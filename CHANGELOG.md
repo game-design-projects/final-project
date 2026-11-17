@@ -23,6 +23,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
 - A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.
+- The one asking a favour takes its name by the same rule as the floor's monsters: never one met earlier in the run, recorded names before spare ones (it used the whole pool, so a quest-giver could be called the KESSHRA you slew), and its name is kept for the floors after, so no monster is later named after it.
 
 - A restored save was not checked for a Snake's confession (`social.confided_mercy`): a word where true, false or nothing belongs is refused now, as the rest of a monster's social memory is.
 - `data/social.json` holds the wariness a confession earns, a denial's pressure and the trust of a true confession, instead of those numbers living in `src/rules/social.gd`.
