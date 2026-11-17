@@ -11,7 +11,7 @@ const Texts = preload("res://src/game/texts.gd")
 
 const TAKE := 0
 
-var _wants := 0.5
+var _wants := -1.0 # how much it wants to come along; below 0 while the mind is still thinking about it
 var _room := false
 
 
@@ -19,7 +19,7 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
 	_room = s.party_size() < Combat.PARTY_MAX
-	_wants = await flow.mind.join(m)
+	_wants = -1.0
 	var charm: Dictionary = Content.table("encounter").charms[m.species]
 	var gift: Dictionary = Allies.gift(m.species)
 	var lines := []
@@ -32,12 +32,24 @@ func enter(flow, _args: Dictionary) -> void:
 	if _room:
 		s.menu.push_front({"label": "COME ALONG", "sub": "%s: %s. %s" % [charm.name, charm.text, Texts.party_tip(s.party_size())]})
 	s.hint = "ENTER ANSWER · 1-%d" % s.menu.size()
-	s.mind_rows = [{"id": "join", "label": "DOES IT WANT TO COME ALONG?", "answer": _wants}] + flow.encounter.pending_rows
+	s.mind_rows = flow.encounter.pending_rows
 	flow.encounter.pending_rows = []
-	print("ask: %s asks to join (wants %d%%, room: %s)" % [m.name, roundi(_wants * 100.0), _room])
+	_think_join(flow, m) # not awaited: the answer only sets how loyal it starts, so the choice is yours at once
+
+
+## How much `m` wants to come along, asked while you choose; the mind card shows it when it comes.
+func _think_join(flow, m) -> void:
+	var wants: float = await flow.mind.join(m)
+	if flow.state.foe != m or flow.state.stage != "ask":
+		return
+	_wants = wants
+	flow.state.mind_rows = [{"id": "join", "label": "DOES IT WANT TO COME ALONG?", "answer": wants}] + flow.state.mind_rows
+	print("ask: %s asks to join (wants %d%%, room: %s)" % [m.name, roundi(wants * 100.0), _room])
 
 
 func pick(flow, index: int) -> void:
+	if _wants < 0.0:
+		_wants = await flow.mind.join(flow.state.foe) # chosen before the mind answered: the same question, already out
 	if _room and index == TAKE:
 		await flow.encounter.take_along(flow.state.foe, _wants)
 	else:

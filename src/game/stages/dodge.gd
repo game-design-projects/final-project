@@ -38,6 +38,7 @@ func enter(flow, args: Dictionary) -> void:
 	var mood := Feelings.mood(m) if flow.feature("mood-attacks") else ""
 	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace, Clans.elite() if m.elite else {}, mood)
 	s.dodge.guard = Combat.party_guard(s.allies.size()) + (Keepsakes.THICK_GUARD if Keepsakes.has(s, "thick_hide") else 0)
+	flow.encounter.think_ahead(m) # the mercy the menu after it needs, asked while you dodge (a heart caught changes it: then it asks again)
 	if Keepsakes.has(s, "quick_feet"):
 		s.dodge.nerve_window = Combat.NERVE_WINDOW_MS * Keepsakes.QUICK_WINDOW
 	_hits = 0

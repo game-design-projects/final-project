@@ -145,8 +145,9 @@ func _finish(flow) -> void:
 	var landed := _landed
 	_landed = {}
 	s.bar = null
+	s.hint = "" # the bar is gone: its "ENTER STRIKE" would be a lie while the mind takes it in
 	Combat.apply_hit_to_mood(m)
-	var begging: bool = await flow.encounter.spareable(m)
+	var begging: bool = flow.encounter.begging()
 	if m.hp <= 0:
 		flow.encounter.judge("slay_begging" if begging else "slay")
 		await flow.encounter.defeat(m, "slain")

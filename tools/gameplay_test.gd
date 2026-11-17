@@ -553,10 +553,16 @@ func _thinking(game) -> void:
 	var dock = game._dock
 	game._process(0.016)
 	_check(dock.thinking_ms == 0 and not dock.is_thinking(), "nothing says 'thinking' while no question is out")
-	Network._flights[-1] = Time.get_ticks_msec() - 900
+	Network._flights[-1] = {"at": Time.get_ticks_msec() - 900, "what": "WILL IT ACCEPT MERCY?"}
 	game._process(0.016)
 	_check(dock.thinking_ms >= 800 and dock.is_thinking(), "a question that has been out for a while shows as thinking (%d ms)" % dock.thinking_ms)
-	Network._flights[-1] = Time.get_ticks_msec() - 20
+	_check(dock.thinking_line().ends_with("THINKING: WILL IT ACCEPT MERCY"), "and says what about (%s)" % dock.thinking_line())
+	var stage_was: String = game.flow.state.stage
+	game.flow.state.stage = "dodge"
+	game._process(0.016)
+	_check(not dock.is_thinking(), "not while you dodge: nothing waits on it then")
+	game.flow.state.stage = stage_was
+	Network._flights[-1] = {"at": Time.get_ticks_msec() - 20, "what": ""}
 	game._process(0.016)
 	_check(not dock.is_thinking(), "a quick answer does not flicker it")
 	Network._flights.erase(-1)
@@ -606,21 +612,16 @@ func _start_is_guarded(game) -> void:
 	var real = flow.mind
 	flow.mind = SlowMind.new()
 	var m = flow.state.floor_map.monsters[0]
-	flow.exclusive(func(): await flow.go("intro", {"foe": m})) # not awaited: the mind is still answering
-	_check(flow.busy and flow.state.stage == "intro", "a start from outside holds input off while the mind answers")
+	var t0 := Time.get_ticks_msec()
+	await flow.go("intro", {"foe": m})
+	_check(Time.get_ticks_msec() - t0 < 200 and flow.state.stage == "intro", "a fight begins without waiting for the mind: it asks ahead")
+	flow.exclusive(func(): await flow.go("menu")) # not awaited: the menu waits for the mercy odds
+	_check(flow.busy and flow.state.stage == "menu", "a start from outside holds input off while the mind answers")
 	flow.tick(flow.clock + 100000.0)
 	await process_frame
-	_check(flow.state.stage == "intro", "so a tick arriving meanwhile does not run the intro's own tick (it would have moved on to the menu)")
+	_check(flow.state.stage == "menu", "so a tick arriving meanwhile runs nothing")
 	await create_timer(0.5).timeout
-	_check(not flow.busy, "and input is free again when it is done")
-	flow.tick(flow.clock + 100000.0)
-	await create_timer(0.4).timeout
-	if flow.feature("ambush-prompt"):
-		_check(flow.state.stage == "intro" and flow.state.hint == "ANY KEY CONTINUE", "the greeting stays until confirmed")
-		await flow.press("confirm")
-		_check(flow.state.stage == "menu", "confirmation opens the fight menu")
-	else:
-		_check(flow.state.stage == "menu", "without the prompt, the intro opens the fight menu automatically")
+	_check(not flow.busy and flow.encounter.known_mercy >= 0.0, "and input is free again when it is done, the odds known")
 	flow.mind = real
 	await game.flow.new_run()
 

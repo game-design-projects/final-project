@@ -50,6 +50,8 @@ var part := Part.HEADER
 var state # State, set by the owner
 ## How long the oldest question to Jev has been out (Network.waiting_ms), set by the owner every frame.
 var thinking_ms := 0
+## What that question asks (Network.waiting_what), so the line says what the monster is thinking about.
+var thinking_what := ""
 
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
@@ -109,6 +111,12 @@ func _process(dt: float) -> void:
 ## Whether the dock has been asked to wait for Jev long enough to say so.
 func is_thinking() -> bool:
 	return thinking_ms >= THINKING_AFTER_MS
+
+
+## Who is thinking, and about what: "NYSS IS THINKING: WILL IT ACCEPT MERCY?", or just "THINKING" out of a fight or unlabelled.
+func thinking_line() -> String:
+	var who: String = "%s IS THINKING" % state.foe.name if state != null and state.foe != null else "THINKING"
+	return who if thinking_what == "" else "%s: %s" % [who, thinking_what.trim_suffix("?")]
 
 
 func _draw() -> void:
@@ -443,7 +451,7 @@ func _log(area: Rect2) -> void:
 		y += rich_h
 	if is_thinking():
 		var dots := ".".repeat(1 + int(Time.get_ticks_msec() / 300.0) % 3)
-		_text(_title, "THINKING" + dots, Vector2(0, area.end.y - 4.0), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_RIGHT, area.size.x)
+		_text(_title, thinking_line() + dots, Vector2(0, area.end.y - 4.0), 8, Palette.YOU, HORIZONTAL_ALIGNMENT_RIGHT, area.size.x)
 
 
 ## The commands: up to four across, a second row after that. The picked one has a bright border.
