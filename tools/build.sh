@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Exports the game into build/<platform>/ and zips each one as build/donjon-<version>-<platform>.zip.
-#   tools/build.sh                                # every platform (web windows macos linux), monsters think with the local rules
+#   tools/build.sh                                # every platform (web windows macos linux); with no --proxy the monsters ask
+#                                                 # the default Jev proxy, the same address a game from source asks
 #   tools/build.sh web macos                      # only some
 #   tools/build.sh --proxy https://donjon-api.<you>.workers.dev [platforms...]
 #                                                 # monsters ask Jev through your Worker (proxy/), which holds the key:
@@ -101,6 +102,8 @@ binary_format/architecture="x86_64"
 PRESETS
 
 version=$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)
+# What the game asks when a build ships no address of its own: the default proxy in src/mind/minds.gd (DEFAULT_URL).
+default_url=$(sed -n 's/^const DEFAULT_URL := "\(.*\)"/\1/p' src/mind/minds.gd)
 "$GODOT" --headless --path . --import >/dev/null 2>&1 || true
 
 # platform -> export preset name, and the file it writes inside build/<platform>/ (bash 3.2 has no maps)
@@ -125,6 +128,8 @@ for p in "${platforms[@]}"; do
 done
 if [[ -n $base ]]; then
   echo "Monsters in these builds: Jev through $base"
+elif [[ -n $default_url ]]; then
+  echo "Monsters in these builds: Jev through the default proxy ($default_url)"
 else
-  echo "Monsters in these builds: the local rules"
+  echo "Monsters in these builds: Jev through the default proxy"
 fi
