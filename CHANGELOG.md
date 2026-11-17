@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-17
+
 ### Changed
 - Each species' heavy-blade weakness is its own number in `data/species.json` ("heavy": the rock 1.5, the dragon 1.2, the bandit 1.0, the snake 0.8, the slime 0.55) instead of a table in `src/rules/combat.gd`; the values and so the fight are unchanged, and a species with no number of its own is now a failing check rather than a silent plain blow.
 
@@ -456,7 +458,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.1...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.2...main
+[0.9.2]: https://github.com/game-design-projects/final-project/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/game-design-projects/final-project/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/game-design-projects/final-project/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/game-design-projects/final-project/compare/v0.8.0...v0.8.1
