@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-11-17
+
 ### Fixed
 - Jev's mercy-and-pressure reply no longer loses mercy and stops a fight when its answer cache reaches 64 entries.
 
@@ -483,7 +485,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.3...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.4...main
+[0.9.4]: https://github.com/game-design-projects/final-project/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/game-design-projects/final-project/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/game-design-projects/final-project/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/game-design-projects/final-project/compare/v0.9.0...v0.9.1
