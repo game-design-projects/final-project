@@ -4,7 +4,8 @@
 # The game code comes from several people, so the deploy is kept to the smallest scope that works:
 #   - CLOUDFLARE_API_TOKEN is a Cloudflare token with Workers Editor on the donjon-api Worker only: it cannot touch
 #     any other Worker on the account, create or delete Workers, or add routes. the check job keeps
-#     wrangler.jsonc to one workers.dev Worker with no routes, builds or extra bindings.
+#     wrangler.jsonc to one workers.dev Worker with no routes, builds or extra bindings; its one service binding is the
+#     LLM gateway's Worker (api-cf-llmgateway-front), checked by worker.test.js.
 #   - Only main deploys, through the cloudflare-production environment (deployment branches: main), and only the
 #     deploy step sees the token.
 #   - The Jev key is a Worker secret set by hand (`wrangler secret put`); it never passes through GitHub.
@@ -44,7 +45,11 @@ jobs:
       - name: Worker config is one workers.dev Worker with no routes, builds or extra bindings
         run: |
           set -euo pipefail
-          ! grep -E '^\s*"(routes|route|build|kv_namespaces|d1_databases|r2_buckets|services)"' proxy/wrangler.jsonc || { echo '::error::wrangler.jsonc has more than the one Worker'; exit 1; }
+          ! grep -E '^\s*"(routes|route|build|kv_namespaces|d1_databases|r2_buckets)"' proxy/wrangler.jsonc || { echo '::error::wrangler.jsonc has more than the one Worker'; exit 1; }
+          # The one service binding allowed: the LLM gateway's Worker (worker.test.js checks the parsed config too).
+          services=$(grep -E '^\s*"services"' proxy/wrangler.jsonc | sed 's/^[[:space:]]*//' || true)
+          allowed='"services": [{ "binding": "LLMGW", "service": "api-cf-llmgateway-front" }],'
+          [[ -z $services || $services == "$allowed" ]] || { echo '::error::the only service binding allowed is LLMGW -> api-cf-llmgateway-front'; exit 1; }
       - name: Bundle the Worker (no credentials, nothing uploaded)
         working-directory: proxy
         env:
