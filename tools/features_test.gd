@@ -76,6 +76,7 @@ func _run() -> void:
 	await _npcs()
 	await _roaming()
 	await _input_cooldown()
+	await _charting()
 	await _heavy_strike()
 	await _nerve()
 	await _mood_attacks()
@@ -2956,6 +2957,66 @@ func _champion_moves() -> void:
 	_check(chaser.cell == hall, "with the chase off, it stays even once seen")
 	Roaming.turn(fs, {"boss_chase": true})
 	_check(chaser.cell != hall and chaser.hunting, "seen, with boss-chase, it comes after you")
+
+
+## The rest of a floor goes onto the map late on (rules/chart.gd): by instinct once enough of it is seen, or from a monster that is
+## out of the way and was carrying a map. (map_test checks the rules; this is the game doing it.)
+func _charting() -> void:
+	var Chart = load("res://src/rules/chart.gd")
+	var flow = _flow(880)
+	await flow.new_run()
+	var s = flow.state
+	var heard := []
+	flow.happened.connect(func(name, d):
+		if name == "charted":
+			heard.append(d))
+	var at := float(Chart.table().instinct_at)
+	var cells: Array = s.reach().keys()
+	await flow.press("right")
+	_check(s.charted.is_empty() and heard.is_empty(), "with little of the floor seen (%.0f%%), nothing is charted" % (Chart.share(s) * 100.0))
+	for i in ceili(cells.size() * at):
+		s.seen[cells[i]] = true
+	await flow.tick(flow.clock + 60000.0) # the run's own banner has gone: instinct doesn't talk over another banner
+	await flow.press("left")
+	var words: Dictionary = Chart.table().instinct
+	_check(not s.charted.is_empty() and heard.size() == 1 and heard[0].how == "instinct" and int(heard[0].cells) == s.charted.size(), "at %.0f%% seen, instinct charts the rest (%d cells)" % [at * 100.0, s.charted.size()])
+	_check(s.banner != null and s.banner.title == str(words.title) and s.lines.any(func(l): return l.text == str(words.line)), "and says so on the picture and in the log")
+	_check(Chart.known(s, s.floor_map.stairs), "the stairs are on the map")
+	await flow.press("right")
+	_check(heard.size() == 1, "once a floor")
+	await flow.new_run()
+	s = flow.state
+	_check(s.charted.is_empty(), "a new floor starts with nothing charted")
+	# a monster's map: one that fled keeps it, one out of the way that rolled it hands it over
+	cells = s.reach().keys()
+	for i in ceili(cells.size() * at) - 1:
+		s.seen[cells[i]] = true
+	var carrier = null
+	var other = null
+	for m in s.floor_map.monsters:
+		if m.boss:
+			continue
+		m.gone = "spared"
+		var has: bool = Chart.drops(s, m)
+		m.gone = ""
+		if has and carrier == null:
+			carrier = m
+		elif other == null:
+			other = m
+	_check(carrier != null and other != null, "on this floor one monster carries a map and another is there to flee from (%d monsters)" % s.floor_map.monsters.size())
+	if carrier == null or other == null:
+		return
+	await flow.go("intro", {"foe": other})
+	await flow.go("menu")
+	await flow.encounter.leave_fight([])
+	_check(s.charted.is_empty() and heard.size() == 1, "a monster you left standing keeps its map")
+	await flow.go("intro", {"foe": carrier})
+	await flow.go("menu")
+	carrier.gone = "spared"
+	await flow.encounter.leave_fight([])
+	_check(not s.charted.is_empty() and heard.size() == 2 and heard[1].how == "map", "one out of the way hands its map over (%d cells charted)" % s.charted.size())
+	_check(s.stage == "explore" and s.lines.any(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map")), "and the log says who was carrying it")
+	_check(Chart.known(s, s.floor_map.stairs) and not Chart.instinct_due(s), "the stairs are on the map, and instinct has nothing left to add")
 
 
 ## What a fight's end does to keys, without the scene. (gameplay_test presses real keys.)

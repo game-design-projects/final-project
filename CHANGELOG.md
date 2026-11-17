@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- The whole floor's map: **M**, or a click on the corner map, puts every cell of the floor over the picture with the floor's name and how much of it is seen; the arrows walk under it, and M, Esc or a click puts it away (#114).
+- Explorer's instinct: once 80% of a floor is seen, the rest of its layout and the stairs go onto the map (#115).
+- A monster put out of the way, spared or slain, may have been carrying a map of the floor, which charts it the same way: 5% with nothing seen, rising to 50% (#115).
+- `tools/sim_chart.gd` measures how much of a floor is seen when the stairs show and the steps instinct saves, for tuning `chart` in `data/floors.json`.
+
+### Changed
+- A click on the corner map opens the whole floor's map instead of pinning the legend; the legend stays on hover and on **I**.
+
 ### Fixed
 - The row under the cursor reads at WCAG's small-text contrast (4.95:1 on the pick's fill, was 3.75:1): a label you can't use, and the line under any picked row.
 

@@ -54,6 +54,7 @@ func _run() -> void:
 	await _camp_grid(game)
 	await _mouse(game)
 	await _hover_and_tips(game)
+	await _full_map(game)
 	await _thinking(game)
 	await _sub_text_wraps(game)
 	await _start_is_guarded(game)
@@ -534,6 +535,77 @@ func _hover_and_tips(game) -> void:
 	s.allies = []
 	await process_frame
 	_check(tips.chip_count() == 0, "no allies, no chips")
+
+
+## The whole floor's map: M and a click on the corner map open it, M, Esc or a tap put it away, the arrows walk under it, and it is
+## never up outside the walk.
+func _full_map(game) -> void:
+	await game.flow.new_run()
+	game.flow._keys_back_at = -1.0
+	await process_frame
+	await process_frame
+	var s = game.flow.state
+	var paused := {"v": false}
+	var note := func(name, _d):
+		if name == "pause_requested":
+			paused.v = true
+	game.flow.happened.connect(note)
+	_check(not game.map_open() and game._automap.visible and not game._full_map.visible, "walking, the corner map shows and the full map is away")
+	_check(str(s.hint).contains("M MAP"), "the key hints name M")
+	game._unhandled_input(_key(KEY_M, {}, 109))
+	await process_frame
+	await process_frame
+	_check(game.map_open() and game._full_map.visible and not game._automap.visible, "M opens the whole floor's map in the corner map's place")
+	_check(game._full_map.window_cells() == s.floor_map.size, "all of the floor is on it (%d cells across, %d px each, in %s)" % [s.floor_map.size, game._full_map.cell_px(), game._full_map.size])
+	s.facing = _way_on(s)
+	var stood: Vector2i = s.cell
+	game._unhandled_input(_key(KEY_UP))
+	await process_frame
+	await process_frame
+	_check(s.cell != stood and game.map_open() and s.stage == "explore", "an arrow walks under it, and it stays up")
+	game._unhandled_input(_key(KEY_ESCAPE))
+	await process_frame
+	await process_frame
+	_check(not game.map_open() and not paused.v and not game._pause.visible and game._automap.visible, "Esc puts it away, and does not open the menu")
+	game._unhandled_input(_key(KEY_M, {}, 109))
+	game._unhandled_input(_key(KEY_M, {}, 109))
+	await process_frame
+	_check(not game.map_open(), "M opens it and M closes it")
+	var held := _key(KEY_M, {}, 109)
+	held.echo = true
+	game._unhandled_input(held)
+	_check(not game.map_open(), "a held M is not a second press")
+	var corner: Vector2 = game._automap.get_global_rect().get_center() - game._picture.get_global_position()
+	game._on_picture_input(_click(corner))
+	await process_frame
+	await process_frame
+	_check(game.map_open() and game._tips.pinned == "", "a click on the corner map opens it too")
+	stood = s.cell
+	game._on_picture_input(_click(_on_picture(game, Vector2(224, 144))))
+	await process_frame
+	await process_frame
+	_check(not game.map_open() and s.cell == stood and s.stage == "explore", "and a click anywhere puts it away, and does nothing else")
+	game.show_map(true)
+	game._unhandled_input(_key(KEY_ENTER))
+	await process_frame
+	await process_frame
+	_check(not game.map_open() and s.stage == "camp", "Enter puts it away and makes camp")
+	game._unhandled_input(_key(KEY_M, {}, 109))
+	await process_frame
+	_check(not game.map_open(), "at camp M opens nothing")
+	await game.flow.go("explore")
+	game.flow._keys_back_at = -1.0
+	game.show_map(true)
+	await process_frame
+	await _fight(game)
+	await process_frame
+	await process_frame
+	_check(not game.map_open() and not game._full_map.visible, "a fight puts it away")
+	game._unhandled_input(_key(KEY_M, {}, 109))
+	await process_frame
+	_check(not game.map_open() and game.flow.state.stage == "menu", "and in a fight M opens nothing")
+	game.flow.happened.disconnect(note)
+	await game.flow.new_run()
 
 
 func _text_of(blocks: Array) -> String:

@@ -89,12 +89,15 @@ func hover_command(i: int, rect := Rect2()) -> void:
 	_command_rect = rect
 
 
-## A click or tap at `p` in the picture: on the foe or the automap it keeps that card open (or closes it).
-func tap(p: Vector2) -> void:
+## A click or tap at `p` in the picture: on the foe it keeps its card open (or closes it). Returns what was tapped: "foe", "map"
+## (the automap: the scene opens the whole floor's map, and the legend stays on the pointer and the info key) or "".
+func tap(p: Vector2) -> String:
 	if state != null and _allowed("foe") and FOE_RECT.has_point(p):
 		toggle("foe")
-	elif state != null and _allowed("map") and automap_rect().has_point(p):
-		toggle("map")
+		return "foe"
+	if state != null and _allowed("map") and automap_rect().has_point(p):
+		return "map"
+	return ""
 
 
 ## A tap or click on `key`'s thing: keep its card open, or close it when it is the one open.
@@ -295,6 +298,7 @@ static func ally_blocks(a) -> Array:
 ## With the run's state `s`, each kind also says how its clan feels about you, and the card ends on what makes this floor harder.
 static func map_blocks(roaming := false, s = null) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
+	out.append({"kind": "text", "text": "M or a click: the whole floor."})
 	var genres: Dictionary = Content.table("encounter").genres
 	var depth: int = s.depth if s != null and not s.practice else 1
 	for entry in Kinds.at_depth(depth): # this floor's five kinds, each with its attack and how its clan feels
@@ -314,6 +318,7 @@ static func map_blocks(roaming := false, s = null) -> Array:
 	out.append({"kind": "swatch", "color": Palette.STIR, "left": "SOMETHING", "right": "walk round it, or fight it"})
 	var writing: Dictionary = Lore.table().legend
 	out.append({"kind": "swatch", "color": Palette.MERCY, "left": str(writing.left), "right": str(writing.right)})
+	out.append({"kind": "swatch", "color": Automap.CHARTED.lightened(0.25), "left": "CHARTED", "right": "known from a map, not seen"})
 	if s != null:
 		out.append({"kind": "text", "text": harder_text(s)})
 	return out

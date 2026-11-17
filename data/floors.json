@@ -112,6 +112,20 @@
    "territory": true
   }
  ],
+ "chart": {
+  "instinct_at": 0.8,
+  "drop": {"start": 0.05, "full": 0.5},
+  "instinct": {
+   "title": "EXPLORER'S INSTINCT",
+   "text": "You have walked enough of this floor to know how the rest must run.",
+   "line": "The rest of the floor is on your map now, and the stairs with it."
+  },
+  "map": {
+   "title": "A MAP",
+   "text": "%s was carrying a map of this floor.",
+   "line": "%s was carrying a map of this floor. The rest of it is on your map now, and the stairs with it."
+  }
+ },
  "friend": {
   "title": "WICK",
   "line": "A very small witch hops up and hands you a heart. She lights the torches here.",

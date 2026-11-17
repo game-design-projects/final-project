@@ -30,7 +30,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `network_test` | Timeouts, retries, Jev's answers |
 | `view_test` | Models, sight, camera, automap, palettes |
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
-| `map_test` | The floor generators, biomes and chunks, and what sight costs on a big floor |
+| `map_test` | The floor generators, biomes and chunks, what sight costs on a big floor, charting the rest of a floor and the full map |
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, and a save without any of them |
 | `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game |
 | `features_test` | Each feature with its flag on and off (it switches them itself), and the champion holding the stairs over 1,000 seeds (the issue #26 measurement) |
@@ -47,6 +47,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
 | `screenshots`, `camera_shots`, `map_shots`, `nerve_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
+| `sim_chart` | How much of a floor is seen when the stairs first show, and the steps instinct saves on the way to them, per biome and depth (`seeds=N`); for tuning `chart` in `data/floors.json` |
 | `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`); it prints hits, how much of the box is lit, and moments with no way out |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
