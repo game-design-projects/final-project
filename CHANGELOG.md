@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- A fight no longer stops after a feeling late in a long run with Jev: with 63 answers kept, keeping the pressure answer emptied the lot and the mercy answer was read back from nothing (`Invalid access to property or key 'mercy{…}'` in `jev_mind.gd`). The pair is returned as answered, and a full memory drops its oldest answer instead of all 64.
+
 ## [0.9.3] - 2026-11-17
 
 ### Added

@@ -31,6 +31,7 @@ func _run() -> void:
 	await _waiting_is_visible()
 	await _batched_questions()
 	await _batch_failure_falls_back()
+	await _a_full_memory_keeps_the_pair()
 	await _malformed_numbers_fall_back()
 	await _asked_ahead_goes_out_once()
 	_local_minds_ask_one_then_the_other()
@@ -157,6 +158,29 @@ func _asked_ahead_goes_out_once() -> void:
 	_check(is_equal_approx(later, 0.64) and is_equal_approx(ahead.v, 0.64), "and both askers get its answer")
 	_check(Network.waiting_what() == "", "nothing is out once it is answered")
 	_delay_s = 0.0
+
+
+## Jev keeps KNOWN_MAX answers. The pair is two of them: with one place left, keeping the second used to empty the lot, the
+## first with it, and the fight stopped on reading the first back (a playtest, late in a long run). Every fill level around
+## the limit answers both, and the pair just kept is still there for the menu.
+func _a_full_memory_keeps_the_pair() -> void:
+	var m = _monster()
+	var reply := [{"status": 200, "text": JSON.stringify({"answers": {"mercy": {"noul": 0.7}, "pressure": {"score": 2.5}}})}]
+	for kept in [JevMind.KNOWN_MAX - 2, JevMind.KNOWN_MAX - 1, JevMind.KNOWN_MAX]:
+		var mind := JevMind.new("https://proxy.invalid", LocalMind.new())
+		for i in kept:
+			mind._remember("other%d" % i, 0.5)
+		_begin(reply)
+		var both = await mind.mercy_and_pressure(m)
+		_check(both is Dictionary and is_equal_approx(both.get("mercy", -1.0), 0.7) and is_equal_approx(both.get("pressure", -1.0), 2.5), "with %d answers already kept, the pair still comes back (%s)" % [kept, both])
+		_check(mind._known.size() <= JevMind.KNOWN_MAX, "and no more than %d are kept (%d)" % [JevMind.KNOWN_MAX, mind._known.size()])
+		var again: float = await mind.mercy(m)
+		var press: float = await mind.pressure(m)
+		_check(_requests.size() == 1 and is_equal_approx(again, 0.7) and is_equal_approx(press, 2.5), "and the menu opening after it asks nothing more (%d requests)" % _requests.size())
+	var full := JevMind.new("https://proxy.invalid", LocalMind.new())
+	for i in JevMind.KNOWN_MAX + 3:
+		full._remember("other%d" % i, 0.5)
+	_check(full._known.size() == JevMind.KNOWN_MAX and not full._known.has("other0") and full._known.has("other%d" % (JevMind.KNOWN_MAX + 2)), "a full memory drops its oldest answers, not all of them")
 
 
 func _batch_failure_falls_back() -> void:

@@ -98,16 +98,17 @@ func _post(state: Dictionary, questions: Dictionary, what: String) -> Dictionary
 func mercy_and_pressure(m) -> Dictionary:
 	var mercy_key := _key("mercy", m)
 	var pressure_key := _key("pressure", m)
-	if not (_known.has(mercy_key) and _known.has(pressure_key)):
-		var r := await _post(_state(m, {}), {"mercy": MERCY_Q, "pressure": PRESSURE_Q}, ASKS.pressure)
-		var odds := _odds(_answer(r, "mercy"))
-		var press := _score(_answer(r, "pressure"))
-		print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
-		if odds < 0.0 or press < 0.0:
-			return {"mercy": odds if odds >= 0.0 else await _fallback.mercy(m), "pressure": press if press >= 0.0 else await _fallback.pressure(m)}
-		_remember(mercy_key, odds)
-		_remember(pressure_key, press)
-	return {"mercy": _known[mercy_key], "pressure": _known[pressure_key]}
+	if _known.has(mercy_key) and _known.has(pressure_key):
+		return {"mercy": _known[mercy_key], "pressure": _known[pressure_key]}
+	var r := await _post(_state(m, {}), {"mercy": MERCY_Q, "pressure": PRESSURE_Q}, ASKS.pressure)
+	var odds := _odds(_answer(r, "mercy"))
+	var press := _score(_answer(r, "pressure"))
+	print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
+	if odds < 0.0 or press < 0.0:
+		return {"mercy": odds if odds >= 0.0 else await _fallback.mercy(m), "pressure": press if press >= 0.0 else await _fallback.pressure(m)}
+	_remember(mercy_key, odds)
+	_remember(pressure_key, press)
+	return {"mercy": odds, "pressure": press} # the answers themselves: what is kept can be dropped to make room
 
 
 func _feelings() -> Dictionary:
@@ -188,7 +189,12 @@ func _key(kind: String, m) -> String:
 	return kind + JSON.stringify(_state(m, {}))
 
 
+## Keeps an answer. When the room is full the oldest answers go (a Dictionary keeps the order things went in), one for
+## one, so the pair kept a line apart in mercy_and_pressure is never split by the second pushing the first out.
 func _remember(key: String, answer: float) -> void:
-	if _known.size() >= KNOWN_MAX:
-		_known.clear()
+	if not _known.has(key):
+		while _known.size() >= KNOWN_MAX:
+			var oldest: String = _known.keys()[0]
+			_known.erase(oldest)
+			print_verbose("jev: %d answers kept, dropping the oldest (%s)" % [KNOWN_MAX, oldest.left(40)])
 	_known[key] = answer
