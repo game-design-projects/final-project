@@ -272,7 +272,7 @@ static func from_dict(d: Dictionary):
 		if id is String and Keepsakes.known(id) and not s.keepsakes.has(id): # what the ember heart gave is in maxHp already
 			s.keepsakes.append(id)
 	for species in d.get("heavyKnown", []) if d.get("heavyKnown") is Array else []:
-		if Combat.HEAVY_WEAK.has(str(species)):
+		if Combat.weighs_heavy(str(species)):
 			s.heavy_known[str(species)] = true
 	s.hunger = clampf(float(d.hunger), 0.0, float(Survival.table().hunger.starving_at)) if SaveCheck.is_num(d.get("hunger")) else 0.0
 	s.starved_steps = maxi(0, SaveCheck.to_int(d.starvedSteps)) if SaveCheck.is_num(d.get("starvedSteps")) else 0

@@ -2,6 +2,8 @@
 ## The values are tuning; change them here, nowhere else.
 extends RefCounted
 
+const Content = preload("res://src/rules/content.gd")
+
 const START_HP := 20
 const START_GOLD := 8
 const CUT_COST := 6 # what a fair cut of gold costs, if the monster takes it
@@ -21,7 +23,6 @@ const HOARD_FIRE_BONUS := 4 # the dragon's charm
 const HEAVY_BAR_SCALE := 0.6
 const HEAVY_MISS_EDGE := 0.35
 const HEAVY_DAMAGE := 1.25
-const HEAVY_WEAK := {"rock": 1.5, "dragon": 1.2, "bandit": 1.0, "snake": 0.8, "slime": 0.55}
 const HEAVY_MISS_PRESSURE := 0.5 # a miss leaves you off balance: the next attack presses this much harder
 
 # What being hit does to a monster's mood
@@ -84,9 +85,20 @@ static func heavy_strike(x: float, boss: bool, species: String, hoard_fire: bool
 	return {"miss": false, "crit": crit, "damage": roundi(scaled) + (HOARD_FIRE_BONUS if hoard_fire else 0) + aid}
 
 
-## How much a heavy blow does to this species, against 1.0 for one that takes it plainly.
+## How much a heavy blow does to this species, against 1.0 for one that takes it plainly. Each species carries its own number
+## (`data/species.json`, "heavy"): a rock takes it and a slime barely does.
 static func heavy_weakness(species: String) -> float:
-	return float(HEAVY_WEAK.get(species, 1.0))
+	return float((Content.table("species").get(species, {}) as Dictionary).get("heavy", 1.0))
+
+
+## The species a heavy blow has its own number against: every one of them (the table is the game's cast).
+static func heavy_species() -> Array:
+	return Content.table("species").keys()
+
+
+## Whether a monster of this species takes heavy blows the way its own entry says.
+static func weighs_heavy(species: String) -> bool:
+	return Content.table("species").has(species)
 
 
 ## What this many allies add to a strike.
