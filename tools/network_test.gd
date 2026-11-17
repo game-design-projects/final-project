@@ -7,10 +7,13 @@ extends "res://tools/test_base.gd"
 
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
+const Mind = preload("res://src/mind/mind.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Network = preload("res://src/network/network.gd")
+const Fault = preload("res://src/utils/fault.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const SafeMind = preload("res://src/mind/safe_mind.gd")
 const SeededMind = preload("res://src/mind/seeded_mind.gd")
 
 const URL := "https://proxy.invalid/api/jev"
@@ -18,6 +21,44 @@ const URL := "https://proxy.invalid/api/jev"
 var _requests: Array = [] # the body of every request the stand-in saw
 var _replies: Array = [] # what it says next: {"status", "text"} or {"error"}; the last one repeats
 var _delay_s := 0.0
+
+
+## A mind whose every answer is the wrong shape: what a script error inside a question leaves behind, and worse.
+class Junk extends "res://src/mind/mind.gd":
+	func label() -> String: return "junk"
+	func read_words(_text: String) -> Dictionary: return {}
+	func feeling_when_hit(_m) -> Dictionary: return {"sad": NAN}
+	func feeling_when_told(_m, _intents: Array) -> Dictionary: return {"sad": 0.0, "enraged": 0.0}
+	func mercy(_m) -> float: return NAN
+	func join(_m) -> float: return 1.5
+	func pressure(_m) -> float: return -1.0
+	func mercy_and_pressure(_m) -> Dictionary: return {"pressure": 2.0}
+
+
+## The playtest's fault as an export has it: no script error there, the answer that was lost reads back as null.
+class Nulled extends "res://src/mind/mind.gd":
+	func label() -> String: return "nulled"
+	func mercy_and_pressure(_m) -> Dictionary: return {"mercy": null, "pressure": 2.5}
+
+
+## A mind that trips for real, the way the playtest's did in a debug build: the read of a key that isn't there ends the function.
+class Tripping extends "res://src/mind/mind.gd":
+	func label() -> String: return "tripping"
+	func mercy_and_pressure(_m) -> Dictionary:
+		var kept := {}
+		return {"mercy": kept["mercy"], "pressure": kept["pressure"]}
+
+
+## A mind that never answers.
+class Silent extends "res://src/mind/mind.gd":
+	signal never
+	func label() -> String: return "silent"
+	func mercy(_m) -> float:
+		await never
+		return 0.9
+	func feeling_when_hit(_m) -> Dictionary:
+		await never
+		return {"sad": 1.0}
 
 
 func _name() -> String:
@@ -35,6 +76,7 @@ func _run() -> void:
 	await _malformed_numbers_fall_back()
 	await _asked_ahead_goes_out_once()
 	_local_minds_ask_one_then_the_other()
+	await _a_mind_gone_wrong_cannot_stop_a_fight()
 	_default_proxy_is_for_the_game_only()
 	Network.transport = Callable()
 	Network.reset()
@@ -218,6 +260,60 @@ func _local_minds_ask_one_then_the_other() -> void:
 	var mercy: float = b.mercy(m)
 	var pressure: float = b.pressure(m)
 	_check(both.mercy == mercy and both.pressure == pressure, "the seeded mind draws mercy first, then pressure, as before")
+
+
+## Every mind the game uses is inside a SafeMind, the edge where its answers are checked. An answer that isn't one (the wrong
+## shape, a number out of range, an export's null where a key was missing, a script error's empty leftovers, or none at all):
+## a debug build reports it and hands it on as it is (fail fast), an export has the local rules answer so the fight goes on.
+func _a_mind_gone_wrong_cannot_stop_a_fight() -> void:
+	var m = _monster()
+	var local := LocalMind.new()
+	var intents := [{"intent": "joke", "w": 1.0}]
+	_check(Minds.create(Rng.new(3)) is SafeMind, "the mind a game gets is a guarded one")
+	_check(not Fault.tolerant(), "a debug build (this run) fails fast; only an export carries on")
+	for as_export in [false, true]:
+		Fault.forced = as_export
+		var good := SafeMind.new(SeededMind.new(Rng.new(9)))
+		var bare := SeededMind.new(Rng.new(9))
+		var same: bool = await good.feeling_when_hit(m) == bare.feeling_when_hit(m) and await good.mercy(m) == bare.mercy(m)
+		var pair: Dictionary = await good.mercy_and_pressure(m)
+		var bare_pair: Dictionary = await bare.mercy_and_pressure(m)
+		_check(same and pair == bare_pair and good.saved == 0, "%s: a good answer passes through untouched, in the same order (a seeded game plays the same)" % ("export" if as_export else "debug"))
+	print("network_test: the errors below are the faults these checks cause on purpose")
+	# debug: reported, and nothing papered over
+	Fault.forced = false
+	var before := Fault.count
+	var loud := SafeMind.new(Junk.new())
+	var given: Dictionary = await loud.mercy_and_pressure(m)
+	_check(given == {"pressure": 2.0} and Fault.count == before + 1 and loud.saved == 0, "debug: half a pair is a fault and is handed on as it is, so the run fails where it would without the guard (%s)" % Fault.last)
+	_check(is_nan(await loud.mercy(m)) and Fault.count == before + 2, "debug: so is a number that is not one")
+	# an export: reported, and the local rules answer
+	Fault.forced = true
+	before = Fault.count
+	var junk := SafeMind.new(Junk.new())
+	_check(await junk.read_words("hello there") == local.read_words("hello there"), "export: no odds for the words, the local rules read them")
+	_check(await junk.feeling_when_hit(m) == local.feeling_when_hit(m), "export: a feeling that is not a number, the local rules feel it")
+	_check(await junk.feeling_when_told(m, intents) == local.feeling_when_told(m, intents), "export: odds that add up to nothing, the local rules feel it")
+	_check(await junk.mercy(m) == local.mercy(m) and await junk.join(m) == local.join(m) and await junk.pressure(m) == local.pressure(m), "export: numbers that are not numbers or out of range, the local rules answer")
+	var half: Dictionary = await junk.mercy_and_pressure(m)
+	_check(half.get("mercy") == local.mercy(m) and half.get("pressure") == local.pressure(m), "export: half a pair is no pair, the local rules answer both (%s)" % [half])
+	_check(junk.saved == 7 and Fault.count == before + 7 and Fault.last.begins_with("mind: junk "), "export: each one is counted and logged under the mind's own name (%d)" % junk.saved)
+	var lost: Dictionary = await SafeMind.new(Nulled.new()).mercy_and_pressure(m)
+	_check(lost.get("mercy") == local.mercy(m) and lost.get("pressure") == local.pressure(m), "export: the playtest's fault as an export has it (mercy read back as null) is answered, not played as 0%% mercy (%s)" % [lost])
+	var after = await SafeMind.new(Tripping.new()).mercy_and_pressure(m)
+	_check(after is Dictionary and after.get("mercy") == local.mercy(m) and after.get("pressure") == local.pressure(m), "export: and as a debug build has it (a script error ends the question) too (%s)" % [after])
+	var worst := SafeMind.new(Junk.new(), Junk.new())
+	var last: Dictionary = await worst.mercy_and_pressure(m)
+	_check(last == {"mercy": SafeMind.LAST_MERCY, "pressure": SafeMind.LAST_PRESSURE} and await worst.feeling_when_hit(m) == SafeMind.LAST_FEELING and await worst.read_words("x") == SafeMind.LAST_WORDS, "export: with the local rules gone wrong too, there is still an answer the game can roll")
+	_check(SafeMind.DEADLINE_S > Network.TIMEOUT_S * (Network.RETRIES + 1) + Network.BACKOFF_S * 3.0, "export: the wait is longer than every try of one request, so a slow network is never cut short (%.0f s)" % SafeMind.DEADLINE_S)
+	var silent := SafeMind.new(Silent.new())
+	silent.deadline_s = 0.2
+	var began := Time.get_ticks_msec()
+	var odds: float = await silent.mercy(m)
+	var took := Time.get_ticks_msec() - began
+	_check(odds == local.mercy(m) and took >= 150 and took < 2000, "export: a mind that never answers is waited for only so long, then the local rules answer (%d ms)" % took)
+	_check(await silent.feeling_when_hit(m) == local.feeling_when_hit(m) and silent.saved == 2, "export: and so for a feeling")
+	Fault.forced = null
 
 
 func _default_proxy_is_for_the_game_only() -> void:

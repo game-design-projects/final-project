@@ -52,6 +52,14 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
 
+## When a part fails: debug stops, an export carries on
+
+`src/utils/fault.gd` holds the one rule. A debug build (the editor, the tools, CI) fails fast: a script error ends the function it is in and, under the editor's debugger, pauses the game on that line. An export does neither: measured on 4.7.2 with the 0.9.3 macOS build, a missing key reads as `null`, the function runs to its end, nothing is logged and `assert` is not evaluated, so a typed `float` can hold `null`.
+
+So a paused game in the editor is the debug build doing its job, and what an export needs is a place where a wrong answer is noticed. `src/mind/safe_mind.gd` is that place for the minds: every answer is checked (odds that can be rolled, a number in range, both halves of a pair, an answer within 30 s). A bad one is reported with `Fault.report` (`fault N: mind: ...` in the log); a debug build hands it on untouched so the run fails as before, an export asks the local rules instead. `tools/network_test.gd` runs both sides by setting `Fault.forced`.
+
+To see what an export really does with a piece of code, swap a pack into a copy of a released app (an export template refuses `--path` and `-s`): `godot --headless --path <project> --export-pack <preset> out.pck`, copy it over `Donjon.app/Contents/Resources/Donjon.pck`, run `Donjon.app/Contents/MacOS/Donjon --headless`.
+
 ## Run flags
 
 Flags change one run. From source they go after `--`; the list with descriptions is `KNOWN` in `src/utils/flags.gd`.

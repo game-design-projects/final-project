@@ -1,13 +1,14 @@
 ## Picks the mind a game uses. `mock` asks for the seeded random one (except for an offline game such as social-demo,
 ## which always gets the rule-based one). `jev=<url>` (or `saved_url`, the address the player saved, or else the one
 ## a build ships with, or else DEFAULT_URL for the game itself) asks Jev through the proxy, with the rule-based mind
-## answering whenever the network can't. Otherwise the rule-based one.
+## answering whenever the network can't. Otherwise the rule-based one. Whichever it is goes inside a SafeMind.
 extends RefCounted
 
 const Flags = preload("res://src/utils/flags.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const SafeMind = preload("res://src/mind/safe_mind.gd")
 const SeededMind = preload("res://src/mind/seeded_mind.gd")
 
 
@@ -49,4 +50,4 @@ static func create(rng: Rng, saved_url := "", offline := false, use_default := f
 		if url != "":
 			mind = JevMind.new(url, mind)
 	print("mind: %s" % mind.label())
-	return mind
+	return SafeMind.new(mind) # the edge where its answers are checked: a bad one stops a debug build and is replaced in an export
