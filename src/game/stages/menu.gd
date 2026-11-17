@@ -52,8 +52,10 @@ func enter(flow, _args: Dictionary) -> void:
 	s.menu.append({"label": ITEM, "sub": "%d in your bag" % s.items.size(), "disabled": s.items.is_empty()})
 	if int(s.foe.social.get("opening", 0)) > 0:
 		s.menu[FIGHT].sub += " · OPENING +%d NEXT HIT" % int(s.foe.social.opening)
-	if nerve > 0 and flow.feature("nerve"): # as the strike bar does: nothing to say, and nothing to spend, while you hold none
-		s.menu[FIGHT].sub += " · NERVE %d/%d: +%d ON HIT; SPARE %s" % [nerve, Combat.NERVE_MAX, Combat.nerve_damage(nerve), Combat.chance_label(spare_odds)]
+	if nerve > 0: # as the strike bar does: nothing to say, and nothing to spend, while you hold none
+		# No SPARE odds for a clan that takes no mercy: SPARE is greyed out, and the nerve goes on the hit alone.
+		var spare_said := "" if enraged else "; SPARE %s" % Combat.chance_label(spare_odds)
+		s.menu[FIGHT].sub += " · NERVE %d/%d: +%d ON HIT%s" % [nerve, Combat.NERVE_MAX, Combat.nerve_damage(nerve), spare_said]
 	s.hint = "ARROWS / WASD CHOOSE · ENTER PICK · 1-%d · I INFO" % s.menu.size()
 
 
