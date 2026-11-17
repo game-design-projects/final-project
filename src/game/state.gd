@@ -76,6 +76,7 @@ var rotate_mini_games := false # every third attack is a mini-game (the flow tur
 var social_offer := {} # only the social stage owns this popup
 var social_typing := false
 var social_note := ""
+var social_heard := {} # the typed line the popup is previewing: {text, choice (an index into the menu, or -1 for plain words), words}
 var recent_social := "" # last species to offer, to space repeated topics
 var encounter_start := {} # snapshot (foe, purse, tally, party) taken when a fight begins, to try it again after dying; a retry starts at full HP
 
