@@ -21,6 +21,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The Jev Worker reaches the LLM gateway through a service binding (`LLMGW` -> `api-cf-llmgateway-front`) instead of its public address, so a Jev request no longer pays 30-100 ms on its way out and back whenever it lands on a new machine; same key, same budget. CI allows that one binding and no other.
 
 ### Fixed
+- The one service binding in `wrangler.jsonc` is checked only on the parsed file (`proxy/worker.test.js`), not by a line match in the check job: the line match still refused the same binding written in another key order or across several lines, which stalls the proxy deploy; `docs/DEVELOPMENT.md` says the line is deleted in a copy for another account, since the test expects it on `main`.
 - The Worker workflow's guard reads the one service binding by its keys and values instead of its exact spacing, so a valid `wrangler.jsonc` written another way is no longer refused and the proxy deploy no longer stalls on it; `docs/DEVELOPMENT.md` now says what the binding is for, that the Worker falls back to https without it, and that another account deletes that line.
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
 - A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.

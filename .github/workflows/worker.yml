@@ -42,16 +42,14 @@ jobs:
       - name: Worker tests and scope guard
         working-directory: proxy
         run: node --test worker.test.js
-      - name: Worker config is one workers.dev Worker with no routes, builds or extra bindings
+      - name: Worker config has no routes, builds or data bindings
         run: |
           set -euo pipefail
+          # The one service binding (LLMGW -> api-cf-llmgateway-front) and the top-level keys are checked on the parsed
+          # file by worker.test.js, the step above. A text match cannot tell the same binding from a second one once it is
+          # written with other spacing, in another key order or over several lines, and a check that refuses a valid
+          # config stops the deploy as surely as one that lets a wrong config through.
           ! grep -E '^[[:space:]]*"(routes|route|build|kv_namespaces|d1_databases|r2_buckets)"' proxy/wrangler.jsonc || { echo '::error::wrangler.jsonc has more than the one Worker'; exit 1; }
-          # The one service binding allowed: the LLM gateway's Worker (worker.test.js checks the parsed config too).
-          # It is compared by its keys and values, not by its spacing or a trailing comma, so the same binding written
-          # differently is the same binding. A `services` array spread over several lines does not match: a refusal, not a pass.
-          services=$(grep -E '^[[:space:]]*"services"' proxy/wrangler.jsonc | tr -d '[:space:]' | sed 's/,$//' || true)
-          allowed='"services":[{"binding":"LLMGW","service":"api-cf-llmgateway-front"}]'
-          [[ -z $services || $services == "$allowed" ]] || { echo '::error::the only service binding allowed is LLMGW -> api-cf-llmgateway-front'; exit 1; }
       - name: Bundle the Worker (no credentials, nothing uploaded)
         working-directory: proxy
         env:
