@@ -32,10 +32,6 @@ func unpin() -> void:
 	_has_pin = false
 
 
-func is_pinned() -> bool:
-	return _has_pin
-
-
 ## A float in [0, 1).
 func real() -> float:
 	var roll := _pinned if _has_pin else _rng.real()

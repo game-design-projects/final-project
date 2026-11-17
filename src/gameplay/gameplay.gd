@@ -55,11 +55,6 @@ static func picture_width(room: Vector2) -> int:
 	return maxi(VIEW_W, snappedi(VIEW_H * shape, WIDTH_STEP))
 
 
-## How wide the dock (the log, the commands) is in a window this wide.
-static func dock_width(window_w: float) -> float:
-	return window_w - FRAME_MARGIN * 2.0 - FRAME_PAD_X * 2.0
-
-
 const KEYS := {
 	KEY_UP: "up", KEY_W: "up", KEY_DOWN: "down", KEY_S: "down", KEY_LEFT: "left", KEY_A: "left", KEY_RIGHT: "right", KEY_D: "right",
 	KEY_ENTER: "confirm", KEY_KP_ENTER: "confirm", KEY_SPACE: "confirm", KEY_Z: "confirm", KEY_ESCAPE: "cancel", KEY_X: "cancel",

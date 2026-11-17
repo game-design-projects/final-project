@@ -13,7 +13,6 @@ const LIFT := 0.012 # how far a ring sits off the floor, so the two don't flicke
 const CHEST := Vector3(0.9, 0.42, 0.6)
 const DRAWN_CHEST := 0.56 # how tall the drawings stand
 const DRAWN_SACK := 0.44
-const LID_H := 0.16
 const STIR_MOTES := 18
 const STIR_RADIUS := 0.26
 const STIR_HEIGHT := 1.0
