@@ -9,6 +9,7 @@ const Automap = preload("res://src/view/automap.gd")
 const Chart = preload("res://src/rules/chart.gd")
 const Chunks = preload("res://src/rules/maps/chunks.gd")
 const Content = preload("res://src/rules/content.gd")
+const Dice = preload("res://src/utils/dice.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -439,6 +440,7 @@ func _chart() -> void:
 	fresh.cell = fresh.floor_map.start
 	_check(not fresh.to_dict().has("charted"), "a save with nothing charted reads as it always did")
 	# a monster's map: its own roll, the same every time, and about as often as the chance says
+	var dice := Dice.new(Rng.new(0)) # unpinned: `keyed` draws from the floor's seed, whichever generator it is handed
 	var rolls := 0
 	var maps := 0
 	var steady := true
@@ -452,17 +454,36 @@ func _chart() -> void:
 		for m in s.floor_map.monsters:
 			if m.boss:
 				m.gone = "slain"
-				steady = steady and not Chart.drops(s, m)
+				steady = steady and not Chart.drops(s, m, dice)
 				continue
-			steady = steady and not Chart.drops(s, m) # still standing: it keeps its map
+			steady = steady and not Chart.drops(s, m, dice) # still standing: it keeps its map
 			m.gone = "spared" if rolls % 2 == 0 else "slain"
-			var first: bool = Chart.drops(s, m)
-			steady = steady and first == Chart.drops(s, m)
+			var first: bool = Chart.drops(s, m, dice)
+			steady = steady and first == Chart.drops(s, m, dice)
 			rolls += 1
 			maps += int(first)
 	var rate := float(maps) / rolls
 	_check(steady, "a monster's map is its own roll: the same when asked again, never a champion's, never one still standing")
 	_check(absf(rate - float(numbers.drop.full)) < 0.08, "at the most likely, about %.0f%% of monsters carry one (%d of %d, %.0f%%)" % [float(numbers.drop.full) * 100.0, maps, rolls, rate * 100.0])
+	# the roll is the run's dice, keyed by the floor and the monster: a pinned dice rules it like every other chance
+	var pinned := Dice.new(Rng.new(0))
+	var some_floor = State.new() # a state at the share where a monster is likeliest to carry one
+	some_floor.depth = 3
+	some_floor.floor_map = FloorGen.generate(Rng.new(7), _plan(Content.table("biomes").biomes[0], 3))
+	var some_cells: Array = some_floor.reach().keys()
+	for i in ceili(some_cells.size() * at):
+		some_floor.seen[some_cells[i]] = true
+	var on_it = some_floor.floor_map.monsters.filter(func(m): return not m.boss)[0]
+	on_it.gone = "spared"
+	pinned.pin(0.0)
+	var always: bool = Chart.drops(some_floor, on_it, pinned)
+	pinned.pin(0.99)
+	var never: bool = Chart.drops(some_floor, on_it, pinned)
+	pinned.unpin()
+	_check(always and not never, "a pinned dice rules the map too (0.0: it carries one, 0.99: it does not)")
+	var stranger = Monster.new() # not one of this floor's monsters: no place of its own to roll from
+	stranger.gone = "spared"
+	_check(not Chart.drops(some_floor, stranger, pinned), "a monster that is not one of the floor's monsters carries none")
 
 
 ## The whole floor over the picture (automap.gd drawn `full`): every cell fits a picture of the usual size, and a picture too small

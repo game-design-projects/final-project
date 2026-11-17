@@ -2997,7 +2997,7 @@ func _charting() -> void:
 		if m.boss:
 			continue
 		m.gone = "spared"
-		var has: bool = Chart.drops(s, m)
+		var has: bool = Chart.drops(s, m, flow.dice)
 		m.gone = ""
 		if has and carrier == null:
 			carrier = m

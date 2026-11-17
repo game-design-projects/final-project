@@ -367,7 +367,7 @@ func leave_fight(lines: Array) -> void:
 ## your map. Returns the log's line for it, or [] when it had none.
 func _map_from(m) -> Array:
 	var s = flow.state
-	if s.floor_map == null or not Chart.drops(s, m):
+	if s.floor_map == null or not Chart.drops(s, m, flow.dice):
 		return []
 	var chance: float = Chart.drop_chance(s)
 	var seen: float = Chart.share(s)
