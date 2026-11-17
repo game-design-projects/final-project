@@ -105,8 +105,7 @@ func mercy_and_pressure(m) -> Dictionary:
 		print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
 		if odds < 0.0 or press < 0.0:
 			return {"mercy": odds if odds >= 0.0 else await _fallback.mercy(m), "pressure": press if press >= 0.0 else await _fallback.pressure(m)}
-		_remember(mercy_key, odds)
-		_remember(pressure_key, press)
+		_remember_all({mercy_key: odds, pressure_key: press})
 	return {"mercy": _known[mercy_key], "pressure": _known[pressure_key]}
 
 
@@ -189,6 +188,17 @@ func _key(kind: String, m) -> String:
 
 
 func _remember(key: String, answer: float) -> void:
-	if _known.size() >= KNOWN_MAX:
+	_remember_all({key: answer})
+
+
+## Keeps one reply's answers together when making room: clearing between a batched mercy and pressure answer would leave the
+## first one absent before the caller can read it.
+func _remember_all(answers: Dictionary) -> void:
+	var added := 0
+	for key in answers:
+		if not _known.has(key):
+			added += 1
+	if _known.size() + added > KNOWN_MAX:
 		_known.clear()
-	_known[key] = answer
+	for key in answers:
+		_known[key] = answers[key]

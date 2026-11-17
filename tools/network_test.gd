@@ -30,6 +30,7 @@ func _run() -> void:
 	await _outages_are_retried()
 	await _waiting_is_visible()
 	await _batched_questions()
+	await _batch_at_cache_boundary()
 	await _batch_failure_falls_back()
 	await _malformed_numbers_fall_back()
 	await _asked_ahead_goes_out_once()
@@ -138,6 +139,21 @@ func _batched_questions() -> void:
 	await mind.feeling_when_hit(m)
 	_check(_requests.size() == 3, "a feeling is its own request: what it says changes the monster the next two questions are about")
 	Network.transport = _transport
+
+
+## Making room for a two-answer reply happens once, before either answer is stored. At 63 entries, clearing on the second
+## insertion used to discard mercy and make the pair fail as soon as it tried to read that answer.
+func _batch_at_cache_boundary() -> void:
+	var mind := JevMind.new("https://proxy.invalid", LocalMind.new())
+	for i in range(JevMind.KNOWN_MAX - 1):
+		mind._remember("old-%d" % i, 0.0)
+	var m = _monster()
+	_begin([{"status": 200, "text": JSON.stringify({"answers": {"mercy": {"noul": 0.7}, "pressure": {"score": 2.5}}})}])
+	var both: Dictionary = await mind.mercy_and_pressure(m)
+	var again: float = await mind.mercy(m)
+	var press: float = await mind.pressure(m)
+	_check(is_equal_approx(both.mercy, 0.7) and is_equal_approx(both.pressure, 2.5), "a two-answer reply survives the cache boundary (%s)" % [both])
+	_check(_requests.size() == 1 and is_equal_approx(again, 0.7) and is_equal_approx(press, 2.5), "and both boundary answers stay cached")
 
 
 ## Asked ahead (a dodge asks the mercy the menu after it will need) and asked again before Jev answers: one request, both get

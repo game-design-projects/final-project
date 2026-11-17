@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- Jev's mercy-and-pressure reply no longer loses mercy and stops a fight when its answer cache reaches 64 entries.
+
 ## [0.9.3] - 2026-11-17
 
 ### Added
