@@ -3,6 +3,10 @@
   "cooldown": 2,
   "memory_max": 8,
   "cost": 6,
+  "wary_pressure": 0.5,
+  "lie_pressure": 0.2,
+  "confide_friendliness": 10,
+  "confide_friendliness_curious": 18,
   "events": {
     "bandit": {
       "goal": "buy safety without losing face",

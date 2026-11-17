@@ -13,7 +13,7 @@ const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
 
-var _landed := {} # your strike that landed, while the friends' marks are still to come: {result, found, betrayal}
+var _landed := {} # your strike that landed, while the friends' marks are still to come: {result, found, betrayal, nerve}
 var _followed: Array = [] # the friends whose strikes landed after it
 var _follow_damage := 0 # and what they did in all
 var _pressed_at := -1e9 # when the last press that counted was, to let a slip of the finger go

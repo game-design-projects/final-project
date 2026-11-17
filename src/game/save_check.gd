@@ -118,6 +118,9 @@ static func _monster_problem(m, f: Dictionary) -> String:
 		for key in ["used", "promise", "betrayed", "pending", "was_low", "words_asked"]:
 			if social.has(key) and not social[key] is bool:
 				return "social %s is not a boolean" % key
+		# What a Snake was told about your record: true or false once you have answered it, and nothing before that.
+		if social.has("confided_mercy") and not (social.confided_mercy is bool or social.confided_mercy == null):
+			return "social confided_mercy is not true, false or nothing"
 		if social.has("history") and (not social.history is Array or social.history.any(func(v): return not v is Dictionary)):
 			return "social history is not a list of records"
 		for key in ["rounds", "due", "checked", "seed", "pressure", "soft_turns", "opening", "trial"]:
