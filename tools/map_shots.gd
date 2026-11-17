@@ -1,6 +1,8 @@
 ## Pictures of the floors the generators make, for looking at (tests can't judge looks): each biome's largest floor from above, and
 ## in first person what its secrets look like: the start, a cracked wall, the chest behind it, a pad, and the automap on a big floor.
 ## Then the whole floor's map (M) half seen and with the rest charted, and the corner map of a charted floor.
+## Each biome starts with no pause menu and a running game clock, and a capture identical to the one before it ends the
+## run with a non-zero exit and the capture's name: a frozen picture must never be saved twice and pass as evidence.
 ##   godot --path . -s res://tools/map_shots.gd -- out=<dir> nosound
 extends SceneTree
 
@@ -18,6 +20,10 @@ const SEEDS := [21, 22, 23]
 
 var _out := ""
 var _game
+var _failed := false
+var _last_hash := ""
+var _last_name := ""
+var _hashes := {}
 
 
 func _initialize() -> void:
@@ -45,6 +51,17 @@ func _run() -> void:
 	_game._overlay.visible = true
 	for biome in Content.table("biomes").biomes:
 		await _walk_through(biome)
+		if _failed:
+			return
+	print("map_shots: %d captures, every one different from the one before it" % _hashes.size())
+	for biome in Content.table("biomes").biomes:
+		var id := str(biome.id)
+		print("map_shots: %s whole map %s | charted %s | corner %s" % [
+			id,
+			_hashes.get("%s_3_full_map" % id, "MISSING"),
+			_hashes.get("%s_4_full_map_charted" % id, "MISSING"),
+			_hashes.get("%s_5_corner_charted" % id, "MISSING"),
+		])
 	print("map_shots: written to %s" % _out)
 	quit()
 
@@ -88,6 +105,9 @@ func _plan_picture(f, name: String) -> void:
 
 func _walk_through(biome: Dictionary) -> void:
 	var flow = _game.flow
+	await _reset_before_biome(str(biome.id))
+	if _failed:
+		return
 	var s = flow.state
 	s.floor_map = FloorGen.generate(Rng.new(SEEDS[0]), _plan(biome, 5))
 	s.palette_id = Floors.palette(biome.id, SEEDS[0])
@@ -160,15 +180,29 @@ func _walk_through(biome: Dictionary) -> void:
 		await _shot("%s_c_request" % biome.id)
 		await flow.press("cancel")
 	s.items = ["salve", "sugar", "smoke"]
-	await flow.go("intro", {"foe": f.monsters[0]})
-	await _wait(1.4)
+	await flow.go("intro", {"foe": _a_foe(f)})
+	await _wait_for_stage(flow, "menu", "%s: the fight menu" % biome.id)
+	if _failed:
+		return
 	await _shot("%s_9_fight_menu" % biome.id)
-	await flow.press("5")
-	await _wait(0.4)
+	var item_row := _menu_row(flow, "ITEM")
+	if item_row < 0:
+		_fail("%s: the fight menu has no ITEM row" % biome.id)
+		return
+	await flow.press(str(item_row + 1))
+	await _wait_for_stage(flow, "items", "%s: the bag" % biome.id)
+	if _failed:
+		return
 	await _shot("%s_9b_bag" % biome.id)
 	await flow.press("cancel")
-	await flow.press("4")
-	await _wait(0.4)
+	await _wait_for_stage(flow, "menu", "%s: back from the bag" % biome.id)
+	if _failed:
+		return
+	await flow.press("4") # FLEE ends the fight: the next floor has to start on the walk, not inside a menu
+	await _wait_for_stage(flow, "explore", "%s: the end of the fight" % biome.id)
+	if _failed:
+		return
+	await _wait_awake("%s: after the fight" % biome.id)
 
 
 ## Stand a step or two off a cell, looking at it.
@@ -238,11 +272,92 @@ func _a_cracked_wall(f) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+## Put the last biome's fight and menus away before the next floor is built, and prove the game is running again: `_process`
+## returns early while the pause menu is up, which used to leave every later biome on one frozen frame.
+func _reset_before_biome(where: String) -> void:
+	_game.show_map(false)
+	if _game._pause.visible:
+		_game._resume()
+		print("map_shots: %s: closed the pause menu left open by the floor before" % where)
+	_game._social.suspended = false
+	_game._tips.unpin()
+	if _game.flow.state.stage != "explore":
+		_fail("%s: the next floor would start in stage '%s', not on the walk" % [where, _game.flow.state.stage])
+		return
+	await _wait_awake(where)
+
+
+## A frame after the pause menu closes is not enough: wait until the game clock moves, which only `_process` does.
+func _wait_awake(where: String) -> void:
+	var before: float = _game._clock_ms
+	var deadline := Time.get_ticks_msec() + 3000
+	while _game._pause.visible or _game._clock_ms <= before:
+		if Time.get_ticks_msec() > deadline:
+			_fail("%s: the game did not resume ticking (pause menu %s, clock %.0f ms)" % [where, "open" if _game._pause.visible else "closed", _game._clock_ms])
+			return
+		await create_timer(0.05).timeout
+
+
+## Wait for the flow to reach a stage, continuing the intro's "ANY KEY" card so the wait is about the stage, not a keypress.
+## Every pass yields a timer: `flow.press` can finish without awaiting anything, and a loop that never yields would starve
+## the game's `_process` (the intro then never finishes its own continue).
+func _wait_for_stage(flow, stage: String, where: String) -> void:
+	var deadline := Time.get_ticks_msec() + 5000
+	while flow.state.stage != stage:
+		if Time.get_ticks_msec() > deadline:
+			_fail("%s: still in stage '%s', not '%s' (clock %.0f, hint '%s')" % [where, flow.state.stage, stage, flow.clock, flow.state.hint])
+			return
+		if flow.state.stage == "intro" and flow.state.hint == "ANY KEY CONTINUE":
+			await flow.press("confirm")
+		await create_timer(0.05).timeout
+
+
+## The row of a menu with this label, or -1: which key opens ITEM depends on the features that add rows above it.
+func _menu_row(flow, label: String) -> int:
+	for i in flow.state.menu.size():
+		if str(flow.state.menu[i].get("label", "")) == label:
+			return i
+	return -1
+
+
+## A monster that can be fled from: a champion blocks FLEE, and the next floor is built after this fight.
+func _a_foe(f):
+	var walkers: Array = f.monsters.filter(func(m): return not m.is_gone() and not m.boss)
+	return walkers[0] if not walkers.is_empty() else f.monsters[0]
+
+
 func _wait(seconds: float) -> void:
 	await create_timer(seconds).timeout
 
 
+## Take the picture, and refuse to save it when the game is frozen or the pixels are the ones just saved.
 func _shot(name: String) -> void:
+	if _failed:
+		return
+	await _wait_awake(name)
+	if _failed:
+		return
+	if _game._pause.visible:
+		_fail("%s: the pause menu is up, the picture would be frozen" % name)
+		return
 	await RenderingServer.frame_post_draw
-	root.get_texture().get_image().save_png("%s/%s.png" % [_out, name])
-	print("map_shots: %s" % name)
+	var img := root.get_texture().get_image()
+	var digest := img.get_data().hex_encode().md5_text()
+	if digest == _last_hash:
+		_fail("%s: the same pixels as %s (%s); the capture is frozen" % [name, _last_name, digest])
+		return
+	_last_hash = digest
+	_last_name = name
+	_hashes[name] = digest
+	img.save_png("%s/%s.png" % [_out, name])
+	print("map_shots: %s %s" % [name, digest])
+
+
+## Stop with a non-zero exit and the name of the floor and capture: a screenshot tool must not save a frozen frame.
+func _fail(message: String) -> void:
+	if _failed:
+		return
+	_failed = true
+	push_error("map_shots: FAIL: %s" % message)
+	print("map_shots: FAIL: %s" % message)
+	quit(1)
