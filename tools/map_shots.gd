@@ -115,6 +115,7 @@ func _walk_through(biome: Dictionary) -> void:
 	var f = s.floor_map
 	s.seen = {}
 	s.visited = {}
+	s.charted = {} # a new floor starts uncharted, as Flow._make_floor: the last biome's charted cells are not this one's
 	_put(s, f.start, f.start_facing())
 	s.banner = null
 	await _wait(0.5)
@@ -246,6 +247,9 @@ func _roam(s, f, biome: Dictionary) -> void:
 		s.seen[cells[i]] = true
 		if i % 3 == 0:
 			s.visited[cells[i]] = true
+	if not s.charted.is_empty(): # the picture says how much is seen: charted cells before the reveal are another floor's
+		_fail("%s: %d charted cells before the reveal, so the half-seen map is not half seen" % [biome.id, s.charted.size()])
+		return
 	_game.show_map(true)
 	await _wait(0.3)
 	await _shot("%s_3_full_map" % biome.id)
