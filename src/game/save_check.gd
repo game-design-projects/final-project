@@ -99,7 +99,7 @@ static func _floor_problem(f) -> String:
 static func _monster_problem(m, f: Dictionary) -> String:
 	if not m is Dictionary:
 		return "a monster is not a record"
-	if not Content.table("species").has(str(m.get("species", ""))):
+	if not Content.is_monster(str(m.get("species", ""))):
 		return "a monster is of no known species"
 	if not Content.table("encounter").genres.has(str(m.get("genre", ""))):
 		return "a monster fights in no known genre"

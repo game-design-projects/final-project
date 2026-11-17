@@ -173,7 +173,7 @@ func _learn_how_it_takes_it(flow, m) -> String:
 	s.heavy_known[m.species] = true
 	var weak := Combat.heavy_weakness(m.species)
 	print("fightbar: found out how a %s takes a heavy blow (%.2f)" % [m.species, weak])
-	if weak == 1.0:
+	if weak == Combat.HEAVY_PLAIN: # the number a species takes when it says nothing of its own
 		return ""
 	var found := Texts.heavy_found(m, weak)
 	if not flow.banner_up():

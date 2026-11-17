@@ -40,9 +40,14 @@ static func species(id: String) -> Dictionary:
 	return {}
 
 
+## Whether an id names a monster (data/species.json), not a friend who isn't one: what a save may say a monster is.
+static func is_monster(id: String) -> bool:
+	return table("species").has(id)
+
+
 ## Whether an id names a monster or a friend who isn't one (data/friends.json): what a save may say an ally is.
 static func is_species(id: String) -> bool:
-	return table("species").has(id) or table("friends").has(id)
+	return is_monster(id) or table("friends").has(id)
 
 
 ## "hi {name}" with {"name": "Drip"} -> "hi Drip". A {key} that isn't in vars stays as written.
