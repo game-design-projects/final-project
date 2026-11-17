@@ -160,10 +160,8 @@ func _a_charted_floor_comes_back_charted() -> void:
 	await flow.new_run()
 	var s = flow.state
 	var reach: Dictionary = s.reach()
-	var seen := 0
 	for c in reach: # see enough of the floor that instinct would chart the rest
 		s.seen[c] = true
-		seen += 1
 		if Chart.instinct_due(s):
 			break
 	_check(Chart.instinct_due(s), "on this floor, enough of it seen brings instinct (%.0f%% seen)" % (Chart.share(s) * 100.0))
@@ -178,11 +176,9 @@ func _a_charted_floor_comes_back_charted() -> void:
 	var before = State.from_dict(old)
 	_check(before != null and before.charted.is_empty(), "a save from before charting reads as a floor with nothing charted")
 	var wrong: Dictionary = s.to_dict()
-	wrong.charted = [[1, 1], "x", [2], [999, 999], [1.0, 3.0], [0, 0], [float(s.floor_map.stairs.x), float(s.floor_map.stairs.y)]]
+	wrong.charted = [[s.floor_map.start.x, s.floor_map.start.y], "x", [2], [999, 999], [0, 0], [float(s.floor_map.stairs.x), float(s.floor_map.stairs.y)]]
 	var kept = State.from_dict(wrong)
-	_check(kept != null and kept.charted.keys().all(func(c): return kept.floor_map.is_open(c)), "charted cells that are not cells of this floor are dropped, the rest kept")
-	_check(kept != null and kept.charted.has(s.floor_map.stairs), "the stairs given as floats still chart")
-	Flags.set_args(PackedStringArray([]))
+	_check(kept != null and kept.charted.size() == 2 and kept.charted.has(s.floor_map.start) and kept.charted.has(s.floor_map.stairs), "charted cells that are not cells of this floor are dropped, the rest kept (the start, and the stairs given as floats)")
 
 
 func _cleanup() -> void:
