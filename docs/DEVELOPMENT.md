@@ -33,7 +33,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `map_test` | The floor generators, biomes and chunks, and what sight costs on a big floor |
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, and a save without any of them |
 | `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game |
-| `features_test` | Each feature with its flag on and off (it switches them itself) |
+| `features_test` | Each feature with its flag on and off (it switches them itself), and the champion holding the stairs over 1,000 seeds (the issue #26 measurement) |
 
 `tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`.
 

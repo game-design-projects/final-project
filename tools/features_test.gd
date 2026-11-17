@@ -1428,24 +1428,42 @@ func _late_decisions() -> void:
 	_use()
 
 
+## The measurement issue #26 asks for: over 1,000 seeds, the fewest monster cells a walk from the start to the stairs
+## must enter. With the champion on the stairs that is never zero; with it back in its hall most floors can still be
+## walked past, which is the version the plan can still compare. The target is zero floors with no fight and no seed
+## unreachable: the stairs are reached through the champion's cell, never around it.
 func _gate() -> void:
+	const SEEDS := 1000
 	var spread := {}
 	var blocked := 0
-	for i in 200:
-		var f = FloorGen.generate(Rng.new(i + 1), Floors.plan(1).merged({"boss_at_exit": true}))
+	var unreachable := 0
+	for i in SEEDS:
+		var f = FloorGen.generate(Rng.new(i), Floors.plan(1).merged({"boss_at_exit": true}))
 		var champion = f.monsters.back()
-		if champion.cell == f.stairs and Floors.fights_required(f) >= 1:
+		var n: int = Floors.fights_required(f)
+		spread[n] = spread.get(n, 0) + 1
+		if n < 0:
+			unreachable += 1
+		if champion.cell == f.stairs and n >= 1:
 			blocked += 1
-	_check(blocked == 200, "boss-at-exit: the champion blocks the stairs on every floor (%d of 200)" % blocked)
-	for i in 200:
-		var f = FloorGen.generate(Rng.new(i + 1), Floors.plan(1))
+	print("features_test: fights required with the champion on the stairs: %s" % str(spread))
+	_check(unreachable == 0, "the champion at the exit leaves the stairs reachable on every floor (%d unreachable)" % unreachable)
+	_check(spread.get(0, 0) == 0, "no floor can be finished without a fight (%d of %d need none)" % [spread.get(0, 0), SEEDS])
+	_check(blocked == SEEDS, "the champion holds the stairs on every floor (%d of %d)" % [blocked, SEEDS])
+	spread = {}
+	for i in SEEDS:
+		var f = FloorGen.generate(Rng.new(i), Floors.plan(1))
 		var n: int = Floors.fights_required(f)
 		spread[n] = spread.get(n, 0) + 1
 	print("features_test: fights required with the champion in its hall: %s" % str(spread))
-	_check(spread.get(0, 0) > 100, "without it most floors can still be walked with no fight, as they always could")
-	var a = FloorGen.generate(Rng.new(5), Floors.plan(1).merged({"boss_at_exit": true}))
-	var b = FloorGen.generate(Rng.new(5), Floors.plan(1))
-	_check(a.grid == b.grid, "the flag only moves the champion: same seed, same maze")
+	_check(spread.get(0, 0) > SEEDS / 2, "with the champion back in its hall most floors can still be walked with no fight, as they always could (%d of %d)" % [spread.get(0, 0), SEEDS])
+	for seed_value in [0, 1, 5, 42, 999]:
+		var a = FloorGen.generate(Rng.new(seed_value), Floors.plan(1).merged({"boss_at_exit": true}))
+		var b = FloorGen.generate(Rng.new(seed_value), Floors.plan(1))
+		var same: bool = a.grid == b.grid and a.stairs == b.stairs and a.start == b.start and a.monsters.size() == b.monsters.size()
+		for j in a.monsters.size() - 1: # the champion is last; only it moves
+			same = same and a.monsters[j].cell == b.monsters[j].cell and a.monsters[j].species == b.monsters[j].species
+		_check(same and a.monsters.back().cell == a.stairs and b.monsters.back().cell != b.stairs, "seed %d: placing the champion at the exit moves only it" % seed_value)
 
 	var flow = _flow(45)
 	await flow.new_run()
