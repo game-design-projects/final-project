@@ -33,6 +33,8 @@ const LORE_SEED := 300 # the writing is placed from a generator of its own, so t
 ## floor.
 static func generate(rng: Rng, plan := {}):
 	var t0 := Time.get_ticks_usec()
+	plan = plan.duplicate()
+	plan.taken = (plan.get("names_taken", {}) as Dictionary).duplicate() # the names met this run, and this floor's as they are given
 	var f := FloorMap.new()
 	f.seed_value = rng.seed_value
 	f.hp_scale = float(plan.get("hp_scale", 1.0))
@@ -95,7 +97,7 @@ static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
 	var roster: Array = _kinds_here(plan)
 	var champion = f.monsters.pop_back()
 	for c: Vector2i in cells:
-		var m = Monster.make(rng, _at_depth(_one_of(roster, plan.get("biome", {}).get("weights", {}), rng), plan), c)
+		var m = Monster.make(rng, _at_depth(_one_of(roster, plan.get("biome", {}).get("weights", {}), rng), plan), c, plan.taken)
 		m.lurking = true
 		m.purse = rng.int_range(int(numbers.purse[0]), int(numbers.purse[1]))
 		f.monsters.append(m)
@@ -194,7 +196,7 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 				spot = c
 				break
 		used.append(spot)
-		monsters.append(Monster.make(rng, _at_depth(roster[i], plan), spot))
+		monsters.append(Monster.make(rng, _at_depth(roster[i], plan), spot, plan.taken))
 	var boss: Dictionary = enc.boss
 	var champion: Dictionary = plan.get("champion", boss)
 	var post: Vector2i = walk.farthest if plan.get("boss_at_exit", false) else hall

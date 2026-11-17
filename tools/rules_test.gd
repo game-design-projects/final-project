@@ -10,6 +10,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
+const Floors = preload("res://src/rules/floors.gd")
 const Hints = preload("res://src/rules/hints.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Monster = preload("res://src/rules/monster.gd")
@@ -24,7 +25,40 @@ func _name() -> String:
 	return "rules_test"
 
 
+## A playtest met a second KESSHRA after slaying the first, who then talked about "you slew Kesshra": no monster in a run shares
+## a name with one met before it, and a species that runs out of names counts on.
+func _names_are_not_reused() -> void:
+	var taken := {}
+	var repeats := []
+	var met := 0
+	for depth in range(1, 6):
+		var plan: Dictionary = Floors.plan(depth, {})
+		plan.lurkers = true
+		plan.names_taken = taken.duplicate()
+		var f = FloorGen.generate(Rng.new(4100 + depth), plan)
+		for m in f.monsters:
+			if m.boss:
+				continue
+			met += 1
+			if taken.has(m.name):
+				repeats.append(m.name)
+			taken[m.name] = true
+	_check(repeats.is_empty() and met >= 25, "%d monsters over five floors, no name met twice (%s)" % [met, repeats])
+	var all := {}
+	for n in ["Glop", "Drip"]:
+		all[n.to_upper()] = true
+	var name := Monster._fresh_name(Rng.new(1), ["Glop", "Drip"], all)
+	_check(name in ["GLOP II", "DRIP II"], "a species out of names counts on (%s)" % name)
+	all[name] = true
+	var third := Monster._fresh_name(Rng.new(1), ["Glop"], {"GLOP": true, "GLOP II": true})
+	_check(third == "GLOP III", "and on (%s)" % third)
+	var spare := Monster._fresh_name(Rng.new(1), ["Glop"], {"GLOP": true}, ["Plip"])
+	_check(spare == "PLIP", "a spare name before counting on (%s)" % spare)
+	_check(Monster._fresh_name(Rng.new(1), ["Glop", "Drip"], {"GLOP": true}, ["Plip"]) == "DRIP", "and a recorded name before a spare one")
+
+
 func _run() -> void:
+	_names_are_not_reused()
 	_strike_bands()
 	_mood_after_a_hit()
 	_dodge_cells()

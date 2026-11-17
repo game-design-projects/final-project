@@ -24,6 +24,20 @@
    "Drip",
    "Wobbles"
   ],
+  "spare_names": [
+   "Splotch",
+   "Gummo",
+   "Plip",
+   "Smudge",
+   "Burble",
+   "Sloosh",
+   "Dollop",
+   "Gelly",
+   "Mushel",
+   "Blub",
+   "Sog",
+   "Wibble"
+  ],
   "traits": [
    "shy",
    "hungry",
@@ -183,6 +197,20 @@
    "Sly Tam",
    "Nettle"
   ],
+  "spare_names": [
+   "Crow",
+   "Fen",
+   "Quill",
+   "Scab",
+   "Lark",
+   "Vane",
+   "Hob",
+   "Sixpence",
+   "Grit",
+   "Moll",
+   "Jinks",
+   "Cutter"
+  ],
   "traits": [
    "quick-fingered",
    "greedy",
@@ -339,6 +367,20 @@
    "Kesshra",
    "Nyss",
    "Zhessar"
+  ],
+  "spare_names": [
+   "Ssylla",
+   "Hissk",
+   "Sythe",
+   "Vresss",
+   "Ophi",
+   "Nasssa",
+   "Sileth",
+   "Isskar",
+   "Ksstra",
+   "Myssa",
+   "Thessk",
+   "Asssh"
   ],
   "traits": [
    "patient",
@@ -498,6 +540,20 @@
    "Ommon",
    "Granite"
   ],
+  "spare_names": [
+   "Flint",
+   "Cobble",
+   "Tor",
+   "Slate",
+   "Gneiss",
+   "Marl",
+   "Craig",
+   "Quarry",
+   "Scree",
+   "Feldspar",
+   "Old Chert",
+   "Dolmen"
+  ],
   "traits": [
    "ancient",
    "slow to anger",
@@ -654,6 +710,16 @@
    "Szarroth",
    "Kaelgrin",
    "Ythrax"
+  ],
+  "spare_names": [
+   "Pyrrhex",
+   "Ombraxa",
+   "Vyrmathe",
+   "Cindrel",
+   "Zolgarax",
+   "Thessarok",
+   "Auvrel",
+   "Skarnyx"
   ],
   "traits": [
    "vain",

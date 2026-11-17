@@ -361,6 +361,11 @@ func _every_monster_stands_on_the_set() -> void:
 		_check(all.all(func(m): return (stage._stirs.has(m) and stage._stirs[m].visible and not stage._models.has(m)) if m.lurking else (stage._models.has(m) and stage._models[m].visible)), "all %d monsters are on the set, facing %s" % [all.size(), FloorMap.DIR_NAMES[facing]])
 	var stirring: Array = all.filter(func(m): return m.lurking)
 	if not stirring.is_empty():
+		var fought = all.filter(func(m): return not m.lurking and not m.boss)[0]
+		stage.off_set = fought # a fight is on: the battle screen is over the halls
+		stage.update(s, 0.0, FRAME)
+		_check(stirring.all(func(m): return not stage._stirs[m].get_child(0).visible), "no SOMETHING tag reads through the battle screen")
+		stage.off_set = null
 		stirring[0].lurking = false
 		stage.update(s, 0.0, FRAME)
 		_check(not stage._stirs[stirring[0]].visible and stage._models[stirring[0]].visible, "what stirred shows itself once you walk into it")

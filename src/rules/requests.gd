@@ -50,7 +50,8 @@ static func fill(rng, f, plan: Dictionary) -> bool:
 ## A name nobody on this floor has.
 static func _free_name(rng, f, species: String) -> String:
 	var taken: Array = f.monsters.map(func(m): return m.name)
-	var free: Array = Content.species(species).names.map(func(n): return str(n).to_upper()).filter(func(n): return not taken.has(n))
+	var sp: Dictionary = Content.species(species)
+	var free: Array = (sp.names + sp.get("spare_names", [])).map(func(n): return str(n).to_upper()).filter(func(n): return not taken.has(n))
 	return str(rng.pick(free)) if not free.is_empty() else "THE OLD ONE"
 
 

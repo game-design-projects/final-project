@@ -172,6 +172,25 @@ func summary() -> String:
 	return "HP %d/%d · gold %d · spared %d · slain %d" % [hp, max_hp, gold, tally.spared, tally.slain]
 
 
+## The names of the monsters met this run as far as it remembers them (upper case -> true): the floor you are on (or leaving),
+## the ones the clans talk about, the party and the friends you lost. A new floor gives its monsters other names.
+func names_met() -> Dictionary:
+	var out := {}
+	if floor_map != null:
+		for m in floor_map.monsters:
+			out[str(m.name).to_upper()] = true
+	for d in deeds:
+		out[str(d.who).to_upper()] = true
+	for a in allies:
+		out[str(a.name).to_upper()] = true
+	for b in butchered:
+		out[str(b.get("name", "")).to_upper()] = true
+	for n in left_behind:
+		out[str(n).to_upper()] = true
+	out.erase("")
+	return out
+
+
 func to_dict() -> Dictionary:
 	var visited_cells := []
 	for c in visited:

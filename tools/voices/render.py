@@ -76,7 +76,7 @@ def line_key(line):
 
 def roster_lines():
     """{"species": {species: [{key, text}]}}: every line a monster says (data/species.json "lines"), as the game fills it
-    in: each of the species' names (first letter capital) for {name}, "you" for {target}. A line that is only a stage
+    in: each of the species' names and spare names (first letter capital) for {name}, "you" for {target}. A line that is only a stage
     direction has no words to record and is left out; the game voices it with the synthesiser (src/audio/shout.gd)."""
     species = json.load(open(os.path.join(ROOT, "data", "species.json")))
     out = {}
@@ -84,7 +84,7 @@ def roster_lines():
         seen = {}
         for pool in spec["lines"].values():
             for line in pool:
-                for name in spec["names"]:
+                for name in spec["names"] + spec.get("spare_names", []):
                     fill = {"name": name[:1].upper() + name[1:].lower(), "target": "you"}
                     filled = re.sub(r"\{(\w+)\}", lambda m: fill.get(m.group(1), m.group(0)), line)
                     text = speakable(filled)

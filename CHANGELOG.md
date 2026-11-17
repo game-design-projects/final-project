@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- No monster in a run takes a name met before it (the floor you leave, the deeds the clans remember, the party), so a second KESSHRA no longer talks about the KESSHRA you slew. Each species has 12 spare names (the dragon 8, `spare_names` in `data/species.json`), drawn once its recorded names are used up; their lines with the name in them use the synthesised voice until `tools/voices/render.py` renders them. Out of both, it counts on: GLOP II.
+- The Jev Worker answers with `server-timing` (the rate limiter and the way to Jev), and the game's log prints it beside its own time, so a slow answer says which hop was slow.
+
+### Changed
+- The mind thinks while you do something else: the mercy the menu needs is asked as the dodge starts, a fight's first odds come in while it greets you, and a question already out is never asked twice (whoever asks next waits for the same answer).
+- A blow that ends the fight no longer waits on Jev: whether it was begging is the mercy the gauge showed. A strike that doesn't end it asks two questions instead of three.
+- The come-along choice after a spare opens at once; how much it wants to come is asked while you choose.
+- The THINKING line says who and what about ("NYSS IS THINKING: WILL IT ACCEPT MERCY"), and is not shown during a dodge; the strike's "ENTER STRIKE" hint goes away once the bar has.
+- SAY SOMETHING ELSE: Enter shows how your words are heard and keeps them in the box; Enter again on the same words says them. Words that answer none of the offer's choices are said as plain words (the offer ends, the monster reacts as to SAY SOMETHING, for your action) instead of "Not understood".
+
+### Fixed
+- The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
+- A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.
+
 ## [0.9.0] - 2026-11-16
 
 ### Added
