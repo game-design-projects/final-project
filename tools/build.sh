@@ -123,4 +123,8 @@ for p in "${platforms[@]}"; do
   fi
   echo "   $zip ($(du -h "$zip" | cut -f1))"
 done
-echo "Monsters in these builds: ${base:+Jev through $base}${base:-local rules}"
+if [[ -n $base ]]; then
+  echo "Monsters in these builds: Jev through $base"
+else
+  echo "Monsters in these builds: the local rules"
+fi
