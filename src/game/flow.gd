@@ -290,6 +290,7 @@ func _make_floor(way := {}) -> void:
 		plan.lurkers = true
 		plan.request = Requests.due(state.depth)
 		plan.lore = true
+		plan.names_taken = state.names_met()
 		state.floor_map = FloorGen.generate(floor_rng, plan)
 		_send_elites()
 	state.palette_id = Floors.palette(state.floor_map.biome, state.floor_map.seed_value)
