@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+- Each species' heavy-blade weakness is its own number in `data/species.json` ("heavy": the rock 1.5, the dragon 1.2, the bandit 1.0, the snake 0.8, the slime 0.55) instead of a table in `src/rules/combat.gd`; the values and so the fight are unchanged, and a species with no number of its own is now a failing check rather than a silent plain blow.
+
 ## [0.9.1] - 2026-11-17
 
 ### Added
@@ -19,7 +22,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - The champion-on-the-stairs measurement is now a test over 1,000 seeds: no floor can be finished without a fight, the champion holds the stairs on every one, and no seed is unreachable (#26).
 - Nerve is on screen where it is spent: the fight menu and the strike bar say how much you hold out of five and what a strike adds, SPARE shows its odds before and after spending, and a SPARE a kept promise already guarantees no longer spends any. The FIGHT command says nothing about nerve while you hold none, as the strike bar already did.
 - The Snake's offer trades clearer: the truth gives an exact route and two softer attacks and it remembers whether you spared anyone here (it meets you wary if you spared nobody), denying mercy keeps the record private at the price of a vague direction and a slightly stronger attack, and 2 gold buys an exact route with nothing revealed.
-- Each species' heavy-blade weakness is its own number in `data/species.json` ("heavy": the rock 1.5, the dragon 1.2, the bandit 1.0, the snake 0.8, the slime 0.55) instead of a table in `src/rules/combat.gd`; the values and so the fight are unchanged.
 - Jev's numbers are checked before the rules act on them: an answer out of range, not a number or not finite falls back on the local rules instead of moving a meter.
 - The Jev Worker reaches the LLM gateway through a service binding (`LLMGW` -> `api-cf-llmgateway-front`) instead of its public address, so a Jev request no longer pays 30-100 ms on its way out and back whenever it lands on a new machine; same key, same budget. CI allows that one binding and no other.
 

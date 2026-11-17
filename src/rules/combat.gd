@@ -1,5 +1,6 @@
 ## The numbers of a fight: what a strike does, what it costs the monster's mood, and the party's starting purse.
-## The values are tuning; change them here, nowhere else.
+## The values are tuning; change them here, nowhere else. The one that isn't here is how a species takes a heavy blow: that
+## is the species' own number in `data/species.json` ("heavy"), as its clan, tastes and words are.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -23,6 +24,7 @@ const HOARD_FIRE_BONUS := 4 # the dragon's charm
 const HEAVY_BAR_SCALE := 0.6
 const HEAVY_MISS_EDGE := 0.35
 const HEAVY_DAMAGE := 1.25
+const HEAVY_PLAIN := 1.0 # a species with no number of its own takes a heavy blow as any other
 const HEAVY_MISS_PRESSURE := 0.5 # a miss leaves you off balance: the next attack presses this much harder
 
 # What being hit does to a monster's mood
@@ -85,20 +87,21 @@ static func heavy_strike(x: float, boss: bool, species: String, hoard_fire: bool
 	return {"miss": false, "crit": crit, "damage": roundi(scaled) + (HOARD_FIRE_BONUS if hoard_fire else 0) + aid}
 
 
-## How much a heavy blow does to this species, against 1.0 for one that takes it plainly. Each species carries its own number
-## (`data/species.json`, "heavy"): a rock takes it and a slime barely does.
+## How much a heavy blow does to this species, against `HEAVY_PLAIN` for one that takes it plainly. Each species carries its
+## own number (`data/species.json`, "heavy"): a rock takes it and a slime barely does.
 static func heavy_weakness(species: String) -> float:
-	return float((Content.table("species").get(species, {}) as Dictionary).get("heavy", 1.0))
+	return float((Content.table("species").get(species, {}) as Dictionary).get("heavy", HEAVY_PLAIN))
 
 
-## The species a heavy blow has its own number against: every one of them (the table is the game's cast).
+## The species that take a heavy blow on a number of their own, rather than as any other (an entry with no "heavy" falls back
+## on `HEAVY_PLAIN`; tools/features_test.gd says every species has one, which is what the game assumes).
 static func heavy_species() -> Array:
-	return Content.table("species").keys()
-
-
-## Whether a monster of this species takes heavy blows the way its own entry says.
-static func weighs_heavy(species: String) -> bool:
-	return Content.table("species").has(species)
+	var out := []
+	var all := Content.table("species")
+	for id in all:
+		if all[id] is Dictionary and all[id].has("heavy"):
+			out.append(id)
+	return out
 
 
 ## What this many allies add to a strike.

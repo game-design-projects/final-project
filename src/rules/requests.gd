@@ -107,7 +107,7 @@ static func settle(q: Dictionary, s) -> Dictionary:
 static func problem(q: Dictionary, monsters: int) -> String:
 	if not KINDS.has(str(q.get("kind", ""))):
 		return "the floor's request is of no known kind"
-	if not Content.table("species").has(str(q.get("species", ""))) or not q.get("name") is String:
+	if not Content.is_monster(str(q.get("species", ""))) or not q.get("name") is String:
 		return "the floor's request comes from no known monster"
 	if q.kind == "fetch":
 		return "" if Items.known(str(q.get("want", ""))) else "the floor's request wants no known thing"

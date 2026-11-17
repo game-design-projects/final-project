@@ -51,7 +51,7 @@ func _the_table() -> void:
 		_check(CLANS.all(func(c): return clans.has(c)), "every clan has a kind on B%dF (%s)" % [depth, ", ".join(clans.keys())])
 	for id in Kinds.all():
 		var k: Dictionary = Kinds.info(id)
-		var ok: bool = Content.table("species").has(str(k.species)) and genres.has(str(k.genre)) and DodgeRun.MINI_GAMES.has(str(k.genre))
+		var ok: bool = Content.is_monster(str(k.species)) and genres.has(str(k.genre)) and DodgeRun.MINI_GAMES.has(str(k.genre))
 		ok = ok and int(k.hp) > 0 and str(k.title) != "" and Color.html_is_valid(str(k.color)) and int(k.depth) >= 1 and int(k.depth) <= floors
 		var roam: Dictionary = k.get("roam", {})
 		if not roam.is_empty():
