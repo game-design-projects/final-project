@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 - Jev's mercy-and-pressure reply no longer loses mercy and stops a fight when its answer cache reaches 64 entries.
+- That reply is read from what came back and not from the cache it was just written to, and one that answers only half the pair keeps that half: a mercy asked ahead on a half-answered monster costs no request, and the cache-boundary case in `tools/network_test.gd` now fails a check instead of printing a script error that the suite still called passed.
 
 ## [0.9.3] - 2026-11-17
 
