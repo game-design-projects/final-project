@@ -61,9 +61,9 @@ func enter(flow, args: Dictionary) -> void:
 	var warning := Texts.hostile(m, s)
 	if not warning.is_empty(): # says more than WORD HAS SPREAD, so it takes the picture's place
 		flow.announce(warning.title, warning.text)
-	var mercy: float = await flow.encounter.mercy(m)
-	flow.encounter.known_mercy = mercy
-	s.mind_rows = [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": mercy}]
+	flow.encounter.known_mercy = -1.0
+	s.mind_rows = []
+	flow.encounter.think_ahead(m, true) # not awaited: the greeting (or its first strike) doesn't wait for the mind
 	_continue_at = flow.clock + flow.DIALOGUE_BUFFER_MS
 	print("intro: %s (%s) %s%s%s" % [m.name, m.species, "BOSS" if m.boss else "", " ELITE" if m.elite else "", " ENRAGED" if enraged else ""])
 

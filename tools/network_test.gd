@@ -32,6 +32,7 @@ func _run() -> void:
 	await _batched_questions()
 	await _batch_failure_falls_back()
 	await _malformed_numbers_fall_back()
+	await _asked_ahead_goes_out_once()
 	_local_minds_ask_one_then_the_other()
 	_default_proxy_is_for_the_game_only()
 	Network.transport = Callable()
@@ -137,6 +138,25 @@ func _batched_questions() -> void:
 	await mind.feeling_when_hit(m)
 	_check(_requests.size() == 3, "a feeling is its own request: what it says changes the monster the next two questions are about")
 	Network.transport = _transport
+
+
+## Asked ahead (a dodge asks the mercy the menu after it will need) and asked again before Jev answers: one request, both get
+## the answer, and the screen can say what is being thought about.
+func _asked_ahead_goes_out_once() -> void:
+	var mind := JevMind.new("https://proxy.invalid", LocalMind.new())
+	var m = _monster()
+	_begin([{"status": 200, "text": JSON.stringify({"answers": {"q": {"noul": 0.64}}})}])
+	_delay_s = 0.3
+	var ahead := {"v": -1.0}
+	(func(): ahead.v = await mind.mercy(m)).call() # not awaited, as Encounter.think_ahead
+	await process_frame
+	_check(Network.waiting_what() == "WILL IT ACCEPT MERCY?", "a question out says what it asks (%s)" % Network.waiting_what())
+	var later: float = await mind.mercy(m)
+	_check(_requests.size() == 1, "asked again while it is out, it goes out once (%d requests)" % _requests.size())
+	await process_frame # the one who asked ahead hears it right after (inside the same answer)
+	_check(is_equal_approx(later, 0.64) and is_equal_approx(ahead.v, 0.64), "and both askers get its answer")
+	_check(Network.waiting_what() == "", "nothing is out once it is answered")
+	_delay_s = 0.0
 
 
 func _batch_failure_falls_back() -> void:

@@ -277,12 +277,12 @@ func _generators_differ() -> void:
 
 func _classic_is_untouched() -> void:
 	# these seeds' floors as they were before the generators came: the grid's md5 and the stairs; the monsters, the last of them the
-	# champion, as they are since B1F has five kinds (data/kinds.json)
+	# champion, as they are since B1F has five kinds (data/kinds.json) and no two monsters of a run share a name
 	var golden := {
-		3: ["313a57227267a61edf46faf015ad62cb", Vector2i(11, 11), ["DRIP(10, 1)", "BLORBO(2, 4)", "SLY TAM(1, 6)", "NYSS(11, 6)", "GRANITE(3, 11)", "VEXALITH(6, 6)"]],
-		7: ["c30723289c78247d93cad5beda245eab", Vector2i(11, 7), ["WOBBLES(7, 3)", "SQUISH(9, 7)", "SLY TAM(1, 8)", "NYSS(4, 1)", "GRUMM(11, 10)", "VEXALITH(6, 6)"]],
-		7042: ["2b3d47566598db18c610e22d0760c229", Vector2i(11, 11), ["WOBBLES(3, 4)", "GLOOB(9, 1)", "MAGS(10, 3)", "ITHISS(5, 10)", "GRUMM(11, 7)", "VEXALITH(6, 6)"]],
-		123456: ["d58cd3ce9c112b41d60249f556861f36", Vector2i(9, 11), ["GLOP(7, 1)", "SQUISH(9, 3)", "PATCH(9, 7)", "SSSERA(11, 1)", "GRANITE(11, 9)", "VEXALITH(6, 6)"]],
+		3: ["313a57227267a61edf46faf015ad62cb", Vector2i(11, 11), ["DRIP(10, 1)", "SQUISH(2, 4)", "SLY TAM(1, 6)", "NYSS(11, 6)", "GRANITE(3, 11)", "VEXALITH(6, 6)"]],
+		7: ["c30723289c78247d93cad5beda245eab", Vector2i(11, 7), ["WOBBLES(7, 3)", "GLOP(9, 7)", "SLY TAM(1, 8)", "NYSS(4, 1)", "GRUMM(11, 10)", "VEXALITH(6, 6)"]],
+		7042: ["2b3d47566598db18c610e22d0760c229", Vector2i(11, 11), ["WOBBLES(3, 4)", "GLOP(9, 1)", "MAGS(10, 3)", "ITHISS(5, 10)", "GRUMM(11, 7)", "VEXALITH(6, 6)"]],
+		123456: ["d58cd3ce9c112b41d60249f556861f36", Vector2i(9, 11), ["GLOP(7, 1)", "BLORBO(9, 3)", "PATCH(9, 7)", "SSSERA(11, 1)", "GRANITE(11, 9)", "VEXALITH(6, 6)"]],
 	}
 	for seed_value in golden:
 		var f = FloorGen.generate(Rng.new(seed_value))

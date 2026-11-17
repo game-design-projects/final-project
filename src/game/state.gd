@@ -76,6 +76,7 @@ var rotate_mini_games := false # every third attack is a mini-game (the flow tur
 var social_offer := {} # only the social stage owns this popup
 var social_typing := false
 var social_note := ""
+var social_heard := {} # the typed line the popup is previewing: {text, choice (an index into the menu, or -1 for plain words), words}
 var recent_social := "" # last species to offer, to space repeated topics
 var encounter_start := {} # snapshot (foe, purse, tally, party) taken when a fight begins, to try it again after dying; a retry starts at full HP
 
@@ -169,6 +170,25 @@ func spot() -> void:
 ## "spared 1 · slain 0 · 8 gold", for the log when you come back to a save.
 func summary() -> String:
 	return "HP %d/%d · gold %d · spared %d · slain %d" % [hp, max_hp, gold, tally.spared, tally.slain]
+
+
+## The names of the monsters met this run as far as it remembers them (upper case -> true): the floor you are on (or leaving),
+## the ones the clans talk about, the party and the friends you lost. A new floor gives its monsters other names.
+func names_met() -> Dictionary:
+	var out := {}
+	if floor_map != null:
+		for m in floor_map.monsters:
+			out[str(m.name).to_upper()] = true
+	for d in deeds:
+		out[str(d.who).to_upper()] = true
+	for a in allies:
+		out[str(a.name).to_upper()] = true
+	for b in butchered:
+		out[str(b.get("name", "")).to_upper()] = true
+	for n in left_behind:
+		out[str(n).to_upper()] = true
+	out.erase("")
+	return out
 
 
 func to_dict() -> Dictionary:

@@ -26,7 +26,7 @@ static var transport := Callable()
 
 static var _failures := 0
 static var _down_until := 0.0 # seconds on the engine clock
-static var _flights := {} # id -> the engine's msec when that question went out, for the ones still waiting
+static var _flights := {} # id -> {at: the engine's msec when that question went out, what: what it asks}, for the ones still waiting
 static var _next_flight := 0
 
 
@@ -45,17 +45,31 @@ static func reset() -> void:
 static func waiting_ms() -> int:
 	if _flights.is_empty():
 		return 0
-	return Time.get_ticks_msec() - int(_flights.values().min())
+	return Time.get_ticks_msec() - _oldest().at
+
+
+## What the longest-waiting question asks ("WILL IT ACCEPT MERCY?"), for the screen; "" when nothing is waiting or it has no label.
+static func waiting_what() -> String:
+	return "" if _flights.is_empty() else str(_oldest().what)
+
+
+static func _oldest() -> Dictionary:
+	var out: Dictionary = {}
+	for f in _flights.values():
+		if out.is_empty() or f.at < out.at:
+			out = f
+	return out
 
 
 ## POST `body` as JSON. Returns {"ok": bool, "status": int, "json": Variant, "text": String, "error": String, "ms": int}.
-static func post_json(url: String, body: Dictionary, headers := {}, timeout_s := TIMEOUT_S) -> Dictionary:
+## `what` says what the question asks, for the screen while it waits (`waiting_what`).
+static func post_json(url: String, body: Dictionary, headers := {}, timeout_s := TIMEOUT_S, what := "") -> Dictionary:
 	if is_down():
 		return _fail("network is down, skipping %s" % url, 0, Time.get_ticks_msec())
 	print("network: -> %s asking %s" % [url, ", ".join(body.get("questions", {}).keys())])
 	_next_flight += 1
 	var id := _next_flight
-	_flights[id] = Time.get_ticks_msec()
+	_flights[id] = {"at": Time.get_ticks_msec(), "what": what}
 	var result := await _post(url, body, headers, timeout_s)
 	_flights.erase(id)
 	return result
@@ -91,7 +105,9 @@ static func _post(url: String, body: Dictionary, headers: Dictionary, timeout_s:
 			return _failed_for_good("the reply was not JSON", res.status, t0)
 		_failures = 0
 		var ms := Time.get_ticks_msec() - t0
-		print("network: %s -> %d in %d ms: %s" % [url, res.status, ms, str(res.text).left(300)])
+		# the proxy's own clock (server-timing): what of the wait was the model's front door, and what was the way there
+		var timing: String = res.get("timing", "")
+		print("network: %s -> %d in %d ms%s: %s" % [url, res.status, ms, " (server %s)" % timing if timing != "" else "", str(res.text).left(300)])
 		return {"ok": true, "status": res.status, "json": parsed.data, "text": res.text, "error": "", "ms": ms}
 	return {}
 
@@ -114,7 +130,11 @@ static func _send(url: String, payload: String, headers: Dictionary, timeout_s: 
 		return {"error": "timed out after %.0f s" % timeout_s}
 	if int(done[0]) != HTTPRequest.RESULT_SUCCESS:
 		return {"error": "%s (result %d)" % [RESULT_NAMES.get(int(done[0]), "request failed"), int(done[0])]}
-	return {"status": int(done[1]), "text": (done[3] as PackedByteArray).get_string_from_utf8()}
+	var timing := ""
+	for h in done[2] as PackedStringArray:
+		if h.to_lower().begins_with("server-timing:"):
+			timing = h.substr(h.find(":") + 1).strip_edges()
+	return {"status": int(done[1]), "text": (done[3] as PackedByteArray).get_string_from_utf8(), "timing": timing}
 
 
 static func _failed_for_good(error: String, status: int, t0: int) -> Dictionary:

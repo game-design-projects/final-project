@@ -619,7 +619,7 @@ func _show_figure(figure: Node3D, tag: Label3D, f, cell: Vector2i, now: float) -
 	var to_you := _camera.position - figure.position
 	figure.rotation.y = atan2(to_you.x, to_you.z)
 	figure.pose(now)
-	tag.visible = Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), cell)
+	tag.visible = off_set == null and Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), cell)
 
 
 ## Something stirring goes round and round where it waits, until you walk into it.
@@ -637,7 +637,8 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 	var stir: Node3D = _stirs[m]
 	stir.visible = true
 	stir.rotation.y = now * STIR_TURN
-	stir.get_child(0).visible = Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), m.cell)
+	# its SOMETHING tag, not while the battle screen is up: it read through the fight, over the foe (as _show_tags does)
+	stir.get_child(0).visible = off_set == null and Vision.sees_body(f, Vector2(_pos.x / CELL + 0.5, _pos.z / CELL + 0.5), m.cell)
 
 
 func _add_monster(m) -> void:

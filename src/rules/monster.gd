@@ -5,6 +5,7 @@ extends RefCounted
 const Content = preload("res://src/rules/content.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const ROMAN := ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"] # for a name met before: GLOP II
 
 const METER_MAX := 100.0
 
@@ -47,8 +48,9 @@ var hunting := false
 var last_seen := Vector2i(-1, -1)
 
 
-## `entry` is one line of the roster (species, genre, hp), or the boss. `cell` is where it stands.
-static func make(rng: Rng, entry: Dictionary, cell: Vector2i):
+## `entry` is one line of the roster (species, genre, hp), or the boss. `cell` is where it stands. `taken` holds the names
+## already met this run (upper case -> true): its name is one of the others, and joins them.
+static func make(rng: Rng, entry: Dictionary, cell: Vector2i, taken := {}):
 	var m = _from_entry(entry, cell)
 	var sp := Content.species(entry.species)
 	var start: Dictionary = sp.start
@@ -57,7 +59,8 @@ static func make(rng: Rng, entry: Dictionary, cell: Vector2i):
 		"anger": clampf(start.anger + rng.int_range(-5, 10), 0.0, METER_MAX),
 		"fear": float(start.fear),
 	}
-	m.name = str(entry.get("name", "")) if m.boss else str(rng.pick(sp.names)).to_upper()
+	m.name = str(entry.get("name", "")) if m.boss else _fresh_name(rng, sp.names, taken, sp.get("spare_names", []))
+	taken[m.name] = true
 	m.traits = _pick_traits(rng, m.species, sp)
 	m._roll_taste(rng)
 	print_verbose("monster: %s the %s (%s) %s, traits %s" % [m.name, m.species, m.kind, "boss" if m.boss else "", m.traits])
@@ -81,6 +84,23 @@ static func _from_entry(entry: Dictionary, cell: Vector2i):
 
 ## A monster whose personality is given instead of rolled (social-demo and the tests): the same species, genre and hp fields as
 ## `make`, and the taste its traits shift, without the random part. `entry` is a roster line, `meters` its starting feelings.
+## A name for one of a species that no one met this run has had, so a monster never shares a name with one you slew (its
+## clan would talk about it as someone else). `names` first: their lines are recorded (assets/voices); then `spare`, whose
+## lines with the name in them the synthesiser speaks until they are rendered. Out of both, it counts on: "GLOP II".
+static func _fresh_name(rng: Rng, names: Array, taken: Dictionary, spare := []) -> String:
+	var free := names.filter(func(n): return not taken.has(str(n).to_upper()))
+	if free.is_empty():
+		free = spare.filter(func(n): return not taken.has(str(n).to_upper()))
+	var base := str(rng.pick(free if not free.is_empty() else names)).to_upper()
+	if not taken.has(base):
+		return base
+	var n := 2
+	while taken.has("%s %s" % [base, ROMAN[mini(n, ROMAN.size() - 1)]]) and n < ROMAN.size() - 1:
+		n += 1
+	print_verbose("monster: every %s name is taken, so %s %s" % [names[0], base, ROMAN[n]])
+	return "%s %s" % [base, ROMAN[n]]
+
+
 static func given(entry: Dictionary, cell: Vector2i, given_name: String, given_traits: Array, meters: Dictionary):
 	var m = _from_entry(entry, cell)
 	m.meters = meters.duplicate()
