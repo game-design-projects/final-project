@@ -160,7 +160,7 @@ func _a_picked_row_that_cannot_be_picked_still_reads(panel) -> void:
 
 
 ## WCAG contrast: 1.0 is the same colour. Small text needs 4.5:1 (3.0 is the floor for large text and UI
-## boundaries), and these are labels on a fill, so 4.5 is what the checks ask for.
+## boundaries), and these are text on a fill, so 4.5 is what the checks ask for.
 func _contrast(a: Color, b: Color) -> float:
 	var la := _luminance(a)
 	var lb := _luminance(b)
