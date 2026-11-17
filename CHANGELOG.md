@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - A click on the corner map opens the whole floor's map instead of pinning the legend; the legend stays on hover and on **I**.
 
 ### Fixed
+- The whole floor's map keeps its own line: with M up, a banner (a floor's name, a first meeting, a tip) is held back instead of landing on the line that says the map's keys, and comes back when it closes.
 - The row under the cursor reads at WCAG's small-text contrast (4.95:1 on the pick's fill, was 3.75:1): a label you can't use, and the line under any picked row.
 
 ## [0.9.2] - 2026-11-17

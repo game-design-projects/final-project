@@ -444,6 +444,9 @@ func show_map(open: bool) -> void:
 	if open == _map_open:
 		return
 	_map_open = open
+	if _overlay != null: # its banner would land on the line the map says its keys in
+		_overlay.quiet = open
+		_overlay.queue_redraw()
 	print("gameplay: the full map %s" % ("opens" if open else "closes"))
 
 

@@ -70,6 +70,8 @@ var hurt_until := 0.0
 var shake_until := 0.0
 ## True while the title card is up (before a run has started).
 var title_card := false
+## Whether the banner is held back: the full map (automap.gd) is up over the picture, and its own line sits where the banner goes.
+var quiet := false
 ## When the fight began in clock ms, and how strong its white flash starts.
 var intro_at := -1e9
 var intro_strength := 0.5
@@ -314,7 +316,8 @@ func _draw() -> void:
 		var at: Vector2 = c.from.lerp(Vector2(W * 0.5, H), (clock_ms - c.born) / COMET_MS)
 		draw_circle(at, 3.0, Palette.WARN)
 		draw_line(at, at.lerp(c.from, 0.25), Color(Palette.WARN, 0.5), 2.0)
-	_banner()
+	if not quiet: # the whole floor's map is up over the picture, and the banner would land on the line the map says its keys in
+		_banner()
 
 
 ## Where the soul is in the box, in picture pixels (the box's middle when there is no dodge).

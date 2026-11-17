@@ -556,6 +556,7 @@ func _full_map(game) -> void:
 	await process_frame
 	await process_frame
 	_check(game.map_open() and game._full_map.visible and not game._automap.visible, "M opens the whole floor's map in the corner map's place")
+	_check(game._overlay.quiet, "and the banner holds back, so the map's own line has its place")
 	_check(game._full_map.window_cells() == s.floor_map.size, "all of the floor is on it (%d cells across, %d px each, in %s)" % [s.floor_map.size, game._full_map.cell_px(), game._full_map.size])
 	s.facing = _way_on(s)
 	var stood: Vector2i = s.cell
@@ -567,6 +568,7 @@ func _full_map(game) -> void:
 	await process_frame
 	await process_frame
 	_check(not game.map_open() and not paused.v and not game._pause.visible and game._automap.visible, "Esc puts it away, and does not open the menu")
+	_check(not game._overlay.quiet, "and the banner may come back")
 	game._unhandled_input(_key(KEY_M, {}, 109))
 	game._unhandled_input(_key(KEY_M, {}, 109))
 	await process_frame
