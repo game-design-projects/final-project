@@ -17,6 +17,8 @@ func enter(flow, _args: Dictionary) -> void:
 	var words := Requests.speak(q, s)
 	flow.event("shout", {"text": words, "species": q.species, "boss": false})
 	s.say([State.speech(q.name, words)])
+	if not s.questers_met.has(q.name): # heard now: its floor keeps the name for the next one, this keeps it for the run
+		s.questers_met.append(q.name)
 	var what: String = kind.sub % Requests.subject(q, s.floor_map)
 	match _status:
 		"new":

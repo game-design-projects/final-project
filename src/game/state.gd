@@ -50,6 +50,7 @@ var allies: Array = [] # Ally
 var tally := {"spared": 0, "slain": 0, "fled": 0, "recruited": 0, "left": 0}
 var reputation := {} # clan -> how it thinks of you, -100..100 (rules/clans.gd)
 var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest first
+var questers_met: Array = [] # the names of the ones who asked a favour and were heard: kept after their floor, as deeds keep the ones fought
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
@@ -173,8 +174,8 @@ func summary() -> String:
 
 
 ## The names of the monsters met this run as far as it remembers them (upper case -> true): the floor you are on (or leaving),
-## the one asking on it, the ones the clans talk about, the party and the friends you lost. A new floor gives its monsters
-## other names.
+## the one asking on it, the ones asking on the floors before it, the ones the clans talk about, the party and the friends you
+## lost. A new floor gives its monsters other names.
 func names_met() -> Dictionary:
 	var out := {}
 	if floor_map != null:
@@ -182,6 +183,8 @@ func names_met() -> Dictionary:
 			out[str(m.name).to_upper()] = true
 		if not floor_map.quester.is_empty(): # the one asking is a monster of the run too, named from the same pools
 			out[str(floor_map.quester.get("name", "")).to_upper()] = true
+	for n in questers_met: # and the ones heard asking on the floors before
+		out[str(n).to_upper()] = true
 	for d in deeds:
 		out[str(d.who).to_upper()] = true
 	for a in allies:
@@ -215,6 +218,8 @@ func to_dict() -> Dictionary:
 		out.skills = skills.duplicate()
 	if not keepsakes.is_empty(): # and so does one with no keepsake taken
 		out.keepsakes = keepsakes.duplicate()
+	if not questers_met.is_empty(): # and one whose run has heard nobody asking
+		out.questersMet = questers_met.duplicate()
 	return out
 
 
@@ -276,6 +281,9 @@ static func from_dict(d: Dictionary):
 	for who in d.get("leftBehind", []) if d.get("leftBehind") is Array else []:
 		if who is String:
 			s.left_behind.append(who)
+	for who in d.get("questersMet", []) if d.get("questersMet") is Array else []:
+		if who is String and who != "":
+			s.questers_met.append(who)
 	for b in d.get("butchered", []) if d.get("butchered") is Array else []:
 		if b is Dictionary and b.get("species") is String and b.get("name") is String:
 			s.butchered.append({"species": b.species, "name": b.name})
