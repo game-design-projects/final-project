@@ -1,5 +1,6 @@
 {
  "slime": {
+  "heavy": 0.55,
   "label": "orange slime",
   "color": "#ff8a1f",
   "nature": "A simple slime with a blank, unblinking stare. Timidly speaks with an innocent aura.",
@@ -173,6 +174,7 @@
   }
  },
  "bandit": {
+  "heavy": 1.0,
   "label": "bandit",
   "color": "#e0524e",
   "nature": "A wiry human bandit in a patched hood, all grins and knives. Talks fast in street slang and is always working out the take. Respects coin and a fair cut; loyal to whoever pays.",
@@ -344,6 +346,7 @@
   }
  },
  "snake": {
+  "heavy": 0.8,
   "label": "snake person",
   "color": "#6bd36b",
   "nature": "A coiled snake person, half human and half serpent. Sly and patient, it speaks slowly with long hissing s's and loves a clever bargain.",
@@ -516,6 +519,7 @@
   }
  },
  "rock": {
+  "heavy": 1.5,
   "label": "rock entity",
   "color": "#a7a39b",
   "nature": "A slow, ancient rock entity: a living heap of stone with a single glowing crack for an eye. It speaks rarely, in few, deep words, and thinks in centuries.",
@@ -687,6 +691,7 @@
   }
  },
  "dragon": {
+  "heavy": 1.2,
   "label": "yellow dragon",
   "color": "#ffe03a",
   "nature": "An ancient yellow dragon, proud, vain and clever. Speaks grandly and looks down on mortals.",

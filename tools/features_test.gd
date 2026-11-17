@@ -2450,21 +2450,21 @@ func _heavy_trade() -> void:
 	var mean := {}
 	for error_ms in [50.0, 80.0, 200.0]:
 		var row := {"quick": 0.0}
-		for species in Combat.HEAVY_WEAK:
+		for species in Combat.heavy_species():
 			row[species] = 0.0
 		for _i in 4000:
 			var e: float = rng.randfn(0.0, error_ms)
 			row.quick += Combat.strike(clampf(0.5 + e / half / 2.0, 0.0, 1.0), false, false).damage / 4000.0
-			for species in Combat.HEAVY_WEAK:
+			for species in Combat.heavy_species():
 				var x := clampf(0.5 + e / (half * Combat.HEAVY_BAR_SCALE) / 2.0, 0.0, 1.0)
 				row[species] += Combat.heavy_strike(x, false, species, false).damage / 4000.0
 		mean[error_ms] = row
-		print("heavy-strike: timing error %.0f ms, damage per swing: FIGHT %.1f, HEAVY %s" % [error_ms, row.quick, ", ".join(Combat.HEAVY_WEAK.keys().map(func(k): return "%s %.1f" % [k, row[k]]))])
+		print("heavy-strike: timing error %.0f ms, damage per swing: FIGHT %.1f, HEAVY %s" % [error_ms, row.quick, ", ".join(Combat.heavy_species().map(func(k): return "%s %.1f" % [k, row[k]]))])
 	_check(mean[50.0].rock > mean[50.0].quick * 1.3, "steady hands want it against a rock (%.1f against %.1f)" % [mean[50.0].rock, mean[50.0].quick])
 	_check(absf(mean[80.0].bandit - mean[80.0].quick) < mean[80.0].quick * 0.15, "against a bandit it is about even (%.1f against %.1f)" % [mean[80.0].bandit, mean[80.0].quick])
 	for error_ms in mean:
 		_check(mean[error_ms].slime < mean[error_ms].quick, "against a slime FIGHT is always better (%.0f ms: %.1f against %.1f)" % [error_ms, mean[error_ms].slime, mean[error_ms].quick])
-	for species in Combat.HEAVY_WEAK:
+	for species in Combat.heavy_species():
 		_check(mean[200.0][species] < mean[200.0].quick, "an unsteady hand stays with FIGHT against a %s (%.1f against %.1f)" % [species, mean[200.0][species], mean[200.0].quick])
 
 
