@@ -72,6 +72,7 @@ func _run() -> void:
 	await _waiting_is_visible()
 	await _batched_questions()
 	await _batch_at_cache_boundary()
+	await _half_an_answer_is_kept()
 	await _batch_failure_falls_back()
 	await _malformed_numbers_fall_back()
 	await _asked_ahead_goes_out_once()
@@ -184,7 +185,7 @@ func _batched_questions() -> void:
 
 
 ## Making room for a two-answer reply happens once, before either answer is stored. At 63 entries, clearing on the second
-## insertion used to discard mercy and make the pair fail as soon as it tried to read that answer.
+## insertion used to throw mercy away, so the pair cost a second request as soon as the menu asked for it.
 func _batch_at_cache_boundary() -> void:
 	var mind := JevMind.new("https://proxy.invalid", LocalMind.new())
 	for i in range(JevMind.KNOWN_MAX - 1):
@@ -196,6 +197,19 @@ func _batch_at_cache_boundary() -> void:
 	var press: float = await mind.pressure(m)
 	_check(is_equal_approx(both.mercy, 0.7) and is_equal_approx(both.pressure, 2.5), "a two-answer reply survives the cache boundary (%s)" % [both])
 	_check(_requests.size() == 1 and is_equal_approx(again, 0.7) and is_equal_approx(press, 2.5), "and both boundary answers stay cached")
+
+
+## A reply that answers one of the two: Jev's half is kept, so asked on its own it costs no request, and the missing half is
+## the local rules' answer, not remembered as Jev's.
+func _half_an_answer_is_kept() -> void:
+	var local := LocalMind.new()
+	var mind := JevMind.new("https://proxy.invalid", local)
+	var m = _monster(70.0)
+	_begin([{"status": 200, "text": JSON.stringify({"answers": {"mercy": {"noul": 0.31}}})}])
+	var both: Dictionary = await mind.mercy_and_pressure(m)
+	var mercy: float = await mind.mercy(m)
+	_check(is_equal_approx(both.mercy, 0.31) and is_equal_approx(both.pressure, local.pressure(m)), "a reply with only mercy answered: Jev's mercy and the local pressure")
+	_check(_requests.size() == 1 and is_equal_approx(mercy, 0.31), "and the answered half is kept, so asking it alone costs no request (%d requests)" % _requests.size())
 
 
 ## Asked ahead (a dodge asks the mercy the menu after it will need) and asked again before Jev answers: one request, both get

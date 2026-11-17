@@ -94,19 +94,26 @@ func _post(state: Dictionary, questions: Dictionary, what: String) -> Dictionary
 
 ## Mercy and pressure after a feeling, in one request (the Worker takes up to 120 questions at once). The feeling stays its own
 ## request: its answer changes the monster, and these two are about the monster after that. An answer that is missing comes
-## from the local rules, and what Jev did answer is kept, so the menu opening on the same monster asks nothing more.
+## from the local rules; a half Jev did answer is kept, so asked on its own (the dodge thinking a mercy ahead) it costs no
+## request, while the pair together is asked again until both halves are answered.
 func mercy_and_pressure(m) -> Dictionary:
 	var mercy_key := _key("mercy", m)
 	var pressure_key := _key("pressure", m)
-	if not (_known.has(mercy_key) and _known.has(pressure_key)):
-		var r := await _post(_state(m, {}), {"mercy": MERCY_Q, "pressure": PRESSURE_Q}, ASKS.pressure)
-		var odds := _odds(_answer(r, "mercy"))
-		var press := _score(_answer(r, "pressure"))
-		print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
-		if odds < 0.0 or press < 0.0:
-			return {"mercy": odds if odds >= 0.0 else await _fallback.mercy(m), "pressure": press if press >= 0.0 else await _fallback.pressure(m)}
-		_remember_all({mercy_key: odds, pressure_key: press})
-	return {"mercy": _known[mercy_key], "pressure": _known[pressure_key]}
+	if _known.has(mercy_key) and _known.has(pressure_key):
+		return {"mercy": _known[mercy_key], "pressure": _known[pressure_key]}
+	var r := await _post(_state(m, {}), {"mercy": MERCY_Q, "pressure": PRESSURE_Q}, ASKS.pressure)
+	var odds := _odds(_answer(r, "mercy"))
+	var press := _score(_answer(r, "pressure"))
+	print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
+	var answered := {}
+	if odds >= 0.0:
+		answered[mercy_key] = odds
+	if press >= 0.0:
+		answered[pressure_key] = press
+	if not answered.is_empty():
+		_remember_all(answered)
+	# The answer is what came back, never what the cache holds: making room for it may clear the cache first.
+	return {"mercy": odds if odds >= 0.0 else await _fallback.mercy(m), "pressure": press if press >= 0.0 else await _fallback.pressure(m)}
 
 
 func _feelings() -> Dictionary:
@@ -191,8 +198,8 @@ func _remember(key: String, answer: float) -> void:
 	_remember_all({key: answer})
 
 
-## Keeps one reply's answers together when making room: clearing between a batched mercy and pressure answer would leave the
-## first one absent before the caller can read it.
+## Keeps one reply's answers together when making room: remembered one at a time, the second could find the cache full and
+## clear it, throwing the first away, so the pair would be asked again on the next menu.
 func _remember_all(answers: Dictionary) -> void:
 	var added := 0
 	for key in answers:
