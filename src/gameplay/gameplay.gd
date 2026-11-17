@@ -325,7 +325,9 @@ func _build_screen() -> void:
 func _process(dt: float) -> void:
 	if flow == null or _pause.visible:
 		return
-	_dock.thinking_ms = Network.waiting_ms()
+	# during a dodge nothing waits on the answer (a question asked ahead, see stages/dodge.gd): no "thinking" to distract
+	_dock.thinking_ms = 0 if flow.state.stage == "dodge" else Network.waiting_ms()
+	_dock.thinking_what = Network.waiting_what()
 	flow.easy_dodge = Settings.get_value("easy")
 	flow.coach.enabled = Settings.get_value("tips")
 	var large: bool = Settings.get_value("text_size") == "large"

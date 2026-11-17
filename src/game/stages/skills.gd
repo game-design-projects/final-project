@@ -60,7 +60,7 @@ func pick(flow, index: int) -> void:
 		Combat.apply_hit_to_mood(m)
 		words.append(Skills.line("hit") % [Skills.label(id), did.damage])
 		if m.hp <= 0:
-			var begging: bool = await flow.encounter.spareable(m)
+			var begging: bool = flow.encounter.begging()
 			flow.encounter.judge("slay_begging" if begging else "slay")
 			await flow.encounter.defeat(m, "slain")
 			return
@@ -86,7 +86,7 @@ func _end_turn(flow) -> void:
 		var said: Array = s.lines.slice(-1) if int(f.used) > 0 else []
 		await flow.encounter.after_player(said + [State.sys_line(Skills.line("guarded"))], {"pressure": pressure, "pacified": false})
 		return
-	var begging: bool = await flow.encounter.spareable(m)
+	var begging: bool = flow.encounter.begging()
 	var decision: Dictionary = await flow.encounter.decide(m, "fight", "YOU HIT IT")
 	if m.social.get("betrayed", false):
 		decision.pacified = false

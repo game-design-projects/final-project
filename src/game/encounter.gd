@@ -73,8 +73,10 @@ func greeting(m):
 	return memory if memory != null else foe_line(m, news.kind, news.who)
 
 
-func spareable(m) -> bool:
-	return await mercy(m) >= 0.5
+## Whether it was begging when you struck: the odds as the gauge last showed them, not asked again, so a blow that ends the
+## fight never waits on the mind.
+func begging() -> bool:
+	return known_mercy >= 0.5
 
 
 ## The odds `m` takes mercy now: the mind's (and what the keepsake open hand adds), or none at all when its clan is enraged
@@ -86,6 +88,16 @@ func mercy(m) -> float:
 	if Keepsakes.has(flow.state, "open_hand"):
 		odds = minf(1.0, odds + Keepsakes.OPEN_MERCY)
 	return odds
+
+
+## Asks the mind about `m`'s mercy without waiting for the answer, so the fight (or the dodge) goes on while it thinks. The mind
+## keeps the answer, and whoever asks the same next (the menu, the end of the dodge) gets it at once or waits for this same
+## question. With `show`, the gauge shows it when it comes, unless a deed has shown newer odds by then.
+func think_ahead(m, show := false) -> void:
+	var odds: float = await mercy(m)
+	if show and flow.state.foe == m and known_mercy < 0.0:
+		known_mercy = odds
+		flow.state.mind_rows = flow.state.mind_rows.filter(func(row): return row.id != "mercy") + [{"id": "mercy", "label": "WILL IT ACCEPT MERCY?", "answer": odds}]
 
 
 ## One round of the mind: how `m` feels about `act` ("fight", or [{intent, w}] for an ACT button or typed words), and how

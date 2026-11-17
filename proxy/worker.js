@@ -12,6 +12,7 @@ const CORS = {
   "access-control-allow-methods": "POST, OPTIONS",
   "access-control-allow-headers": "content-type",
   "access-control-max-age": "86400",
+  "access-control-expose-headers": "server-timing",
 };
 // Jev's front doors.
 export const UPSTREAM = {
@@ -55,6 +56,8 @@ export default {
     if (!key) return reply({ error: "Server not configured" }, 503);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     // Per-IP cap (LIMITER in wrangler.jsonc), so one script can't drain the key's credits. Preflights are free.
+    // The time spent on it and on Jev goes back in server-timing, so the game's log can tell the hops apart.
+    const t0 = Date.now();
     if (env.LIMITER) {
       const { success } = await env.LIMITER.limit({ key: request.headers.get("cf-connecting-ip") ?? "unknown" });
       if (!success) {
@@ -74,6 +77,7 @@ export default {
 
     // The model is pinned here, whatever the client sent: it spends this Worker's key
     const up = env.LLMGW_API_KEY ? UPSTREAM.gateway : env.OPENROUTER_API_KEY ? UPSTREAM.openrouter : UPSTREAM.typesafe;
+    const tLimited = Date.now();
     try {
       const res = await fetch(up.url, {
         method: "POST",
@@ -82,7 +86,9 @@ export default {
         signal: AbortSignal.timeout(10_000),
       });
       // Status and body pass through, so the game sees the 429/529 it backs off on and the errors it reports
-      return reply(await res.text(), res.status);
+      const text = await res.text();
+      const timing = `limit;dur=${tLimited - t0}, upstream;dur=${Date.now() - tLimited}`;
+      return reply(text, res.status, { "server-timing": timing });
     } catch (err) {
       console.error(`Jev unreachable: ${err?.message ?? err}`);
       return reply({ error: "Jev unreachable" }, 502);

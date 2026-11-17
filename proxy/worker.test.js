@@ -69,6 +69,12 @@ test("the upstream status and body pass through, so the game can back off on a 4
   assert.equal(await res.text(), "slow down");
 });
 
+test("an answer says how long the limiter and Jev took (server-timing), and a browser build may read it", async () => {
+  const res = await post(GOOD, { env: { ...KEY, LIMITER: limiter(true) } });
+  assert.match(res.headers.get("server-timing"), /^limit;dur=\d+, upstream;dur=\d+$/);
+  assert.equal(res.headers.get("access-control-expose-headers"), "server-timing");
+});
+
 test("every answer carries CORS and is never cached; OPTIONS is a preflight", async () => {
   const res = await post(GOOD);
   assert.equal(res.headers.get("access-control-allow-origin"), "*");

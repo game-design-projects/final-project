@@ -10,10 +10,18 @@ const Network = preload("res://src/network/network.gd")
 const MERCY_Q := {"type": "noul", "instructions": "Would this monster accept mercy and stop fighting right now?"}
 const PRESSURE_Q := {"type": "score", "instructions": "How hard will this monster press the player with its next attack? 0 gentle, 3 relentless.", "criteria": ["gentle", "firm", "fierce", "relentless"]}
 const KNOWN_MAX := 64
+## What each question asks, in the words the screen uses while it waits (and the mind card uses for the answer).
+const ASKS := {"words": "WHAT DID YOUR WORDS MEAN?", "feeling": "HOW DOES IT FEEL?", "mercy": "WILL IT ACCEPT MERCY?", "pressure": "HOW HARD WILL IT ATTACK?", "join": "DOES IT WANT TO COME ALONG?"}
+
+
+## A question still out: whoever asks the same thing meanwhile waits for this answer instead of asking again.
+class Asking extends RefCounted:
+	signal answered(value: float)
 
 var _url: String
 var _fallback # a Mind
 var _known := {} # a question and the monster's state when it was asked -> the answer, so the same question about the same monster is asked once
+var _asking := {} # the same key -> an Asking, for a question that is out right now (asked ahead, see Encounter.think_ahead)
 
 ## `api_base` is where the proxy lives (https://…); `fallback` answers when Jev can't.
 func _init(api_base: String, fallback) -> void:
@@ -31,44 +39,57 @@ func read_words(text: String) -> Dictionary:
 		kinds[k] = "The player is doing this: %s" % k.replace("_", " ")
 	kinds["other"] = "Said something that is none of the above"
 	kinds["gibberish"] = "Typed nonsense, not words"
-	var a = await _choice({"player_said": text}, "Which kind of thing is `player_said`?", kinds)
+	var a = await _choice({"player_said": text}, "Which kind of thing is `player_said`?", kinds, ASKS.words)
 	return a if a != null else await _fallback.read_words(text)
 
 
 func feeling_when_hit(m) -> Dictionary:
-	var a = await _choice(_state(m, {"just_happened": "the player hit it"}), "How does the monster feel after being hit?", _feelings())
+	var a = await _choice(_state(m, {"just_happened": "the player hit it"}), "How does the monster feel after being hit?", _feelings(), ASKS.feeling)
 	return a if a != null else await _fallback.feeling_when_hit(m)
 
 
 func feeling_when_told(m, intents: Array) -> Dictionary:
 	var said := intents.map(func(i): return "%s (%.1f)" % [i.intent, i.w])
-	var a = await _choice(_state(m, {"just_happened": "the player showed: %s" % ", ".join(said)}), "How does the monster feel about what the player just did?", _feelings())
+	var a = await _choice(_state(m, {"just_happened": "the player showed: %s" % ", ".join(said)}), "How does the monster feel about what the player just did?", _feelings(), ASKS.feeling)
 	return a if a != null else await _fallback.feeling_when_told(m, intents)
 
 
 func mercy(m) -> float:
-	var key := _key("mercy", m)
-	if not _known.has(key):
-		var odds := _odds(_answer(await Network.post_json(_url, {"state": _state(m, {}), "questions": {"q": MERCY_Q}}), "q"))
-		if odds < 0.0:
-			return await _fallback.mercy(m)
-		_remember(key, odds)
-	return _known[key]
+	var odds := await _once(_key("mercy", m), func(): return _odds(_answer(await _post(_state(m, {}), {"q": MERCY_Q}, ASKS.mercy), "q")))
+	return odds if odds >= 0.0 else await _fallback.mercy(m)
 
 
 func join(m) -> float:
-	var a = await _noul(_state(m, {}), "Would this monster join the player's party if asked right now?")
+	var state := _state(m, {})
+	var a := await _once(_key("join", m), func(): return await _noul(state, "Would this monster join the player's party if asked right now?", ASKS.join))
 	return a if a >= 0.0 else await _fallback.join(m)
 
 
 func pressure(m) -> float:
-	var key := _key("pressure", m)
-	if not _known.has(key):
-		var press := _score(_answer(await Network.post_json(_url, {"state": _state(m, {}), "questions": {"q": PRESSURE_Q}}), "q"))
-		if press < 0.0:
-			return await _fallback.pressure(m)
-		_remember(key, press)
-	return _known[key]
+	var press := await _once(_key("pressure", m), func(): return _score(_answer(await _post(_state(m, {}), {"q": PRESSURE_Q}, ASKS.pressure), "q")))
+	return press if press >= 0.0 else await _fallback.pressure(m)
+
+
+## The answer for `key`: known, or joined while it is out, or asked now with `ask` (-> 0.. or -1 for no answer) and kept.
+## A question asked ahead (nobody awaiting it) and asked again before Jev answers goes out once.
+func _once(key: String, ask: Callable) -> float:
+	if _known.has(key):
+		return _known[key]
+	if _asking.has(key):
+		print_verbose("jev: already asking %s, waiting for that answer" % key.left(40))
+		return await _asking[key].answered
+	var waiting := Asking.new()
+	_asking[key] = waiting
+	var answer: float = await ask.call()
+	_asking.erase(key)
+	if answer >= 0.0:
+		_remember(key, answer)
+	waiting.answered.emit(answer)
+	return answer
+
+
+func _post(state: Dictionary, questions: Dictionary, what: String) -> Dictionary:
+	return await Network.post_json(_url, {"state": state, "questions": questions}, {}, Network.TIMEOUT_S, what)
 
 
 ## Mercy and pressure after a feeling, in one request (the Worker takes up to 120 questions at once). The feeling stays its own
@@ -78,7 +99,7 @@ func mercy_and_pressure(m) -> Dictionary:
 	var mercy_key := _key("mercy", m)
 	var pressure_key := _key("pressure", m)
 	if not (_known.has(mercy_key) and _known.has(pressure_key)):
-		var r := await Network.post_json(_url, {"state": _state(m, {}), "questions": {"mercy": MERCY_Q, "pressure": PRESSURE_Q}})
+		var r := await _post(_state(m, {}), {"mercy": MERCY_Q, "pressure": PRESSURE_Q}, ASKS.pressure)
 		var odds := _odds(_answer(r, "mercy"))
 		var press := _score(_answer(r, "pressure"))
 		print_verbose("jev: mercy and pressure in one request (%s)" % ("answered" if odds >= 0.0 and press >= 0.0 else "not fully answered"))
@@ -108,9 +129,9 @@ func _state(m, extra: Dictionary) -> Dictionary:
 
 
 ## A choice question: label -> probability (adding up to 1), or null when Jev didn't answer.
-func _choice(state: Dictionary, question: String, options: Dictionary):
+func _choice(state: Dictionary, question: String, options: Dictionary, what := ""):
 	var q := {"type": "choice", "instructions": question, "criteria": options}
-	var answer = _answer(await Network.post_json(_url, {"state": state, "questions": {"q": q}}))
+	var answer = _answer(await _post(state, {"q": q}, what))
 	if not (answer is Dictionary and answer.get("probabilities") is Dictionary):
 		print("jev: no usable answer to %s, local rules instead" % question)
 		return null
@@ -131,8 +152,8 @@ func _choice(state: Dictionary, question: String, options: Dictionary):
 
 
 ## A yes/no question: 0..1, or -1 when Jev didn't answer.
-func _noul(state: Dictionary, question: String) -> float:
-	var answer = _answer(await Network.post_json(_url, {"state": state, "questions": {"q": {"type": "noul", "instructions": question}}}))
+func _noul(state: Dictionary, question: String, what := "") -> float:
+	var answer = _answer(await _post(state, {"q": {"type": "noul", "instructions": question}}, what))
 	if answer is Dictionary and _valid_number(answer.get("noul"), 0.0, 1.0):
 		return clampf(float(answer.noul), 0.0, 1.0)
 	return -1.0
