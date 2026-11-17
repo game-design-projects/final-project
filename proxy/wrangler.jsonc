@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   // CI's Cloudflare token is scoped to the Worker with this name; the Worker workflow guards what else this file
-  // may hold (no routes, builds or extra bindings)
+  // may hold (no routes, builds or extra bindings beyond the gateway's service binding)
   "name": "donjon-api",
   "main": "worker.js",
   "compatibility_date": "2026-09-30",
@@ -10,5 +10,7 @@
   // Requests per IP per minute; a player makes a few per round. namespace_id is unique on the account.
   "ratelimits": [{ "name": "LIMITER", "namespace_id": "45531", "simple": { "limit": 60, "period": 60 } }],
   // Secret (not in this file): LLMGW_API_KEY, OPENROUTER_API_KEY or TYPESAFE_API_KEY, set with `wrangler secret put`
+  // The LLM gateway's Worker, so Jev requests reach it without leaving Cloudflare (worker.js). The only service it may bind.
+  "services": [{ "binding": "LLMGW", "service": "api-cf-llmgateway-front" }],
   "observability": { "enabled": true }
 }

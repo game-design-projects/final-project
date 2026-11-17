@@ -4,7 +4,9 @@
 // Secret (set with `npx wrangler secret put`), first one set wins: LLMGW_API_KEY (an sk-llmgw- key for the LLM gateway,
 // llm.lishuyu.app, limited to Jev and a daily budget; the gateway reaches Jev through OpenRouter), OPENROUTER_API_KEY
 // (a key with a credit limit), or TYPESAFE_API_KEY. CI deploys it from .github/workflows/worker.yml with a token scoped
-// to this one Worker.
+// to this one Worker. The gateway is reached through the service binding LLMGW (wrangler.jsonc) when it is there: the request
+// stays inside Cloudflare instead of going out to api.lishuyu.app and back, which added 30-100 ms whenever it landed on a
+// new machine. It is the same gateway with the same key check and budget; without the binding (local, tests) it is a fetch.
 // Local: `node proxy/dev.js`.
 
 const CORS = {
@@ -79,7 +81,8 @@ export default {
     const up = env.LLMGW_API_KEY ? UPSTREAM.gateway : env.OPENROUTER_API_KEY ? UPSTREAM.openrouter : UPSTREAM.typesafe;
     const tLimited = Date.now();
     try {
-      const res = await fetch(up.url, {
+      const send = up === UPSTREAM.gateway && env.LLMGW ? (url, init) => env.LLMGW.fetch(url, init) : fetch;
+      const res = await send(up.url, {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json", ...up.headers },
         body: JSON.stringify({ model: up.model, state: body.state, questions: body.questions }),
