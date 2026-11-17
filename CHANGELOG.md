@@ -8,6 +8,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - One rule for a part that fails (`src/utils/fault.gd`): a debug build fails fast, an export carries on and logs `fault N: ...`.
 - Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
 
+## [0.9.4] - 2026-11-17
+
 ### Fixed
 - Jev's mercy-and-pressure reply no longer loses mercy and stops a fight when its answer cache reaches 64 entries.
 
@@ -487,7 +489,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.3...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.4...main
+[0.9.4]: https://github.com/game-design-projects/final-project/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/game-design-projects/final-project/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/game-design-projects/final-project/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/game-design-projects/final-project/compare/v0.9.0...v0.9.1
