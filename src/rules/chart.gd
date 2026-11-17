@@ -6,6 +6,7 @@
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
+const Dice = preload("res://src/utils/dice.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
@@ -65,15 +66,18 @@ static func drop_chance(s) -> float:
 
 
 ## Whether `m`, now out of the way, was carrying the map. The roll is the monster's own, from the floor's seed and its place among
-## the floor's monsters, so a fight tried again rolls the same and no other draw of the run moves.
-static func drops(s, m) -> bool:
+## the floor's monsters, so a fight tried again rolls the same and no other draw of the run moves; it is a keyed draw of the run's
+## dice (`Dice.keyed`, like the social scheduling), so a dice pinned by a test rules this chance as it rules every other one.
+static func drops(s, m, dice: Dice) -> bool:
 	if m == null or m.boss or not m.is_gone():
 		return false
 	var p := drop_chance(s)
 	if p <= 0.0:
 		return false
 	var index: int = s.floor_map.monsters.find(m)
-	return Rng.new(Rng.offset(int(s.floor_map.seed_value), ROLL_STEP * (index + 1))).chance(p)
+	if index < 0: # not one of this floor's monsters: it has no place of its own to roll from, so it carries none
+		return false
+	return dice.keyed(Rng.offset(int(s.floor_map.seed_value), ROLL_STEP * (index + 1))) < p
 
 
 ## Learn the rest of the layout: every cell that can be walked to and isn't seen yet is charted. Returns how many that was.

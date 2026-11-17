@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 - A click on the corner map opens the whole floor's map instead of pinning the legend; the legend stays on hover and on **I**.
+- The roll for a monster's map is a keyed draw of the run's dice (`Dice.keyed`) instead of a generator of its own: in play the same floor and monster still roll the same however often the fight is tried, and a dice pinned by a test now rules this chance too.
 
 ### Fixed
 - The whole floor's map keeps its own line: with M up, a banner (a floor's name, a first meeting, a tip) is held back instead of landing on the line that says the map's keys, and comes back when it closes.
