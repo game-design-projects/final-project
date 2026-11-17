@@ -158,7 +158,9 @@ func _a_picked_row_that_cannot_be_picked_still_reads(panel) -> void:
 	Flags.set_args(PackedStringArray([]))
 
 
-## WCAG contrast: 1.0 is the same colour, 3.0 is a small text you can still read.
+## WCAG contrast: 1.0 is the same colour. 3.0 is the floor for large text (>=18pt, or >=14pt bold)
+## and for UI boundaries; body text needs 4.5. The picked row's grey is checked against 3.0 here
+## because the pick is a highlight, not body copy, and the owner chose that grey.
 func _contrast(a: Color, b: Color) -> float:
 	var la := _luminance(a)
 	var lb := _luminance(b)
