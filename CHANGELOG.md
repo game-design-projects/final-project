@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- One rule for a part that fails (`src/utils/fault.gd`): a debug build fails fast, an export carries on and logs `fault N: ...`.
+- Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
+
 ## [0.9.4] - 2026-11-17
 
 ### Fixed
