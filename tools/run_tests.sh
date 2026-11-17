@@ -89,4 +89,21 @@ echo "on skill-combat: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || ec
 if [ "$code" != 0 ]; then
 	failed=1
 fi
+# Seeds where the two nearest monsters sat in opposite directions: the pilot stepped between two cells for the whole game,
+# each step making the other monster the nearer one. It keeps the monster it chose until it is gone now.
+log="$OUT/on-stall-seeds.log"
+: >"$log"
+code=0
+for seed in 313 357 362 415 451 454; do
+	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=$?
+done
+reached=$(grep -cE '^autoplay: 1 of 1' "$log" || true)
+if [ "$reached" != 6 ]; then
+	code=1
+fi
+echo "on stall seeds: exit $code, $reached of 6 games reached the stairs"
+if [ "$code" != 0 ]; then
+	failed=1
+	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
+fi
 exit "$failed"

@@ -27,6 +27,7 @@ var _stage_counts := {}
 var _event_counts := {}
 var _retries := 0
 var _met_floor := 1 # the floor the two fights are counted on
+var _goal_monster = null # the monster this floor's walk is committed to; null walks to the stairs
 var _met_before := 0 # how many it had met before that floor
 var _tried := {} # pacifist: ACT -> how far it moved the odds, for this foe
 var _tried_foe = null
@@ -57,6 +58,7 @@ func _play(seed_value: int) -> bool:
 	_retries = 0
 	_met_floor = 1
 	_met_before = 0
+	_goal_monster = null
 	flow.happened.connect(func(name, _data): _event_counts[name] = _event_counts.get(name, 0) + 1)
 	await flow.new_run(Flags.on("practice"))
 	var t := 0.0
@@ -184,22 +186,31 @@ func _dodge_key(s, t: float) -> String:
 	return best_key
 
 
-## Turn toward and walk to the nearest monster that's still around (for the first two fights), then the stairs.
+## Turn toward and walk to the nearest monster that's still around (for the first two fights), then the stairs. The
+## monster is kept for the floor once chosen: picking the nearest every step made two monsters in opposite directions
+## alternate, each step making the other the nearer one, so the walk stood still (seeds 313, 357, 362, 415, 451, 454).
 func _explore_key(s) -> String:
-	var goal: Vector2i = s.floor_map.stairs
-	var best := 1 << 30
 	var all_met: int = s.tally.spared + s.tally.slain + s.tally.fled
 	if _met_floor != s.depth:
 		_met_floor = s.depth
 		_met_before = all_met
+		_goal_monster = null
 	var met: int = all_met - _met_before
-	for m in s.floor_map.monsters:
-		if met < 2 and not m.is_gone() and not m.boss:
-			var d := absi(m.cell.x - s.cell.x) + absi(m.cell.y - s.cell.y)
-			if d < best:
-				best = d
-				goal = m.cell
+	if met >= 2 or (_goal_monster != null and _goal_monster.is_gone()):
+		_goal_monster = null # the stairs: two monsters met on this floor, or the one walked to is gone
+	if met < 2 and _goal_monster == null:
+		var best := 1 << 30
+		for m in s.floor_map.monsters:
+			if not m.is_gone() and not m.boss:
+				var d := absi(m.cell.x - s.cell.x) + absi(m.cell.y - s.cell.y)
+				if d < best:
+					best = d
+					_goal_monster = m
+	var goal: Vector2i = s.floor_map.stairs if _goal_monster == null else _goal_monster.cell
 	var step := _first_step(s.floor_map, s.cell, goal)
+	if step < 0 and _goal_monster != null: # walled off from it: the stairs are the floor's one sure way on
+		_goal_monster = null
+		step = _first_step(s.floor_map, s.cell, s.floor_map.stairs)
 	if step < 0:
 		return "up"
 	if s.facing == step:
