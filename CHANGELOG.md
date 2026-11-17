@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 - Each species' heavy-blade weakness is its own number in `data/species.json` ("heavy": the rock 1.5, the dragon 1.2, the bandit 1.0, the snake 0.8, the slime 0.55) instead of a table in `src/rules/combat.gd`; the values and so the fight are unchanged, and a species with no number of its own is now a failing check rather than a silent plain blow.
+- A species is a monster in one place: `Content.is_monster()` says whether an id names one, `is_species()` builds on it, and a save's monster, a floor's request and a saved `heavyKnown` ask that one question instead of each spelling out `Content.table("species").has(...)`. `Combat.weighs_heavy()` is gone (it only ever answered that for a save and read like a combat rule); `Combat.HEAVY_PLAIN` names the number a species takes when it says nothing of its own, where the menu, the tip and the log compared against a bare 1.0; `Combat.heavy_species()` returns the species that carry a number, which its name and comment already claimed; and `tools/features_test.gd` is the check the entry above promised, failing when a species carries none and building the list once instead of twice per sample in a 12,000-sample loop. `src/rules/combat.gd`'s header no longer says all tuning lives in that file.
+
+### Fixed
+- The build says which Jev its monsters ask: a build made without `--proxy` ships the default proxy, but its log said "the local rules" (and the first go at saying otherwise printed the address twice). `tools/build.sh` reads the default out of `src/mind/minds.gd` the way it reads the version out of `project.godot`, prints "Monsters in these builds: Jev through the default proxy (<url>)", and its header says the same where it promised local rules.
+- A row that can't be picked, while it is under the cursor, reads again: LOAD GAME and SAVE MANAGER's empty slots drew their label in the pick's own grey and came out blank (the picked row keeps a quiet grey chosen to read on the highlight, and `menu_test` checks the contrast).
 
 ## [0.9.1] - 2026-11-17
 
@@ -28,7 +33,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - The Jev Worker reaches the LLM gateway through a service binding (`LLMGW` -> `api-cf-llmgateway-front`) instead of its public address, so a Jev request no longer pays 30-100 ms on its way out and back whenever it lands on a new machine; same key, same budget. CI allows that one binding and no other.
 
 ### Fixed
-- A row that can't be picked, while it is under the cursor, reads again: LOAD GAME and SAVE MANAGER's empty slots drew their label in the pick's own grey and came out blank (the picked row keeps a quiet grey chosen to read on the highlight, and `menu_test` checks the contrast).
 - The one service binding in `wrangler.jsonc` is checked only on the parsed file (`proxy/worker.test.js`), not by a line match in the check job: the line match still refused the same binding written in another key order or across several lines, which stalls the proxy deploy. `docs/DEVELOPMENT.md` says what the binding is for, that the Worker falls back to https without it, and that another account deletes the line in its copy, since the test expects it on `main`.
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
 - A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.
