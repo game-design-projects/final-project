@@ -174,7 +174,8 @@ static func _walk_from(f, from: Vector2i, hall: Vector2i) -> Dictionary:
 	return {"dist": dist, "order": order, "farthest": farthest}
 
 
-## Roster monsters spread out nearest first, evenly through the candidate cells; the champion stands in the hall.
+## Roster monsters spread out nearest first, evenly through the candidate cells; the champion stands on the stairs, or in the
+## hall when the plan keeps it there (no `boss_at_exit`).
 static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Dictionary, reserved: Dictionary) -> Array:
 	var enc := Content.table("encounter")
 	var candidates := []
