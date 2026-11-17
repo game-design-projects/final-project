@@ -2595,6 +2595,7 @@ func _npcs() -> void:
 	_check(s.foe == null and s.lines[0].kind == "say" and s.lines[0].who == q.name, "it says what it wants")
 	_check(s.lines[0].text.contains(Items.label(q.want)), "by name (%s)" % s.lines[0].text)
 	_check(s.menu.size() == 2 and s.menu[0].label == t.kinds.fetch.yes, "and you answer")
+	_check(s.questers_met.has(q.name), "its name is heard, and kept (%s)" % q.name)
 	await flow.press("1")
 	_check(s.stage == "explore" and q.taken, "you say you will, and walk on")
 	await flow.press("up")
@@ -2608,12 +2609,14 @@ func _npcs() -> void:
 	_check(s.stage == "explore" and s.items.is_empty(), "it takes it")
 	_check(s.gold == int(t.gold) and s.hp == 3 + int(t.heal), "and pays (%d gold, %d hp)" % [s.gold, s.hp])
 	_check(f.quester.is_empty() and not f.in_the_way(stood + f.DIRS[s.facing]), "then it's gone, and so is what stood in the way")
+	_check(s.names_met().has(str(q.name).to_upper()), "and its name is still one met, so no later floor takes it")
 	_check(s.reputation.get(Clans.of(q.species), 0.0) > 0.0, "and its clan thinks better of you")
 	_check(s.banner != null and Overlay.banner_fits(s.banner.text), "the banner says so and fits")
 	var back = _flow(s.run_seed)
 	await back.load_state(saved)
 	var bq: Dictionary = back.state.floor_map.quester
 	_check(bq.taken and bq.kind == "fetch" and bq.want == q.want and bq.cell == q.cell, "a save keeps the request as it stood")
+	_check(back.state.questers_met.has(q.name), "and the name it heard")
 	# sparing
 	var kin = await _asking(300, "spare")
 	var ks = kin.state
