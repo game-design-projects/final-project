@@ -1726,6 +1726,9 @@ func _hostility() -> void:
 	_won_over(elite)
 	await flow.go("menu")
 	_check(s.menu[2].get("disabled", false) and str(s.menu[2].sub).begins_with("ENRAGED"), "enraged: SPARE is greyed out and says why (%s)" % str(s.menu[2]))
+	s.nerve = 2
+	await flow.go("menu")
+	_check(str(s.menu[0].sub).contains("NERVE 2/5") and not str(s.menu[0].sub).contains("SPARE"), "enraged: FIGHT still shows the nerve it adds, and no SPARE chance the fight won't take (%s)" % s.menu[0].sub)
 	_check(await flow.encounter.mercy(elite) == 0.0, "its odds are none, however friendly it is")
 	await flow.press("3")
 	_check(s.stage == "menu" and elite.gone == "", "and SPARE does nothing (%s)" % s.stage)

@@ -4,7 +4,6 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-
 ### Added
 - No monster in a run takes a name met before it (the floor you leave, the deeds the clans remember, the party), so a second KESSHRA no longer talks about the KESSHRA you slew. Each species has 12 spare names (the dragon 8, `spare_names` in `data/species.json`), drawn once its recorded names are used up; their lines with the name in them use the synthesised voice until `tools/voices/render.py` renders them. Out of both, it counts on: GLOP II.
 - The Jev Worker answers with `server-timing` (the rate limiter and the way to Jev), and the game's log prints it beside its own time, so a slow answer says which hop was slow.
@@ -24,10 +23,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
 - A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.
 - The one asking a favour takes its name by the same rule as the floor's monsters: never one met earlier in the run, recorded names before spare ones (it used the whole pool, so a quest-giver could be called the KESSHRA you slew), and its name is kept for the floors after, so no monster is later named after it.
-
 - A restored save was not checked for a Snake's confession (`social.confided_mercy`): a word where true, false or nothing belongs is refused now, as the rest of a monster's social memory is.
 - `data/social.json` holds the wariness a confession earns, a denial's pressure and the trust of a true confession, instead of those numbers living in `src/rules/social.gd`.
 - `docs/SOCIAL_COMBAT.md` no longer promises a route for denying mercy (there is none) and names the new data fields.
+- An enraged clan's FIGHT line no longer promises a SPARE chance that clan will never take; the nerve a strike adds is still said.
 
 ## [0.9.0] - 2026-11-16
 
