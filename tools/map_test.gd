@@ -6,6 +6,7 @@
 extends "res://tools/test_base.gd"
 
 const Automap = preload("res://src/view/automap.gd")
+const Chart = preload("res://src/rules/chart.gd")
 const Chunks = preload("res://src/rules/maps/chunks.gd")
 const Content = preload("res://src/rules/content.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
@@ -15,6 +16,7 @@ const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Materials = preload("res://src/view/materials.gd")
 const Monster = preload("res://src/rules/monster.gd")
+const Palette = preload("res://src/view/palette.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const SaveCheck = preload("res://src/game/save_check.gd")
@@ -40,6 +42,8 @@ func _run() -> void:
 	_save_keeps_the_secrets()
 	_sight_is_bounded()
 	_map_window()
+	_chart()
+	_full_map()
 	_costs()
 	_finish()
 
@@ -368,6 +372,125 @@ func _sight_is_bounded() -> void:
 	var seen: Array = Vision.sight(f, Vector2i(20, 20), 0)
 	var far := seen.filter(func(c): return absi(c.x - 20) > Vision.RANGE or absi(c.y - 20) > Vision.RANGE)
 	_check(far.is_empty() and seen.size() > 50, "sight stops %d cells away (%d cells seen in an open field)" % [Vision.RANGE, seen.size()])
+
+
+## The rest of a floor's layout, learnt late (rules/chart.gd): what counts as the floor, when instinct and a monster's map give it,
+## what they leave hidden, and that a save keeps it.
+func _chart() -> void:
+	var numbers: Dictionary = Chart.table()
+	var at := float(numbers.instinct_at)
+	for biome in Content.table("biomes").biomes:
+		var s = State.new()
+		s.depth = 5
+		s.floor_map = FloorGen.generate(Rng.new(5), _plan(biome, 5))
+		var f = s.floor_map
+		s.cell = f.start
+		s.facing = f.start_facing()
+		s.look()
+		var reach: Dictionary = s.reach()
+		var hidden: Array = f.treasure.filter(func(t): return not reach.has(t.cell))
+		_check(reach.has(f.start) and reach.has(f.stairs) and reach.keys().all(func(c): return f.is_open(c)), "%s: the floor as a map knows it is open cells, with the start and the stairs (%d cells)" % [biome.id, reach.size()])
+		_check(not hidden.is_empty(), "%s: a chest behind a cracked wall is not part of it (%d of %d chests)" % [biome.id, hidden.size(), f.treasure.size()])
+		_check(Chart.share(s) > 0.0 and Chart.share(s) < at and not Chart.instinct_due(s), "%s: at the start little is seen (%.0f%%) and instinct waits" % [biome.id, Chart.share(s) * 100.0])
+		_check(is_equal_approx(Chart.drop_chance(s), lerpf(float(numbers.drop.start), float(numbers.drop.full), Chart.share(s) / at)), "%s: a monster's map is unlikely then (%.0f%%)" % [biome.id, Chart.drop_chance(s) * 100.0])
+		var last := Chart.drop_chance(s)
+		var rising := true
+		for c in reach:
+			if Chart.share(s) >= at:
+				break
+			if s.seen.has(c):
+				continue
+			s.seen[c] = true
+			var now := Chart.drop_chance(s)
+			rising = rising and now >= last and now <= float(numbers.drop.full) + 0.0001
+			last = now
+		_check(rising and is_equal_approx(last, float(numbers.drop.full)), "%s: the more is seen the likelier, up to %.0f%%" % [biome.id, last * 100.0])
+		_check(Chart.instinct_due(s), "%s: at %.0f%% seen instinct is due" % [biome.id, Chart.share(s) * 100.0])
+		s.practice = true
+		_check(not Chart.instinct_due(s) and Chart.drop_chance(s) == 0.0, "%s: never on the practice floor" % biome.id)
+		s.practice = false
+		var unseen: int = reach.keys().filter(func(c): return not s.seen.has(c)).size()
+		var learnt: int = Chart.reveal(s)
+		_check(learnt == unseen and learnt > 0 and s.charted.size() == unseen, "%s: the rest of the layout is charted (%d cells)" % [biome.id, learnt])
+		_check(s.charted.keys().all(func(c): return reach.has(c) and not s.seen.has(c)), "%s: only cells that can be walked to and were not seen" % biome.id)
+		_check(reach.keys().all(func(c): return Chart.known(s, c)) and hidden.all(func(t): return not Chart.known(s, t.cell)), "%s: all of the floor is known now, and the hidden chest is not" % biome.id)
+		_check(not Chart.instinct_due(s) and Chart.drop_chance(s) == 0.0 and Chart.reveal(s) == 0, "%s: a floor is charted once" % biome.id)
+		var map = Automap.new()
+		map.state = s
+		s.seen.erase(f.stairs)
+		s.charted[f.stairs] = true
+		s.cell = f.stairs + Vector2i(0, 0)
+		_check(not map.stairs_mark().is_empty(), "%s: the map shows charted stairs" % biome.id)
+		_check(map.monster_marks().filter(func(m): return m.color == Palette.BOSS).is_empty(), "%s: but not the champion on them, until it is seen" % biome.id)
+		_check(map.charted_shown().has(f.stairs) and not map._shown().has(f.stairs), "%s: charted floor is drawn apart from seen floor" % biome.id)
+		map.free()
+		var saved: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+		var back = State.from_dict(saved)
+		_check(back != null and back.charted.size() == s.charted.size() and back.charted.has(f.stairs), "%s: a save keeps what is charted" % biome.id)
+		saved.charted = [[0, 0], "x", [1], [f.stairs.x, f.stairs.y]]
+		back = State.from_dict(saved)
+		_check(back != null and back.charted.size() == 1, "%s: and a saved charted cell that is a wall, or no cell at all, is dropped" % biome.id)
+		var crack: Vector2i = _cracked(f)[0]
+		var before: int = s.reach().size()
+		f.break_wall(crack)
+		_check(s.reach().size() > before, "%s: a broken wall makes the floor bigger (%d -> %d cells)" % [biome.id, before, s.reach().size()])
+	var fresh = State.new()
+	fresh.floor_map = FloorGen.generate(Rng.new(5), _plan(Content.table("biomes").biomes[0], 1))
+	fresh.cell = fresh.floor_map.start
+	_check(not fresh.to_dict().has("charted"), "a save with nothing charted reads as it always did")
+	# a monster's map: its own roll, the same every time, and about as often as the chance says
+	var rolls := 0
+	var maps := 0
+	var steady := true
+	for seed_value in 60:
+		var s = State.new()
+		s.depth = 3
+		s.floor_map = FloorGen.generate(Rng.new(seed_value), _plan(Content.table("biomes").biomes[seed_value % 3], 3))
+		var cells: Array = s.reach().keys()
+		for i in ceili(cells.size() * at):
+			s.seen[cells[i]] = true
+		for m in s.floor_map.monsters:
+			if m.boss:
+				m.gone = "slain"
+				steady = steady and not Chart.drops(s, m)
+				continue
+			steady = steady and not Chart.drops(s, m) # still standing: it keeps its map
+			m.gone = "spared" if rolls % 2 == 0 else "slain"
+			var first: bool = Chart.drops(s, m)
+			steady = steady and first == Chart.drops(s, m)
+			rolls += 1
+			maps += int(first)
+	var rate := float(maps) / rolls
+	_check(steady, "a monster's map is its own roll: the same when asked again, never a champion's, never one still standing")
+	_check(absf(rate - float(numbers.drop.full)) < 0.08, "at the most likely, about %.0f%% of monsters carry one (%d of %d, %.0f%%)" % [float(numbers.drop.full) * 100.0, maps, rolls, rate * 100.0])
+
+
+## The whole floor over the picture (automap.gd drawn `full`): every cell fits a picture of the usual size, and a picture too small
+## for that still keeps you in its window.
+func _full_map() -> void:
+	for biome in Content.table("biomes").biomes:
+		var s = State.new()
+		s.depth = 5
+		s.floor_map = FloorGen.generate(Rng.new(5), _plan(biome, 5))
+		var f = s.floor_map
+		s.cell = Vector2i(f.size - 2, f.size - 2)
+		var map = Automap.new()
+		map.full = true
+		map.state = s
+		map.size = Vector2(960, 560)
+		_check(map.window_cells() == f.size and map.window_origin() == Vector2i.ZERO, "%s: the full map shows all %d cells across" % [biome.id, f.size])
+		_check(map.cell_px() >= Automap.FULL_MIN_CELL_PX and map.cell_px() <= Automap.FULL_MAX_CELL_PX, "%s: at %d pixels a cell" % [biome.id, map.cell_px()])
+		var panel: Rect2 = map.panel_rect()
+		_check(Rect2(Vector2.ZERO, map.size).encloses(panel.grow(Automap.FULL_TEXT - 1.0)), "%s: with room round it for its two lines (%s in %s)" % [biome.id, panel, map.size])
+		var lines: Dictionary = map.full_lines()
+		_check(str(lines.where) == "B5F · " + str(biome.name) and str(lines.seen).ends_with("% SEEN"), "%s: it says where you are and how much is seen (%s, %s)" % [biome.id, lines.where, lines.seen])
+		s.charted[f.stairs] = true
+		_check(str(map.full_lines().seen).ends_with("CHARTED"), "%s: and that the floor is charted" % biome.id)
+		map.size = Vector2(300, 200)
+		var o: Vector2i = map.window_origin()
+		var cells: int = map.window_cells()
+		_check(cells < f.size and s.cell.x >= o.x and s.cell.x < o.x + cells and s.cell.y >= o.y and s.cell.y < o.y + cells and Rect2(Vector2.ZERO, map.size).encloses(map.panel_rect()), "%s: in a picture too small it scrolls, with you in the window (%d cells)" % [biome.id, cells])
+		map.free()
 
 
 func _map_window() -> void:

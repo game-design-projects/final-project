@@ -3,6 +3,7 @@
 ## off as soon as you step on it, and the writing on a wall is read as soon as you step up to it.
 extends "res://src/game/stages/stage.gd"
 
+const Chart = preload("res://src/rules/chart.gd")
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
@@ -15,7 +16,7 @@ const Survival = preload("res://src/rules/survival.gd")
 
 const SIGHT_AHEAD := 6 # how many cells down a straight line the first-time tips look
 
-const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · ENTER CAMP · I INFO · ESC MENU"
+const HINT := "UP / DOWN WALK · LEFT / RIGHT TURN · ENTER CAMP · M MAP · I INFO · ESC MENU"
 
 
 func enter(flow, args: Dictionary) -> void:
@@ -36,9 +37,11 @@ func handle(flow, key: String) -> void:
 			await _step(flow, true)
 		"left":
 			s.turn(-1)
+			_instinct(flow)
 			_notice(flow)
 		"right":
 			s.turn(1)
+			_instinct(flow)
 			_notice(flow)
 		"confirm":
 			await flow.go("camp")
@@ -78,6 +81,7 @@ func _step(flow, backwards: bool) -> void:
 	s.steps += 1
 	if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 		s.hp += 1
+	_instinct(flow) # before the cell's own find, so a chest's line is the one that stays in the log
 	_find_secrets(flow)
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
@@ -95,6 +99,22 @@ func _get_hungrier(flow) -> void:
 		flow.event("sound", {"name": "odd"})
 		flow.coach.say("hungry")
 		print("explore: %s after %d steps" % [done.crossed, s.steps])
+
+
+## Enough of the floor is seen: the rest of its layout goes onto the map (rules/chart.gd).
+func _instinct(flow) -> void:
+	var s = flow.state
+	if not Chart.instinct_due(s):
+		return
+	var seen: float = Chart.share(s)
+	var cells: int = Chart.reveal(s)
+	var words: Dictionary = Chart.table().instinct
+	if not flow.banner_up():
+		flow.announce(str(words.title), str(words.text))
+	s.say([State.sys_line(str(words.line))])
+	print("explore: instinct at %.0f%% seen, %d cells charted on B%dF" % [seen * 100.0, cells, s.depth])
+	flow.event("charted", {"how": "instinct", "cells": cells})
+	flow.event("sound", {"name": "holy"})
 
 
 ## Everybody's turn. True when one of them walked into you, and the fight is on.

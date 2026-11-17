@@ -3,6 +3,7 @@
 extends RefCounted
 
 const Ally = preload("res://src/game/ally.gd")
+const Chart = preload("res://src/rules/chart.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
@@ -41,6 +42,9 @@ var quarter_turns := 0 # every quarter turn made, right +1 and left -1, adding u
 var visited := {} # Vector2i -> true: cells you stood in
 var in_sight := {} # Vector2i -> true: the cells the camera sees right now; worked out again by `look`
 var seen := {} # Vector2i -> true: cells you saw from where you stood (rules/vision.gd), for the automap
+var charted := {} # Vector2i -> true: cells not seen yet whose layout a map or your instinct told you (rules/chart.gd)
+var _reach := {} # the cells that can be walked to from the floor's start, kept until the floor or its walls change
+var _reach_key := []
 
 # the party
 var hp := Combat.START_HP
@@ -161,6 +165,17 @@ func look() -> void:
 	print_verbose("state: sight from %s took %d us, %d cells" % [cell, Time.get_ticks_usec() - t0, in_sight.size()])
 
 
+## The cells that can be walked to from the floor's start, as a set (rules/chart.gd): worked out once, and again when a wall breaks.
+func reach() -> Dictionary:
+	var key := [floor_map, floor_map.changes]
+	if key != _reach_key:
+		var t0 := Time.get_ticks_usec()
+		_reach = Chart.reach(floor_map)
+		_reach_key = key
+		print_verbose("state: %d cells can be walked to, worked out in %d us" % [_reach.size(), Time.get_ticks_usec() - t0])
+	return _reach
+
+
 ## Note where the monsters in view are now, for the map.
 func spot() -> void:
 	for m in floor_map.monsters:
@@ -220,6 +235,8 @@ func to_dict() -> Dictionary:
 		out.keepsakes = keepsakes.duplicate()
 	if not questers_met.is_empty(): # and one whose run has heard nobody asking
 		out.questersMet = questers_met.duplicate()
+	if not charted.is_empty(): # and one whose floor has no map of it yet
+		out.charted = charted.keys().map(func(c): return [c.x, c.y])
 	return out
 
 
@@ -246,6 +263,9 @@ static func from_dict(d: Dictionary):
 	for c in d.get("seen", []) if d.get("seen") is Array else []:
 		if SaveCheck.is_cell(c) and s.floor_map.is_open(SaveCheck.cell(c)):
 			s.seen[SaveCheck.cell(c)] = true
+	for c in d.get("charted", []) if d.get("charted") is Array else []:
+		if SaveCheck.is_cell(c) and s.floor_map.is_open(SaveCheck.cell(c)):
+			s.charted[SaveCheck.cell(c)] = true
 	s.look()
 	s.max_hp = maxi(1, SaveCheck.to_int(d.maxHp))
 	s.hp = clampi(SaveCheck.to_int(d.hp), 1, s.max_hp)

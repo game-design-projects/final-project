@@ -4,6 +4,7 @@ extends RefCounted
 
 const Ally = preload("res://src/game/ally.gd")
 const Allies = preload("res://src/rules/allies.gd")
+const Chart = preload("res://src/rules/chart.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
@@ -348,6 +349,7 @@ func _heal(amount) -> int:
 ## a champion, which leaves keepsakes: one is taken first (stages/keepsake.gd), and that stage comes back here.
 func leave_fight(lines: Array) -> void:
 	var s = flow.state
+	lines = lines + _map_from(s.foe)
 	if s.keepsake_due != "":
 		var from: String = s.keepsake_due
 		s.keepsake_due = ""
@@ -359,6 +361,24 @@ func leave_fight(lines: Array) -> void:
 		await flow.go("intro", {"foe": flow.fight_queue.pop_front(), "before": lines})
 		return
 	await flow.go("explore", {"lines": lines})
+
+
+## The foe that is now out of the way may have been carrying a map of the floor (rules/chart.gd): the rest of the layout goes onto
+## your map. Returns the log's line for it, or [] when it had none.
+func _map_from(m) -> Array:
+	var s = flow.state
+	if s.floor_map == null or not Chart.drops(s, m):
+		return []
+	var chance: float = Chart.drop_chance(s)
+	var seen: float = Chart.share(s)
+	var cells: int = Chart.reveal(s)
+	var words: Dictionary = Chart.table().map
+	if not flow.banner_up():
+		flow.announce(str(words.title), str(words.text) % m.name)
+	print("encounter: %s was carrying the map (%.0f%% seen, chance %.0f%%), %d cells charted" % [m.name, seen * 100.0, chance * 100.0, cells])
+	flow.event("charted", {"how": "map", "cells": cells})
+	flow.event("sound", {"name": "good"})
+	return [State.sys_line(str(words.line) % m.name)]
 
 
 ## Out of the fight with nothing owed: no gold, no grudge, and it heals up as if you were never there.

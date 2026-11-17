@@ -299,6 +299,7 @@ func _make_floor(way := {}) -> void:
 	state.quarter_turns = 0
 	state.visited = {state.cell: true}
 	state.seen = {}
+	state.charted = {}
 	state.look()
 
 

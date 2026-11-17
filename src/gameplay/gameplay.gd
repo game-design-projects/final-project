@@ -65,6 +65,8 @@ const KEYS := {
 	KEY_ENTER: "confirm", KEY_KP_ENTER: "confirm", KEY_SPACE: "confirm", KEY_Z: "confirm", KEY_ESCAPE: "cancel", KEY_X: "cancel",
 }
 const INFO_KEY := KEY_I # shows the foe's card, then each ally's, then the map's legend (tips.gd); also the pad's INFO
+const MAP_KEY := KEY_M # opens and closes the whole floor's map over the picture (automap.gd drawn `full`); so does a click on the corner map
+const WALK_KEYS := ["up", "down", "left", "right"] # the keys that leave the full map open: you can walk with it up
 const REPEATING := ["explore", "dodge"] # stages where holding a key keeps acting
 
 ## What to start with: {"kind": "new"} or {"kind": "load", "state": Dictionary}, set by the menu through session.gd. With
@@ -82,6 +84,8 @@ var _frame_box: StyleBoxFlat
 var _rule: ColorRect
 var _overlay
 var _automap
+var _full_map # the same map drawn over the whole picture, while `_map_open`
+var _map_open := false
 var _postfx
 var _picture: TextureRect
 var _room: Control
@@ -286,6 +290,11 @@ func _build_screen() -> void:
 	_automap.custom_minimum_size = Vector2(Automap.PANEL, Automap.PANEL)
 	_automap.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_frame.add_child(_automap)
+	_full_map = Automap.new() # the whole floor, over the picture and under the tooltips
+	_full_map.full = true
+	_full_map.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_full_map.visible = false
+	_frame.add_child(_full_map)
 	_tips = Tips.new() # the ally chips and the tooltips, over the picture
 	_frame.add_child(_tips)
 
@@ -344,7 +353,11 @@ func _process(dt: float) -> void:
 	_stage.calm = Settings.get_value("calm")
 	_stage.update(s, _clock_ms / 1000.0, dt)
 	_overlay.clock_ms = _clock_ms
-	_automap.visible = s.floor_map != null and s.stage in Transitions.WALK
+	var walking: bool = s.floor_map != null and s.stage in Transitions.WALK
+	if _map_open and not _map_allowed():
+		show_map(false) # a fight, a trader, the stairs: the map is put away
+	_automap.visible = walking and not _map_open
+	_full_map.visible = walking and _map_open
 	_apply_fx()
 	_postfx.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
 	_postfx.set_warmth(Warmth.of(s))
@@ -378,6 +391,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_tips.cycle()
 		get_viewport().set_input_as_handled()
 		return
+	if event.keycode == MAP_KEY:
+		if not event.echo:
+			show_map(not _map_open)
+		get_viewport().set_input_as_handled()
+		return
 	var key := key_name(event)
 	if key != "":
 		_press(key, event.echo)
@@ -403,14 +421,38 @@ static func key_name(event: InputEventKey) -> String:
 	return ""
 
 
-## A key of the game, from the keyboard, the pad or a click: it closes a card that was kept open, then acts.
+## A key of the game, from the keyboard, the pad or a click: it closes a card that was kept open, then acts. With the full map
+## up, BACK only closes it, the arrows walk under it, and anything else closes it and acts.
 func _press(key: String, held := false) -> void:
 	_tips.unpin()
+	if _map_open and not key in WALK_KEYS:
+		show_map(false)
+		if key == "cancel":
+			return
 	flow.press(key, held)
 
 
+## Whether the whole floor's map may be up: only while walking the floor, not in a fight, at camp or with someone to talk to.
+func _map_allowed() -> bool:
+	return flow != null and flow.state.floor_map != null and flow.state.stage == "explore"
+
+
+## Open or close the whole floor's map.
+func show_map(open: bool) -> void:
+	if open and not _map_allowed():
+		return
+	if open == _map_open:
+		return
+	_map_open = open
+	print("gameplay: the full map %s" % ("opens" if open else "closes"))
+
+
+func map_open() -> bool:
+	return _map_open
+
+
 ## The pointer over the picture, and a click or tap on it. Where the strike bar sweeps (and on the title card) the picture is
-## the big OK button; on the foe or the automap, a click keeps its card open (touch has no hover).
+## the big OK button; on the foe a click keeps its card open (touch has no hover), and on the automap it opens the whole floor's map.
 func _on_picture_input(event: InputEvent) -> void:
 	if flow == null or _pause.visible:
 		return
@@ -428,8 +470,10 @@ func _on_picture_input(event: InputEvent) -> void:
 		_begin()
 	elif flow.state.stage == "fightbar" or (flow.state.stage in ["intro", "wait"] and flow.state.hint == "ANY KEY CONTINUE"):
 		_press("confirm")
-	else:
-		_tips.tap(_in_picture(event.position))
+	elif _map_open:
+		show_map(false) # a tap anywhere puts the map away
+	elif _tips.tap(_in_picture(event.position)) == "map":
+		show_map(true)
 
 
 ## A point of the picture control as a point of the overlay's 448 x 288, which sits in the middle of a wider picture.
@@ -664,6 +708,7 @@ func _bind_views() -> void:
 	_social.state = flow.state
 	_overlay.state = flow.state
 	_automap.state = flow.state
+	_full_map.state = flow.state
 	_tips.state = flow.state
 
 

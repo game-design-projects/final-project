@@ -1,8 +1,10 @@
 ## Pictures of the floors the generators make, for looking at (tests can't judge looks): each biome's largest floor from above, and
 ## in first person what its secrets look like: the start, a cracked wall, the chest behind it, a pad, and the automap on a big floor.
+## Then the whole floor's map (M) half seen and with the rest charted, and the corner map of a charted floor.
 ##   godot --path . -s res://tools/map_shots.gd -- out=<dir> nosound
 extends SceneTree
 
+const Chart = preload("res://src/rules/chart.gd")
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
@@ -204,6 +206,21 @@ func _roam(s, f, biome: Dictionary) -> void:
 	_put(s, best, 1)
 	await _wait(0.4)
 	await _shot("%s_2_wide" % biome.id)
+	# the whole floor's map (M): with the near half of the floor seen, then with the rest charted, and the corner map after that
+	var cells: Array = s.reach().keys() # nearest the start first
+	for i in cells.size() / 2:
+		s.seen[cells[i]] = true
+		if i % 3 == 0:
+			s.visited[cells[i]] = true
+	_game.show_map(true)
+	await _wait(0.3)
+	await _shot("%s_3_full_map" % biome.id)
+	Chart.reveal(s)
+	await _wait(0.3)
+	await _shot("%s_4_full_map_charted" % biome.id)
+	_game.show_map(false)
+	await _wait(0.3)
+	await _shot("%s_5_corner_charted" % biome.id)
 
 
 func _put(s, c: Vector2i, facing: int) -> void:

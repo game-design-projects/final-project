@@ -2,10 +2,16 @@
 ## you have seen is dark, floor you stood on lighter, walls are lines on the edges of seen floor (in the view walls are faces
 ## with no thickness, and a block would look like unexplored dark). The stairs are a ring; monsters you have seen are dots;
 ## the champion is marked in red from the start, so you can choose to hunt it. The wall with writing on it is a gold edge, grey once read.
-## A big floor shows through a window that follows you.
+## A big floor shows through a window that follows you. Floor you haven't seen but know from a map or your instinct (rules/chart.gd)
+## is a dark blue with dim walls: the layout and the stairs, and nothing of who or what is there.
+## The same node drawn `full` is the whole floor over the picture (M, or a click on the corner map): it fills its parent, dims the
+## picture behind it, fits every cell of the floor, and says which floor it is and how much of it you have seen.
 ## It only reads the game's state.
 extends Control
 
+const Chart = preload("res://src/rules/chart.gd")
+const Floors = preload("res://src/rules/floors.gd")
+const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 
 const PANEL := 115.0 # the whole panel, border and margin included
@@ -16,25 +22,66 @@ const LORE_EDGE := 2.0 # how deep the writing's edge is
 const MIN_CELL_PX := 7 # a smaller cell has no room for a dot in it; a floor that would need one scrolls instead
 const SEEN := Color("#262626")
 const VISITED := Color("#5a5a5a")
+const CHARTED := Color("#15202e") # floor known from a map, not from your eyes
+const CHARTED_WALL_DARK := 0.5 # and its walls, darker than the ones you saw
 const YOU := Color.WHITE
+const FULL_MIN_CELL_PX := 4 # the full map's smallest cell: under it the dots and the stairs' ring run together, so it scrolls instead
+const FULL_MAX_CELL_PX := 14 # and its largest: a small floor stays a map, not a board
+const FULL_PAD := 12.0 # the least room left round the full map
+const FULL_TEXT := 22.0 # the room above and below it, for its two lines
+const FULL_DIM := 0.72 # how dark the picture goes behind it
+const FULL_FONT_PX := 8
 
 var state # State, set by the owner
+var full := false # the whole floor over the picture, instead of the corner's window
 var _drawn_key := []
 
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(PANEL, PANEL)
+	if not full:
+		custom_minimum_size = Vector2(PANEL, PANEL)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## The side of the square the map may fill, in pixels: the corner panel's, or what the picture leaves the full map.
+func map_px() -> int:
+	if not full:
+		return MAP_PX
+	return maxi(MAP_PX, floori(minf(size.x - FULL_PAD * 2.0, size.y - FULL_TEXT * 2.0) - MARGIN * 2.0))
 
 
 ## The width of a cell on the map, in pixels.
 func cell_px() -> int:
-	return maxi(MIN_CELL_PX, floori(float(MAP_PX) / state.floor_map.size))
+	var fit := floori(float(map_px()) / state.floor_map.size)
+	if full:
+		return clampi(fit, FULL_MIN_CELL_PX, FULL_MAX_CELL_PX)
+	return maxi(MIN_CELL_PX, fit)
 
 
 ## How many cells the window shows across.
 func window_cells() -> int:
-	return mini(state.floor_map.size, floori(float(MAP_PX) / cell_px()))
+	return mini(state.floor_map.size, floori(float(map_px()) / cell_px()))
+
+
+## The panel the map is drawn in (this node's pixels): the whole corner node, or a square in the middle of the picture.
+func panel_rect() -> Rect2:
+	if not full:
+		return Rect2(Vector2.ZERO, size)
+	var side := window_cells() * cell_px() + MARGIN * 2.0
+	return Rect2(((size - Vector2(side, side)) / 2.0).floor(), Vector2(side, side))
+
+
+## The full map's two lines: which floor this is and how much of it is seen, and the keys.
+func full_lines() -> Dictionary:
+	var f = state.floor_map
+	var where := "PRACTICE" if state.practice else "B%dF" % state.depth
+	var biome := str(Floors.biome_named(f.biome).get("name", "")) if f.biome != "" else ""
+	if biome != "":
+		where += " · " + biome
+	var seen := "%d%% SEEN" % floori(Chart.share(state) * 100.0)
+	if not state.charted.is_empty():
+		seen += " · CHARTED"
+	return {"where": where, "seen": seen, "keys": "M CLOSE · ARROWS WALK"}
 
 
 ## The floor cell at the window's top left corner: you in the middle of it, as far as the floor goes.
@@ -52,13 +99,24 @@ func _in_window(c: Vector2i) -> bool:
 
 ## The cells you have seen that are in the window.
 func _shown() -> Array:
+	return _in_window_of(state.seen)
+
+
+## The cells in the window you know only from a map (rules/chart.gd).
+func charted_shown() -> Array:
+	if state.charted.is_empty():
+		return []
+	return _in_window_of(state.charted).filter(func(c): return not state.seen.has(c))
+
+
+func _in_window_of(cells_known: Dictionary) -> Array:
 	var o := window_origin()
 	var cells := window_cells()
 	var out := []
 	for y in range(o.y, o.y + cells):
 		for x in range(o.x, o.x + cells):
 			var c := Vector2i(x, y)
-			if state.seen.has(c):
+			if cells_known.has(c):
 				out.append(c)
 	return out
 
@@ -88,12 +146,12 @@ func monster_marks() -> Array:
 	return out
 
 
-## The lines where seen floor meets a wall, as Rect2s 1 pixel thick (map pixels).
-func wall_lines() -> Array:
+## The lines where seen floor meets a wall, as Rect2s 1 pixel thick (map pixels). With `cells`, the lines round those instead.
+func wall_lines(cells = null) -> Array:
 	var f = state.floor_map
 	var s := cell_px()
 	var out := []
-	for c in _shown():
+	for c in _shown() if cells == null else cells:
 		var at := Vector2(c) * s
 		for side in 4:
 			if f.is_open(c + f.DIRS[side]):
@@ -106,10 +164,10 @@ func wall_lines() -> Array:
 	return out
 
 
-## The stairs' ring (outer and inner squares, map pixels) once they are seen, or an empty list.
+## The stairs' ring (outer and inner squares, map pixels) once they are seen or charted, or an empty list.
 func stairs_mark() -> Array:
 	var f = state.floor_map
-	if not state.seen.has(f.stairs) or not _in_window(f.stairs):
+	if not Chart.known(state, f.stairs) or not _in_window(f.stairs):
 		return []
 	var s := cell_px()
 	var at := Vector2(f.stairs) * s
@@ -155,7 +213,9 @@ func _edge(c: Vector2i, side: int, thick: float) -> Rect2:
 func _process(_dt: float) -> void:
 	if state == null or state.floor_map == null:
 		return
-	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size(), state.floor_map.steps, state.floor_map.lore.get("read", false)]
+	if full and not is_visible_in_tree():
+		return
+	var key := [state, state.cell, state.facing, state.seen.size(), state.visited.size(), state.floor_map.monsters_left(), state.floor_map.treasure.size(), state.floor_map.pickups.size(), state.floor_map.changes, state.floor_map.quester.size(), state.floor_map.steps, state.floor_map.lore.get("read", false), state.charted.size(), size]
 	if key != _drawn_key:
 		_drawn_key = key
 		queue_redraw()
@@ -165,13 +225,27 @@ func _draw() -> void:
 	if state == null or state.floor_map == null:
 		return
 	var f = state.floor_map
-	draw_rect(Rect2(Vector2.ZERO, size), Color.BLACK)
-	draw_rect(Rect2(Vector2.ZERO, size).grow(-0.5), Palette.FAINT, false, 1.0)
+	var panel := panel_rect()
+	if full:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, FULL_DIM))
+		var lines := full_lines()
+		var font: Font = Fonts.title()
+		draw_string(font, Vector2(panel.position.x, panel.position.y - 6.0), lines.where, HORIZONTAL_ALIGNMENT_LEFT, -1, FULL_FONT_PX, Palette.INK)
+		draw_string(font, Vector2(panel.position.x, panel.position.y - 6.0), lines.seen, HORIZONTAL_ALIGNMENT_RIGHT, panel.size.x, FULL_FONT_PX, Palette.DIM)
+		draw_string(font, Vector2(panel.position.x, panel.end.y + 6.0 + FULL_FONT_PX), lines.keys, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, FULL_FONT_PX, Palette.DIM)
+		print_verbose("automap: the full map drawn in %s, %d cells across at %d px, %s" % [size, window_cells(), cell_px(), lines.seen])
+	draw_rect(panel, Color.BLACK)
+	draw_rect(panel.grow(-0.5), Palette.FAINT, false, 1.0)
 	var s := cell_px()
-	draw_set_transform(Vector2(MARGIN, MARGIN) - Vector2(window_origin()) * s)
+	draw_set_transform(panel.position + Vector2(MARGIN, MARGIN) - Vector2(window_origin()) * s)
+	var wall: Color = Palette.for_run(state.palette_id).wall
+	var charted := charted_shown()
+	for c in charted:
+		draw_rect(Rect2(Vector2(c) * s, Vector2(s, s)), CHARTED)
+	for r in wall_lines(charted):
+		draw_rect(r, wall.darkened(CHARTED_WALL_DARK))
 	for c in _shown():
 		draw_rect(Rect2(Vector2(c) * s, Vector2(s, s)), VISITED if state.visited.has(c) else SEEN)
-	var wall: Color = Palette.for_run(state.palette_id).wall
 	for r in wall_lines():
 		draw_rect(r, wall)
 	var ring := stairs_mark()

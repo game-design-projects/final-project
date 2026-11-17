@@ -44,7 +44,7 @@ const TREND_S := 1.4 # how long your health bar's arrow stays after a change
 const FLASH_S := 0.14
 const HEAL := Color("#9ed36b")
 
-const KEY_NAMES := {"UP / DOWN": "ud", "LEFT / RIGHT": "lr", "ARROWS": "all", "ENTER": "ENTER", "ESC": "ESC", "I": "I", "ANY KEY": "ANY KEY", "1-4": "1 - 4"}
+const KEY_NAMES := {"UP / DOWN": "ud", "LEFT / RIGHT": "lr", "ARROWS": "all", "ENTER": "ENTER", "ESC": "ESC", "I": "I", "M": "M", "ANY KEY": "ANY KEY", "1-4": "1 - 4"}
 
 var part := Part.HEADER
 var state # State, set by the owner

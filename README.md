@@ -23,10 +23,10 @@ No key is needed: without Jev, the monsters think with local rules. Prebuilt bui
 
 | Where | Keys |
 | --- | --- |
-| Walking | ↑/W forward · ↓/S back · ←/A and →/D turn · **Enter** make camp · **I** details · **Esc** pause menu |
+| Walking | ↑/W forward · ↓/S back · ←/A and →/D turn · **Enter** make camp · **M** the whole floor's map · **I** details · **Esc** pause menu |
 | Fight menu | ↑/↓ choose · **Enter**, Space or Z pick · **1–4** pick directly · **I** details · **Esc** pause menu |
 | Strike bar | **Enter** (or click the picture) when the line crosses the middle |
 | Dodge | arrows or WASD |
 | Menu pages | ↑/↓ choose · ←/→ change a setting · **Enter** pick · **1–9** pick directly · **Esc** back |
 
-The mouse works too: hover a command to pick it, hover the foe, an ally or the map for details. Touch devices get an on-screen pad.
+The mouse works too: hover a command to pick it, hover the foe, an ally or the map for details, and click the map for the whole floor. Touch devices get an on-screen pad.
