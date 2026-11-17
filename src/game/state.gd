@@ -173,12 +173,15 @@ func summary() -> String:
 
 
 ## The names of the monsters met this run as far as it remembers them (upper case -> true): the floor you are on (or leaving),
-## the ones the clans talk about, the party and the friends you lost. A new floor gives its monsters other names.
+## the one asking on it, the ones the clans talk about, the party and the friends you lost. A new floor gives its monsters
+## other names.
 func names_met() -> Dictionary:
 	var out := {}
 	if floor_map != null:
 		for m in floor_map.monsters:
 			out[str(m.name).to_upper()] = true
+		if not floor_map.quester.is_empty(): # the one asking is a monster of the run too, named from the same pools
+			out[str(floor_map.quester.get("name", "")).to_upper()] = true
 	for d in deeds:
 		out[str(d.who).to_upper()] = true
 	for a in allies:

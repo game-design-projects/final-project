@@ -11,10 +11,12 @@ const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const FloorMap = preload("res://src/rules/floor_map.gd")
 const Hints = preload("res://src/rules/hints.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Odds = preload("res://src/rules/odds.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Words = preload("res://src/mind/words.gd")
 
@@ -57,8 +59,44 @@ func _names_are_not_reused() -> void:
 	_check(Monster._fresh_name(Rng.new(1), ["Glop", "Drip"], {"GLOP": true}, ["Plip"]) == "DRIP", "and a recorded name before a spare one")
 
 
+## The one asking on a floor is a monster of the run too: its name is one nobody on the floor has, nor anyone met earlier.
+## Before, it came from the whole pool, so a quest-giver could be called the KESSHRA you slew, and a later monster could be
+## named after it.
+func _questers_are_named_fresh() -> void:
+	var stale := []
+	var checked := 0
+	for seed_value in range(1, 21):
+		var taken := {}
+		for depth in range(1, 6):
+			var plan: Dictionary = Floors.plan(depth, {})
+			plan.request = Requests.due(depth)
+			plan.items = true
+			plan.lurkers = true
+			plan.names_taken = taken.duplicate()
+			var f = FloorGen.generate(Rng.new(Floors.floor_seed(seed_value, depth, 0)), plan)
+			for m in f.monsters:
+				taken[m.name] = true
+			if f.quester.is_empty():
+				continue
+			checked += 1
+			var who := str(f.quester.name).to_upper()
+			if taken.has(who) or f.monsters.any(func(m): return str(m.name).to_upper() == who):
+				stale.append("%d/%d %s" % [seed_value, depth, who])
+			taken[who] = true
+	_check(checked >= 20 and stale.is_empty(), "%d questers over 20 runs, no name met before (%s)" % [checked, stale])
+	var slime := Content.species("slime")
+	var met := {}
+	for n in slime.names:
+		met[str(n).to_upper()] = true
+	var spare: String = Requests._free_name(Rng.new(5), FloorMap.new(), "slime", met)
+	_check(slime.spare_names.map(func(n): return str(n).to_upper()).has(spare), "out of recorded names, a quester takes a spare one (%s)" % spare)
+	var named: String = Requests._free_name(Rng.new(5), FloorMap.new(), "slime", {})
+	_check(slime.names.map(func(n): return str(n).to_upper()).has(named), "and a recorded one while the run has met nobody (%s)" % named)
+
+
 func _run() -> void:
 	_names_are_not_reused()
+	_questers_are_named_fresh()
 	_strike_bands()
 	_mood_after_a_hit()
 	_dodge_cells()

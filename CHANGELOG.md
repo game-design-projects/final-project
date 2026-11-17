@@ -19,6 +19,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Fixed
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
 - A lurker's SOMETHING tag, and the trader's and the quester's names, no longer read through the battle screen over the foe.
+- The one asking a favour takes its name by the same rule as the floor's monsters: never one met earlier in the run, recorded names before spare ones (it used the whole pool, so a quest-giver could be called the KESSHRA you slew), and its name is kept for the floors after, so no monster is later named after it.
 
 ## [0.9.0] - 2026-11-16
 
