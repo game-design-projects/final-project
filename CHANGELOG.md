@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-17
+
 ### Added
 - No monster in a run takes a name met before it (the floor you leave, the deeds the clans remember, the party), so a second KESSHRA no longer talks about the KESSHRA you slew. Each species has 12 spare names (the dragon 8, `spare_names` in `data/species.json`), drawn once its recorded names are used up; their lines with the name in them use the synthesised voice until `tools/voices/render.py` renders them. Out of both, it counts on: GLOP II.
 - The Jev Worker answers with `server-timing` (the rate limiter and the way to Jev), and the game's log prints it beside its own time, so a slow answer says which hop was slow.
@@ -450,7 +452,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.0...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.1...main
+[0.9.1]: https://github.com/game-design-projects/final-project/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/game-design-projects/final-project/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/game-design-projects/final-project/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/game-design-projects/final-project/compare/v0.7.0...v0.8.0
