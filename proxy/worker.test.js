@@ -168,7 +168,7 @@ const parseJsonc = (text) => JSON.parse(text.replace(/("(?:\\.|[^"\\])*")|\/\/[^
 
 test("wrangler.jsonc stays inside the Worker's scope: one workers.dev Worker, no routes, builds or extra bindings", () => {
   const config = parseJsonc(readFileSync(new URL("./wrangler.jsonc", import.meta.url), "utf8"));
-  const allowed = ["$schema", "name", "main", "compatibility_date", "workers_dev", "preview_urls", "ratelimits", "observability"];
+  const allowed = ["$schema", "name", "main", "compatibility_date", "workers_dev", "preview_urls", "ratelimits", "services", "observability"];
   assert.deepEqual(Object.keys(config).filter((k) => !allowed.includes(k)), [], "new top-level keys widen what CI deploys; review them");
   assert.equal(config.name, "donjon-api", "the CI token is scoped to the Worker named donjon-api");
   assert.equal(config.main, "worker.js");
@@ -180,4 +180,20 @@ test("wrangler.jsonc stays inside the Worker's scope: one workers.dev Worker, no
   assert.match(rl.namespace_id, /^\d+$/);
   assert.ok([10, 60].includes(rl.simple.period), "Cloudflare only takes a 10 or 60 second period");
   assert.ok(rl.simple.limit > 0);
+  assert.deepEqual(config.services, [{ binding: "LLMGW", service: "api-cf-llmgateway-front" }], "the one service binding is the LLM gateway");
+});
+
+test("with the LLMGW binding the gateway request goes through it, with the key and the pinned model; other upstreams never do", async () => {
+  const via = [];
+  const LLMGW = { fetch: async (url, init) => (via.push({ url: String(url), init, body: JSON.parse(init.body) }), new Response('{"answers":{}}', { status: 200 })) };
+  const res = await post(GOOD, { env: { LLMGW_API_KEY: "sk-llmgw-x", LLMGW } });
+  assert.equal(res.status, 200);
+  assert.equal(upstream.calls.length, 0, "nothing went out over the network");
+  assert.equal(via.length, 1);
+  assert.equal(via[0].url, UPSTREAM.gateway.url);
+  assert.equal(via[0].init.headers.authorization, "Bearer sk-llmgw-x");
+  assert.equal(via[0].body.model, UPSTREAM.gateway.model);
+  await post(GOOD, { env: { OPENROUTER_API_KEY: "or-x", LLMGW } });
+  assert.equal(via.length, 1, "an OpenRouter key never goes to the gateway binding");
+  assert.equal(upstream.calls.length, 1);
 });
