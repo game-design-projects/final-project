@@ -164,7 +164,7 @@ func warning_fill(h: Dictionary) -> float:
 	return 0.12 + 0.28 * clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)
 
 
-## Where a goo ball is now, falling onto the square it is aimed at.
+## Where a goo ball is now, falling onto the square it is aimed at (`at`; goo without one has no ball).
 func goo_ball(h: Dictionary) -> Vector2:
 	var to := _cell_rect(h.at).get_center()
 	return to - Vector2(0.0, (1.0 - clampf((clock_ms - h.warn) / (h.hit - h.warn), 0.0, 1.0)) * GOO_DROP)
@@ -580,7 +580,7 @@ func _hazard(h: Dictionary, col: Color) -> void:
 		var at := _cell_rect(h.at).get_center()
 		draw_rect(Rect2(at - Vector2(11, 11), Vector2(22, 22)), Color.BLACK)
 		_piece(h.glyph, at, Color.WHITE)
-	if h.kind == "goo" and not live:
+	if h.kind == "goo" and not live and h.has("at"): # a puddle's spread of goo has no one square to fall on
 		draw_circle(goo_ball(h), 5.0, col)
 	if h.has("mark") and h.has("at") and (live or h.get("mark_warn", false)) and clock_ms < h.end:
 		_mark(h, live)
