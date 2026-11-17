@@ -25,6 +25,7 @@ const HINT_H := 18.0
 const BODY_H := 300.0
 const INPUT_H := 40.0
 const SELECTED_FILL := Color("#313135")
+const PICKED_QUIET := Color("#a0a0a0") # text you can't use, on the pick's fill: 4.95:1 there
 const LABEL_X := 16.0 # where a row's label starts, and the margin it keeps from the left edge
 const VALUE_RIGHT := 14.0 # how far in from the right edge an item's value ends
 const VALUE_GAP := 12.0 # the least space between a label and the value beside it
@@ -330,16 +331,19 @@ func _notification(what: int) -> void:
 
 
 ## The label's colour: a row that can't be picked is faint, but not on the pick's own fill, where faint would be the fill
-## itself (LOAD GAME's empty slots are all disabled, and the one under the cursor came out blank).
+## itself (LOAD GAME's empty slots are all disabled, and the one under the cursor came out blank). On the fill the quiet grey
+## is brighter than `Palette.DIM`, which is 3.75:1 there: small text needs 4.5:1, and this one is 4.95:1.
 static func row_ink(off: bool, picked: bool) -> Color:
 	if off:
-		return Palette.DIM if picked else Palette.FAINT
+		return PICKED_QUIET if picked else Palette.FAINT
 	return Palette.MERCY if picked else Palette.INK
 
 
 ## The line under it, the same way: quiet, and legible on the pick's fill.
 static func row_sub_ink(off: bool, picked: bool) -> Color:
-	return Palette.DIM if picked or not off else Palette.FAINT
+	if picked:
+		return PICKED_QUIET
+	return Palette.FAINT if off else Palette.DIM
 
 
 func _item_at(at: Vector2) -> int:

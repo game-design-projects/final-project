@@ -152,15 +152,15 @@ func _a_picked_row_that_cannot_be_picked_still_reads(panel) -> void:
 	var fill: Color = MenuPanel.SELECTED_FILL
 	var off: bool = item.get("disabled", false)
 	_check(off, "an empty save slot can't be picked")
-	_check(_contrast(MenuPanel.row_ink(off, true), fill) >= 3.0, "picked, its label still reads on the pick (%.1f:1)" % _contrast(MenuPanel.row_ink(off, true), fill))
-	_check(_contrast(MenuPanel.row_sub_ink(off, true), fill) >= 3.0, "and so does the line under it (%.1f:1)" % _contrast(MenuPanel.row_sub_ink(off, true), fill))
+	_check(_contrast(MenuPanel.row_ink(off, true), fill) >= 4.5, "picked, its label reads on the pick at AA for small text (%.1f:1)" % _contrast(MenuPanel.row_ink(off, true), fill))
+	_check(_contrast(MenuPanel.row_sub_ink(off, true), fill) >= 4.5, "and so does the line under it (%.1f:1)" % _contrast(MenuPanel.row_sub_ink(off, true), fill))
+	_check(_contrast(MenuPanel.row_sub_ink(false, true), fill) >= 4.5, "a picked row you can use keeps its line readable too (%.1f:1)" % _contrast(MenuPanel.row_sub_ink(false, true), fill))
 	_check(_luminance(MenuPanel.row_ink(off, false)) < _luminance(MenuPanel.row_ink(false, false)), "unpicked, it is dimmer than a label you can use")
 	Flags.set_args(PackedStringArray([]))
 
 
-## WCAG contrast: 1.0 is the same colour. 3.0 is the floor for large text (>=18pt, or >=14pt bold)
-## and for UI boundaries; body text needs 4.5. The picked row's grey is checked against 3.0 here
-## because the pick is a highlight, not body copy, and the owner chose that grey.
+## WCAG contrast: 1.0 is the same colour. Small text needs 4.5:1 (3.0 is the floor for large text and UI
+## boundaries), and these are labels on a fill, so 4.5 is what the checks ask for.
 func _contrast(a: Color, b: Color) -> float:
 	var la := _luminance(a)
 	var lb := _luminance(b)
