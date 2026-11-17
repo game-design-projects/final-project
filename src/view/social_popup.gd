@@ -53,7 +53,8 @@ func _ready() -> void:
 		_buttons.append(b)
 	_input = LineEdit.new()
 	_input.max_length = 140
-	_input.placeholder_text = "Your reply (Enter previews its meaning)"
+	_input.placeholder_text = "Your reply (Enter shows how it is heard)"
+	_input.keep_editing_on_text_submit = true # the second Enter, which says the previewed line, must reach it too
 	_input.add_theme_font_override("font", Fonts.body())
 	_input.add_theme_font_size_override("font_size", 20)
 	_input.add_theme_stylebox_override("normal", _box(Palette.DIM, 8))
@@ -115,10 +116,16 @@ func _process(_dt: float) -> void:
 	_detail.visible = not state.social_typing
 	_input.visible = state.social_typing
 	_send.visible = state.social_typing
+	_send.text = "SAY IT" if said_next() else "PREVIEW REPLY"
 	if state.social_typing and not _typing:
 		_input.clear()
 		_input.call_deferred("grab_focus")
 	elif not state.social_typing and _typing:
 		_input.release_focus()
 	_typing = state.social_typing
-	_note.text = state.social_note + "\nARROWS choose · ENTER confirm · 1–5 select · ESC " + ("back" if _typing else "ignore")
+	_note.text = state.social_note + ("\nENTER %s · ESC back" % ("say it" if said_next() else "preview") if _typing else "\nARROWS choose · ENTER confirm · 1–5 select · ESC ignore")
+
+
+## Whether Enter now says the line (it is the one just previewed) rather than previewing it.
+func said_next() -> bool:
+	return state != null and state.social_typing and state.social_heard.get("text", null) == _input.text.strip_edges()

@@ -32,17 +32,18 @@ func submit(flow, raw: String) -> void:
 	if text == "":
 		await flow.go("act")
 		return
-	await _say(flow, text)
+	await say(flow, text)
 
 
-func _say(flow, text: String) -> void:
+## Says `text` to the foe and lets it react; `read` is what the mind already made of it (the social popup asked), or null to ask.
+static func say(flow, text: String, read = null) -> void:
 	var s = flow.state
 	var m = s.foe
 	m.spoke = true
 	s.add_chat("YOU", text)
 	flow.event("said", {"text": text})
 	s.listening = true
-	var words: Dictionary = await flow.mind.read_words(text)
+	var words: Dictionary = read if read is Dictionary else await flow.mind.read_words(text)
 	var top := Odds.top(words)
 	if m.species in CASHES_IN and top == "gold" and Words.mentions_money(text):
 		s.listening = false
