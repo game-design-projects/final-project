@@ -442,7 +442,7 @@ func _hover_and_tips(game) -> void:
 	var tips = game._tips
 	dock._gui_input(_move(rects[2].get_center()))
 	_check(tips.shown() == "command2", "resting on SPARE shows its help (%s)" % tips.shown())
-	_check(tips.blocks().any(func(b): return str(b.get("text", "")).contains("chance to accept")), "which is the command's own text")
+	_check(tips.blocks().any(func(b): return str(b.get("text", "")).contains("chance") and str(b.get("text", "")).contains("Nerve")), "which is the command's own probability and Nerve text")
 	dock.mouse_exited.emit()
 	_check(tips.shown() == "", "and goes when the mouse leaves")
 	# the foe
@@ -575,14 +575,19 @@ func _sub_text_wraps(game) -> void:
 	var longest := 0.0
 	for item in game.flow.state.menu:
 		longest = maxf(longest, load("res://src/view/fonts.gd").body().get_string_size(str(item.sub), HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x)
-	_check(longest > 900.0 and longest < 1100.0, "SPARE's help is about 980 px wide at the dock's font (%d)" % longest)
+	_check(longest > 200.0 and longest < 800.0, "shortened command help fits at the dock's font (%d px)" % longest)
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
 	var dock_height: float = Hud.DOCK_H + Hud.GRID_SLOT_H - Hud.SLOT_H + Hud.SUB_LINE_H
 	_check(not dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "in a wide window it is one line and the dock keeps its height")
 	dock.size = Vector2(800, 200)
 	dock._process(0.0)
-	_check(dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "in a narrow one there is room for the wrapped help")
+	_check(not dock._sub_wraps() and is_equal_approx(dock.custom_minimum_size.y, dock_height), "short help stays on one line in a narrow window")
+	var original_sub: String = game.flow.state.menu[2].sub
+	game.flow.state.menu[2].sub = "A longer explanation of SPARE and its consequences should still wrap safely when this window becomes narrow. Every important cost and consequence remains visible to the player."
+	dock._process(0.0)
+	_check(dock._sub_wraps(), "longer help still wraps safely when needed")
+	game.flow.state.menu[2].sub = original_sub
 	dock.size = Vector2(1180, 200)
 	dock._process(0.0)
 	_check(is_equal_approx(dock.custom_minimum_size.y, dock_height), "and goes back when the window is wide again")

@@ -58,17 +58,17 @@
         [
           "truth",
           "TELL THE TRUTH",
-          "Trade your record for a real route clue; it learns about you."
+          "Exact route and softer attacks. It remembers your record; no mercy makes it wary next meeting."
         ],
         [
           "lie",
           "DENY ANY MERCY",
-          "Keep your reputation hidden. It can catch lies only about things it witnessed."
+          "Keep your record private; get only a vague clue. A witnessed lie backfires."
         ],
         [
           "proof",
           "REQUEST PROOF",
-          "Pay 2 gold for the route and a gentler next attack."
+          "Pay 2 gold for an exact route and one softer attack; reveal nothing."
         ]
       ]
     },
@@ -116,6 +116,8 @@
     }
   },
   "lines": {
+    "remembered_mercy": "You told me you spared someone here. I remember your words.",
+    "remembered_none": "You told me you spared nobody here. I remember; I will keep my distance.",
     "remembered_betrayal": "I remember your broken promise. Keep that weapon away.",
     "remembered_promise": "You promised not to hurt me. I remember.",
     "broke_word": "You broke your word before."
