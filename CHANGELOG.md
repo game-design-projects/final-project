@@ -14,6 +14,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - The come-along choice after a spare opens at once; how much it wants to come is asked while you choose.
 - The THINKING line says who and what about ("NYSS IS THINKING: WILL IT ACCEPT MERCY"), and is not shown during a dodge; the strike's "ENTER STRIKE" hint goes away once the bar has.
 - SAY SOMETHING ELSE: Enter shows how your words are heard and keeps them in the box; Enter again on the same words says them. Words that answer none of the offer's choices are said as plain words (the offer ends, the monster reacts as to SAY SOMETHING, for your action) instead of "Not understood".
+- The champion-on-the-stairs measurement is now a test over 1,000 seeds: no floor can be finished without a fight, the champion holds the stairs on every one, and no seed is unreachable (#26).
 
 ### Fixed
 - The puddles, tide and hypnosis attacks no longer crash the dodge box: their spread of goo has no single square for a falling ball.
