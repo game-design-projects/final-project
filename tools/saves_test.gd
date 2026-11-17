@@ -3,6 +3,7 @@
 ##   godot --headless --path . -s res://tools/saves_test.gd
 extends "res://tools/test_base.gd"
 
+const Chart = preload("res://src/rules/chart.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
@@ -32,6 +33,7 @@ func _run() -> void:
 	_numbers_rise()
 	_nosave_in_memory()
 	await _state_is_checked()
+	await _a_charted_floor_comes_back_charted()
 	_cleanup()
 	_finish()
 
@@ -149,6 +151,38 @@ func _state_is_checked() -> void:
 		clamped[what][0].call(d)
 		var got = State.from_dict(d)
 		_check(got != null and clamped[what][1].call(got), "a save with %s is read, brought back in range" % what)
+
+
+## A floor whose rest was charted (rules/chart.gd): the map you were handed is still on the save, and a floor is charted once, so
+## loading it neither loses the stairs nor drops a second map. A save from before charting reads as a floor with nothing charted.
+func _a_charted_floor_comes_back_charted() -> void:
+	var flow := Flow.new(Rng.new(17), LocalMind.new())
+	await flow.new_run()
+	var s = flow.state
+	var reach: Dictionary = s.reach()
+	var seen := 0
+	for c in reach: # see enough of the floor that instinct would chart the rest
+		s.seen[c] = true
+		seen += 1
+		if Chart.instinct_due(s):
+			break
+	_check(Chart.instinct_due(s), "on this floor, enough of it seen brings instinct (%.0f%% seen)" % (Chart.share(s) * 100.0))
+	var learnt: int = Chart.reveal(s)
+	var back = State.from_dict(s.to_dict())
+	_check(learnt > 0 and back != null and back.charted.size() == learnt, "the rest of the map a floor was handed is on its save (%d cells)" % learnt)
+	_check(back != null and back.charted.keys().all(func(c): return back.floor_map.is_open(c)), "and every charted cell is floor you can walk")
+	_check(back != null and Chart.known(back, back.floor_map.stairs), "so the stairs are still on it after a load")
+	_check(back != null and not Chart.open(back), "and a loaded floor is not charted a second time")
+	var old: Dictionary = s.to_dict()
+	old.erase("charted")
+	var before = State.from_dict(old)
+	_check(before != null and before.charted.is_empty(), "a save from before charting reads as a floor with nothing charted")
+	var wrong: Dictionary = s.to_dict()
+	wrong.charted = [[1, 1], "x", [2], [999, 999], [1.0, 3.0], [0, 0], [float(s.floor_map.stairs.x), float(s.floor_map.stairs.y)]]
+	var kept = State.from_dict(wrong)
+	_check(kept != null and kept.charted.keys().all(func(c): return kept.floor_map.is_open(c)), "charted cells that are not cells of this floor are dropped, the rest kept")
+	_check(kept != null and kept.charted.has(s.floor_map.stairs), "the stairs given as floats still chart")
+	Flags.set_args(PackedStringArray([]))
 
 
 func _cleanup() -> void:
