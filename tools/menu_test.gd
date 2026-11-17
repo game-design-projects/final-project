@@ -26,6 +26,7 @@ func _run() -> void:
 	_data_page_and_nosave(panel)
 	_slot_page_shows_the_name(panel)
 	_slot_rows_leave_room_for_the_date(panel)
+	_a_picked_row_that_cannot_be_picked_still_reads(panel)
 	_copy_page_names_the_slots(panel)
 	_settings_fall_back_to_the_old_blob()
 	await _digits_wheel_and_clicks(panel)
@@ -136,6 +137,40 @@ func _slot_rows_leave_room_for_the_date(panel) -> void:
 	_check(panel._value_shown(setting, true) == "‹ 80 ›" and panel._value_shown(setting, false) == "80", "a setting shows arrows only while it is picked")
 	Saves.delete("1")
 	Flags.set_args(PackedStringArray([]))
+
+
+## A row that can't be picked, under the cursor: its label used to be the faint colour of the borders, drawn on the pick's own
+## fill, so LOAD GAME's empty slots came out blank under the pick (the same grey as the fill). It stays quiet, but legible.
+func _a_picked_row_that_cannot_be_picked_still_reads(panel) -> void:
+	Flags.set_args(PackedStringArray(["nosave"]))
+	var Saves = load("res://src/menu/saves.gd")
+	if Saves.in_memory():
+		Saves.delete("1")
+	var ctx := {"load_slot": func(_s): pass, "save_slot": func(_s): pass}
+	panel.open(func(): return Menus.slot_list(panel, ctx, "load"))
+	var item: Dictionary = panel._page.items[1] # slot 1, after the autosave: empty, so it can't be picked
+	var fill: Color = MenuPanel.SELECTED_FILL
+	var off: bool = item.get("disabled", false)
+	_check(off, "an empty save slot can't be picked")
+	_check(_contrast(MenuPanel.row_ink(off, true), fill) >= 3.0, "picked, its label still reads on the pick (%.1f:1)" % _contrast(MenuPanel.row_ink(off, true), fill))
+	_check(_contrast(MenuPanel.row_sub_ink(off, true), fill) >= 3.0, "and so does the line under it (%.1f:1)" % _contrast(MenuPanel.row_sub_ink(off, true), fill))
+	_check(_luminance(MenuPanel.row_ink(off, false)) < _luminance(MenuPanel.row_ink(false, false)), "unpicked, it is dimmer than a label you can use")
+	Flags.set_args(PackedStringArray([]))
+
+
+## WCAG contrast: 1.0 is the same colour, 3.0 is a small text you can still read.
+func _contrast(a: Color, b: Color) -> float:
+	var la := _luminance(a)
+	var lb := _luminance(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+func _luminance(c: Color) -> float:
+	return 0.2126 * _channel(c.r) + 0.7152 * _channel(c.g) + 0.0722 * _channel(c.b)
+
+
+func _channel(v: float) -> float:
+	return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
 
 
 ## COPY TO and its REPLACE question name a slot the way the list does, with its name.

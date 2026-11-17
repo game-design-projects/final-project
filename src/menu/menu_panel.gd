@@ -329,6 +329,19 @@ func _notification(what: int) -> void:
 		_place_children()
 
 
+## The label's colour: a row that can't be picked is faint, but not on the pick's own fill, where faint would be the fill
+## itself (LOAD GAME's empty slots are all disabled, and the one under the cursor came out blank).
+static func row_ink(off: bool, picked: bool) -> Color:
+	if off:
+		return Palette.DIM if picked else Palette.FAINT
+	return Palette.MERCY if picked else Palette.INK
+
+
+## The line under it, the same way: quiet, and legible on the pick's fill.
+static func row_sub_ink(off: bool, picked: bool) -> Color:
+	return Palette.DIM if picked or not off else Palette.FAINT
+
+
 func _item_at(at: Vector2) -> int:
 	if _page.is_empty():
 		return -1
@@ -355,7 +368,7 @@ func _draw() -> void:
 		var r: Rect2 = lay.rows[i]
 		var off: bool = item.get("disabled", false)
 		var picked: bool = i == _selected
-		var color: Color = Palette.FAINT if off else (Palette.MERCY if picked else Palette.INK)
+		var color: Color = row_ink(off, picked)
 		if picked:
 			draw_rect(r, SELECTED_FILL)
 			draw_rect(Rect2(r.position, Vector2(4.0, r.size.y)), Palette.MERCY)
@@ -363,6 +376,6 @@ func _draw() -> void:
 		if item.has("value"):
 			draw_string(title, r.position + Vector2(0.0, 24.0), _value_shown(item, picked), HORIZONTAL_ALIGNMENT_RIGHT, r.size.x - VALUE_RIGHT, VALUE_SIZE, Palette.YOU)
 		if item.get("sub", "") != "":
-			draw_string(body, r.position + Vector2(16.0, 46.0), item.sub, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32.0, 18, Palette.FAINT if off else Palette.DIM)
+			draw_string(body, r.position + Vector2(16.0, 46.0), item.sub, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 32.0, 18, row_sub_ink(off, picked))
 	var top := frame.end.y - PAD - hint_height()
 	draw_multiline_string(body, Vector2(frame.position.x + PAD, top + 16.0), _hint_text(), HORIZONTAL_ALIGNMENT_LEFT, WIDTH - PAD * 2.0, 18, -1, Palette.DIM)
