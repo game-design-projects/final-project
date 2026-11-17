@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- The row under the cursor reads at WCAG's small-text contrast (4.95:1 on the pick's fill, was 3.75:1): the label and the line under it, whether the row can be picked or not.
+
 ## [0.9.2] - 2026-11-17
 
 ### Changed
