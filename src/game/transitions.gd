@@ -45,6 +45,10 @@ const WALK := ["explore", "end", "trade", "request", "camp", "keepsake"]
 ## The fight is waiting for the player to pick something: the foe's card and the chat card may open, and a spareable foe shows
 ## its bubble.
 const PICKING := ["intro", "menu", "act", "items", "skills", "talk"]
+## The stages whose choice is the whole moment (a keepsake to take, who holds the gate, the way down, how the run ends): the
+## picture gives its middle to them, each choice a card with what it does written on it (view/choice_popup.gd), and the dock
+## keeps the log and the keys.
+const DECIDING := ["keepsake", "end"]
 
 
 static func stages() -> Array:

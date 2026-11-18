@@ -58,6 +58,7 @@ var questers_met: Array = [] # the names of the ones who asked a favour and were
 var items: Array = [] # item ids in the bag (rules/items.gd)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
+var vignette := "" # what the walk has stopped at, for the picture to show (view/vignette.gd): set by the stage, "" on the walk; never saved
 var keepsakes: Array = [] # the keepsakes taken from champions this run, in the order taken (rules/keepsakes.gd, the feature keepsakes)
 var skills: Array = [] # the skills held (rules/skills.gd): given by the feature skill-combat, kept in a save made with it
 var hunger := 0.0 # 0 fed .. rules/survival.gd's starving_at

@@ -10,6 +10,7 @@ const Automap = preload("res://src/view/automap.gd")
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
+const ChoicePopup = preload("res://src/view/choice_popup.gd")
 const Hud = preload("res://src/view/hud.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
 const Menus = preload("res://src/menu/menus.gd")
@@ -95,6 +96,7 @@ var _header
 var _status
 var _dock
 var _social: Control
+var _choice: Control
 var _pause: MenuPanel
 var _tips
 var _pad
@@ -296,6 +298,12 @@ func _build_screen() -> void:
 	_full_map.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_full_map.visible = false
 	_frame.add_child(_full_map)
+	_choice = ChoicePopup.new() # what the walk has stopped at and its choices, over the picture and the corner map
+	_choice.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_choice.visible = false
+	_choice.hovered.connect(func(i): flow.select(i))
+	_choice.picked.connect(func(i): _press(str(i + 1)))
+	_frame.add_child(_choice)
 	_tips = Tips.new() # the ally chips and the tooltips, over the picture
 	_frame.add_child(_tips)
 
@@ -731,6 +739,7 @@ func _bind_views() -> void:
 	_status.state = flow.state
 	_dock.state = flow.state
 	_social.state = flow.state
+	_choice.state = flow.state
 	_overlay.state = flow.state
 	_automap.state = flow.state
 	_full_map.state = flow.state

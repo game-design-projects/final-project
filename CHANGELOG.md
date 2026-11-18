@@ -5,12 +5,15 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- What the walk stops at is shown, not only said: a small moving picture over the corridor for a champion's keepsakes, the gate and its chain, the stairs, the shut door, a run's end and the camp's fire (`src/view/vignette.gd`, named by the stage in `state.vignette`).
+- `tools/event_shots.gd` takes pictures of each of them, twice a moment apart.
 - A script error in any part of the game fails the run it happens in: the suites (`tools/test_base.gd`) and `tools/autoplay.gd` count them with `Fault.watch()`. Before, a game could reach the stairs over 100 of them and pass.
 - `tools/check.sh` runs one headless tool and fails unless it said it passed; CI runs every suite through it, because Godot exits with 0 for a script that doesn't load.
 - One rule for a part that fails (`src/utils/fault.gd`): a debug build fails fast, an export carries on and logs `fault N: ...`.
 - Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
 
 ### Changed
+- A choice that is the whole moment (a keepsake to take, who holds the gate, the way down, how the run ends) is in the middle of the picture instead of the dock: the question, and each choice a card with what it does written on it (`Transitions.DECIDING`, `src/view/choice_popup.gd`). The dock keeps the lines before the question and the keys.
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed

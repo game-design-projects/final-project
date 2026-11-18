@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `menu` | 主菜单、设置、存档页面（暂停菜单复用同一套页面）、NEW GAME 之后的开场影片（`intro_cg`） | → `gameplay`（经 `session` 交请求） |
 | `gameplay` | 一局游戏的场景：把 `game` `view` `audio` `mind` 接起来、读输入、暂停、自动存档 | `menu` → 它 → `game` |
-| `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，墙饰的位置在 `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
+| `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，墙饰的位置在 `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、走路停下来时画面中央的选择卡和事件小动画（`choice_popup` `vignette`）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
 | `audio` | 声音：合成音效（`sfx` `synth`）、音乐（`music`）、怪物录音和合成嗓音（`voices` `shout`）、总线（`mix`） | `assets` `flags` `game`（事件）→ `audio` |
 | `game` | 流程、状态机 | `menu` `view` `audio` `mind` → `game` → `mind` `rules` |
 | `mind` | 怪物怎么思考；`Minds.create` 给出的每个 mind 都包在 `safe_mind` 里，答案在这里校验后才交给 `game` | `game` `data` → `mind` → `rules` `game`（决定） |
@@ -20,7 +20,7 @@
 数据与资源：`data`（物种、种类、台词、数值）、`assets`（音乐、字体、语音、手绘图集）、`flags`（启动参数）。
 外部：`proxy`（持有密钥）→ Jev LLM。本地语音识别（`native/asr`）和按住说话暂未带回。
 
-`game` 里的阶段都在 `game/stages/`，一张转移表（`transitions.gd`）管住能从哪到哪，每个阶段算战斗还是行走（`FIGHT` / `WALK`，选指令的是 `PICKING`）也只在这里写，画面和提示从这里读，事件的字段在 `events.gd` 里校验。小游戏和攻击一个文件一个，在 `rules/minigames/`：`spawn` 每帧加危险格，可选的 `begin` 在第一帧前摆柱子、灯笼或镜像操作，自己的状态放 `run.mem`，危险格能带的画面标记写在 `dodge_run.gd` 开头；地图生成器也是一个文件一个，在 `rules/maps/`。小地图画什么由两份数据定：`State.seen`（镜头看到过的格子）和 `State.charted`（没看到、但从地图或直觉得知布局的格子，`rules/chart.gd`）；`view/automap.gd` 一个节点两种画法，角落的窗口和 `full` 的全图。怪物 = 物种 + 种类：物种（`data/species.json`）定氏族、行为、口味、台词和当朋友时的护符，种类（`data/kinds.json`，`rules/kinds.gd`）定外形、颜色、血量、攻击和走法，每层五种、层间不重复；冠军不属于种类，轮流用本层五种的攻击。视图按 `Sprites.look_of` 取种类的图，没有就用物种的。跨局留下的东西（成就、余烬、加成、读过的墙上文字）存在 `menu/progress.gd`，由 `gameplay` 交给 `game`；`game` 只发事件（`trophy`、`run_closed`、`found` 里的 `lore`），不碰存储。
+`game` 里的阶段都在 `game/stages/`，一张转移表（`transitions.gd`）管住能从哪到哪，每个阶段算战斗还是行走（`FIGHT` / `WALK`，选指令的是 `PICKING`，选择本身就是全部内容、要摆到画面中央的是 `DECIDING`）也只在这里写，画面和提示从这里读，事件的字段在 `events.gd` 里校验。小游戏和攻击一个文件一个，在 `rules/minigames/`：`spawn` 每帧加危险格，可选的 `begin` 在第一帧前摆柱子、灯笼或镜像操作，自己的状态放 `run.mem`，危险格能带的画面标记写在 `dodge_run.gd` 开头；地图生成器也是一个文件一个，在 `rules/maps/`。小地图画什么由两份数据定：`State.seen`（镜头看到过的格子）和 `State.charted`（没看到、但从地图或直觉得知布局的格子，`rules/chart.gd`）；`view/automap.gd` 一个节点两种画法，角落的窗口和 `full` 的全图。怪物 = 物种 + 种类：物种（`data/species.json`）定氏族、行为、口味、台词和当朋友时的护符，种类（`data/kinds.json`，`rules/kinds.gd`）定外形、颜色、血量、攻击和走法，每层五种、层间不重复；冠军不属于种类，轮流用本层五种的攻击。视图按 `Sprites.look_of` 取种类的图，没有就用物种的。跨局留下的东西（成就、余烬、加成、读过的墙上文字）存在 `menu/progress.gd`，由 `gameplay` 交给 `game`；`game` 只发事件（`trophy`、`run_closed`、`found` 里的 `lore`），不碰存储。
 
 ## 约定
 

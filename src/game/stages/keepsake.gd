@@ -16,6 +16,7 @@ func enter(flow, args: Dictionary) -> void:
 	_offered = args.get("offered", [])
 	s.menu = _offered.map(func(id): return {"label": Keepsakes.name_of(id), "sub": sentence(Keepsakes.text_of(id)), "gold": true})
 	s.selected = 0
+	s.vignette = "keepsakes"
 	s.hint = "ENTER TAKE"
 	var ended: Array = args.get("lines", []).filter(func(l): return l.kind == "sys").slice(-1) # how the fight ended
 	s.say(ended + [State.sys_line(str(Keepsakes.table().ask) % str(args.get("from", "The champion")))])

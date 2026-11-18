@@ -13,6 +13,7 @@ var _asking = null # the ally about to be butchered, while it asks
 
 func enter(flow, _args: Dictionary) -> void:
 	_asking = null
+	flow.state.vignette = "camp"
 	var lines := [State.sys_line(Survival.line("camp"))]
 	if not flow.state.keepsakes.is_empty(): # a look at what the champions left
 		lines.append(State.sys_line(str(Keepsakes.table().held) % Keepsakes.held_words(flow.state)))

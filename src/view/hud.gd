@@ -7,10 +7,12 @@ extends Control
 const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const ChoicePopup = preload("res://src/view/choice_popup.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 
 enum Part { HEADER, STATUS, DOCK }
 
@@ -29,8 +31,6 @@ const LOG_SIZES_LARGE := [26, 24, 22]
 static var large_text := false # the TEXT SIZE setting (the scene keeps this up to date)
 const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
 const SUB_STAGES := ["menu", "act", "skills"] # where the line under the key hints says what the picked command does
-const CARD_STAGES := ["keepsake"] # where each choice is a card, as tall as the slot, with what it does written under its name: all of them read at once
-const CARD_SUB_PX := 18
 const THINKING_AFTER_MS := 250 # a question out this long shows as "thinking"; a quick answer doesn't flicker it
 const SAY_BUTTON := -2 # what `_hover_at` says over the talk box's button
 const PAGE_BACK := -3
@@ -186,9 +186,10 @@ func _grid() -> bool:
 	return state != null and not state.menu.is_empty() and (state.stage == "menu" or state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end", "keepsake"])
 
 
-## Whether each choice is a card (CARD_STAGES).
-func _cards() -> bool:
-	return _grid() and state.stage in CARD_STAGES
+## Whether the choices are up over the picture and not here (Transitions.DECIDING, view/choice_popup.gd): the dock keeps the
+## lines that led to the question, and the keys.
+func _deciding() -> bool:
+	return state != null and state.stage in Transitions.DECIDING and not state.menu.is_empty()
 
 
 ## Reserve the same space while walking and in menus, so opening a grid never resizes the picture.
@@ -222,13 +223,11 @@ func _page_at(at: Vector2) -> int:
 ## Where each command of the menu is, in the dock's own pixels.
 func command_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	if state == null or state.stage == "talk" or state.menu.is_empty():
+	if state == null or state.stage == "talk" or state.menu.is_empty() or _deciding():
 		return out
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	var cols := mini(3, state.menu.size()) if _grid() else clampi(state.menu.size(), 1, 4)
 	var button_h := (GRID_SLOT_H - GAP) / 2.0 if _grid() else BUTTON_H
-	if _cards():
-		button_h = GRID_SLOT_H
 	var w := (slot.size.x - GAP * (cols - 1)) / cols
 	var first_row := _first_grid_row(cols) if _grid() else 0
 	for i in state.menu.size():
@@ -388,6 +387,9 @@ func _dock() -> void:
 		return # its popup owns both speech and choices
 	_log(Rect2(0, 0, size.x, LOG_H))
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
+	if _deciding():
+		_keys(Rect2(0, LOG_H + GAP, size.x, KEYS_H)) # the keys right under the log: nothing is between them here
+		return
 	if state.stage == "talk":
 		_talk_row(slot)
 	else:
@@ -428,6 +430,8 @@ static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 
 ## What the log shows: what the foe says has a box of its own on the picture while the fight waits on it.
 func _log_lines() -> Array:
+	if _deciding():
+		return state.lines.slice(0, state.lines.size() - ChoicePopup.asked(state).size())
 	if state.foe == null or not state.stage in Overlay.SPEECH_STAGES:
 		return state.lines
 	return state.lines.filter(func(l): return not (l.kind == "say" and l.who == state.foe.name))
@@ -468,9 +472,6 @@ func _commands(_slot: Rect2) -> void:
 		draw_rect(r, Color.BLACK)
 		draw_rect(r.grow(-1.0), Palette.INK if picked_one or i == _hover else Palette.FAINT, false, 2.0)
 		var base := r.position + Vector2(12.0, r.size.y * 0.5 + (6.0 if _grid() else 4.0))
-		if _cards():
-			base = r.position + Vector2(12.0, 28.0) # the name at the top, what it does under it
-			draw_multiline_string(_body, r.position + Vector2(14.0, 52.0), str(items[i].get("sub", "")), HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 26.0, CARD_SUB_PX, 3, Palette.INK if picked_one else Palette.DIM)
 		if picked_one:
 			draw_colored_polygon([base + Vector2(0, -8), base + Vector2(8, -4), base + Vector2(0, 0)], Palette.YOU)
 		var px := 14 if _grid() else 9
