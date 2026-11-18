@@ -337,6 +337,7 @@ func go(to: String, args := {}) -> void:
 		_keys_back_at = clock + (BEFORE_KEEPSAKE_MS if to == "keepsake" else AFTER_FIGHT_MS)
 		_held_over = true
 	state.stage = to
+	state.vignette = "" # the stage says what it has stopped at, if anything
 	_since = clock
 	state.selected = 0
 	print("flow: %s -> %s" % [from if from != "" else "start", to])

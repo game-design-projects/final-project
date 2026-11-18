@@ -5,10 +5,13 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- What the walk stops at is shown, not only said: a small moving picture over the corridor for a champion's keepsakes, the gate and its chain, the stairs, the shut door, a run's end and the camp's fire (`src/view/vignette.gd`, named by the stage in `state.vignette`).
+- `tools/event_shots.gd` takes pictures of each of them, twice a moment apart.
 - One rule for a part that fails (`src/utils/fault.gd`): a debug build fails fast, an export carries on and logs `fault N: ...`.
 - Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
 
 ### Changed
+- A choice that is the whole moment (a keepsake to take, who holds the gate, the way down, how the run ends) is in the middle of the picture instead of the dock: the question, and each choice a card with what it does written on it (`Transitions.DECIDING`, `src/view/choice_popup.gd`). The dock keeps the lines before the question and the keys.
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed

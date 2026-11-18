@@ -30,12 +30,14 @@ func enter(flow, _args: Dictionary) -> void:
 	if s.run_over and flow.feature("last-door") and s.allies.is_empty():
 		s.run_over = false
 		_at_door = true
+		s.vignette = "door"
 		s.say([State.sys_line(Texts.DOOR_SHUT), State.sys_line(Texts.DOOR_HINT)])
 		s.menu = [{"label": "TURN BACK", "sub": "Find someone who will come with you"}, {"label": "LEAVE ALONE", "sub": "Ends the run, not cleared"}, {"label": "MAIN MENU", "sub": ""}]
 		print("end: the Last Door stays shut, no allies")
 	elif s.run_over:
 		_finish(flow, Texts.ending(s.tally, s.allies))
 	elif s.practice:
+		s.vignette = "stairs"
 		s.say([State.sys_line(Practice.line("done"))])
 		s.menu = [{"label": "GO DOWN", "sub": Practice.line("down_sub")}, {"label": "MAIN MENU", "sub": ""}]
 		print("end: the practice floor done")
@@ -48,6 +50,7 @@ func enter(flow, _args: Dictionary) -> void:
 
 func _offer_ways(flow, lines: Array) -> void:
 	var s = flow.state
+	s.vignette = "stairs"
 	s.say(lines)
 	_ways = Floors.paths(s.run_seed, s.depth) if flow.feature("branching") else []
 	s.menu = []
@@ -63,6 +66,7 @@ func _ask_toll(flow) -> void:
 	var s = flow.state
 	var toll := Floors.toll()
 	_at_toll = true
+	s.vignette = "gate"
 	s.say([State.sys_line(Texts.floor_done(s.depth)), State.sys_line(toll.ask)])
 	s.menu = [{"label": toll.hold_label, "sub": toll.hold_sub % int(toll.hp)}]
 	for a in s.allies:
@@ -101,6 +105,7 @@ func _pay_toll(flow, index: int) -> void:
 func _finish(flow, ending: Dictionary, how := "cleared") -> void:
 	var s = flow.state
 	s.run_over = true
+	s.vignette = "ending" if how == "cleared" else "door"
 	flow.event("run_ended", {"how": how})
 	var embers: int = flow.close_run(how == "cleared")
 	var tail: String = ending.tail

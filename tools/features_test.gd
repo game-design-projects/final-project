@@ -22,7 +22,9 @@ const Monster = preload("res://src/rules/monster.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Pace = preload("res://src/rules/pace.gd")
 const Practice = preload("res://src/rules/practice.gd")
+const ChoicePopup = preload("res://src/view/choice_popup.gd")
 const Hud = preload("res://src/view/hud.gd")
+const Vignette = preload("res://src/view/vignette.gd")
 const Items = preload("res://src/rules/items.gd")
 const Lore = preload("res://src/rules/lore.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
@@ -441,6 +443,56 @@ func _meet(flow, m) -> void:
 		await flow.press("cancel")
 
 
+## A stage that is deciding (Transitions.DECIDING) has its choices over the middle of the picture and not in the dock:
+## `cards` of them cards with what they do, `plain` of them small buttons, with the moving picture `art` over them.
+func _choices_over_the_picture(s, art: String, cards: int, plain: int) -> void:
+	var where := "%s (%s)" % [s.stage, art]
+	_check(Transitions.DECIDING.has(s.stage) and Transitions.WALK.has(s.stage), "%s: the choice is the whole moment" % where)
+	_check(s.vignette == art and Vignette.KNOWN.has(art), "%s: the stage says what it has stopped at, and there is a picture of it (%s)" % [where, s.vignette])
+	var asked: Array = ChoicePopup.asked(s)
+	_check(not asked.is_empty() and asked[-1] == s.lines[-1], "%s: what is asked is said with the choices" % where)
+	var dock := Hud.new()
+	dock.part = Hud.Part.DOCK
+	dock.state = s
+	dock.size = Vector2(1136, 200)
+	_check(dock.command_rects().is_empty() and dock._log_lines().size() == s.lines.size() - asked.size(), "%s: the dock keeps the lines before the question and no commands" % where)
+	dock.free()
+	for frame in [Vector2(936, 392), Vector2(1400, 600), Vector2(480, 206)]:
+		var popup := ChoicePopup.new()
+		popup.state = s
+		popup.size = frame
+		var rects: Array[Rect2] = popup.choice_rects()
+		var plan: Dictionary = popup._layout()
+		var whole := Rect2(Vector2.ZERO, frame)
+		var all_in: bool = rects.size() == s.menu.size() and rects.all(func(r): return r.has_area() and whole.encloses(r))
+		var apart := true
+		for a in rects.size():
+			for b in range(a + 1, rects.size()):
+				apart = apart and not rects[a].intersects(rects[b])
+		_check(all_in and apart, "%s at %s: every choice has its own place inside the picture" % [where, frame])
+		var tall: Array = rects.filter(func(r): return r.size.y > ChoicePopup.PLAIN_H + 1.0)
+		_check(tall.size() == cards and rects.size() - tall.size() == plain, "%s at %s: %d cards that say what they do and %d plain (%d, %d)" % [where, frame, cards, plain, tall.size(), rects.size() - tall.size()])
+		var box: Rect2 = rects[0]
+		for r in rects:
+			box = box.merge(r)
+		box = box.merge(plan.ask)
+		if plan.art.has_area():
+			box = box.merge(plan.art)
+		_check(absf(box.get_center().x - frame.x / 2.0) < 2.0 and box.position.y >= 0.0 and box.end.y <= frame.y and absf(box.get_center().y - frame.y / 2.0) < frame.y * 0.12, "%s at %s: the question and its choices sit in the middle (%s)" % [where, frame, box])
+		_check(not plan.art.has_area() or (whole.encloses(plan.art) and rects.all(func(r): return not r.intersects(plan.art)) and not plan.art.intersects(plan.ask)), "%s at %s: the moving picture is over them, on nothing" % [where, frame])
+		if frame.y >= 392.0:
+			_check(plan.art.has_area(), "%s at %s: and it is there when the picture has the room" % [where, frame])
+		var got := [-1]
+		popup.picked.connect(func(i): got[0] = i)
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		click.position = rects[-1].get_center()
+		popup._gui_input(click)
+		_check(got[0] == rects.size() - 1, "%s at %s: a click on a choice picks it (%d)" % [where, frame, got[0]])
+		popup.free()
+
+
 ## keepsakes: a champion out of your way leaves three, of which you take one for the rest of the run.
 func _keepsakes() -> void:
 	# what is offered
@@ -455,7 +507,16 @@ func _keepsakes() -> void:
 	_check(Keepsakes.offer(11, 1, all.slice(0, 7)).size() == 2 and Keepsakes.offer(11, 1, all).is_empty(), "with few left fewer are offered, and with none left none")
 	_check(range(40).all(func(i): return Keepsakes.offer(i, 1, [], false).all(func(id): return not Keepsakes.NEEDS_NERVE.has(id))), "a game without nerve is never offered the ones that feed it")
 	_check(Transitions.allowed("fightbar", "keepsake") and Transitions.allowed("ask", "keepsake") and Transitions.allowed("keepsake", "explore") and not Transitions.allowed("explore", "keepsake"), "the choice comes at the end of a fight and nowhere else")
-	_check(Transitions.WALK.has("keepsake") and Hud.CARD_STAGES.has("keepsake"), "it is made on the floor, the fight behind you, and each is a card that says what it does")
+	_check(Transitions.WALK.has("keepsake") and Transitions.DECIDING.has("keepsake"), "it is made on the floor, the fight behind you, and it is the whole moment: its cards go over the picture")
+	var named := {}
+	var naming := RegEx.create_from_string('vignette = (?:"(\\w+)" if .* else )?"(\\w+)"')
+	for file in DirAccess.get_files_at("res://src/game/stages"):
+		if file.ends_with(".gd"):
+			for found in naming.search_all(FileAccess.get_file_as_string("res://src/game/stages/" + file)):
+				for group in [1, 2]:
+					if found.get_string(group) != "":
+						named[found.get_string(group)] = file
+	_check(named.size() >= 6 and named.keys().all(func(id): return Vignette.KNOWN.has(id)) and Vignette.KNOWN.all(func(id): return named.has(id)), "every moving picture a stage names is one there is, and every one there is is named (%s)" % [named.keys()])
 
 	# a champion slain leaves them
 	var flow = _flow(86)
@@ -476,6 +537,7 @@ func _keepsakes() -> void:
 	_check(s.stage == "keepsake" and s.foe == null and s.keepsake_due == "", "a champion slain leaves keepsakes before the walk goes on (%s)" % s.stage)
 	_check(s.menu.map(func(item): return item.label) == offered.map(func(id): return Keepsakes.name_of(id)) and s.menu.all(func(item): return str(item.sub).ends_with(".")), "the three of this run and floor, each saying what it does (%s)" % [s.menu])
 	_check(s.lines.any(func(l): return str(l.text).contains(boss.name) and str(l.text).contains("keepsakes")), "the log says who left them (%s)" % str(s.lines.map(func(l): return l.text)))
+	_choices_over_the_picture(s, "keepsakes", 3, 0)
 	_check(s.banner != null and str(s.banner.text).contains("stronger"), "and the picture still says the champion made you stronger")
 	await flow.press("confirm")
 	_check(s.stage == "keepsake" and s.keepsakes.is_empty(), "a key still down from the fight takes nothing")
@@ -1374,11 +1436,13 @@ func _late_decisions() -> void:
 	s.hp = 20
 	await _reach_stairs(flow)
 	_check(s.stage == "end" and s.menu[0].label == toll.hold_label and s.menu.size() == 4, "the gate asks who stays (%s)" % str(s.menu.map(func(i): return i.label)))
+	_choices_over_the_picture(s, "gate", 3, 1)
 	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and the log has room for it")
 	await flow.press("2")
 	_check(s.allies.size() == 1 and s.allies[0].name == "HISS" and s.left_behind == ["GLOP"], "a friend left at the chain stays there")
 	_check(s.allies[0].loyalty == 60.0 + float(toll.loyalty), "and the others saw")
 	_check(s.menu[-1].label == "MAIN MENU" and s.menu[0].label != toll.hold_label, "and the way down is open")
+	_check(s.vignette == "stairs", "and the picture is the stairs now, not the gate (%s)" % s.vignette)
 	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))).left_behind == ["GLOP"], "a save remembers who")
 	var ended := {"route": "x", "text": "y", "tail": "z"}
 	flow._stages["end"]._finish(flow, ended)
