@@ -722,7 +722,9 @@ func _open_pause() -> void:
 	_dock.set_talking(false)
 	_tips.visible = false
 	var ctx := {"resume": _resume, "to_main_menu": _leave, "load_slot": _load_slot, "achievements": show_trophies}
-	if flow.state.testing: # the test room is not a run: there is nothing to save
+	if not flow.state.testing: # the test room is not a run: there is no seed to play again
+		ctx["seed"] = flow.state.run_seed # a bug report that names it can be played again
+	if flow.state.testing: # and nothing there can be saved
 		ctx["no_save"] = "Not in the test room"
 	elif flow.state.stage == "explore": # a fight can't be saved (it would come back as a walk)
 		ctx["save_slot"] = _save_slot
