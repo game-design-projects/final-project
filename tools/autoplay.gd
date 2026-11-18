@@ -39,7 +39,7 @@ var _mercy_before := 0.0
 
 func _init() -> void:
 	Fault.watch()
-	Flags.set_args(OS.get_cmdline_user_args() as PackedStringArray)
+	Flags.set_args(OS.get_cmdline_user_args() as PackedStringArray + PackedStringArray(["nosave"])) # its games never reach the player's saves or store
 	var seeds: Array = DEFAULT_SEEDS
 	var flagged := Rng.flag_seed("playing the default seeds")
 	if flagged >= 0:

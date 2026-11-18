@@ -12,7 +12,7 @@ tools/build.sh web                                                # export to bu
 
 ## Tests
 
-Each script prints one line per check and exits 1 if any failed. Pass `nosave` so your own saves stay untouched:
+Each script prints one line per check and exits 1 if any failed. Your own saves and store stay untouched whether or not you pass `nosave`: every suite (`tools/test_base.gd`) and `autoplay` turn it on themselves, and the store heeds it even when it is said after the store was made (a tool's script sets its flags after the autoloads exist):
 
 ```bash
 godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
