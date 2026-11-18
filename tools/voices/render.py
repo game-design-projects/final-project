@@ -13,16 +13,17 @@ engine another spelling of a line it can't say as written (CosyVoice3 gives "Hmp
     python3 tools/voices/render.py cosyvoice3 --service feiyu --url http://gpu-box:8000 --key ... --voice <a CC voice>
     python3 tools/voices/render.py qwen3 --service qwen --url http://mac:8001
     python3 tools/voices/render.py gemini --dry-run          # what it would render, and about what it costs
-    GEMINI_API_KEY=... python3 tools/voices/render.py gemini # the key comes from the environment, never the command line
+    OPENROUTER_API_KEY=... python3 tools/voices/render.py gemini   # the key comes from the environment, never the command line
 
   cosyvoice3   CosyVoice3, the engine of the Feiyu stack (engines/cosyvoice3.py, run with --python: an environment
                with FunAudioLLM/CosyVoice's requirements; --src: its checkout), zero-shot from the reference recording
   qwen3        Qwen3-TTS Base (engines/qwen3.py, an environment with `qwen-tts`), cloned from the same recording
-  gemini       Gemini TTS through the Gemini API (engines/gemini.py, standard library only): no cloned voice, a
-               prebuilt voice and a style of delivery per monster (voices.json "gemini"). It costs money (--dry-run
-               says about how much); every reply is kept in build/voices/gemini/responses/ before it is read.
-               --model picks the model (default gemini-3.8-flash-tts), --rpm how many requests a minute (default 10),
-               --key-env the environment variable that holds the key (default GEMINI_API_KEY).
+  gemini       Gemini TTS (engines/gemini.py, standard library only): no cloned voice, a prebuilt voice and a style of
+               delivery per monster (voices.json "gemini"). It costs money (--dry-run says about how much); every
+               reply is kept in build/voices/gemini/responses/ before it is read. --via openrouter (the default, key
+               in OPENROUTER_API_KEY) or google (the Gemini API itself, key in GEMINI_API_KEY); --model picks the
+               model (default gemini-3.8-flash-tts), --rpm how many requests a minute (default 10), --key-env
+               another environment variable for the key.
   --service    instead of a local model, a running service renders the lines: feiyu (POST /v1/speech, the job
                queue) or qwen (POST /synthesize). They use their own voices (--voice / --speaker), not voices.json.
 
@@ -211,11 +212,13 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--force", action="store_true")
-    ap.add_argument("--key-env", default=gemini.KEY_ENV, help="gemini: the environment variable that holds the API key")
+    ap.add_argument("--via", choices=sorted(gemini.URLS), default=gemini.VIA, help="gemini: whose API renders it")
+    ap.add_argument("--key-env", default="", help="gemini: the environment variable that holds the API key")
     ap.add_argument("--rpm", type=float, default=10.0, help="gemini: requests a minute")
     ap.add_argument("--dry-run", action="store_true", help="gemini: say what would be rendered and about what it costs, and stop")
     args = ap.parse_args()
     is_gemini = args.bank == "gemini"
+    args.key_env = args.key_env or gemini.KEY_ENVS[args.via]
     if is_gemini and args.service:
         ap.error("gemini is rendered through the Gemini API, not --service")
     if args.service and not args.url:
@@ -263,7 +266,7 @@ def main():
     if is_gemini:
         cost = gemini.estimate(todo, model)
         usd = "no listed price" if cost["usd"] is None else f"about ${cost['usd']:.2f}"
-        log(f"gemini: {model}, {cost['lines']} requests, {cost['chars']} characters, about {cost['seconds']:.0f} s of speech, "
+        log(f"gemini: {model} via {args.via}, {cost['lines']} requests, {cost['chars']} characters, about {cost['seconds']:.0f} s of speech, "
             f"{usd}, about {cost['lines'] / max(args.rpm, 0.1):.0f} min at {args.rpm:g} requests a minute")
         if args.dry_run:
             for species in data["species"]:
@@ -277,13 +280,13 @@ def main():
         if is_gemini:
             key = os.environ.get(args.key_env, "")
             try:
-                asked = gemini.render(todo, key, responses_dir, model, args.url or gemini.URL, args.rpm, log, args.force)
+                asked = gemini.render(todo, key, responses_dir, model, args.url or "", args.rpm, log, args.force, args.via)
                 for retake in range(1, RETAKES + 1):
                     odd = [it for it in todo if os.path.exists(it["out"]) and odd_length(it["text"], wav_seconds(it["out"]))]
                     if not odd:
                         break
                     log(f"retake {retake}: {len(odd)} takes of an odd length: " + "; ".join(it["text"] for it in odd))
-                    asked += gemini.render(odd, key, responses_dir, model, args.url or gemini.URL, args.rpm, log, True)
+                    asked += gemini.render(odd, key, responses_dir, model, args.url or "", args.rpm, log, True, args.via)
             except gemini.GeminiError as e:
                 sys.exit(f"gemini: {e}\nWhat was rendered before this is kept; run again to go on from here.")
             log(f"gemini: {asked} requests made")
@@ -314,7 +317,7 @@ def main():
     manifest.update({
         "id": args.bank,
         "label": LABELS[args.bank],
-        "engine": f"service:{args.service}" if args.service else args.bank,
+        "engine": f"service:{args.service}" if args.service else (f"gemini:{args.via}" if is_gemini else args.bank),
         "model": model or args.url,
         "voices": cast if is_gemini else {s: {k: v for k, v in r.items() if k != "text"} for s, r in voices["refs"].items()},
         "shape": shapes,

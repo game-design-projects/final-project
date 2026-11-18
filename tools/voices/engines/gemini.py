@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""Gemini TTS as a voice engine for render.py: each line is one request to the Gemini API's Interactions endpoint, in a
-prebuilt voice with a style of delivery (voices.json "gemini"), and comes back as a 24 kHz mono WAV.
+"""Gemini TTS as a voice engine for render.py: each line is one request, in a prebuilt voice with a style of delivery
+(voices.json "gemini"), and comes back as 24 kHz mono speech. Nothing here is asked for while the game runs: a bank is
+rendered once and shipped as files.
 
 Standard library only, so it runs in the Python render.py runs in. The API key is read from an environment variable
-(GEMINI_API_KEY unless --key-env names another) and goes nowhere but the request header: it is never printed, logged
-or written to a file.
+and goes nowhere but the request header: it is never printed, logged or written to a file.
 
 Every reply is written to disk as it arrived (build/voices/gemini/responses/) before anything reads it, so a reply that
 was paid for is never lost to a parsing mistake; a second run reads the saved reply instead of asking again.
 
-The wire format is the one documented at https://ai.google.dev/gemini-api/docs/speech-generation (read 2026-11-17):
+Two ways to the same models (`via`):
+
+openrouter (the default; key in OPENROUTER_API_KEY), as documented at https://openrouter.ai/docs/features/text-to-speech
+(read 2026-11-17). The reply is the audio itself, bare 16-bit PCM:
+
+    POST https://openrouter.ai/api/v1/audio/speech      Authorization: Bearer <key>
+    {"model": "google/gemini-3.8-flash-tts", "input": "<the line>", "voice": "Kore",
+     "instructions": "<how it is said>", "response_format": "pcm"}
+
+google (key in GEMINI_API_KEY), as documented at https://ai.google.dev/gemini-api/docs/speech-generation (read
+2026-11-17; written from the page and tried only against a stand-in server, never against Google's):
 
     POST https://generativelanguage.googleapis.com/v1beta/interactions      x-goog-api-key: <key>
     {"model": "gemini-3.8-flash-tts",
@@ -29,9 +39,10 @@ import urllib.error
 import urllib.request
 import wave
 
-URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
+URLS = {"openrouter": "https://openrouter.ai/api/v1/audio/speech", "google": "https://generativelanguage.googleapis.com/v1beta/interactions"}
+KEY_ENVS = {"openrouter": "OPENROUTER_API_KEY", "google": "GEMINI_API_KEY"}
+VIA = "openrouter"
 MODEL = "gemini-3.8-flash-tts"
-KEY_ENV = "GEMINI_API_KEY"
 RATE = 24000
 AUDIO_TOKENS_PER_S = 25
 # USD per million tokens (text in, audio out), standard tier, as listed on 2026-11-17 for use through 2026-12-31
@@ -66,8 +77,16 @@ def request_body(text, voice, style, model=MODEL):
     }
 
 
+def openrouter_body(text, voice, style, model=MODEL):
+    """the JSON of one line for OpenRouter's speech endpoint: Gemini reads `input` word for word, so the style goes beside it"""
+    body = {"model": model if "/" in model else "google/" + model, "input": text, "voice": voice, "response_format": "pcm"}
+    if style:
+        body["instructions"] = style
+    return body
+
+
 def audio_of(reply):
-    """the audio bytes in a reply: the last audio item of the model's output steps"""
+    """the audio bytes in Google's reply: the last audio item of the model's output steps"""
     found = None
     for step in reply.get("steps") or []:
         if not isinstance(step, dict) or step.get("type") != "model_output":
@@ -81,15 +100,28 @@ def audio_of(reply):
     return base64.b64decode(found)
 
 
-def as_wav(audio):
-    """the bytes as a WAV file: as they are when they have a RIFF header, wrapped as 24 kHz mono 16-bit when they are bare PCM"""
+def rate_of(content_type):
+    """the sample rate a reply's Content-Type names ("audio/pcm;rate=24000"), or 24000 when it names none"""
+    for part in (content_type or "").lower().split(";")[1:]:
+        name, _, value = part.strip().partition("=")
+        if name in ("rate", "sample_rate") and value.strip().isdigit():
+            return int(value)
+    return RATE
+
+
+def as_wav(audio, rate=RATE):
+    """the bytes as a WAV file: as they are when they have a RIFF header, wrapped as mono 16-bit at `rate` when they are bare PCM"""
     if audio[:4] == b"RIFF" and audio[8:12] == b"WAVE":
         return audio
+    if not audio or len(audio) % 2:
+        raise ValueError("%d bytes is not 16-bit PCM" % len(audio))
+    if audio[:1] in (b"{", b"<"):
+        raise ValueError("the reply is text, not audio: %s" % audio[:200].decode("utf-8", "replace"))
     out = io.BytesIO()
     with wave.open(out, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
-        w.setframerate(RATE)
+        w.setframerate(rate)
         w.writeframes(audio)
     return out.getvalue()
 
@@ -106,19 +138,22 @@ def estimate(items, model=MODEL):
     return {"lines": len(items), "chars": chars, "seconds": seconds, "usd": usd}
 
 
-def _post(url, body, key):
+def _post(url, body, key, via):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST")
     req.add_header("Content-Type", "application/json")
-    req.add_header("x-goog-api-key", key)
+    if via == "google":
+        req.add_header("x-goog-api-key", key)
+    else:
+        req.add_header("Authorization", "Bearer " + key)
     with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
-        return r.read()
+        return r.read(), {"content-type": r.headers.get("Content-Type", ""), "generation": r.headers.get("X-Generation-Id", "")}
 
 
-def _ask(url, body, key, log):
-    """the reply's bytes; a busy or failing server is asked again, a refusal is not"""
+def _ask(url, body, key, log, via):
+    """the reply's bytes and what its headers said; a busy or failing server is asked again, a refusal is not"""
     for attempt in range(1, RETRIES + 1):
         try:
-            return _post(url, body, key)
+            return _post(url, body, key, via)
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:600]
             if e.code != 429 and e.code < 500:
@@ -133,19 +168,23 @@ def _ask(url, body, key, log):
     raise GeminiError(f"no answer after {RETRIES} tries")
 
 
-def render(items, key, responses_dir, model=MODEL, url=URL, rpm=10.0, log=print, force=False):
+def render(items, key, responses_dir, model=MODEL, url="", rpm=10.0, log=print, force=False, via=VIA):
     """Render every item {text, voice, style, out} to a WAV at `out`. Each reply is saved under `responses_dir` (named as the
-    WAV is) before it is read, and a saved reply is used instead of asking again unless `force`. Returns how many requests
-    were made. A refusal (a bad key, a bad request) stops the run with GeminiError: the next lines would fail the same way."""
+    WAV is: the body as it arrived, and beside it what the headers said) before it is read, and a saved reply is used instead
+    of asking again unless `force`. Returns how many requests were made. A refusal (a bad key, a bad request) stops the run
+    with GeminiError: the next lines would fail the same way."""
     if not key:
         raise GeminiError("no API key")
+    if via not in URLS:
+        raise GeminiError("via is %s or %s, not '%s'" % (*URLS, via))
+    url = url or URLS[via]
     os.makedirs(responses_dir, exist_ok=True)
     asked = 0
     gap = 60.0 / rpm if rpm > 0 else 0.0
     last = 0.0
     for n, it in enumerate(items, 1):
         name = os.path.splitext(os.path.basename(it["out"]))[0]
-        kept = os.path.join(responses_dir, os.path.basename(os.path.dirname(it["out"])), name + ".json")
+        kept = os.path.join(responses_dir, os.path.basename(os.path.dirname(it["out"])), name + (".json" if via == "google" else ".pcm"))
         os.makedirs(os.path.dirname(kept), exist_ok=True)
         t0 = time.time()
         fresh = force or not os.path.exists(kept)
@@ -154,14 +193,18 @@ def render(items, key, responses_dir, model=MODEL, url=URL, rpm=10.0, log=print,
             if asked and wait > 0:
                 time.sleep(wait)
             last = time.time()
-            raw = _ask(url, request_body(it["text"], it["voice"], it.get("style", ""), model), key, log)
+            make = request_body if via == "google" else openrouter_body
+            raw, said = _ask(url, make(it["text"], it["voice"], it.get("style", ""), model), key, log, via)
             asked += 1
             with open(kept, "wb") as f:  # as it arrived, before anything reads it
                 f.write(raw)
+            with open(kept + ".headers.json", "w") as f:
+                json.dump(said, f)
         with open(kept, "rb") as f:
             raw = f.read()
+        said = json.load(open(kept + ".headers.json")) if os.path.exists(kept + ".headers.json") else {}
         try:
-            audio = as_wav(audio_of(json.loads(raw)))
+            audio = as_wav(audio_of(json.loads(raw))) if via == "google" else as_wav(raw, rate_of(said.get("content-type", "")))
         except (ValueError, json.JSONDecodeError) as e:
             log(f"[{n}/{len(items)}] no audio for: {it['text']} ({e}); the reply is in {kept}")
             continue

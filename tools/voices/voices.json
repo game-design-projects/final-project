@@ -93,6 +93,24 @@
    "tempo": 1.05
   }
  },
+ "gemini": {
+  "_": "the Gemini TTS bank (render.py gemini): a prebuilt voice and how it speaks, per monster, and its own shaping after rendering",
+  "model": "gemini-3.8-flash-tts",
+  "voices": {
+   "slime": {"voice": "Leda", "style": "a tiny shy creature: small, bubbly and wobbly, short breathy words, a little squeak in it"},
+   "bandit": {"voice": "Algenib", "style": "a cocky street thief: quick, sly, a grin in every word, low and close"},
+   "snake": {"voice": "Enceladus", "style": "a slow breathy hiss: soft, cold and patient, every s drawn out long"},
+   "rock": {"voice": "Orus", "style": "an ancient stone giant: very slow, heavy and flat, a long pause between words"},
+   "dragon": {"voice": "Charon", "style": "an old proud dragon: deep, grand and bored, unhurried, faintly amused"}
+  },
+  "shape": {
+   "slime": {"semitones": 2, "tempo": 1.0},
+   "bandit": {"semitones": 0, "tempo": 1.0},
+   "snake": {"semitones": 0, "tempo": 1.0},
+   "rock": {"semitones": -3, "tempo": 1.0},
+   "dragon": {"semitones": -2, "tempo": 1.0}
+  }
+ },
  "say": {
   "_": "per bank: a line -> what the engine is given instead (a spelling it can say); the bank still files it under the line",
   "cosyvoice3": {
