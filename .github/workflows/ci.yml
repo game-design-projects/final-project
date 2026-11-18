@@ -98,6 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           tools/check.sh res://tools/audio_test.gd -- nosave
+          python3 tools/voices/test_gemini.py
       # What the feature flags add: each feature with its flag on and off (it switches them itself).
       - name: Check the features
         run: |
