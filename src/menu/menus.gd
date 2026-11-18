@@ -76,7 +76,15 @@ static func pause(panel, ctx: Dictionary) -> Dictionary:
 			"label": "QUIT GAME", "sub": lost,
 			"act": _go(panel, func(): return confirm(panel, "QUIT THE GAME?", "Anything since your last save is lost.", "QUIT GAME", func(): ctx.quit.call())) if kept else func(): ctx.quit.call(),
 		})
-	return {"title": "PAUSED", "items": items, "hint": "UP / DOWN CHOOSE · ENTER PICK · ESC RESUME", "back": func(): ctx.resume.call()}
+	return {"title": "PAUSED", "items": items, "hint": pause_hint(ctx), "back": func(): ctx.resume.call()}
+
+
+## The pause menu's hint: the keys, and the seed the run was made from, so a bug report can be played again (`ctx.seed`).
+static func pause_hint(ctx: Dictionary) -> String:
+	var hint := "UP / DOWN CHOOSE · ENTER PICK · ESC RESUME"
+	if ctx.has("seed"):
+		hint += " · SEED %d" % int(ctx.seed)
+	return hint
 
 
 ## Something the player has to be told: a page with the text where the hint goes, and OK back.

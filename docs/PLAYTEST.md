@@ -7,8 +7,9 @@ matters is that every session covers the same ground, and that a note can be tra
 
 - One build, one channel: the itch build or a zip from the release, not a mix, and the same one for every tester. Write the
   version down (it is on the main menu, bottom left).
-- The seed: a run from source prints `seed N` in the console on the first floor. From a build there is none, so a bug worth
-  reproducing wants the floor, the monster's name and what it was doing as much as the seed.
+- The seed: the pause menu's hint ends on it (`ESC RESUME · SEED 7`), and a run from source also prints `seed N` on the first
+  floor. A note that names it can be played again exactly; without one, the floor, the monster's name and what it was doing
+  are what make a report reproducible.
 - Saves: the run autosaves on the way down, and six slots are on the menu. A tester can go back to a save rather than replay
   the whole run, so nobody has to see the same first floor twice.
 

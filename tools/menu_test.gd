@@ -27,6 +27,7 @@ func _run() -> void:
 	_slot_page_shows_the_name(panel)
 	_slot_rows_leave_room_for_the_date(panel)
 	_a_picked_row_that_cannot_be_picked_still_reads(panel)
+	_pause_names_the_run_seed(panel)
 	_copy_page_names_the_slots(panel)
 	_settings_fall_back_to_the_old_blob()
 	await _digits_wheel_and_clicks(panel)
@@ -174,6 +175,16 @@ func _luminance(c: Color) -> float:
 
 func _channel(v: float) -> float:
 	return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
+
+
+## The pause menu's hint ends on the seed the run was made from: a bug report that names it can be played again. A menu opened
+## without one (nothing to do with a run) says nothing about it.
+func _pause_names_the_run_seed(panel) -> void:
+	var ctx := {"resume": func(): pass, "seed": 424242}
+	panel.open(func(): return Menus.pause(panel, ctx))
+	_check(str(panel._page.hint).ends_with("SEED 424242"), "the pause menu names the run's seed (%s)" % panel._page.hint)
+	panel.open(func(): return Menus.pause(panel, {"resume": func(): pass}))
+	_check(not str(panel._page.hint).contains("SEED"), "and a menu without one says nothing about a seed")
 
 
 ## COPY TO and its REPLACE question name a slot the way the list does, with its name.
