@@ -3,6 +3,7 @@
 extends SceneTree
 
 const Fault = preload("res://src/utils/fault.gd")
+const BaseFlags = preload("res://src/utils/flags.gd")
 
 ## How long a test may take before it is stopped as hung.
 const WATCHDOG_S := 90
@@ -22,6 +23,14 @@ func _script_errors_meant() -> int:
 
 func _initialize() -> void:
 	Fault.watch()
+	# a suite never touches the player's store or saves, whatever its command line says: `nosave` is on before anything
+	# else happens, and the store heeds it from here (store.gd). A suite that sets its own flags keeps `nosave` in them.
+	BaseFlags.set_args(OS.get_cmdline_user_args() as PackedStringArray + PackedStringArray(["nosave"]))
+	var store = root.get_node_or_null("Store")
+	if store != null and store.persists():
+		print("%s: FAIL the store still reaches the player's file" % _name())
+		quit(1)
+		return
 	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
 	create_timer(WATCHDOG_S).timeout.connect(func():
 		print("%s: FAIL did not finish in %d s (a script error stopped it?)" % [_name(), WATCHDOG_S])

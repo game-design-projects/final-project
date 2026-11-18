@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed
+- A test suite, `autoplay` or a screenshot tool run with no `nosave` on its command line no longer writes to the player's store or saves: before, `meta_test` cleared the achievements, embers, legacy ranks and writing read, `autoplay` saved over the autosave, and a tool that set `nosave` itself was too late for the store. The store heeds `nosave` whenever it is said (`src/utils/store.gd`), and every suite and `autoplay` say it themselves.
 - A banner announced while the whole floor's map is up (a first-time tip, an item found, explorer's instinct) is said again from its start when the map closes, instead of running out unread behind it; a tip is only ever said once.
 - The whole floor's map writes its two lines as wide as they need on a small floor: on the practice floor the line with its keys is no longer cut, and there and on the smallest B1F the floor's name and `100% SEEN` no longer touch.
 - Explorer's instinct waits for the next step or turn when the cell stepped on has news of its own (an item, a chest, the wall's writing, a pad): an item's or the writing's banner and line no longer take the place of instinct's, which was then said nowhere.
