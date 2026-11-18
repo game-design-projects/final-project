@@ -66,6 +66,8 @@ func _paid(flow) -> void:
 		var pact: Dictionary = Lords.pact()
 		var clan_name: String = Clans.title(str(q.lord))
 		flow.announce(str(pact.title) % clan_name.to_upper(), str(pact.line) % clan_name)
+		if got.joined: # it fills a place, and a full table is an achievement like any other (rules/achievements.gd)
+			flow.event("lord_joined", {"species": str(q.species)})
 	else:
 		flow.announce(t.done_title, t.done_line % [got.gold, got.healed])
 	flow.event("sound", {"name": "good"})

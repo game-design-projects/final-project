@@ -34,6 +34,7 @@ const FIELDS := {
 	"spared": ["boss"],
 	"slain": ["boss"],
 	"recruited": ["species"],
+	"lord_joined": ["species"], # a clan's lord, sworn by its second favour, came along (rules/lords.gd)
 	"ally_left": ["species"],
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"warmth": ["from", "to"], # the halls moved to another level of how they feel about you (rules/warmth.gd)

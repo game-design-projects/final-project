@@ -34,6 +34,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed
+- A lord sworn by its second favour takes the last place in the party when one is free, and filling the party with it earns A FULL TABLE as any other friend does: the room was counted over every ally, the little witch included, who holds none of the three places (#156).
 - A lord's fetch favour now names a thing that lies on its floor, as a stray asker's does; and a lord placed on a floor that had no asker never stands on a monster or on the only way through.
 - A build no longer carries the alternate voice banks: `assets/voices/gemini` (10 MB, 314 lines) was shipped in every platform although the feature that plays it is off unless named, and `qwen3` was already left out. The web download drops from 51.7 MB to 43.9 MB; a build's `gemini-voices` falls back on the game's own bank, as it does where no bank was rendered.
 - A test suite, `autoplay` or a screenshot tool run with no `nosave` on its command line no longer writes to the player's store or saves: before, `meta_test` cleared the achievements, embers, legacy ranks and writing read, `autoplay` saved over the autosave, and a tool that set `nosave` itself was too late for the store. The store heeds `nosave` whenever it is said (`src/utils/store.gd`), and every suite and `autoplay` say it themselves.

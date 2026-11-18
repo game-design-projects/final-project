@@ -86,11 +86,11 @@ static func _spread(state, from: String, worth: float) -> Array:
 		var part: float = worth * reach(from, clan)
 		if part != 0.0:
 			var was := hostility(float(state.reputation.get(clan, 0.0)))
-			var floor := -STANDING_MAX
+			var lowest := -STANDING_MAX
 			var sworn = state.get("lords_sworn")
 			if sworn is Array and (sworn as Array).has(clan): # sworn: its own never turn on you past angry
-				floor = float(str(_table().hostility[0].at))
-			state.reputation[clan] = clampf(float(state.reputation.get(clan, 0.0)) + part, floor, STANDING_MAX)
+				lowest = float(_table().hostility[0].at) # the first level is the mildest, as `hostility` reads them
+			state.reputation[clan] = clampf(float(state.reputation.get(clan, 0.0)) + part, lowest, STANDING_MAX)
 			var now := hostility(float(state.reputation[clan]))
 			if now != was:
 				moved.append({"clan": clan, "from": was, "to": now})
