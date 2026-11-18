@@ -129,9 +129,10 @@ static func place_pads(rng, f, walk: Dictionary, hall: Vector2i, params: Diction
 		f.teleports.append({"a": a, "b": b})
 
 
-## A spot for the trader, who stands in the way as a pad does, or null.
-static func place_trader(rng, f, walk: Dictionary, hall: Vector2i) -> Variant:
-	return _pad_in(rng, f, walk, hall, TRADER_AT, walk.dist[walk.farthest], f.reserved())
+## A spot for the trader, who stands in the way as a pad does, or null. `avoid` is more cells it may not stand on: a lord is
+## placed after the monsters stand, and a route may pass through them, so they are not `blocked` (see `_pad_spot`).
+static func place_trader(rng, f, walk: Dictionary, hall: Vector2i, avoid := {}) -> Variant:
+	return _pad_in(rng, f, walk, hall, TRADER_AT, walk.dist[walk.farthest], f.reserved(), avoid)
 
 
 ## Where the things that stir wait: on the way somewhere, so you see one coming, yet never where the floor needs you to pass (a
@@ -197,21 +198,22 @@ static func _plain_walls(f, c: Vector2i) -> Array:
 
 
 ## A spot for a pad in the first of these stretches of the walk that has one.
-static func _pad_in(rng, f, walk: Dictionary, hall: Vector2i, shares: Array, longest: int, blocked: Dictionary) -> Variant:
+static func _pad_in(rng, f, walk: Dictionary, hall: Vector2i, shares: Array, longest: int, blocked: Dictionary, avoid := {}) -> Variant:
 	for share in shares:
-		var spot: Variant = _pad_spot(rng, f, walk, hall, share, longest, blocked)
+		var spot: Variant = _pad_spot(rng, f, walk, hall, share, longest, blocked, false, avoid)
 		if spot != null:
 			return spot
 	return null
 
 
 ## A cell in that stretch of the walk that no route needs, or null. A dead end if there is one, or the other way about with `in_the_open`.
-static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, longest: int, blocked: Dictionary, in_the_open := false) -> Variant:
+## `avoid` cells are not chosen either, but a route may pass through them (a monster already on the floor).
+static func _pad_spot(rng, f, walk: Dictionary, hall: Vector2i, share: Array, longest: int, blocked: Dictionary, in_the_open := false, avoid := {}) -> Variant:
 	var ends := []
 	var others := []
 	for c: Vector2i in walk.order:
 		var d: float = float(walk.dist[c]) / maxi(1, longest)
-		if d < share[0] or d > share[1] or c == f.stairs or c == f.start or Grid.in_hall(c, hall) or blocked.has(c) or _beside_a_secret(f, c, blocked):
+		if d < share[0] or d > share[1] or c == f.stairs or c == f.start or Grid.in_hall(c, hall) or blocked.has(c) or avoid.has(c) or _beside_a_secret(f, c, blocked):
 			continue
 		if _open_sides(f, c).size() == 1:
 			ends.append(c)

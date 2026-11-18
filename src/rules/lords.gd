@@ -6,8 +6,6 @@ extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
 
-const PICK_SEED := 400 # the lord's own draws, apart from the floor's: a floor keeps the layout its seed always made
-
 
 static func table() -> Dictionary:
 	return Content.table("lords")

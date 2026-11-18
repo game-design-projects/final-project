@@ -17,7 +17,7 @@ static func table() -> Dictionary:
 
 ## The floor's lord filling this asker, instead of a stray monster (`rules/lords.gd`): its kind is the lord's own, and the name
 ## and title are the data's, so the same floor always has the same lord. The draws come from the lord's own generator, so the
-## floor's layout is what its seed always made. False when there is no floor spot or no target for the kind it asks.
+## floor's layout is what its seed always made. False when no monster is there for the kind it asks (see `_finish_request`).
 static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	var targets := []
 	for i in f.monsters.size():

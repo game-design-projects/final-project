@@ -91,7 +91,10 @@ static func generate(rng: Rng, plan := {}):
 static func _place_lord(f, walk: Dictionary, hall: Vector2i, lord: Dictionary) -> void:
 	if f.quester.is_empty(): # no one was asking here: a place of its own, from the lord's generator, after the monsters stand
 		var lrng := Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
-		var cell: Variant = Secrets.place_trader(lrng, f, walk, hall)
+		var stood := {}
+		for m in f.monsters: # they are here already, and `reserved()` does not know them
+			stood[m.cell] = true
+		var cell: Variant = Secrets.place_trader(lrng, f, walk, hall, stood)
 		if cell == null:
 			return
 		f.quester = {"cell": cell}
@@ -125,14 +128,15 @@ static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
 
 ## Who asks, and what it asks for; what's fetched lies on this floor. Nobody asks when there is nothing to ask about.
 static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan: Dictionary, stirs: Dictionary) -> void:
-	if f.quester.has("lord"): # a lord asks its own favour, on its own draws (rules/lords.gd)
+	var draws = rng # what places what's fetched: the floor's own draws, or a lord's (rules/lords.gd)
+	if f.quester.has("lord"): # a lord asks its own favour, on its own draws
 		var lord: Dictionary = f.quester.lord
 		f.quester.erase("lord")
-		var lrng := Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
-		if not Requests.fill_lord(lrng, f, lord, plan):
+		draws = Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
+		if not Requests.fill_lord(draws, f, lord, plan):
 			f.quester = {}
-		return
-	if not Requests.fill(rng, f, plan):
+			return
+	elif not Requests.fill(rng, f, plan):
 		f.quester = {}
 		return
 	if f.quester.kind != "fetch":
@@ -140,7 +144,7 @@ static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan:
 	var taken := stirs.duplicate()
 	for m in f.monsters:
 		taken[m.cell] = true
-	var cell: Variant = Secrets.quiet_spot(rng, f, walk, hall, taken)
+	var cell: Variant = Secrets.quiet_spot(draws, f, walk, hall, taken)
 	if cell == null:
 		f.quester = {}
 		return
