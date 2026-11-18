@@ -25,6 +25,7 @@ const NAME_PX := 14
 const SUB_PX := 18
 const ASK_PX := 20
 const ART_H := 96.0 # the moving picture's height when there is room
+const ART_H_BIG := 150.0 # and when there is room to spare: it takes most of what the cards leave
 const ART_H_ALONE := 84.0
 
 var state # State, set by the owner
@@ -134,8 +135,10 @@ func _layout() -> Dictionary:
 	var plain_h := PLAIN_H if not plain.is_empty() else 0.0
 	var room := size.y - 16.0
 	var fixed := ask_h + (GAP if rows > 0 else 0.0) + (GAP + plain_h if plain_h > 0.0 else 0.0) + GAP * maxi(0, rows - 1)
-	var art_h := ART_H if state.vignette in Vignette.KNOWN else 0.0
 	var card_h := CARD_H
+	var art_h := 0.0
+	if state.vignette in Vignette.KNOWN:
+		art_h = clampf((room - fixed - GAP - rows * card_h) * 0.6, ART_H, ART_H_BIG)
 	if rows > 0 and fixed + art_h + GAP + rows * card_h > room:
 		card_h = clampf((room - fixed - art_h - GAP) / rows, CARD_H_MIN, CARD_H)
 	if fixed + art_h + GAP + rows * card_h > room:
