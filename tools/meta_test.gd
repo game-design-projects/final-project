@@ -83,9 +83,10 @@ func _declared() -> void:
 	_check(not Transitions.allowed("menu", "camp"), "but not in the middle of a fight")
 	for stage in Transitions.stages():
 		_check(int(stage in Transitions.FIGHT) + int(stage in Transitions.WALK) == 1, "%s is either a fight or a walk, not both" % stage)
-	for stage in Transitions.FIGHT + Transitions.WALK + Transitions.PICKING:
+	for stage in Transitions.FIGHT + Transitions.WALK + Transitions.PICKING + Transitions.DECIDING:
 		_check(Transitions.ALLOWED.has(stage), "%s, named as a kind of stage, is a stage" % stage)
 	_check(Transitions.PICKING.all(func(s): return s in Transitions.FIGHT), "picking a command only happens in a fight")
+	_check(Transitions.DECIDING.all(func(s): return s in Transitions.WALK), "a choice that is the whole moment is made on the walk, not in a fight")
 	for id in Achievements.ids():
 		var info: Dictionary = Achievements.info(id)
 		_check(str(info.label) != "" and str(info.text) != "", "%s says what it is" % id)

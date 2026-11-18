@@ -645,6 +645,10 @@ func _choices_over_the_picture(s, art: String, cards: int, plain: int) -> void:
 			box = box.merge(plan.art)
 		_check(absf(box.get_center().x - frame.x / 2.0) < 2.0 and box.position.y >= 0.0 and box.end.y <= frame.y and absf(box.get_center().y - frame.y / 2.0) < frame.y * 0.12, "%s at %s: the question and its choices sit in the middle (%s)" % [where, frame, box])
 		_check(not plan.art.has_area() or (whole.encloses(plan.art) and rects.all(func(r): return not r.intersects(plan.art)) and not plan.art.intersects(plan.ask)), "%s at %s: the moving picture is over them, on nothing" % [where, frame])
+		var top := INF
+		for r in rects:
+			top = minf(top, r.position.y)
+		_check(plan.ask.has_area() and top - plan.ask.end.y >= ChoicePopup.GAP - 0.5, "%s at %s: the first row of choices clears the question by the gap the layout counts (%.1f)" % [where, frame, top - plan.ask.end.y])
 		if frame.y >= 392.0:
 			_check(plan.art.has_area(), "%s at %s: and it is there when the picture has the room" % [where, frame])
 		var got := [-1]
@@ -1613,6 +1617,7 @@ func _late_decisions() -> void:
 	var ended := {"route": "x", "text": "y", "tail": "z"}
 	flow._stages["end"]._finish(flow, ended)
 	_check(s.lines[-1].text.contains("GLOP"), "and so does the end of the run (%s)" % s.lines[-1].text)
+	_choices_over_the_picture(s, "ending", 0, 2) # a run's end has nothing but buttons: no card to hold the question off them
 	flow = _flow(63)
 	await flow.new_run()
 	s = flow.state

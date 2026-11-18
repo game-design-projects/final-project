@@ -13,7 +13,6 @@ const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
-const Transitions = preload("res://src/game/transitions.gd")
 
 enum Part { HEADER, STATUS, DOCK }
 
@@ -198,14 +197,10 @@ func _command_at(at: Vector2) -> int:
 	return -1
 
 
+## Whether the choices are a list the arrows walk (a grid of them in this dock, or over the picture when Transitions.DECIDING
+## makes them the whole moment), which the keys line under them says.
 func _grid() -> bool:
 	return state != null and not state.menu.is_empty() and (state.stage == "menu" or state.stage in ["act", "items", "skills", "ask", "dead", "camp", "trade", "request", "end", "keepsake"])
-
-
-## Whether the choices are up over the picture and not here (Transitions.DECIDING, view/choice_popup.gd): the dock keeps the
-## lines that led to the question, and the keys.
-func _deciding() -> bool:
-	return state != null and state.stage in Transitions.DECIDING and not state.menu.is_empty()
 
 
 ## Reserve the same space while walking and in menus, so opening a grid never resizes the picture.
@@ -239,7 +234,7 @@ func _page_at(at: Vector2) -> int:
 ## Where each command of the menu is, in the dock's own pixels.
 func command_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	if state == null or state.stage == "talk" or state.menu.is_empty() or _deciding():
+	if state == null or state.stage == "talk" or state.menu.is_empty() or ChoicePopup.deciding(state):
 		return out
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	var cols := mini(3, state.menu.size()) if _grid() else clampi(state.menu.size(), 1, 4)
@@ -415,8 +410,8 @@ func _dock() -> void:
 		return # its popup owns both speech and choices
 	_log(Rect2(0, 0, size.x, LOG_H))
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
-	if _deciding():
-		_keys(Rect2(0, LOG_H + GAP, size.x, KEYS_H)) # the keys right under the log: nothing is between them here
+	if ChoicePopup.deciding(state): # the choices are over the picture: this keeps the lines before them, and the keys
+		_keys(Rect2(0, LOG_H + GAP, size.x, KEYS_H)) # right under the log, where nothing is between them
 		return
 	if state.stage == "talk":
 		_talk_row(slot)
@@ -458,7 +453,7 @@ static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 
 ## What the log shows: what the foe says has a box of its own on the picture while the fight waits on it.
 func _log_lines() -> Array:
-	if _deciding():
+	if ChoicePopup.deciding(state):
 		return state.lines.slice(0, state.lines.size() - ChoicePopup.asked(state).size())
 	if state.foe == null or not state.stage in Overlay.SPEECH_STAGES:
 		return state.lines

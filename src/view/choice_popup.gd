@@ -28,6 +28,8 @@ const ASK_PX := 20
 const ART_H := 96.0 # the moving picture's height when there is room
 const ART_H_BIG := 150.0 # and when there is room to spare: it takes most of what the cards leave
 const ART_H_ALONE := 84.0
+const ART_SHARE := 0.6 # what the question and the cards leave, of which the moving picture takes this much
+const ART_MIN_H := 48.0 # under this the moving picture goes rather than be squashed to nothing
 const BADGES_H := 38.0 # the row of what the run earned, on the card that ends it
 const BADGE_PX := 32.0
 
@@ -45,9 +47,10 @@ func _ready() -> void:
 	mouse_exited.connect(func(): _set_hover(-1))
 
 
-## Whether the choices are up (the commands are here and not in the dock).
-func deciding() -> bool:
-	return state != null and state.stage in Transitions.DECIDING and not state.menu.is_empty()
+## Whether the choices are up (the commands are here and not in the dock). The dock asks this of the state too, so the one
+## rule is here and not in each view: a stage taken out of Transitions.DECIDING has its commands in the dock again.
+static func deciding(s) -> bool:
+	return s != null and s.stage in Transitions.DECIDING and not s.menu.is_empty()
 
 
 ## The lines of the log that are said here instead: the last one (what is being asked), and with it the one before when
@@ -62,15 +65,16 @@ static func asked(s) -> Array:
 
 
 func _process(_dt: float) -> void:
-	var shown: bool = state != null and (deciding() or state.vignette != "")
+	var up := deciding(state)
+	var shown: bool = state != null and (up or state.vignette != "")
 	visible = shown
-	mouse_filter = Control.MOUSE_FILTER_STOP if shown and deciding() else Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP if shown and up else Control.MOUSE_FILTER_IGNORE
 	if shown:
 		queue_redraw()
 
 
 func _gui_input(event: InputEvent) -> void:
-	if not deciding():
+	if not deciding(state):
 		return
 	if event is InputEventMouseMotion:
 		_set_hover(choice_at(event.position))
@@ -118,12 +122,13 @@ func _ask_height(lines: Array, width: float) -> float:
 	return h
 
 
-## Everything's place: {art: Rect2 (no area when there is no room or nothing to show), ask: Rect2, rects: [Rect2]}. The
-## cards are in rows of COLS, the plain choices in one row under them, the whole block in the middle of the picture. When
-## the picture is short the cards give up height first, then the moving picture does.
+## Everything's place: {art: Rect2 (no area when there is no room or nothing to show), ask: Rect2, badges: Rect2 (the row of
+## what the run earned, where a run's card is), rects: [Rect2]}. The cards are in rows of COLS, the plain choices in one row
+## under them, the whole block in the middle of the picture. When the picture is short the cards give up height first, then the
+## moving picture does.
 func _layout() -> Dictionary:
 	var out := {"art": Rect2(), "ask": Rect2(), "badges": Rect2(), "rects": []}
-	if not deciding():
+	if not deciding(state):
 		return out
 	var items: Array = state.menu
 	var cards: Array = []
@@ -145,12 +150,12 @@ func _layout() -> Dictionary:
 	var card_h := CARD_H
 	var art_h := 0.0
 	if state.vignette in Vignette.KNOWN:
-		art_h = clampf((room - fixed - GAP - rows * card_h) * 0.6, ART_H, ART_H_BIG)
+		art_h = clampf((room - fixed - GAP - rows * card_h) * ART_SHARE, ART_H, ART_H_BIG)
 	if rows > 0 and fixed + art_h + GAP + rows * card_h > room:
 		card_h = clampf((room - fixed - art_h - GAP) / rows, CARD_H_MIN, CARD_H)
 	if fixed + art_h + GAP + rows * card_h > room:
 		art_h = maxf(0.0, room - fixed - GAP - rows * card_h)
-		if art_h < 48.0:
+		if art_h < ART_MIN_H:
 			art_h = 0.0
 	var total := fixed + rows * card_h + (art_h + GAP if art_h > 0.0 else 0.0)
 	var y := maxf(8.0, (size.y - total) / 2.0)
@@ -172,7 +177,7 @@ func _layout() -> Dictionary:
 		rects[cards[n]] = Rect2((size.x - row_w) / 2.0 + (n % COLS) * (card_w + GAP), y + row * (card_h + GAP), card_w, card_h)
 	y += rows * card_h + GAP * maxi(0, rows - 1)
 	if not plain.is_empty():
-		y += GAP if rows > 0 else 0.0
+		y += GAP # the gap the layout counted between these and what is above them, cards or question
 		var widths: Array = plain.map(func(i): return maxf(150.0, _title.get_string_size(str(items[i].label), HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x + 64.0))
 		var row_w := GAP * (plain.size() - 1)
 		for pw in widths:
@@ -190,7 +195,7 @@ func _draw() -> void:
 		return
 	var colours: Dictionary = Palette.for_run(state.palette_id)
 	var t := Time.get_ticks_msec() / 1000.0
-	if not deciding():
+	if not deciding(state):
 		if state.vignette in Vignette.KNOWN: # stopped at something, with its commands in the dock: the picture of it, alone
 			var box := Rect2((size.x - ART_H_ALONE * Vignette.RATIO) / 2.0, 10.0, ART_H_ALONE * Vignette.RATIO, ART_H_ALONE)
 			draw_rect(box.grow(8.0), Color(0, 0, 0, 0.8))
