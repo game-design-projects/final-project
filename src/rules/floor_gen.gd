@@ -56,8 +56,8 @@ static func generate(rng: Rng, plan := {}):
 		if cell != null:
 			f.merchant = {"cell": cell, "stock": Items.stock(rng, plan)}
 	var lord: Dictionary = {}
-	if plan.get("lords", false): # the run's first floor of this biome: its lord is at home there
-		lord = Lords.due(str(f.biome), int(f.seed_value), plan.get("lords_done", []))
+	if plan.get("lords", false) or plan.get("lords_return", false): # at home here, or back where its biome comes round again
+		lord = Lords.due(str(f.biome), int(f.seed_value), plan.get("lords_done", []), plan.get("lords_sworn", []), bool(plan.get("lords_return", false)))
 	if plan.get("request", false):
 		var cell: Variant = Secrets.place_trader(rng, f, walk, hall)
 		if cell != null:
