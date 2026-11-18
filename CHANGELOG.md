@@ -37,6 +37,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Jev's mercy-and-pressure reply is read from what came back and not from the cache it was just written to, and one that answers only half the pair keeps that half: a mercy asked ahead on a half-answered monster costs no request, and the cache-boundary case in `tools/network_test.gd` now fails a check instead of printing a script error that the suite still called passed.
 - The edge around every mind's answer tells an answer of `null` apart from no answer in the log (an export's null used to read as a 30 s wait), and counts infinite odds, or a total too large to divide by, as no answer: the local rules answer instead.
 - `tools/run_tests.sh` lets a suite mark the script errors its own checks cause on purpose (`network_test` does), so a full run is green again; a `SCRIPT ERROR` anywhere else still fails that suite.
+- `tools/moods_test.gd` counts the script errors the engine logs too, like the suites built on `tools/test_base.gd`: the one suite outside that file could pass with a function in `moods.gd` or `monster.gd` cut short, and now fails with the first error's place, before its verdict.
 
 ## [0.9.4] - 2026-11-17
 
