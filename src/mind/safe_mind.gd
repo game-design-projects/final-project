@@ -71,7 +71,8 @@ func mercy_and_pressure(m) -> Dictionary:
 	return await _guard("mercy_and_pressure", func(): return await _inner.mercy_and_pressure(m), is_pair, spare, {"mercy": LAST_MERCY, "pressure": LAST_PRESSURE})
 
 
-## Probabilities the game can roll: something -> a number that is 0 or more, at least one of them above 0.
+## Probabilities the game can roll: something -> a finite number that is 0 or more, at least one of them above 0, and a
+## total the game can divide by (an infinite total makes every roll the same key).
 static func is_odds(answer) -> bool:
 	if not answer is Dictionary or answer.is_empty():
 		return false
@@ -80,12 +81,12 @@ static func is_odds(answer) -> bool:
 		if not is_number(answer[k], INF):
 			return false
 		total += float(answer[k])
-	return total > 0.0
+	return is_finite(total) and total > 0.0
 
 
-## A number from 0 to `high`, and not NAN.
+## A finite number from 0 to `high` (INF itself is not one: the game can't roll it).
 static func is_number(value, high: float) -> bool:
-	return (value is float or value is int) and not is_nan(float(value)) and float(value) >= 0.0 and float(value) <= high
+	return (value is float or value is int) and is_finite(float(value)) and float(value) >= 0.0 and float(value) <= high
 
 
 static func is_chance(answer) -> bool:
@@ -108,25 +109,30 @@ func _guard(question: String, ask: Callable, ok: Callable, spare: Callable, last
 		if not ok.call(given):
 			Fault.report("mind", "%s answered %s to %s" % [label(), str(given).left(120), question])
 		return given
-	var answer = await _within_deadline(ask)
+	var got: Dictionary = await _within_deadline(ask)
+	var answer = got.value
 	if ok.call(answer):
 		return answer
 	saved += 1
-	Fault.report("mind", "%s %s to %s, local rules instead (%d so far)" % [label(), "gave no answer in %.0f s" % deadline_s if answer == null else "answered %s" % str(answer).left(120), question, saved])
+	var why: String = "answered %s" % str(answer).left(120) if got.answered else "gave no answer in %.0f s" % deadline_s
+	Fault.report("mind", "%s %s to %s, local rules instead (%d so far)" % [label(), why, question, saved])
 	var other = await spare.call()
 	return other if ok.call(other) else last
 
 
-## The answer, or null when deadline_s passes first (what comes after that is not used). A mind that answers at once (the
-## local rules, a seeded one) is not waited for: no timer, no frame.
-func _within_deadline(ask: Callable):
-	var box := {"open": true, "answer": null}
+## What the mind said: {"answered": whether it said anything at all, "value": the answer}. `answered` stays false, and the
+## value null, when deadline_s passes first (what comes after that is not used). A mind that answers null at once has
+## answered — it is a bad answer, not a question still out; the two read differently in the log. A mind that answers at
+## once (the local rules, a seeded one) is not waited for: no timer, no frame.
+func _within_deadline(ask: Callable) -> Dictionary:
+	var box := {"open": true, "answered": false, "value": null}
 	var gate := Gate.new()
 	var asking := func():
 		var answer = await ask.call()
 		if box.open:
 			box.open = false
-			box.answer = answer
+			box.answered = true
+			box.value = answer
 			gate.opened.emit()
 	asking.call() # not awaited: it may never come back
 	if box.open:
@@ -135,4 +141,4 @@ func _within_deadline(ask: Callable):
 				box.open = false
 				gate.opened.emit())
 		await gate.opened
-	return box.answer
+	return {"answered": box.answered, "value": box.value}

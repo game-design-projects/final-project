@@ -20,6 +20,8 @@ All notable changes to this project are documented here. The format follows [Kee
 - The legend the pointer had over the corner map no longer hangs over the whole floor's map after the click that opens it.
 - The key hints draw a keycap only for a key that is a word of its own: the dodge rules that begin with IT or ITS (bounce, slither, gaze, golem) no longer lose their first letter to an **I** keycap.
 - Jev's mercy-and-pressure reply is read from what came back and not from the cache it was just written to, and one that answers only half the pair keeps that half: a mercy asked ahead on a half-answered monster costs no request, and the cache-boundary case in `tools/network_test.gd` now fails a check instead of printing a script error that the suite still called passed.
+- The edge around every mind's answer tells an answer of `null` apart from no answer in the log (an export's null used to read as a 30 s wait), and counts infinite odds, or a total too large to divide by, as no answer: the local rules answer instead.
+- `tools/run_tests.sh` lets a suite mark the script errors its own checks cause on purpose (`network_test` does), so a full run is green again; a `SCRIPT ERROR` anywhere else still fails that suite.
 
 ## [0.9.4] - 2026-11-17
 

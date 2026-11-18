@@ -35,7 +35,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game |
 | `features_test` | Each feature with its flag on and off (it switches them itself), and the champion holding the stairs over 1,000 seeds (the issue #26 measurement) |
 
-`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`.
+`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`. A suite that makes faults on purpose says where: `network_test` prints `errors expected below` before the checks that provoke them and `errors expected above` after, and the runner only fails a suite for a `SCRIPT ERROR` outside such a block.
 
 Tests can't judge how it looks. These draw the real thing and print numbers, with pictures if given `out=<dir>`. They need a window, which may stay hidden:
 
