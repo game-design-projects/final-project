@@ -346,6 +346,13 @@ func _follow_through() -> void:
 	# alone: as it always was
 	await flow.press("1")
 	_check(s.bar.marks.is_empty(), "alone there are no marks on the bar")
+	var ticks := []
+	var on_sweep := func(name, data): if name == "sweep": ticks.append(int(data.step))
+	flow.happened.connect(on_sweep)
+	for part in range(1, 11):
+		await flow.tick(s.bar.t0 + s.bar.dur * part * 0.05)
+	_check(ticks == [1, 2, 3, 4], "the line is heard crossing each part of the bar, a step higher to the middle (%s)" % [ticks])
+	flow.happened.disconnect(on_sweep)
 	flow.clock = s.bar.t0 + s.bar.dur / 2.0
 	await flow.press("confirm")
 	_check(s.stage != "fightbar" and s.bar == null, "and the strike ends the bar at once (%s)" % s.stage)

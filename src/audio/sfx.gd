@@ -42,7 +42,7 @@ const ALIASES := {
 ## Rendered ahead of time, in this order, a few milliseconds per frame (voices depend on the monster and render when first needed).
 const PREWARM := [
 	"hit", "miss", "crit", "hurt", "kill", "bump", "tick", "slash", "stairs", "good", "bad", "death", "holy", "buff", "sad", "odd",
-	"join", "chime", "trophy", "encounter", "boss", "flee", "step", "alert", "creep", "beat", "move", "pick", "mercy_refused", "shout",
+	"join", "chime", "trophy", "sweep_1", "sweep_2", "sweep_3", "sweep_4", "encounter", "boss", "flee", "step", "alert", "creep", "beat", "move", "pick", "mercy_refused", "shout",
 ]
 const PREWARM_MS := 4.0 # per frame for background rendering...
 const URGENT_MS := 10.0 # ...and per frame while a sound is waiting for its render
@@ -84,6 +84,7 @@ static func recipes() -> Dictionary:
 			"good": snd_good, "bad": snd_bad, "sad": snd_sad, "odd": snd_odd, "join": snd_join, "chime": snd_chime, "trophy": snd_trophy,
 			"encounter": snd_encounter, "boss": snd_boss, "flee": snd_flee, "bump": snd_bump, "stairs": snd_stairs,
 			"tick": snd_tick,
+			"sweep_1": snd_sweep.bind(0), "sweep_2": snd_sweep.bind(1), "sweep_3": snd_sweep.bind(2), "sweep_4": snd_sweep.bind(3),
 			"nerve_1": snd_nerve.bind(0), "nerve_2": snd_nerve.bind(1), "nerve_3": snd_nerve.bind(2), "nerve_4": snd_nerve.bind(3), "nerve_5": snd_nerve.bind(4),
 			"voice_roar": snd_voice_roar, "voice_bark": snd_voice_bark, "voice_grunt": snd_voice_grunt,
 			"voice_growl": snd_voice_growl, "voice_hiss": snd_voice_hiss, "voice_squelch": snd_voice_squelch,
@@ -336,6 +337,16 @@ static func snd_buff(s, t, _o = {}):
 	var notes := [72, 79, 84]
 	for i in notes.size():
 		s.tone(t + i * 0.05, {type = "triangle", f0 = note(notes[i]), dur = 0.7, vol = 0.1, attack = 0.08, room = 1, vibrato = {rate = 5, depth = 3}})
+
+
+## The strike bar's line crossing another part of the bar: a short dry tick, a note higher the nearer the middle (the bound
+## `step`, 0 at the ends to 3), and the middle's has a bell on top: three ticks climb to it, so the strike has a beat.
+static func snd_sweep(s, t, _o = {}, step := 0):
+	var n: int = [64, 67, 71, 76][clampi(step, 0, 3)]
+	s.tone(t, {type = "square", f0 = note(n), dur = 0.045, vol = 0.07, lp = [3200], room = 0.2})
+	s.noise(t, {dur = 0.02, vol = 0.05, f0 = 5000, f1 = 2500, q = 1.2, room = 0.1})
+	if step >= 3:
+		s.tone(t, {type = "triangle", f0 = note(n + 12), dur = 0.12, vol = 0.09, room = 0.5})
 
 
 ## A point of nerve: a bright blip, a step higher for each point held (the bound `step`, 0 to 4), so a run of them climbs.
