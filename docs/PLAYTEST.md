@@ -16,14 +16,16 @@ matters is that every session covers the same ground, and that a note can be tra
 
 The order matters less than the coverage; the numbers are ten-minute blocks.
 
-1. **The menu and the first minute.** Main menu: NEW GAME, then the practice floor. Watch whether the goal ("five floors down,
-   and the only way out") and the first monster read without being told.
+1. **The menu and the first minute.** Main menu: NEW GAME. A first run with the tips on opens on the practice floor, one slime
+   above B1F; a later one starts on B1F, and SHOW THE TIPS AGAIN in SETTINGS brings the landing back. Watch whether the goal
+   ("five floors down, and the only way out") and the first monster read without being told.
 2. **A walk.** Arrows or WASD, ENTER to camp, **M** for the whole floor's map, **I** for what is around, **K** for
    achievements. Turn round, walk into a monster, and try the fight.
 3. **A fight.** FIGHT at the right moment, HEAVY, ACT, SPARE, FLEE. The dodge box is the part to watch: does a glowing
    square, its colour and the marks on it read as "this will land here, now", and can a tester step off in time?
-4. **The things a floor hides.** A cracked wall (walk into it), the chest behind it, a pad, the trader, the writing on a wall,
-   and the stairs. Press **M** once 80% of a floor is seen: does the rest of the layout appearing help, or steal the mystery?
+4. **The things a floor hides.** A cracked wall (walk into it), the chest behind it, a pad, the writing on a wall, the stairs,
+   and a trader (floors 2 and 4, or below a market stair). Press **M** once 80% of a floor is seen: does the rest of the
+   layout appearing help, or steal the mystery?
 5. **The gate on the third stairs.** Someone has to hold it. Ask what the choice felt like, and whether the cost was clear.
 6. **A champion.** The keepsake choice after it: three cards, one kept. Can a tester say what each does and why they picked it?
 7. **The end.** The Last Door wants company. Ask what the ending screen said, and whether embers meant anything to them.
