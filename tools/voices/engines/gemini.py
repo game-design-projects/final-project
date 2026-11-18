@@ -53,7 +53,7 @@ PRICES = {
     "gemini-2.5-flash-preview-tts": (0.50, 10.00),
     "gemini-2.5-pro-preview-tts": (1.00, 20.00),
 }
-CHARS_PER_S = 13.0  # how fast a line is spoken, about, for the estimate
+CHARS_PER_S = 7.5  # how fast a line is spoken, about, for the estimate (the 354-line bank: 9562 characters, 1381 s of speech)
 CHARS_PER_TOKEN = 4.0
 RETRIES = 5  # for a busy or failing server (429, 5xx, a dropped connection)
 BACKOFF_S = 8.0
