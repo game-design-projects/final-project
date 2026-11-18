@@ -57,6 +57,7 @@ func _run() -> void:
 	await _full_map(game)
 	await _thinking(game)
 	await _sub_text_wraps(game)
+	await _sub_text_items(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
 	await _wide_view(game)
@@ -721,6 +722,32 @@ func _thinking(game) -> void:
 
 ## SPARE's help is about 980 px at the dock's font: in a window narrower than that it wraps to a second line and the dock makes
 ## room for it, rather than running off the bottom of the window.
+## The trader and the bag say what the picked item does under the key hints, with the keys: before, only the mouse's tooltip
+## did (issue #172).
+func _sub_text_items(game) -> void:
+	var flow = game.flow
+	var s = flow.state
+	await flow.go("explore")
+	s.floor_map.merchant = {"cell": s.cell, "stock": ["salve"]}
+	await flow.go("trade")
+	var dock = game._dock
+	dock.state = s
+	_check(not dock.sub_text().is_empty() and dock.sub_text() == str(s.menu[0].get("sub", "")), "the key row says what the trader's item does (%s)" % dock.sub_text())
+	await flow.press("cancel")
+	s.items = ["salve"]
+	await _fight(game)
+	dock.state = flow.state
+	s = flow.state
+	var bag: int = s.menu.find_custom(func(i): return str(i.label) == "ITEM")
+	_check(bag >= 0, "the fight's menu has the bag")
+	s.selected = bag
+	await flow.press("confirm")
+	_check(flow.state.stage == "items", "ITEM opens the bag")
+	dock.state = flow.state
+	_check(not dock.sub_text().is_empty() and dock.sub_text() == str(flow.state.menu[0].get("sub", "")), "and the key row says what the picked item does (%s)" % dock.sub_text())
+	await flow.press("cancel")
+
+
 func _sub_text_wraps(game) -> void:
 	await _fight(game)
 	var Hud = load("res://src/view/hud.gd")
