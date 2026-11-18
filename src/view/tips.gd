@@ -90,7 +90,8 @@ func hover_command(i: int, rect := Rect2()) -> void:
 
 
 ## A click or tap at `p` in the picture: on the foe it keeps its card open (or closes it). Returns what was tapped: "foe", "map"
-## (the automap: the scene opens the whole floor's map, and the legend stays on the pointer and the info key) or "".
+## (the automap: on the walk the scene opens the whole floor's map, and the legend stays on the pointer and the info key; where
+## the whole map can't open the scene keeps the legend open with `toggle`) or "".
 func tap(p: Vector2) -> String:
 	if state != null and _allowed("foe") and FOE_RECT.has_point(p):
 		toggle("foe")
@@ -298,7 +299,8 @@ static func ally_blocks(a) -> Array:
 ## With the run's state `s`, each kind also says how its clan feels about you, and the card ends on what makes this floor harder.
 static func map_blocks(roaming := false, s = null) -> Array:
 	var out := [{"kind": "head", "left": "MONSTERS SHOW WHERE LAST SEEN" if roaming else "MONSTERS SHOW WHEN SEEN", "right": ""}]
-	out.append({"kind": "text", "text": "M or a click: the whole floor."})
+	if s == null or s.stage == "explore": # the whole map opens on the walk only (gameplay.gd's `_map_allowed`): not at camp or with a trader
+		out.append({"kind": "text", "text": "M or a click: the whole floor."})
 	var genres: Dictionary = Content.table("encounter").genres
 	var depth: int = s.depth if s != null and not s.practice else 1
 	for entry in Kinds.at_depth(depth): # this floor's five kinds, each with its attack and how its clan feels

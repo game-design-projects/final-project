@@ -552,6 +552,12 @@ func _full_map(game) -> void:
 	game.flow.happened.connect(note)
 	_check(not game.map_open() and game._automap.visible and not game._full_map.visible, "walking, the corner map shows and the full map is away")
 	_check(str(s.hint).contains("M MAP"), "the key hints name M")
+	var Hud = load("res://src/view/hud.gd")
+	_check(Hud.key_of("M MAP") == "M" and Hud.key_of("I INFO") == "I" and Hud.key_of("1-4") == "1-4" and Hud.key_of("ARROWS / WASD CHOOSE") == "ARROWS" and Hud.key_of("UP / DOWN WALK") == "UP / DOWN", "a hint that begins with a key is drawn with its keycap")
+	var genres: Dictionary = load("res://src/rules/content.gd").table("encounter").genres
+	var mistaken: Array = genres.keys().filter(func(id): return Hud.key_of(str(genres[id].plain)) != "")
+	_check(mistaken.is_empty() and Hud.key_of("IT BOUNCES OFF THE WALLS") == "" and Hud.key_of("MIND THE GAP") == "", "a dodge's rule that only starts with a key's letter keeps that letter: no rule is taken for a key (%s)" % [mistaken])
+	_check(_text_of(game._tips.map_blocks(false, s)).contains("whole floor"), "on the walk the map's legend says M or a click shows the whole floor")
 	game._unhandled_input(_key(KEY_M, {}, 109))
 	await process_frame
 	await process_frame
@@ -578,15 +584,40 @@ func _full_map(game) -> void:
 	game._unhandled_input(held)
 	_check(not game.map_open(), "a held M is not a second press")
 	var corner: Vector2 = game._automap.get_global_rect().get_center() - game._picture.get_global_position()
+	game._on_picture_input(_move(corner))
+	var pointed: String = game._tips.shown()
 	game._on_picture_input(_click(corner))
 	await process_frame
 	await process_frame
 	_check(game.map_open() and game._tips.pinned == "", "a click on the corner map opens it too")
+	game._on_picture_input(_move(corner + Vector2(1, 1)))
+	_check(pointed == "map" and game._tips.shown() == "", "and the legend the pointer had over the corner map doesn't hang over the whole map, from the click or from a move after it")
 	stood = s.cell
 	game._on_picture_input(_click(_on_picture(game, Vector2(224, 144))))
 	await process_frame
 	await process_frame
 	_check(not game.map_open() and s.cell == stood and s.stage == "explore", "and a click anywhere puts it away, and does nothing else")
+	# a banner announced under the map never reaches the picture: it is said again when the map closes; one from before is not
+	for _i in 2: # the run's own banner, then Wick's after it, have gone
+		game._clock_ms += 60000.0
+		await process_frame
+		await process_frame
+	game.flow.announce("BEFORE", "said before the map was up")
+	game._clock_ms += 60000.0
+	await process_frame
+	await process_frame
+	game.show_map(true)
+	game.show_map(false)
+	_check(not game.flow.banner_up(), "a banner that ran out before the map was up stays gone when the map closes")
+	game.show_map(true)
+	game.flow.announce("UNDER", "said under the map")
+	game._clock_ms += 60000.0
+	await process_frame
+	await process_frame
+	_check(game.map_open() and not game.flow.banner_up(), "a banner said under the map runs out behind it, unread")
+	game.show_map(false)
+	_check(game.flow.banner_up() and s.banner.title == "UNDER" and not game._overlay.quiet, "and it is said again from its start when the map closes")
+	s.banner = null
 	game.show_map(true)
 	game._unhandled_input(_key(KEY_ENTER))
 	await process_frame
@@ -595,6 +626,10 @@ func _full_map(game) -> void:
 	game._unhandled_input(_key(KEY_M, {}, 109))
 	await process_frame
 	_check(not game.map_open(), "at camp M opens nothing")
+	game._on_picture_input(_click(corner))
+	_check(not game.map_open() and game._tips.pinned == "map", "but a click on the corner map keeps its legend open there, as it did before there was a whole map")
+	_check(not _text_of(game._tips.blocks()).contains("whole floor"), "and the legend doesn't offer the whole map where it can't open")
+	game._tips.unpin()
 	await game.flow.go("explore")
 	game.flow._keys_back_at = -1.0
 	game.show_map(true)

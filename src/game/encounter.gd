@@ -349,7 +349,7 @@ func _heal(amount) -> int:
 ## a champion, which leaves keepsakes: one is taken first (stages/keepsake.gd), and that stage comes back here.
 func leave_fight(lines: Array) -> void:
 	var s = flow.state
-	lines = lines + _map_from(s.foe)
+	lines = _with_map(lines, s.foe)
 	if s.keepsake_due != "":
 		var from: String = s.keepsake_due
 		s.keepsake_due = ""
@@ -364,21 +364,25 @@ func leave_fight(lines: Array) -> void:
 
 
 ## The foe that is now out of the way may have been carrying a map of the floor (rules/chart.gd): the rest of the layout goes onto
-## your map. Returns the log's line for it, or [] when it had none.
-func _map_from(m) -> Array:
+## your map. Returns `lines` with the log's line for it, or as they were when it had none. With the picture free a banner says it
+## too, and the log's line comes last. With a banner already up (a purse, a clan, a new friend) the log is the only place that
+## says it, so its line comes first: the log cuts the lines it has no room for, from the bottom.
+func _with_map(lines: Array, m) -> Array:
 	var s = flow.state
 	if s.floor_map == null or not Chart.drops(s, m, flow.dice):
-		return []
+		return lines
 	var chance: float = Chart.drop_chance(s)
 	var seen: float = Chart.share(s)
 	var cells: int = Chart.reveal(s)
 	var words: Dictionary = Chart.table().map
-	if not flow.banner_up():
+	var said := [State.sys_line(str(words.line) % m.name)]
+	var on_picture: bool = not flow.banner_up()
+	if on_picture:
 		flow.announce(str(words.title), str(words.text) % m.name)
-	print("encounter: %s was carrying the map (%.0f%% seen, chance %.0f%%), %d cells charted" % [m.name, seen * 100.0, chance * 100.0, cells])
+	print("encounter: %s was carrying the map (%.0f%% seen, chance %.0f%%), %d cells charted, said %s" % [m.name, seen * 100.0, chance * 100.0, cells, "on the picture and last in the log" if on_picture else "first in the log, a banner is up"])
 	flow.event("charted", {"how": "map", "cells": cells})
 	flow.event("sound", {"name": "good"})
-	return [State.sys_line(str(words.line) % m.name)]
+	return lines + said if on_picture else said + lines
 
 
 ## Out of the fight with nothing owed: no gold, no grudge, and it heals up as if you were never there.

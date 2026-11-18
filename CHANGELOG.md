@@ -8,11 +8,23 @@ All notable changes to this project are documented here. The format follows [Kee
 - One rule for a part that fails (`src/utils/fault.gd`): a debug build fails fast, an export carries on and logs `fault N: ...`.
 - Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
 
+### Changed
+- `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
+
+### Fixed
+- A banner announced while the whole floor's map is up (a first-time tip, an item found, explorer's instinct) is said again from its start when the map closes, instead of running out unread behind it; a tip is only ever said once.
+- The whole floor's map writes its two lines as wide as they need on a small floor: on the practice floor the line with its keys is no longer cut, and there and on the smallest B1F the floor's name and `100% SEEN` no longer touch.
+- Explorer's instinct waits for the next step or turn when the cell stepped on has news of its own (an item, a chest, the wall's writing, a pad): an item's or the writing's banner and line no longer take the place of instinct's, which was then said nowhere.
+- A monster's map found while another banner holds the picture (a purse, a clan, a new friend) is said on the log's first line, where the lines the log cuts can't take it; with the picture free it stays last.
+- A click on the corner map at camp, with a trader, at a request or at the stairs keeps the legend open again, as it did before the whole map: the whole map opens on the walk only, and the legend only offers it there.
+- The legend the pointer had over the corner map no longer hangs over the whole floor's map after the click that opens it.
+- The key hints draw a keycap only for a key that is a word of its own: the dodge rules that begin with IT or ITS (bounce, slither, gaze, golem) no longer lose their first letter to an **I** keycap.
+- Jev's mercy-and-pressure reply is read from what came back and not from the cache it was just written to, and one that answers only half the pair keeps that half: a mercy asked ahead on a half-answered monster costs no request, and the cache-boundary case in `tools/network_test.gd` now fails a check instead of printing a script error that the suite still called passed.
+
 ## [0.9.4] - 2026-11-17
 
 ### Fixed
 - Jev's mercy-and-pressure reply no longer loses mercy and stops a fight when its answer cache reaches 64 entries.
-- That reply is read from what came back and not from the cache it was just written to, and one that answers only half the pair keeps that half: a mercy asked ahead on a half-answered monster costs no request, and the cache-boundary case in `tools/network_test.gd` now fails a check instead of printing a script error that the suite still called passed.
 
 ## [0.9.3] - 2026-11-17
 
