@@ -136,20 +136,21 @@ static func fights_required(f) -> int:
 
 
 ## The two ways down from floor `depth` of this run, from its seed, so a printed seed offers the same ones. Each is what `plan`
-## takes, with its `path`, which picks the floor's seed, and its label and sub for the menu. The way to the last floor is one stair.
-## `traders` says whether a way with a trader may be offered.
+## takes, with its `path`, which picks the floor's seed, and its label and sub for the menu. The way to the last floor is one stair;
+## a warren a sworn lord opened is that stair, since the second favour is only paid on B4F or B5F. `traders` says whether a way with
+## a trader may be offered.
 static func paths(run_seed: int, depth: int, traders := true, warren := []) -> Array:
-	if is_last(depth + 1):
-		return []
-	var rng := Rng.new(floor_seed(run_seed, depth, PATH_SEED))
-	var kinds: Array = Content.table("floors").paths.filter(func(k): return traders or not k.get("shop", false))
 	var out := []
 	if not warren.is_empty(): # a sworn lord with no place in the party opens its clan's warren (rules/lords.gd)
 		var entry: Dictionary = _warren_of(str(warren[0]))
 		if not entry.is_empty():
 			entry.path = 1
 			out.append(entry)
-	for i in PATHS_OFFERED - out.size():
+	if is_last(depth + 1):
+		return out # the last floor's one stair, when a warren is open
+	var rng := Rng.new(floor_seed(run_seed, depth, PATH_SEED))
+	var kinds: Array = Content.table("floors").paths.filter(func(k): return traders or not k.get("shop", false))
+	for _i in PATHS_OFFERED - out.size():
 		var kind: Dictionary = kinds.pop_at(rng.int_range(0, kinds.size() - 1)).duplicate()
 		kind.path = out.size() + 1
 		if kind.get("territory", false):
@@ -158,9 +159,14 @@ static func paths(run_seed: int, depth: int, traders := true, warren := []) -> A
 			var word: String = str(Content.species(entry.species).label).to_lower()
 			kind.only_species = entry.species
 			kind.label = kind.label % word.to_upper()
-			kind.sub = kind.sub % ("a " + word)
+			kind.sub = kind.sub % _with_article(word)
 		out.append(kind)
 	return out
+
+
+## A word with the article it takes: "a bandit", "an orange slime".
+static func _with_article(word: String) -> String:
+	return ("an " if "aeiou".contains(word.substr(0, 1)) else "a ") + word
 
 
 ## The warren way down, made one clan's: the stairs say what waits below, and every monster below is that clan.
@@ -178,7 +184,7 @@ static func _warren_of(clan: String) -> Dictionary:
 		return {}
 	entry.only_species = str(species[0])
 	entry.label = str(entry.label) % word.to_upper()
-	entry.sub = str(entry.sub) % ("a " + word)
+	entry.sub = str(entry.sub) % _with_article(word)
 	return entry
 
 
