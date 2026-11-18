@@ -1,6 +1,6 @@
 ## Checks what lasts longer than a run or wears on one: achievements, the legacy between runs, going hungry, what can be done
-## about that with a friend (issue #40), and that every script keeps its `.uid` beside it. Prints one line per check and exits
-## with 1 if any failed.
+## about that with a friend (issue #40), and that every script keeps its `.uid` beside it and in the commit. Prints one line
+## per check and exits with 1 if any failed.
 ##   godot --headless --path . -s res://tools/meta_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
@@ -77,11 +77,11 @@ func _ally(species := "slime", who := "DRIP", loyalty := 60.0):
 	return Ally.make(species, who, loyalty)
 
 
-## Every script keeps its `.uid` beside it, and no two `.uid` files carry the same `uid://`: Godot writes one for each
-## script on import, and a script copied from another brings that one's id along, so one of the two paths is left without
-## an id of its own. The walk leaves out what is not the project's: its import cache (a hidden directory) and the
-## directories it is told to ignore (`.gdignore`). A `.uid` of anything else (a scene, a shader, the film) is not a
-## script's and is not asked about.
+## Every script keeps its `.uid` beside it and in the commit, and no two `.uid` files carry the same `uid://`: Godot writes
+## one for each resource on import, and a script copied from another brings that one's id along, so one of the two paths is
+## left without an id of its own. The walk says what is on disk; git is asked what the commit holds, because an import
+## writes a missing `.uid` again with a new id and would hide a commit that lost it. The walk leaves out what is not the
+## project's: its import cache (a hidden directory) and the directories it is told to ignore (`.gdignore`).
 func _uid_files() -> void:
 	var scripts := []
 	var uids := []
@@ -92,9 +92,9 @@ func _uid_files() -> void:
 		if not FileAccess.file_exists(script + ".uid"):
 			offenders.append("%s: no .uid beside it" % script.trim_prefix("res://"))
 	for uid in uids:
-		var script: String = uid.trim_suffix(".uid")
-		if not scripts.has(script):
-			offenders.append("%s: no script beside it" % uid.trim_prefix("res://"))
+		var beside: String = uid.trim_suffix(".uid")
+		if not FileAccess.file_exists(beside):
+			offenders.append("%s: no %s beside it" % [uid.trim_prefix("res://"), beside.get_file()])
 			continue
 		var id := FileAccess.get_file_as_string(uid).strip_edges()
 		if not id.begins_with("uid://"):
@@ -103,16 +103,54 @@ func _uid_files() -> void:
 			offenders.append("%s, %s: one %s between them" % [ids[id].trim_prefix("res://"), uid.trim_prefix("res://"), id])
 		else:
 			ids[id] = uid
+	var commit := _committed(scripts, uids)
+	offenders.append_array(commit.missing)
 	var detail := "%d scripts" % scripts.size() if offenders.is_empty() else ", ".join(offenders)
-	_check(offenders.is_empty(), "every script has its .uid beside it (%s)" % detail)
+	var what := "every script has its .uid beside it and in the commit, no two with one id"
+	if commit.why != "":
+		what = "every script has its .uid beside it, no two with one id" # the detail says the commit was not asked about
+		detail += ", %s" % commit.why
+	_check(offenders.is_empty(), "%s (%s)" % [what, detail])
 
 
-## Every script and `.gd.uid` under a directory, not going into its import cache or a directory marked `.gdignore`.
+## The scripts and `.uid` files the commit holds, against the two the walk found: `missing` names each that is in one and
+## not in the other (a script committed without its `.uid`, or a `.uid` left behind by a script that is gone), and `why`
+## says what was not asked when there is no `.git` here to ask (a copy of the tree).
+func _committed(scripts: Array, uids: Array) -> Dictionary:
+	var root := ProjectSettings.globalize_path("res://")
+	var git := root.path_join(".git")
+	if not (DirAccess.dir_exists_absolute(git) or FileAccess.file_exists(git)):
+		return {"missing": [], "why": "no .git here, so only what is on disk was checked"}
+	var out := []
+	if OS.execute("git", ["-C", root, "-c", "core.quotePath=false", "ls-files", "--", "*.gd", "*.gd.uid"], out) != 0:
+		return {"missing": ["git could not say what is committed (is it installed?)"], "why": ""}
+	var tracked := {}
+	for line in out:
+		for path in String(line).split("\n", false): # the whole listing arrives as one string on macOS
+			tracked[path.strip_edges()] = true
+	var missing := []
+	for script in scripts:
+		var path: String = script.trim_prefix("res://")
+		if not tracked.has(path):
+			continue # not committed yet: a script being written now, not a commit that lost its id
+		if not tracked.has(path + ".uid"):
+			missing.append("%s: committed without its .uid" % path)
+	for uid in uids:
+		var path: String = uid.trim_prefix("res://")
+		if not path.ends_with(".gd.uid") or not tracked.has(path):
+			continue
+		var script_path: String = path.trim_suffix(".uid")
+		if not tracked.has(script_path):
+			missing.append("%s: committed without its script" % path)
+	return {"missing": missing, "why": ""}
+
+
+## Every script and every `.uid` under a directory, not going into its import cache or a directory marked `.gdignore`.
 func _uid_walk(dir: String, scripts: Array, uids: Array) -> void:
 	for file in DirAccess.get_files_at(dir):
 		if file.ends_with(".gd"):
 			scripts.append(dir.path_join(file))
-		elif file.ends_with(".gd.uid"):
+		if file.ends_with(".uid"):
 			uids.append(dir.path_join(file))
 	for child in DirAccess.get_directories_at(dir):
 		var path := dir.path_join(child)
