@@ -31,6 +31,7 @@ const FULL_PAD := 12.0 # the least room left round the full map
 const FULL_TEXT := 22.0 # the room above and below it, for its two lines
 const FULL_DIM := 0.72 # how dark the picture goes behind it
 const FULL_FONT_PX := 8
+const FULL_TEXT_GAP := 16.0 # the least room between the floor's name and how much of it is seen, on the one line they share
 
 var state # State, set by the owner
 var full := false # the whole floor over the picture, instead of the corner's window
@@ -82,6 +83,18 @@ func full_lines() -> Dictionary:
 	if not state.charted.is_empty():
 		seen += " · CHARTED"
 	return {"where": where, "seen": seen, "keys": "M CLOSE · ARROWS WALK"}
+
+
+## Where the full map's lines are written: x is the left end and y the width, in this node's pixels. The panel's own width on a
+## big floor. A small floor's panel (the practice floor, B1F) is narrower than the words, so there the span is as wide as they
+## need, centred on the panel and kept inside the picture: the name and the share on the top line don't meet, and the keys aren't cut.
+func lines_span(lines: Dictionary) -> Vector2:
+	var font: Font = Fonts.title()
+	var panel := panel_rect()
+	var top := font.get_string_size(lines.where, HORIZONTAL_ALIGNMENT_LEFT, -1, FULL_FONT_PX).x + FULL_TEXT_GAP + font.get_string_size(lines.seen, HORIZONTAL_ALIGNMENT_LEFT, -1, FULL_FONT_PX).x
+	var keys := font.get_string_size(lines.keys, HORIZONTAL_ALIGNMENT_LEFT, -1, FULL_FONT_PX).x
+	var width := minf(size.x, ceilf(maxf(panel.size.x, maxf(top, keys))))
+	return Vector2(clampf(floorf(panel.get_center().x - width / 2.0), 0.0, size.x - width), width)
 
 
 ## The floor cell at the window's top left corner: you in the middle of it, as far as the floor goes.
@@ -229,11 +242,12 @@ func _draw() -> void:
 	if full:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, FULL_DIM))
 		var lines := full_lines()
+		var span := lines_span(lines)
 		var font: Font = Fonts.title()
-		draw_string(font, Vector2(panel.position.x, panel.position.y - 6.0), lines.where, HORIZONTAL_ALIGNMENT_LEFT, -1, FULL_FONT_PX, Palette.INK)
-		draw_string(font, Vector2(panel.position.x, panel.position.y - 6.0), lines.seen, HORIZONTAL_ALIGNMENT_RIGHT, panel.size.x, FULL_FONT_PX, Palette.DIM)
-		draw_string(font, Vector2(panel.position.x, panel.end.y + 6.0 + FULL_FONT_PX), lines.keys, HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, FULL_FONT_PX, Palette.DIM)
-		print_verbose("automap: the full map drawn in %s, %d cells across at %d px, %s" % [size, window_cells(), cell_px(), lines.seen])
+		draw_string(font, Vector2(span.x, panel.position.y - 6.0), lines.where, HORIZONTAL_ALIGNMENT_LEFT, -1, FULL_FONT_PX, Palette.INK)
+		draw_string(font, Vector2(span.x, panel.position.y - 6.0), lines.seen, HORIZONTAL_ALIGNMENT_RIGHT, span.y, FULL_FONT_PX, Palette.DIM)
+		draw_string(font, Vector2(span.x, panel.end.y + 6.0 + FULL_FONT_PX), lines.keys, HORIZONTAL_ALIGNMENT_CENTER, span.y, FULL_FONT_PX, Palette.DIM)
+		print_verbose("automap: the full map drawn in %s, %d cells across at %d px, %s, its lines %d px wide from %d" % [size, window_cells(), cell_px(), lines.seen, span.y, span.x])
 	draw_rect(panel, Color.BLACK)
 	draw_rect(panel.grow(-0.5), Palette.FAINT, false, 1.0)
 	var s := cell_px()
@@ -244,9 +258,10 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2(c) * s, Vector2(s, s)), CHARTED)
 	for r in wall_lines(charted):
 		draw_rect(r, wall.darkened(CHARTED_WALL_DARK))
-	for c in _shown():
+	var seen_cells := _shown() # asked once: the full map's window is the whole floor
+	for c in seen_cells:
 		draw_rect(Rect2(Vector2(c) * s, Vector2(s, s)), VISITED if state.visited.has(c) else SEEN)
-	for r in wall_lines():
+	for r in wall_lines(seen_cells):
 		draw_rect(r, wall)
 	var ring := stairs_mark()
 	if not ring.is_empty():

@@ -86,6 +86,7 @@ var _overlay
 var _automap
 var _full_map # the same map drawn over the whole picture, while `_map_open`
 var _map_open := false
+var _map_opened_at := 0.0 # the flow's clock when the full map last opened: a banner announced since then never reached the picture
 var _postfx
 var _picture: TextureRect
 var _room: Control
@@ -448,6 +449,23 @@ func show_map(open: bool) -> void:
 		_overlay.quiet = open
 		_overlay.queue_redraw()
 	print("gameplay: the full map %s" % ("opens" if open else "closes"))
+	if open:
+		_map_opened_at = flow.clock
+		if _tips != null: # the pointer that clicked the corner map is still where it was: its legend would hang over the map
+			_tips.hover(Vector2(-1, -1))
+	else:
+		_say_held_banner()
+
+
+## A banner announced while the full map was up never reached the picture, and its time ran on behind the map: it starts again
+## now. A tip is only ever said once (coach.gd), and you walk with the map up, so without this it would be spent unread; the
+## same goes for what an item found does and for the instinct that charted the floor.
+func _say_held_banner() -> void:
+	var held = flow.state.banner
+	if held == null or held.t0 < _map_opened_at:
+		return
+	print("gameplay: '%s' was announced under the full map, it is said again" % held.title)
+	flow.announce(str(held.title), str(held.text), float(held.ms))
 
 
 func map_open() -> bool:
@@ -455,12 +473,13 @@ func map_open() -> bool:
 
 
 ## The pointer over the picture, and a click or tap on it. Where the strike bar sweeps (and on the title card) the picture is
-## the big OK button; on the foe a click keeps its card open (touch has no hover), and on the automap it opens the whole floor's map.
+## the big OK button; on the foe a click keeps its card open (touch has no hover), and on the automap it opens the whole floor's map
+## (or, where that can't open, keeps the map's legend open).
 func _on_picture_input(event: InputEvent) -> void:
 	if flow == null or _pause.visible:
 		return
 	if event is InputEventMouseMotion:
-		_tips.hover(_in_picture(event.position))
+		_tips.hover(Vector2(-1, -1) if _map_open else _in_picture(event.position)) # under the whole map the corner map isn't there to point at
 		return
 	var tapped := false
 	if event is InputEventMouseButton:
@@ -476,7 +495,10 @@ func _on_picture_input(event: InputEvent) -> void:
 	elif _map_open:
 		show_map(false) # a tap anywhere puts the map away
 	elif _tips.tap(_in_picture(event.position)) == "map":
-		show_map(true)
+		if _map_allowed():
+			show_map(true)
+		else:
+			_tips.toggle("map") # at camp, with a trader, at the stairs: no whole map there, so the tap keeps the legend open as it always did
 
 
 ## A point of the picture control as a point of the overlay's 448 x 288, which sits in the middle of a wider picture.

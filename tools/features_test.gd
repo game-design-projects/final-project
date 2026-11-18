@@ -2988,8 +2988,75 @@ func _charting() -> void:
 	s = flow.state
 	_check(s.charted.is_empty(), "a new floor starts with nothing charted")
 	# a monster's map: one that fled keeps it, one out of the way that rolled it hands it over
+	var pair: Array = _map_carriers(Chart, flow)
+	var carrier = pair[0]
+	var other = pair[1]
+	_check(carrier != null and other != null, "on this floor one monster carries a map and another is there to flee from (%d monsters)" % s.floor_map.monsters.size())
+	if carrier == null or other == null:
+		return
+	await flow.go("intro", {"foe": other})
+	await flow.go("menu")
+	await flow.encounter.leave_fight([])
+	_check(s.charted.is_empty() and heard.size() == 1, "a monster you left standing keeps its map")
+	await flow.go("intro", {"foe": carrier})
+	await flow.go("menu")
+	carrier.gone = "spared"
+	var ended := [State.sys_line("It falls."), State.sys_line("It is over."), State.sys_line("A friend has something to say.")]
+	flow.announce("A PURSE", "something else holds the picture")
+	await flow.encounter.leave_fight(ended)
+	_check(not s.charted.is_empty() and heard.size() == 2 and heard[1].how == "map", "one out of the way hands its map over (%d cells charted)" % s.charted.size())
+	_check(s.stage == "explore" and s.lines.any(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map")), "and the log says who was carrying it")
+	_check(s.banner.title == "A PURSE" and s.lines.size() == ended.size() + 1 and str(s.lines[0].text).contains(carrier.name) and str(s.lines[0].text).contains("map"), "with another banner on the picture the log says it first, where the lines the log cuts can't take it")
+	_check(Chart.known(s, s.floor_map.stairs) and not Chart.instinct_due(s), "the stairs are on the map, and instinct has nothing left to add")
+	# the same with the picture free: the banner says it, and the log's line comes after how the fight ended
+	await flow.new_run()
+	s = flow.state
+	carrier = _map_carriers(Chart, flow)[0]
+	_check(carrier != null, "the same floor again has the same carrier")
+	if carrier == null:
+		return
+	await flow.go("intro", {"foe": carrier})
+	await flow.go("menu")
+	carrier.gone = "slain"
+	s.banner = null
+	await flow.encounter.leave_fight([State.sys_line("It falls.")])
+	_check(s.banner != null and s.banner.title == str(Chart.table().map.title) and s.lines.size() == 2 and str(s.lines[1].text).contains(carrier.name) and str(s.lines[1].text).contains("map"), "with the picture free a banner says it, and the log's line comes last")
+	# a step onto a cell with news of its own (an item, a chest, the writing, a pad): that news keeps the log and the picture, and
+	# instinct waits for the next step or turn instead of being said nowhere
+	await flow.new_run()
+	s = flow.state
+	var f = s.floor_map
+	var ahead := -1
+	for i in 4:
+		var c: Vector2i = s.cell + f.DIRS[i]
+		if f.is_open(c) and not f.in_the_way(c) and f.monster_at(c) == null and c != f.stairs and f.pickup_at(c) == "" and not f.lore_at(c) and not f.treasure.any(func(t): return t.cell == c):
+			ahead = i
+			break
+	_check(ahead >= 0, "the start has a plain cell beside it to put an item on")
+	if ahead < 0:
+		return
+	var item_cell: Vector2i = s.cell + f.DIRS[ahead]
+	f.pickups.append({"cell": item_cell, "item": "salve"})
+	s.facing = ahead
 	cells = s.reach().keys()
-	for i in ceili(cells.size() * at) - 1:
+	for i in ceili(cells.size() * at):
+		s.seen[cells[i]] = true
+	for _i in 2: # the run's own banners have gone
+		await flow.tick(flow.clock + 60000.0)
+	heard.clear()
+	await flow.press("up")
+	_check(s.cell == item_cell and s.items.has("salve") and s.charted.is_empty() and heard.is_empty() and s.banner != null and s.banner.title != str(words.title), "stepping onto an item with instinct due, the item has the log and the picture, and instinct waits (%s)" % s.lines.map(func(l): return l.text))
+	await flow.tick(flow.clock + 60000.0)
+	await flow.press("left")
+	_check(not s.charted.is_empty() and heard.size() == 1 and heard[0].how == "instinct" and s.banner.title == str(words.title) and s.lines.any(func(l): return l.text == str(words.line)), "and at the next turn it charts the floor, on the picture and in the log")
+
+
+## For `_charting`: sees just under the share where instinct would chart the floor, then finds the first of the floor's monsters that
+## would hand a map over if put out of the way now, and the first that would not. [carrier, other], null for one the floor hasn't got.
+func _map_carriers(Chart, flow) -> Array:
+	var s = flow.state
+	var cells: Array = s.reach().keys()
+	for i in ceili(cells.size() * float(Chart.table().instinct_at)) - 1:
 		s.seen[cells[i]] = true
 	var carrier = null
 	var other = null
@@ -3003,20 +3070,7 @@ func _charting() -> void:
 			carrier = m
 		elif other == null:
 			other = m
-	_check(carrier != null and other != null, "on this floor one monster carries a map and another is there to flee from (%d monsters)" % s.floor_map.monsters.size())
-	if carrier == null or other == null:
-		return
-	await flow.go("intro", {"foe": other})
-	await flow.go("menu")
-	await flow.encounter.leave_fight([])
-	_check(s.charted.is_empty() and heard.size() == 1, "a monster you left standing keeps its map")
-	await flow.go("intro", {"foe": carrier})
-	await flow.go("menu")
-	carrier.gone = "spared"
-	await flow.encounter.leave_fight([])
-	_check(not s.charted.is_empty() and heard.size() == 2 and heard[1].how == "map", "one out of the way hands its map over (%d cells charted)" % s.charted.size())
-	_check(s.stage == "explore" and s.lines.any(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map")), "and the log says who was carrying it")
-	_check(Chart.known(s, s.floor_map.stairs) and not Chart.instinct_due(s), "the stairs are on the map, and instinct has nothing left to add")
+	return [carrier, other]
 
 
 ## What a fight's end does to keys, without the scene. (gameplay_test presses real keys.)

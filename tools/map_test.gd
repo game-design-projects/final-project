@@ -14,10 +14,12 @@ const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
+const Fonts = preload("res://src/view/fonts.gd")
 const Items = preload("res://src/rules/items.gd")
 const Materials = preload("res://src/view/materials.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Practice = preload("res://src/rules/practice.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const SaveCheck = preload("res://src/game/save_check.gd")
@@ -505,12 +507,41 @@ func _full_map() -> void:
 		_check(Rect2(Vector2.ZERO, map.size).encloses(panel.grow(Automap.FULL_TEXT - 1.0)), "%s: with room round it for its two lines (%s in %s)" % [biome.id, panel, map.size])
 		var lines: Dictionary = map.full_lines()
 		_check(str(lines.where) == "B5F · " + str(biome.name) and str(lines.seen).ends_with("% SEEN"), "%s: it says where you are and how much is seen (%s, %s)" % [biome.id, lines.where, lines.seen])
+		_check(map.lines_span(lines).is_equal_approx(Vector2(panel.position.x, panel.size.x)), "%s: on a big floor its lines keep to the panel's width (%s)" % [biome.id, map.lines_span(lines)])
 		s.charted[f.stairs] = true
 		_check(str(map.full_lines().seen).ends_with("CHARTED"), "%s: and that the floor is charted" % biome.id)
 		map.size = Vector2(300, 200)
 		var o: Vector2i = map.window_origin()
 		var cells: int = map.window_cells()
 		_check(cells < f.size and s.cell.x >= o.x and s.cell.x < o.x + cells and s.cell.y >= o.y and s.cell.y < o.y + cells and Rect2(Vector2.ZERO, map.size).encloses(map.panel_rect()), "%s: in a picture too small it scrolls, with you in the window (%d cells)" % [biome.id, cells])
+		map.free()
+	# a small floor's panel is narrower than the map's lines: they are written in a span of their own, so the floor's name and
+	# the share seen never meet on the line they share, and the line with the keys is never cut
+	var practice = State.new()
+	practice.practice = true
+	practice.floor_map = Practice.make(Rng.new(1))
+	var first = State.new()
+	first.floor_map = FloorGen.generate(Rng.new(5), _plan(Content.table("biomes").biomes[0], 1))
+	first.charted[first.floor_map.stairs] = true
+	var small := {"the practice floor": practice, "the smallest B1F": first}
+	var font: Font = Fonts.title()
+	for what in small:
+		var s = small[what]
+		s.cell = s.floor_map.start
+		for c in s.reach(): # all of it seen: the longest the top line gets
+			s.seen[c] = true
+		var map = Automap.new()
+		map.full = true
+		map.state = s
+		map.size = Vector2(1136, 730)
+		var lines: Dictionary = map.full_lines()
+		var panel: Rect2 = map.panel_rect()
+		var span: Vector2 = map.lines_span(lines)
+		var top: float = font.get_string_size(lines.where, HORIZONTAL_ALIGNMENT_LEFT, -1, Automap.FULL_FONT_PX).x + font.get_string_size(lines.seen, HORIZONTAL_ALIGNMENT_LEFT, -1, Automap.FULL_FONT_PX).x
+		var keys: float = font.get_string_size(lines.keys, HORIZONTAL_ALIGNMENT_LEFT, -1, Automap.FULL_FONT_PX).x
+		_check(panel.size.x < maxf(top + Automap.FULL_TEXT_GAP, keys), "%s: its panel is narrower than its lines (%d px for '%s' and '%s', %d px, and the keys, %d px)" % [what, panel.size.x, lines.where, lines.seen, top, keys])
+		_check(span.y >= top + Automap.FULL_TEXT_GAP and span.y >= keys, "%s: so they are written %d px wide: the name and the share don't meet, the keys aren't cut" % [what, span.y])
+		_check(span.x >= 0.0 and span.x + span.y <= map.size.x and absf(span.x + span.y / 2.0 - panel.get_center().x) <= 1.0, "%s: centred on the panel and inside the picture (from %d)" % [what, span.x])
 		map.free()
 
 

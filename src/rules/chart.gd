@@ -47,22 +47,33 @@ static func share(s) -> float:
 
 ## Whether there is anything left for a map to tell: not on the practice floor, not twice on one floor, and not when all is seen.
 static func open(s) -> bool:
-	return s.floor_map != null and not s.practice and s.charted.is_empty() and share(s) < 1.0
+	return _unspent(s) and share(s) < 1.0
+
+
+## Whether this floor may still be charted at all, before asking how much of it is seen (`share` walks every cell of the floor,
+## and the two below are asked on every step: they count it once).
+static func _unspent(s) -> bool:
+	return s.floor_map != null and not s.practice and s.charted.is_empty()
 
 
 ## Whether your instinct fills in the rest now.
 static func instinct_due(s) -> bool:
-	return open(s) and share(s) >= float(table().instinct_at)
+	if not _unspent(s):
+		return false
+	var seen := share(s)
+	return seen < 1.0 and seen >= float(table().instinct_at)
 
 
 ## The chance that a monster just out of the way was carrying the floor's map: from `start` with nothing seen up to `full` at the
 ## share where instinct would do it anyway.
 static func drop_chance(s) -> float:
-	if not open(s):
+	if not _unspent(s):
+		return 0.0
+	var seen := share(s)
+	if seen >= 1.0:
 		return 0.0
 	var t: Dictionary = table()
-	var along := clampf(share(s) / float(t.instinct_at), 0.0, 1.0)
-	return lerpf(float(t.drop.start), float(t.drop.full), along)
+	return lerpf(float(t.drop.start), float(t.drop.full), clampf(seen / float(t.instinct_at), 0.0, 1.0))
 
 
 ## Whether `m`, now out of the way, was carrying the map. The roll is the monster's own, from the floor's seed and its place among
