@@ -1,4 +1,5 @@
 extends SceneTree
+const Fault = preload("res://src/utils/fault.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Moods = preload("res://src/rules/moods.gd")
 const Dice = preload("res://src/utils/dice.gd")
@@ -9,6 +10,7 @@ func check(ok: bool, label: String) -> void:
 	if not ok:
 		failures += 1
 func _initialize() -> void:
+	Fault.watch() # the one suite not built on tools/test_base.gd: a script error anywhere still fails it (see the check before the verdict)
 	var dice = Dice.new(Rng.new(7042))
 	dice.pin(0.5)
 	var a = Monster.given({"species": "bandit", "genre": "chess", "hp": 24}, Vector2i.ZERO, "TIM", ["jumpy"], {"friendliness": 20.0, "anger": 10.0, "fear": 10.0})
@@ -33,5 +35,9 @@ func _initialize() -> void:
 	var old: Dictionary = snap.duplicate(true)
 	old.erase("mood")
 	check(Monster.from_dict(old).mood.is_empty(), "old save default")
+	var tripped := Fault.script_errors() # as tools/test_base.gd's _finish: a function cut short must not pass as a green run
+	if tripped > 0:
+		print("moods_test: FAIL %d script error(s) where none were meant, the first at %s" % [tripped, Fault.first_script_error()])
+		failures += 1
 	print("moods_test: all checks passed" if failures == 0 else "moods_test: %d checks failed" % failures)
 	quit(failures)
