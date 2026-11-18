@@ -90,7 +90,7 @@
   "hold_label": "HOLD IT YOURSELF",
   "hold_sub": "Nobody stays, and the gate catches you on the way under: %d HP",
   "leave_label": "LEAVE %s",
-  "leave_sub": "It holds the gate and stays behind. The others will see",
+  "leave_sub": "It holds the gate and stays behind. The others will remember it",
   "held": "You hold it, you run, and the gate catches you going under. %d HP.",
   "left": "%s takes the chain and doesn't look at you. You go down without it.",
   "others": "Nobody says anything for a long time.",
