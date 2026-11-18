@@ -1,7 +1,8 @@
 ## Holds each arrow key for a few seconds in the real game scene, as a keyboard does (one press, then repeats), and watches the camera frame by
 ## frame (#44). Prints, per key: frames, what the game did (steps, turns), how often the camera turned back on itself, the longest time it stood still
 ## while the key was down, and the slowest frame. Against a wall it says how often the lunge started over.
-##   godot --path . --resolution 640x360 -s res://tools/hold_check.gd -- nosound nosave [seed=9]
+##   godot --path . --resolution 640x360 -s res://tools/hold_check.gd -- nosound [seed=9]
+## The game's own autosave is kept in memory, as with every tool that runs the game: the player's saves stay as they are.
 extends SceneTree
 
 const Flags = preload("res://src/utils/flags.gd")
@@ -15,6 +16,7 @@ var _scene
 
 
 func _initialize() -> void:
+	Flags.set_args(OS.get_cmdline_user_args() as PackedStringArray + PackedStringArray(["nosave"])) # its walk never reaches the player's autosave
 	_run.call_deferred()
 
 
