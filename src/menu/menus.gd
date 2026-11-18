@@ -55,6 +55,8 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 
 static func pause(panel, ctx: Dictionary) -> Dictionary:
 	var can_save: bool = ctx.has("save_slot")
+	var kept: bool = not ctx.has("no_save") # `no_save` says why nothing here can be saved (the test room): then leaving loses nothing
+	var lost := "Progress since the last save is lost" if kept else ""
 	var items := [
 		{"label": "RESUME", "act": func(): ctx.resume.call()},
 		{"label": "SAVE GAME", "disabled": not can_save, "sub": "" if can_save else str(ctx.get("no_save", "Only while walking, not in a fight")), "act": _go(panel, func(): return slot_list(panel, ctx, "save"))},
@@ -65,14 +67,14 @@ static func pause(panel, ctx: Dictionary) -> Dictionary:
 	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{
-			"label": "MAIN MENU", "sub": "Progress since the last save is lost",
-			"act": _go(panel, func(): return confirm(panel, "LEAVE THE RUN?", "Anything since your last save is lost.", "MAIN MENU", func(): ctx.to_main_menu.call())),
+			"label": "MAIN MENU", "sub": lost,
+			"act": _go(panel, func(): return confirm(panel, "LEAVE THE RUN?", "Anything since your last save is lost.", "MAIN MENU", func(): ctx.to_main_menu.call())) if kept else func(): ctx.to_main_menu.call(),
 		},
 	])
 	if ctx.has("quit"):
 		items.append({
-			"label": "QUIT GAME", "sub": "Progress since the last save is lost",
-			"act": _go(panel, func(): return confirm(panel, "QUIT THE GAME?", "Anything since your last save is lost.", "QUIT GAME", func(): ctx.quit.call())),
+			"label": "QUIT GAME", "sub": lost,
+			"act": _go(panel, func(): return confirm(panel, "QUIT THE GAME?", "Anything since your last save is lost.", "QUIT GAME", func(): ctx.quit.call())) if kept else func(): ctx.quit.call(),
 		})
 	return {"title": "PAUSED", "items": items, "hint": "UP / DOWN CHOOSE · ENTER PICK · ESC RESUME", "back": func(): ctx.resume.call()}
 

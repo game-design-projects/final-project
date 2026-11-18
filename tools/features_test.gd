@@ -203,12 +203,14 @@ func _test_room() -> void:
 	s.gold = 0
 	s.items = ["salve"]
 	s.allies = []
+	s.banner = null
 	await flow.encounter.defeat(deep, "slain")
 	var back = f.monster_at(deep_at)
 	_check(s.stage == "explore" and back != null and back != deep and back.name == deep.name and back.hp == back.max_hp and f.monsters_left() == TestRoom.count(), "after it, whoever you slew stands in its place again")
 	_check(s.hp == s.max_hp and s.gold == int(words.gold) and s.items.is_empty() and s.has_ally("witch") and s.depth == 1, "and the party is as it walked in")
 	_check(s.reputation.is_empty() and s.deeds.is_empty() and s.tally.slain == 0, "no clan remembers it, and it is on no tally")
 	_check(s.lines.any(func(l): return l.text == str(words.reset)), "the log says the room is as it was")
+	_check(s.banner == null, "and no banner says a clan took it badly (%s)" % [s.banner.title if s.banner != null else ""])
 	# a champion gives nothing to keep
 	var champion = f.monsters.filter(func(m): return m.boss)[1]
 	var max_before: int = s.max_hp

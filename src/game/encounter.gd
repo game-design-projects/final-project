@@ -272,7 +272,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 ## A clan's hostility moved (Clans.record or Clans.favour): the first move is said on the picture, or in the log when something
 ## else holds the picture. Returns the log lines, [] when the picture said it.
 func tell_hostility(moved: Array) -> Array:
-	if moved.is_empty():
+	if moved.is_empty() or flow.state.testing: # the test room forgets it at once, so it isn't said
 		return []
 	var words: Dictionary = Clans.moved_words(moved[0])
 	if Clans.rank(moved[0].to) > Clans.rank(moved[0].from):
