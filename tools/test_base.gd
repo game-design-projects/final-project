@@ -23,8 +23,9 @@ func _script_errors_meant() -> int:
 
 func _initialize() -> void:
 	Fault.watch()
-	# a suite never touches the player's store or saves, whatever its command line says: `nosave` is on before anything
-	# else happens, and the store heeds it from here (store.gd). A suite that sets its own flags keeps `nosave` in them.
+	# a suite never touches the player's store, whatever its command line says: `nosave` is on before anything else happens,
+	# and the store heeds it from here (store.gd) for good. The save slots ask the flags every call, though, and a suite that
+	# sets its own flags drops `nosave` again (`Flags.set_args` replaces them), so one that would write a save says it there too.
 	BaseFlags.set_args(OS.get_cmdline_user_args() as PackedStringArray + PackedStringArray(["nosave"]))
 	var store = root.get_node_or_null("Store")
 	if store != null and store.persists():
