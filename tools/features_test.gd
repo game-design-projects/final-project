@@ -2841,6 +2841,10 @@ func _lords() -> void:
 	_check(back != null and back.lords_met.is_empty() and back.lords_sworn.is_empty(), "a save from before lords has met none")
 	var kept = State.from_dict(flow.state.to_dict())
 	_check(kept != null and kept.lords_met == [clan], "and a save keeps the ones met")
+	# what it says when met: who it is first, then its favour
+	await flow.go("request")
+	_check(flow.state.lines.size() == 2 and str(flow.state.lines[0].text).contains("LORD OF") and str(flow.state.lines[1].who) == str(q.name), "the lord says who it is before what it wants (%s)" % str(flow.state.lines[0].text))
+	await flow.press("cancel")
 	# the second favour, where the biome comes back: the same lord, and paying it swears the clan
 	var back_flow = _flow(7)
 	await back_flow.new_run()
@@ -2986,8 +2990,9 @@ func _npcs() -> void:
 	s.items = []
 	await flow.press("up")
 	_check(s.stage == "request" and s.cell == stood, "walking up to it opens a talk, not a fight (%s)" % s.stage)
-	_check(s.foe == null and s.lines[0].kind == "say" and s.lines[0].who == q.name, "it says what it wants")
-	_check(s.lines[0].text.contains(Items.label(q.want)), "by name (%s)" % s.lines[0].text)
+	var said_lines: Array = s.lines.filter(func(l): return l.kind == "say") # a lord says who it is in a line of its own first
+	_check(s.foe == null and said_lines.size() == 1 and said_lines[0].who == q.name, "it says what it wants")
+	_check(said_lines[0].text.contains(Items.label(q.want)), "by name (%s)" % said_lines[0].text)
 	_check(s.menu.size() == 2 and s.menu[0].label == t.kinds.fetch.yes, "and you answer")
 	_check(s.questers_met.has(q.name), "its name is heard, and kept (%s)" % q.name)
 	await flow.press("1")
@@ -3025,7 +3030,8 @@ func _npcs() -> void:
 	ks.banner = null
 	_face(ks, kq.cell)
 	await kin.press("up")
-	_check(ks.menu.size() == 1 and ks.lines[0].text.contains(target.name), "it says so and has nothing to offer (%s)" % ks.lines[0].text)
+	var kin_said: Array = ks.lines.filter(func(l): return l.kind == "say")
+	_check(ks.menu.size() == 1 and kin_said.size() >= 1 and kin_said[0].text.contains(target.name), "it says so and has nothing to offer (%s)" % kin_said[0].text)
 	var before: int = ks.gold
 	await kin.press("1")
 	_check(ks.floor_map.quester.is_empty() and ks.gold == before, "and it's gone, with nothing paid")
