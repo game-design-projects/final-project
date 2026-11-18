@@ -18,12 +18,14 @@ library is not used: its authorisation covers that project's own voice training 
 A third bank is not cloned from anyone: `gemini`, Google's Gemini TTS (`gemini-3.8-flash-tts`), each monster in one of its
 prebuilt voices with a style of delivery (`voices.json` `gemini`: voice, style, and its own shaping). The game plays it
 only with the feature `gemini-voices` (off unless named), line by line before the `cosyvoice3` bank, so it can be heard
-beside the game's own voices. It is rendered ahead like the others; the game never asks for speech while it runs.
+beside the game's own voices. It is rendered ahead like the others; the game never asks for speech while it runs. A line
+that names another monster (`{kin}`) is not in the bank: that name is only known when the line is said, so one file cannot
+say it, and the game gives those lines the made-up voice.
 
 ```bash
 python3 tools/voices/render.py gemini --dry-run                 # the cast, how many lines, about what it costs
 python3 tools/voices/render.py gemini --only slime --limit 3    # a first listen (the key is read from $OPENROUTER_API_KEY)
-python3 tools/voices/render.py gemini                           # every line (354: it cost $0.35, about 40 min at 10 requests a minute)
+python3 tools/voices/render.py gemini                           # every line it can file (314: about $0.27, 31 min at 10 requests a minute)
 godot --headless --path . --import && godot --path . -- test-room gemini-voices
 python3 tools/voices/test_gemini.py                             # the engine against a stand-in server: no key, nothing paid
 ```
