@@ -138,15 +138,20 @@ static func fights_required(f) -> int:
 ## The two ways down from floor `depth` of this run, from its seed, so a printed seed offers the same ones. Each is what `plan`
 ## takes, with its `path`, which picks the floor's seed, and its label and sub for the menu. The way to the last floor is one stair.
 ## `traders` says whether a way with a trader may be offered.
-static func paths(run_seed: int, depth: int, traders := true) -> Array:
+static func paths(run_seed: int, depth: int, traders := true, warren := []) -> Array:
 	if is_last(depth + 1):
 		return []
 	var rng := Rng.new(floor_seed(run_seed, depth, PATH_SEED))
 	var kinds: Array = Content.table("floors").paths.filter(func(k): return traders or not k.get("shop", false))
 	var out := []
-	for i in PATHS_OFFERED:
+	if not warren.is_empty(): # a sworn lord with no place in the party opens its clan's warren (rules/lords.gd)
+		var entry: Dictionary = _warren_of(str(warren[0]))
+		if not entry.is_empty():
+			entry.path = 1
+			out.append(entry)
+	for i in PATHS_OFFERED - out.size():
 		var kind: Dictionary = kinds.pop_at(rng.int_range(0, kinds.size() - 1)).duplicate()
-		kind.path = i + 1
+		kind.path = out.size() + 1
 		if kind.get("territory", false):
 			var roster: Array = Content.table("encounter").roster
 			var entry: Dictionary = roster[rng.int_range(0, roster.size() - 1)]
@@ -156,6 +161,25 @@ static func paths(run_seed: int, depth: int, traders := true) -> Array:
 			kind.sub = kind.sub % ("a " + word)
 		out.append(kind)
 	return out
+
+
+## The warren way down, made one clan's: the stairs say what waits below, and every monster below is that clan.
+static func _warren_of(clan: String) -> Dictionary:
+	var species: Array = Content.table("clans").clans[clan].species
+	if species.is_empty():
+		return {}
+	var word: String = str(Content.species(str(species[0])).label).to_lower()
+	var entry := {}
+	for kind in Content.table("floors").paths:
+		if kind.get("territory", false):
+			entry = kind.duplicate()
+			break
+	if entry.is_empty():
+		return {}
+	entry.only_species = str(species[0])
+	entry.label = str(entry.label) % word.to_upper()
+	entry.sub = str(entry.sub) % ("a " + word)
+	return entry
 
 
 ## The gate that wants someone left at its chain (the feature toll).

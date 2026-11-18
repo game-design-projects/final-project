@@ -59,7 +59,8 @@ func _offer_ways(flow, lines: Array) -> void:
 	var s = flow.state
 	s.vignette = "stairs"
 	s.say(lines)
-	_ways = Floors.paths(s.run_seed, s.depth) if flow.feature("branching") else []
+	_ways = Floors.paths(s.run_seed, s.depth, true, s.lords_warren) if flow.feature("branching") else []
+	s.lords_warren = [] # the offer is made once: the stairs below are the ones it was for
 	s.menu = []
 	for way in _ways:
 		s.menu.append({"label": way.label, "sub": way.sub})

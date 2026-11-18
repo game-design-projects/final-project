@@ -170,7 +170,10 @@ static func swear(s, lord: String, q: Dictionary) -> bool:
 	if s.party_size() < Combat.PARTY_MAX and not s.allies.any(func(a): return str(a.name) == str(q.name)):
 		s.allies.append(Ally.make(str(q.species), str(q.name), LORD_LOYALTY))
 		joined = true
-	print("lords: %s swears its clan to you%s" % [lord, ", and comes along" if joined else ""])
+	if not joined: # no place in the party: its clan opens its warren on the next stairs instead (rules/lords.gd)
+		if not s.lords_warren.has(lord):
+			s.lords_warren.append(lord)
+	print("lords: %s swears its clan to you%s" % [lord, ", and comes along" if joined else ", and opens its warren"])
 	return joined
 
 
