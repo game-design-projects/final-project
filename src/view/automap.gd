@@ -10,6 +10,7 @@
 extends Control
 
 const Chart = preload("res://src/rules/chart.gd")
+const Content = preload("res://src/rules/content.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
@@ -75,7 +76,7 @@ func panel_rect() -> Rect2:
 ## The full map's two lines: which floor this is and how much of it is seen, and the keys.
 func full_lines() -> Dictionary:
 	var f = state.floor_map
-	var where := "PRACTICE" if state.practice else "B%dF" % state.depth
+	var where := "PRACTICE" if state.practice else (str(Content.table("floors").test_room.header) if state.testing else "B%dF" % state.depth)
 	var biome := str(Floors.biome_named(f.biome).get("name", "")) if f.biome != "" else ""
 	if biome != "":
 		where += " · " + biome

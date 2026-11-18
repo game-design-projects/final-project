@@ -23,6 +23,7 @@ const CHAT_MAX := 60
 var stage := ""
 var depth := 1 # which floor, B1F is 1
 var practice := false # on the practice floor above B1F; depth stays 1 until its stairs
+var testing := false # in the test room (rules/test_room.gd): nothing here is kept, saved or counted, and `depth` is the floor of whoever is being fought; never saved
 var run_seed := 0 # what this run's floors are made from (rules/floors.gd), so a printed seed replays them all
 var steps := 0 # how far the party has walked this run
 var chat: Array = [] # {who, text}: everything said this run, oldest first, up to CHAT_MAX

@@ -31,6 +31,7 @@ func _run() -> void:
 	_settings_fall_back_to_the_old_blob()
 	await _digits_wheel_and_clicks(panel)
 	await _main_menu_refuses_a_bad_save()
+	_the_test_room_row(panel)
 	await _intro_film()
 	_finish()
 
@@ -41,7 +42,7 @@ func _hints_fit(panel) -> void:
 		return
 	var inner: float = MenuPanel.WIDTH - MenuPanel.PAD * 2.0
 	var body: Font = Fonts.body()
-	var ctx := {"new_game": func(): pass, "load_slot": func(_s): pass, "resume": func(): pass, "to_main_menu": func(): pass}
+	var ctx := {"new_game": func(): pass, "load_slot": func(_s): pass, "resume": func(): pass, "to_main_menu": func(): pass, "test_room": func(): pass}
 	var pages := {
 		"main": func(): return Menus.main(panel, ctx),
 		"pause": func(): return Menus.pause(panel, ctx),
@@ -341,6 +342,31 @@ func _main_menu_refuses_a_bad_save() -> void:
 	Saves.delete("5")
 	menu.queue_free()
 	await process_frame
+	Flags.set_args(PackedStringArray([]))
+
+
+## TEST ROOM on the main menu (the feature test-room): it hands the gameplay a request for the room, and it is not on the pause menu.
+func _the_test_room_row(panel) -> void:
+	var Session = load("res://src/menu/session.gd")
+	var words: Dictionary = load("res://src/rules/content.gd").table("floors").test_room
+	var asked := {"n": 0}
+	var ctx := {"new_game": func(): pass, "load_slot": func(_s): pass, "resume": func(): pass, "to_main_menu": func(): pass, "test_room": func(): asked.n += 1}
+	Flags.set_args(PackedStringArray(["nosave"]))
+	var rows: Array = Menus.main(panel, ctx).items.filter(func(i): return i.label == str(words.menu))
+	_check(rows.size() == 1 and rows[0].sub == str(words.menu_sub), "the main menu has a TEST ROOM row that says what it is")
+	if rows.size() == 1:
+		rows[0].act.call()
+	_check(asked.n == 1, "picking it asks for the room")
+	_check(Menus.pause(panel, ctx).items.all(func(i): return i.label != str(words.menu)), "the pause menu has none")
+	var here: Dictionary = Menus.pause(panel, {"resume": func(): pass, "to_main_menu": func(): pass, "load_slot": func(_s): pass, "no_save": "Not in the test room"})
+	var save: Array = here.items.filter(func(i): return i.label == "SAVE GAME")
+	_check(save.size() == 1 and save[0].disabled and save[0].sub == "Not in the test room", "paused in the room, SAVE GAME is off and says why")
+	Flags.set_args(PackedStringArray(["nosave", "no-test-room"]))
+	_check(Menus.main(panel, ctx).items.all(func(i): return i.label != str(words.menu)), "with the feature off the row is gone")
+	Flags.set_args(PackedStringArray(["nosave"]))
+	Session.take()
+	Session.start_test()
+	_check(Session.take().get("kind") == "test" and Session.take().is_empty(), "the request it hands over is for the test room, taken once")
 	Flags.set_args(PackedStringArray([]))
 
 

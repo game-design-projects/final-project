@@ -9,6 +9,7 @@ const Legacy = preload("res://src/rules/legacy.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
+const TestRoom = preload("res://src/rules/test_room.gd")
 const Texts = preload("res://src/game/texts.gd")
 
 const TURN_BACK := 0
@@ -23,11 +24,17 @@ func enter(flow, _args: Dictionary) -> void:
 	var s = flow.state
 	s.foe = null
 	flow.event("stairs")
-	s.run_over = not s.practice and Floors.is_last(s.depth)
+	s.run_over = not s.practice and not s.testing and Floors.is_last(s.depth)
 	_at_door = false
 	_at_toll = false
 	_ways = []
-	if s.run_over and flow.feature("last-door") and s.allies.is_empty():
+	if s.testing: # the test room's stairs are its way out: stay, or the main menu
+		var room := TestRoom.table()
+		s.vignette = "stairs"
+		s.say([State.sys_line(str(room.out))])
+		s.menu = [{"label": str(room.stay), "sub": str(room.stay_sub)}, {"label": "MAIN MENU", "sub": ""}]
+		print("end: at the test room's way out")
+	elif s.run_over and flow.feature("last-door") and s.allies.is_empty():
 		s.run_over = false
 		_at_door = true
 		s.vignette = "door"
@@ -134,6 +141,8 @@ func pick(flow, index: int) -> void:
 		return
 	if index == flow.state.menu.size() - 1:
 		flow.event("leave", {"to": "menu"})
+	elif flow.state.testing:
+		await flow.go("explore", {"lines": [State.sys_line(str(TestRoom.table().line))]})
 	elif _at_toll:
 		_pay_toll(flow, index)
 	elif flow.state.run_over:

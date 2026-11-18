@@ -97,7 +97,7 @@ static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
 	var roster: Array = _kinds_here(plan)
 	var champion = f.monsters.pop_back()
 	for c: Vector2i in cells:
-		var m = Monster.make(rng, _at_depth(_one_of(roster, plan.get("biome", {}).get("weights", {}), rng), plan), c, plan.taken)
+		var m = Monster.make(rng, roster_line(_one_of(roster, plan.get("biome", {}).get("weights", {}), rng), plan), c, plan.taken)
 		m.lurking = true
 		m.purse = rng.int_range(int(numbers.purse[0]), int(numbers.purse[1]))
 		f.monsters.append(m)
@@ -177,7 +177,6 @@ static func _walk_from(f, from: Vector2i, hall: Vector2i) -> Dictionary:
 ## Roster monsters spread out nearest first, evenly through the candidate cells; the champion stands on the stairs, or in the
 ## hall when the plan keeps it there (no `boss_at_exit`).
 static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Dictionary, reserved: Dictionary) -> Array:
-	var enc := Content.table("encounter")
 	var candidates := []
 	for i in walk.order.size():
 		var c: Vector2i = walk.order[i]
@@ -197,15 +196,21 @@ static func _place_monsters(rng: Rng, walk: Dictionary, hall: Vector2i, plan: Di
 				spot = c
 				break
 		used.append(spot)
-		monsters.append(Monster.make(rng, _at_depth(roster[i], plan), spot, plan.taken))
-	var boss: Dictionary = enc.boss
-	var champion: Dictionary = plan.get("champion", boss)
+		monsters.append(Monster.make(rng, roster_line(roster[i], plan), spot, plan.taken))
 	var post: Vector2i = walk.farthest if plan.get("boss_at_exit", false) else hall
+	monsters.append(Monster.make(rng, champion_line(plan), post))
+	return monsters
+
+
+## The roster line of the champion of the plan's floor: the Hoard's, with its floor's name and health, fighting in every attack
+## of its floor's kinds.
+static func champion_line(plan: Dictionary) -> Dictionary:
+	var boss: Dictionary = Content.table("encounter").boss
+	var champion: Dictionary = plan.get("champion", boss)
 	var genres: Array = Kinds.genres_at(int(plan.get("depth", 1)))
 	if genres.is_empty():
 		genres = boss.genres
-	monsters.append(Monster.make(rng, {"species": boss.species, "genre": genres[0], "genres": genres, "hp": champion.hp, "name": champion.name, "boss": true}, post))
-	return monsters
+	return {"species": boss.species, "genre": genres[0], "genres": genres, "hp": champion.hp, "name": champion.name, "boss": true}
 
 
 ## The roster lines that live on this floor: its depth's five kinds (rules/kinds.gd), or down a warren every kind of that clan met so
@@ -251,7 +256,7 @@ static func _one_of(roster: Array, weights: Dictionary, rng: Rng) -> Dictionary:
 
 
 ## A roster line with the floor's toughness.
-static func _at_depth(entry: Dictionary, plan: Dictionary) -> Dictionary:
+static func roster_line(entry: Dictionary, plan: Dictionary) -> Dictionary:
 	var out := entry.duplicate()
 	out.hp = roundi(float(entry.hp) * float(plan.get("hp_scale", 1.0)))
 	return out

@@ -302,6 +302,8 @@ func _header() -> void:
 	var floor_name: String = "B%dF OF %d " % [state.depth, state.floors_of] if state.floors_of > 0 else "B%dF " % state.depth
 	if state.practice:
 		floor_name = Practice.line("header") + " "
+	elif state.testing:
+		floor_name = str(Content.table("floors").test_room.header) + " "
 	var spared: int = state.tally.spared
 	var slain: int = state.tally.slain
 	var route := "UNWRITTEN" if spared + slain == 0 else "%d SPARED · %d SLAIN" % [spared, slain]

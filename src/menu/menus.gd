@@ -7,6 +7,7 @@
 extends RefCounted
 
 const Achievements = preload("res://src/rules/achievements.gd")
+const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
 const Progress = preload("res://src/menu/progress.gd")
@@ -40,6 +41,9 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 		items.append({"label": "LEGACY", "sub": "Embers to spend: %d" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
 	if Flags.enabled("achievements") and ctx.has("achievements"):
 		items.append(_achievements_row(ctx))
+	if Flags.enabled("test-room") and ctx.has("test_room"):
+		var room: Dictionary = Content.table("floors").test_room
+		items.append({"label": str(room.menu), "sub": str(room.menu_sub), "act": func(): ctx.test_room.call()})
 	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{"label": "CREDITS", "act": _go(panel, func(): return credits())},
@@ -53,7 +57,7 @@ static func pause(panel, ctx: Dictionary) -> Dictionary:
 	var can_save: bool = ctx.has("save_slot")
 	var items := [
 		{"label": "RESUME", "act": func(): ctx.resume.call()},
-		{"label": "SAVE GAME", "disabled": not can_save, "sub": "" if can_save else "Only while walking, not in a fight", "act": _go(panel, func(): return slot_list(panel, ctx, "save"))},
+		{"label": "SAVE GAME", "disabled": not can_save, "sub": "" if can_save else str(ctx.get("no_save", "Only while walking, not in a fight")), "act": _go(panel, func(): return slot_list(panel, ctx, "save"))},
 		{"label": "LOAD GAME", "act": _go(panel, func(): return slot_list(panel, ctx, "load"))},
 	]
 	if Flags.enabled("achievements") and ctx.has("achievements"):

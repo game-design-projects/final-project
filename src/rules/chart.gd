@@ -45,7 +45,7 @@ static func share(s) -> float:
 	return float(n) / cells.size()
 
 
-## Whether there is anything left for a map to tell: not on the practice floor, not twice on one floor, and not when all is seen.
+## Whether there is anything left for a map to tell: not on the practice floor or in the test room, not twice on one floor, and not when all is seen.
 static func open(s) -> bool:
 	return _unspent(s) and share(s) < 1.0
 
@@ -53,7 +53,7 @@ static func open(s) -> bool:
 ## Whether this floor may still be charted at all, before asking how much of it is seen (`share` walks every cell of the floor,
 ## and the two below are asked on every step: they count it once).
 static func _unspent(s) -> bool:
-	return s.floor_map != null and not s.practice and s.charted.is_empty()
+	return s.floor_map != null and not s.practice and not s.testing and s.charted.is_empty()
 
 
 ## Whether your instinct fills in the rest now.

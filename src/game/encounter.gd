@@ -306,7 +306,7 @@ func _reward_for_champion(m) -> void:
 	var healed := _heal(reward.heal)
 	flow.announce(Texts.champion_down(m), Texts.stronger(int(reward.max_hp), healed))
 	print("encounter: %s is out of the way: max HP %d, healed %d" % [m.name, s.max_hp, healed])
-	if flow.feature("keepsakes") and not s.practice and not Floors.is_last(s.depth):
+	if flow.feature("keepsakes") and not s.practice and not s.testing and not Floors.is_last(s.depth):
 		s.keepsake_due = m.name
 
 

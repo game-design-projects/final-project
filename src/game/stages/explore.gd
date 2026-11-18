@@ -13,6 +13,7 @@ const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const Lore = preload("res://src/rules/lore.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
+const TestRoom = preload("res://src/rules/test_room.gd")
 
 const SIGHT_AHEAD := 6 # how many cells down a straight line the first-time tips look
 
@@ -77,7 +78,8 @@ func _step(flow, backwards: bool) -> void:
 	s.look()
 	flow.event("step")
 	var fed := Survival.heals(s)
-	_get_hungrier(flow)
+	if not s.testing: # nobody gets hungry in the test room
+		_get_hungrier(flow)
 	s.steps += 1
 	if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 		s.hp += 1
@@ -86,7 +88,7 @@ func _step(flow, backwards: bool) -> void:
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
 		return
-	if flow.feature("roaming") and await _monsters_move(flow):
+	if flow.feature("roaming") and not s.testing and await _monsters_move(flow): # in the test room everyone keeps their place
 		return
 	_notice(flow)
 
@@ -213,6 +215,11 @@ func _read_the_wall(flow) -> void:
 ## The first time a cracked wall is right in front of you, or something new is down the line you face, say what it is.
 func _notice(flow) -> void:
 	var s = flow.state
+	if s.testing: # the test room says who you are looking at, or who is at your sides
+		var who := TestRoom.ahead(s.floor_map, s.cell, s.facing)
+		if who != "":
+			s.say([State.sys_line(who)])
+		return
 	if s.floor_map.is_cracked(s.cell + FloorMap.DIRS[s.facing]):
 		flow.coach.say("crack")
 	var at: Vector2i = s.cell

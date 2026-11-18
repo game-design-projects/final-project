@@ -23,7 +23,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 	if name == "trophy" or not flow.feature("achievements"):
 		return
 	if name == "state_replaced" and str(data.get("how", "")) != "floor":
-		this_run = [] # a new run, or a save loaded
+		this_run = [] # a new run, a save loaded, or the test room
+	if flow.state.testing: # nothing is earned in the test room: every champion is one step away there
+		return
 	var new := false
 	for id in Achievements.earned_by(name, data, flow.state):
 		if not earned.has(id):
