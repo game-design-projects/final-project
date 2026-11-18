@@ -2870,6 +2870,34 @@ func _lords() -> void:
 	warren_flow.state.allies = []
 	var kept_warren = State.from_dict(warren_flow.state.to_dict())
 	_check(kept_warren != null and kept_warren.lords_warren == ["crew"], "a save keeps the warren the lord opened")
+	var burrow_ways: Array = Floors.paths(warren_flow.state.run_seed, 1, true, ["burrow"])
+	_check(not burrow_ways.is_empty() and str(burrow_ways[0].get("sub", "")).contains("an orange slime"), "a warren takes the right article (%s)" % str(burrow_ways[0].get("sub", "")))
+	# the second favour is paid on B4F (the biome comes back), and B4F's one stair is the one to the last floor:
+	# if the warren is not that stair, the mark is cleared and the clan's warren is never seen
+	var warren_end = await _lord_again("crew")
+	var end_q: Dictionary = warren_end.state.floor_map.quester
+	_check(not end_q.is_empty() and str(end_q.get("lord", "")) == "crew" and bool(end_q.get("big", false)), "B4F's second favour is the Crew's")
+	warren_end.state.allies = [Ally.make("slime", "A", 70.0), Ally.make("rock", "B", 70.0), Ally.make("snake", "C", 70.0)]
+	Requests.settle(end_q, warren_end.state)
+	_check(warren_end.state.lords_warren.has("crew"), "B4F's second favour with a full party opens the warren")
+	await _reach_stairs(warren_end)
+	_check(warren_end.state.stage == "end" and warren_end.state.menu.size() == 2 and str(warren_end.state.menu[0].label) == "THE BANDIT WARREN", "and the one stair to the last floor is the warren (%s)" % str(warren_end.state.menu.map(func(m): return m.label)))
+	_check(warren_end.state.lords_warren.is_empty(), "the stair takes the mark")
+	await warren_end.press("1")
+	_check(warren_end.state.depth == 5 and warren_end.state.floor_map.monsters.slice(0, -1).all(func(m): return m.species == "bandit") and warren_end.state.floor_map.monsters.back().boss, "the last floor below is all bandits (%s)" % str(warren_end.state.floor_map.monsters.map(func(m): return m.species)))
+	# with the feature off there is no choice to make, so the mark waits for a stair that offers one
+	var wait_flow = _flow(7, ["no-branching"])
+	await wait_flow.new_run()
+	wait_flow.state.lords_met = ["crew"]
+	wait_flow.state.depth = 4
+	await wait_flow._make_floor()
+	var wait_q: Dictionary = wait_flow.state.floor_map.quester
+	_check(not wait_q.is_empty() and str(wait_q.get("lord", "")) == "crew", "and with branching off the same lord asks")
+	wait_flow.state.allies = [Ally.make("slime", "A", 70.0), Ally.make("rock", "B", 70.0), Ally.make("snake", "C", 70.0)]
+	Requests.settle(wait_q, wait_flow.state)
+	await _reach_stairs(wait_flow)
+	_check(wait_flow.state.menu[0].label == "GO DOWN" and wait_flow.state.lords_warren == ["crew"], "no branching: the warren waits for a choice (%s)" % str(wait_flow.state.lords_warren))
+	_use()
 	Clans.favour(back_flow.state, second_q.species, -200.0)
 	_check(Clans.hostility_of(back_flow.state, second_q.species) == "angry", "a sworn clan never falls past angry (%s)" % Clans.hostility_of(back_flow.state, second_q.species))
 	# The party has three places for monsters, and the little witch takes none of them: the list of allies is not the party.
