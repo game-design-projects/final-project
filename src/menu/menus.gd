@@ -240,6 +240,7 @@ static func sound() -> Dictionary:
 	return {"title": "SOUND", "hint": ADJUST_HINT, "items": [
 		_setting("sfx", "SOUND EFFECTS", "Effects and music"),
 		_setting("sfx_volume", "VOLUME"),
+		_setting("voice_volume", "MONSTER VOICES", "How loud monsters speak, under the volume above; 0 is silent"),
 	]}
 
 

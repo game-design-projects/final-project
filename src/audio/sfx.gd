@@ -206,7 +206,9 @@ func play(sound: String, opt := {}) -> bool:
 	var rate: float = pow(2.0, ((float(random.call()) * 2.0 - 1.0) * v.cents) / 1200.0) if v != null else 1.0
 	var gain: float = (1.0 + (float(random.call()) * 2.0 - 1.0) * v.gain if v != null else 1.0) / sqrt(near.size())
 	if recipe.begins_with("voice_"):
-		gain *= float(opt.get("vol", 1.0))
+		gain *= float(opt.get("vol", 1.0)) * Mix.voice_gain()
+		if gain <= 0.0:
+			return false # the player turned monsters' voices off
 	gain *= db_to_linear(float(opt.get("db", 0.0)))
 	var key := cache_key(sound, opt)
 	last_play = {"name": sound, "key": key, "at": at, "rate": rate, "gain": gain}
