@@ -36,6 +36,7 @@ const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const Social = preload("res://src/rules/social.gd")
+const Lords = preload("res://src/rules/lords.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -79,6 +80,7 @@ func _run() -> void:
 	await _shop()
 	await _lurkers()
 	await _npcs()
+	await _lords()
 	await _roaming()
 	await _input_cooldown()
 	await _charting()
@@ -2810,6 +2812,34 @@ func _asking(start: int, kind: String) -> Variant:
 			return flow
 	_check(false, "no seed has someone asking for %s" % kind)
 	return null
+
+
+## The faction lords (#77): each biome's lord asks on the first floor of that biome, its name and title from the data, the run
+## remembers it was met, and paying its favour moves its clan by the lord's number.
+func _lords() -> void:
+	var flow = _flow(7)
+	await flow.new_run()
+	var q: Dictionary = flow.state.floor_map.quester
+	_check(not q.is_empty() and str(q.get("title", "")) != "", "a biome's first floor has its lord asking")
+	_check(str(q.species) == "bandit" and str(q.name) == str(Lords.table().lords.crew.name), "the halls' lord is the Crew's (%s, %s)" % [q.get("name", ""), q.get("title", "")])
+	var again = _flow(7)
+	await again.new_run()
+	var bq: Dictionary = again.state.floor_map.quester
+	_check(bq.name == q.name and bq.title == q.title and bq.kind == q.kind, "the same seed gives the same lord")
+	var clan := str(q.lord)
+	var before: float = Clans.standing_of(flow.state, q.species)
+	flow.state.hp = maxi(1, flow.state.max_hp - 12) # room for all the health it pays, or the cap swallows it
+	var paid: Dictionary = Requests.settle(q, flow.state)
+	var pays: Dictionary = Lords.pays()
+	_check(paid.gold == int(pays.gold) and paid.healed == int(pays.heal), "a lord pays its own gold and health (%d, %d)" % [paid.gold, paid.healed])
+	_check(flow.state.lords_met.has(clan), "and the run remembers it was met")
+	_check(is_equal_approx(Clans.standing_of(flow.state, q.species) - before, float(pays.standing)), "its clan moves by the lord's number (%.0f)" % float(pays.standing))
+	var old: Dictionary = flow.state.to_dict()
+	old.erase("lordsMet")
+	var back = State.from_dict(old)
+	_check(back != null and back.lords_met.is_empty(), "a save from before lords has met none")
+	var kept = State.from_dict(flow.state.to_dict())
+	_check(kept != null and kept.lords_met == [clan], "and a save keeps the ones met")
 
 
 func _npcs() -> void:

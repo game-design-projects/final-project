@@ -1,0 +1,41 @@
+{
+ "homes": {
+  "halls": [
+   "crew"
+  ],
+  "undercroft": [
+   "old_stone"
+  ],
+  "caves": [
+   "burrow",
+   "coil"
+  ]
+ },
+ "lords": {
+  "crew": {
+   "name": "SIRRA",
+   "title": "LORD OF THE CREW",
+   "kind": "rid"
+  },
+  "old_stone": {
+   "name": "BEDROCK",
+   "title": "LORD OF THE OLD STONE",
+   "kind": "fetch"
+  },
+  "burrow": {
+   "name": "MOTHER GLOOP",
+   "title": "LORD OF THE BURROW",
+   "kind": "spare"
+  },
+  "coil": {
+   "name": "THE COILED ONE",
+   "title": "LORD OF THE COIL",
+   "kind": "rid"
+  }
+ },
+ "pays": {
+  "standing": 24.0,
+  "gold": 8,
+  "heal": 6
+ }
+}

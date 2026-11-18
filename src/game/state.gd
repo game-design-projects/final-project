@@ -43,6 +43,7 @@ var quarter_turns := 0 # every quarter turn made, right +1 and left -1, adding u
 var visited := {} # Vector2i -> true: cells you stood in
 var in_sight := {} # Vector2i -> true: the cells the camera sees right now; worked out again by `look`
 var seen := {} # Vector2i -> true: cells you saw from where you stood (rules/vision.gd), for the automap
+var lords_met: Array = [] # the clans whose lord was paid a favour this run (rules/lords.gd)
 var charted := {} # Vector2i -> true: cells not seen yet whose layout a map or your instinct told you (rules/chart.gd)
 var _reach := {} # the cells that can be walked to from the floor's start, kept until the floor or its walls change
 var _reach_key := []
@@ -239,6 +240,8 @@ func to_dict() -> Dictionary:
 		out.questersMet = questers_met.duplicate()
 	if not charted.is_empty(): # and one whose floor has no map of it yet
 		out.charted = charted.keys().map(func(c): return [c.x, c.y])
+	if not lords_met.is_empty():
+		out.lordsMet = lords_met.duplicate()
 	return out
 
 
@@ -265,6 +268,9 @@ static func from_dict(d: Dictionary):
 	for c in d.get("seen", []) if d.get("seen") is Array else []:
 		if SaveCheck.is_cell(c) and s.floor_map.is_open(SaveCheck.cell(c)):
 			s.seen[SaveCheck.cell(c)] = true
+	for clan in d.get("lordsMet", []) if d.get("lordsMet") is Array else []:
+		if Clans.is_clan(str(clan)) and not s.lords_met.has(str(clan)):
+			s.lords_met.append(str(clan))
 	for c in d.get("charted", []) if d.get("charted") is Array else []:
 		if SaveCheck.is_cell(c) and s.floor_map.is_open(SaveCheck.cell(c)):
 			s.charted[SaveCheck.cell(c)] = true

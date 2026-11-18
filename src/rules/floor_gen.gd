@@ -7,6 +7,7 @@ const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Items = preload("res://src/rules/items.gd")
+const Lords = preload("res://src/rules/lords.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Requests = preload("res://src/rules/requests.gd")
@@ -26,6 +27,7 @@ const CARVE_TRIES := 100 # a layout that won't do is carved again, from the same
 const EXTRA_MONSTER_CELLS := 3 # a floor this much wider than the classic one has one more monster
 const MIN_MONSTER_DISTANCE := 3 # steps from the start before the first monster may stand
 const MONSTER_SPACING := 2 # no two monsters within this many cells of each other (Manhattan)
+const LORD_SEED := 400 # a lord's own draws, apart from the floor's: the layout stays what the floor's seed always made
 const LORE_SEED := 300 # the writing is placed from a generator of its own, so the rest of a floor is what that seed always made
 
 
@@ -53,10 +55,13 @@ static func generate(rng: Rng, plan := {}):
 		var cell: Variant = Secrets.place_trader(rng, f, walk, hall)
 		if cell != null:
 			f.merchant = {"cell": cell, "stock": Items.stock(rng, plan)}
+	var lord: Dictionary = {}
+	if plan.get("lords", false): # the run's first floor of this biome: its lord is at home there
+		lord = Lords.due(str(f.biome), int(f.seed_value), plan.get("lords_done", []))
 	if plan.get("request", false):
 		var cell: Variant = Secrets.place_trader(rng, f, walk, hall)
 		if cell != null:
-			f.quester = {"cell": cell}
+			f.quester = {"cell": cell} # the draw is made whether or not a lord takes the asker's part, so the floor keeps its seed
 	var stirs := {}
 	if plan.get("lurkers", false) and int(plan.get("count", -1)) <= 0: # a quiet way down is quiet
 		var numbers: Dictionary = Content.table("npcs").lurkers
@@ -71,12 +76,26 @@ static func generate(rng: Rng, plan := {}):
 	reserved.merge(stirs)
 	f.monsters = _place_monsters(rng, walk, hall, plan, reserved)
 	_add_lurkers(rng, f, stirs.keys(), plan)
+	if not lord.is_empty(): # after the monsters stand: on a floor that already had someone asking, the lord is that one
+		_place_lord(f, walk, hall, lord)
 	if not f.quester.is_empty():
 		_finish_request(rng, f, walk, hall, plan, stirs)
 	if plan.get("lore", false):
 		_write_on_a_wall(f, walk, hall)
 	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s%s%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", ", someone asking" if not f.quester.is_empty() else "", ", writing at %s" % f.lore.cell if not f.lore.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
 	return f
+
+
+## The floor's lord (rules/lords.gd) in its biome: its place drawn from a generator of its own, so the floor's own draws, and
+## so its layout, are what the seed always made.
+static func _place_lord(f, walk: Dictionary, hall: Vector2i, lord: Dictionary) -> void:
+	if f.quester.is_empty(): # no one was asking here: a place of its own, from the lord's generator, after the monsters stand
+		var lrng := Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
+		var cell: Variant = Secrets.place_trader(lrng, f, walk, hall)
+		if cell == null:
+			return
+		f.quester = {"cell": cell}
+	f.quester["lord"] = lord # the asker is the lord; `_finish_request` fills it with the lord's own favour
 
 
 ## The writing (rules/lore.gd), on a wall nobody stands in front of. Which piece it is is decided when it is read.
@@ -106,6 +125,13 @@ static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
 
 ## Who asks, and what it asks for; what's fetched lies on this floor. Nobody asks when there is nothing to ask about.
 static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan: Dictionary, stirs: Dictionary) -> void:
+	if f.quester.has("lord"): # a lord asks its own favour, on its own draws (rules/lords.gd)
+		var lord: Dictionary = f.quester.lord
+		f.quester.erase("lord")
+		var lrng := Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
+		if not Requests.fill_lord(lrng, f, lord, plan):
+			f.quester = {}
+		return
 	if not Requests.fill(rng, f, plan):
 		f.quester = {}
 		return
