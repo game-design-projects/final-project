@@ -15,6 +15,24 @@ exact transcript and attribution, and how each voice is shaped after rendering (
 library is not used: its authorisation covers that project's own voice training only. Credits:
 `assets/CREDITS.txt`.
 
+A third bank is not cloned from anyone: `gemini`, Google's Gemini TTS (`gemini-3.8-flash-tts`), each monster in one of its
+prebuilt voices with a style of delivery (`voices.json` `gemini`: voice, style, and its own shaping). The game plays it
+only with the feature `gemini-voices` (off unless named), line by line before the `cosyvoice3` bank, so it can be heard
+beside the game's own voices. It is rendered ahead like the others; the game never asks for speech while it runs.
+
+```bash
+python3 tools/voices/render.py gemini --dry-run                 # the cast, how many lines, about what it costs
+python3 tools/voices/render.py gemini --only slime --limit 3    # a first listen (the key is read from $OPENROUTER_API_KEY)
+python3 tools/voices/render.py gemini                           # every line (354: about $0.20, 35 min at 10 requests a minute)
+godot --headless --path . --import && godot --path . -- test-room gemini-voices
+python3 tools/voices/test_gemini.py                             # the engine against a stand-in server: no key, nothing paid
+```
+
+It goes through OpenRouter's speech endpoint (`--via openrouter`, the default) or the Gemini API itself (`--via google`,
+key in `$GEMINI_API_KEY`; written from the documentation and never run against Google's server). Every reply is kept in
+`build/voices/gemini/responses/` as it arrived before anything reads it, so a run that stops goes on from where it was.
+A bank that ships adds about 8 MB to every build, and needs a line in `assets/CREDITS.txt`.
+
 ## Samples
 
 The same line from each bank, and the recording the voice was cloned from (on GitHub, a click opens the file):
