@@ -12,10 +12,17 @@ engine another spelling of a line it can't say as written (CosyVoice3 gives "Hmp
     python3 tools/voices/render.py qwen3 --python ~/tts/qwen/.venv/bin/python --model Qwen/Qwen3-TTS-12Hz-0.6B-Base
     python3 tools/voices/render.py cosyvoice3 --service feiyu --url http://gpu-box:8000 --key ... --voice <a CC voice>
     python3 tools/voices/render.py qwen3 --service qwen --url http://mac:8001
+    python3 tools/voices/render.py gemini --dry-run          # what it would render, and about what it costs
+    GEMINI_API_KEY=... python3 tools/voices/render.py gemini # the key comes from the environment, never the command line
 
   cosyvoice3   CosyVoice3, the engine of the Feiyu stack (engines/cosyvoice3.py, run with --python: an environment
                with FunAudioLLM/CosyVoice's requirements; --src: its checkout), zero-shot from the reference recording
   qwen3        Qwen3-TTS Base (engines/qwen3.py, an environment with `qwen-tts`), cloned from the same recording
+  gemini       Gemini TTS through the Gemini API (engines/gemini.py, standard library only): no cloned voice, a
+               prebuilt voice and a style of delivery per monster (voices.json "gemini"). It costs money (--dry-run
+               says about how much); every reply is kept in build/voices/gemini/responses/ before it is read.
+               --model picks the model (default gemini-3.8-flash-tts), --rpm how many requests a minute (default 10),
+               --key-env the environment variable that holds the key (default GEMINI_API_KEY).
   --service    instead of a local model, a running service renders the lines: feiyu (POST /v1/speech, the job
                queue) or qwen (POST /synthesize). They use their own voices (--voice / --speaker), not voices.json.
 
@@ -36,6 +43,9 @@ import time
 import urllib.request
 import wave
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "engines"))
+import gemini  # noqa: E402  (standard library only; the other engines run in their own environments)
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HERE = os.path.dirname(os.path.abspath(__file__))
 RATE = 24000
@@ -43,7 +53,7 @@ RETAKES = 3
 LOUDNESS = "I=-18:TP=-1.5:LRA=11"
 QUALITY = 4  # libvorbis -q: about 64 kb/s mono, plenty for speech
 
-LABELS = {"cosyvoice3": "CosyVoice3 (Feiyu stack)", "qwen3": "Qwen3-TTS"}
+LABELS = {"cosyvoice3": "CosyVoice3 (Feiyu stack)", "qwen3": "Qwen3-TTS", "gemini": "Gemini TTS"}
 
 
 def log(*a):
@@ -186,7 +196,7 @@ def run_service(args, items):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("bank", choices=["cosyvoice3", "qwen3"])
+    ap.add_argument("bank", choices=["cosyvoice3", "qwen3", "gemini"])
     ap.add_argument("--python", help="the Python of the engine's environment (local rendering)")
     ap.add_argument("--model", help="model folder or Hugging Face id (local rendering)")
     ap.add_argument("--src", help="cosyvoice3: a checkout of FunAudioLLM/CosyVoice")
@@ -201,12 +211,18 @@ def main():
     ap.add_argument("--only", default="")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--key-env", default=gemini.KEY_ENV, help="gemini: the environment variable that holds the API key")
+    ap.add_argument("--rpm", type=float, default=10.0, help="gemini: requests a minute")
+    ap.add_argument("--dry-run", action="store_true", help="gemini: say what would be rendered and about what it costs, and stop")
     args = ap.parse_args()
+    is_gemini = args.bank == "gemini"
+    if is_gemini and args.service:
+        ap.error("gemini is rendered through the Gemini API, not --service")
     if args.service and not args.url:
         ap.error("--service needs --url")
     if args.service == "feiyu" and not args.voice:
         ap.error("--service feiyu needs --voice: the service's default is the Feiyu voice library, which may not ship")
-    if not args.service and not args.python:
+    if not args.service and not args.python and not is_gemini:
         ap.error("local rendering needs --python (the engine's environment); or use --service")
     if not args.service and args.bank == "cosyvoice3" and not args.src:
         ap.error("cosyvoice3 needs --src, a checkout of FunAudioLLM/CosyVoice")
@@ -221,10 +237,15 @@ def main():
     manifest_path = os.path.join(bank_dir, "manifest.json")
     manifest = json.load(open(manifest_path)) if os.path.exists(manifest_path) else {"lines": {}}
 
+    cast = voices.get("gemini", {}).get("voices", {})
+    shapes = voices.get("gemini", {}).get("shape", {}) if is_gemini else voices["shape"]
+    model = (args.model or voices.get("gemini", {}).get("model") or gemini.MODEL) if is_gemini else args.model
     todo, plan = [], []
     for species, lines in data["species"].items():
         if only and species not in only:
             continue
+        if is_gemini and species not in cast:
+            sys.exit(f"voices.json has no gemini voice for '{species}'")
         ref = voices["refs"][species]
         for line in lines[: args.limit or None]:
             rel = line_file(species, line["key"])
@@ -235,10 +256,38 @@ def main():
                 say = voices.get("say", {}).get(args.bank, {}).get(line["text"], line["text"])
                 todo.append({"text": say, "ref": os.path.join(HERE, ref["wav"]), "ref_text": ref["text"],
                              "out": raw, "species": species})
+                if is_gemini:
+                    todo[-1].update({"voice": cast[species]["voice"], "style": cast[species].get("style", "")})
     log(f"{args.bank}: {len(plan)} lines, {len(todo)} to render")
+    responses_dir = os.path.join(ROOT, "build", "voices", args.bank, "responses")
+    if is_gemini:
+        cost = gemini.estimate(todo, model)
+        usd = "no listed price" if cost["usd"] is None else f"about ${cost['usd']:.2f}"
+        log(f"gemini: {model}, {cost['lines']} requests, {cost['chars']} characters, about {cost['seconds']:.0f} s of speech, "
+            f"{usd}, about {cost['lines'] / max(args.rpm, 0.1):.0f} min at {args.rpm:g} requests a minute")
+        if args.dry_run:
+            for species in data["species"]:
+                if species in cast and (not only or species in only):
+                    log(f"  {species}: {cast[species]['voice']}, {cast[species].get('style', '')}")
+            return
+        if todo and not os.environ.get(args.key_env):
+            sys.exit(f"gemini needs an API key in the environment variable {args.key_env}")
     t0 = time.time()
     if todo:
-        if args.service:
+        if is_gemini:
+            key = os.environ.get(args.key_env, "")
+            try:
+                asked = gemini.render(todo, key, responses_dir, model, args.url or gemini.URL, args.rpm, log, args.force)
+                for retake in range(1, RETAKES + 1):
+                    odd = [it for it in todo if os.path.exists(it["out"]) and odd_length(it["text"], wav_seconds(it["out"]))]
+                    if not odd:
+                        break
+                    log(f"retake {retake}: {len(odd)} takes of an odd length: " + "; ".join(it["text"] for it in odd))
+                    asked += gemini.render(odd, key, responses_dir, model, args.url or gemini.URL, args.rpm, log, True)
+            except gemini.GeminiError as e:
+                sys.exit(f"gemini: {e}\nWhat was rendered before this is kept; run again to go on from here.")
+            log(f"gemini: {asked} requests made")
+        elif args.service:
             run_service(args, todo)
         else:
             run_local(args.bank, args, todo, args.seed)
@@ -258,7 +307,7 @@ def main():
             continue
         out = os.path.join(bank_dir, rel)
         if args.force or not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(raw):
-            finish(raw, out, voices["shape"].get(species, {}), rubberband)
+            finish(raw, out, shapes.get(species, {}), rubberband)
         seconds += duration(out)
         manifest["lines"].setdefault(species, {})[line["key"]] = rel
 
@@ -266,9 +315,9 @@ def main():
         "id": args.bank,
         "label": LABELS[args.bank],
         "engine": f"service:{args.service}" if args.service else args.bank,
-        "model": args.model or args.url,
-        "voices": {s: {k: v for k, v in r.items() if k != "text"} for s, r in voices["refs"].items()},
-        "shape": voices["shape"],
+        "model": model or args.url,
+        "voices": cast if is_gemini else {s: {k: v for k, v in r.items() if k != "text"} for s, r in voices["refs"].items()},
+        "shape": shapes,
     })
     os.makedirs(bank_dir, exist_ok=True)
     json.dump(manifest, open(manifest_path, "w"), indent=1, sort_keys=True)
