@@ -210,6 +210,8 @@ func _half_an_answer_is_kept() -> void:
 	var mercy: float = await mind.mercy(m)
 	_check(is_equal_approx(both.mercy, 0.31) and is_equal_approx(both.pressure, local.pressure(m)), "a reply with only mercy answered: Jev's mercy and the local pressure")
 	_check(_requests.size() == 1 and is_equal_approx(mercy, 0.31), "and the answered half is kept, so asking it alone costs no request (%d requests)" % _requests.size())
+	var press: float = await mind.pressure(m)
+	_check(_requests.size() == 2 and is_equal_approx(press, local.pressure(m)), "and the missing half is not cached as Jev's: asking it alone goes out (%d requests)" % _requests.size())
 
 
 ## Asked ahead (a dodge asks the mercy the menu after it will need) and asked again before Jev answers: one request, both get
