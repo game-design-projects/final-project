@@ -16,6 +16,8 @@ func enter(flow, _args: Dictionary) -> void:
 	_status = Requests.status(q, s)
 	var words := Requests.speak(q, s)
 	flow.event("shout", {"text": words, "species": q.species, "boss": false})
+	if q.get("title", "") != "": # a lord says who it is before what it wants (rules/lords.gd)
+		s.say([State.sys_line("%s, %s." % [q.name, q.title])])
 	s.say([State.speech(q.name, words)])
 	if not s.questers_met.has(q.name): # heard now: its floor keeps the name for the next one, this keeps it for the run
 		s.questers_met.append(q.name)

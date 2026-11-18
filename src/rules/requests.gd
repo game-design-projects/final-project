@@ -6,12 +6,47 @@ extends RefCounted
 const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const Items = preload("res://src/rules/items.gd")
+const Lords = preload("res://src/rules/lords.gd")
 
 const KINDS := ["fetch", "spare", "rid"]
 
 
 static func table() -> Dictionary:
 	return Content.table("npcs").requests
+
+
+## The floor's lord filling this asker, instead of a stray monster (`rules/lords.gd`): its kind is the lord's own, and the name
+## and title are the data's, so the same floor always has the same lord. The draws come from the lord's own generator, so the
+## floor's layout is what its seed always made. False when there is no floor spot or no target for the kind it asks.
+static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
+	var targets := []
+	for i in f.monsters.size():
+		if not f.monsters[i].boss and not f.monsters[i].lurking:
+			targets.append(i)
+	var kind: String = lord.kind
+	if kind == "fetch" and not plan.get("items", false):
+		kind = "rid" # nothing lies about for it to want
+	if targets.is_empty():
+		return false
+	var q: Dictionary = f.quester
+	q.lord = str(lord.clan)
+	q.title = str(lord.title)
+	q.name = str(lord.name)
+	q.species = str(lord.species)
+	q.kind = kind
+	if kind == "fetch":
+		q.target = -1
+	elif kind == "spare": # its kin: the same species as the lord
+		var kin := targets.filter(func(i): return f.monsters[i].species == str(lord.species))
+		if kin.is_empty():
+			return false
+		q.target = int(rng.pick(kin))
+	else:
+		q.target = int(rng.pick(targets))
+	q.taken = false
+	q.want = Items.gift_for(q.species) if kind == "fetch" else ""
+	print("lords: %s, %s, asks: %s %s" % [q.name, q.title, kind, q.want if kind == "fetch" else f.monsters[q.target].name])
+	return true
 
 
 ## Whether this floor has someone asking.
@@ -93,14 +128,25 @@ static func speak(q: Dictionary, s) -> String:
 ## Paid: what was asked for leaves the bag, the gold and health come, and its clan hears. Returns {gold, healed}.
 static func settle(q: Dictionary, s) -> Dictionary:
 	var t := table()
+	var gold: int = int(t.gold)
+	var heal: int = int(t.heal)
+	var standing: float = float(t.standing)
+	var lord := str(q.get("lord", ""))
+	if lord != "": # a lord pays more, and the run remembers it was met (rules/lords.gd)
+		var pays := Lords.pays()
+		gold = int(pays.gold)
+		heal = int(pays.heal)
+		standing = float(pays.standing)
+		if not s.lords_met.has(lord):
+			s.lords_met.append(lord)
 	if q.kind == "fetch":
 		s.items.erase(q.want)
-	s.gold += int(t.gold)
+	s.gold += gold
 	var before: int = s.hp
-	s.hp = mini(s.max_hp, s.hp + int(t.heal))
-	Clans.favour(s, q.species, float(t.standing))
-	print("requests: %s is paid: %d gold, %d health" % [q.name, t.gold, s.hp - before])
-	return {"gold": int(t.gold), "healed": s.hp - before}
+	s.hp = mini(s.max_hp, s.hp + heal)
+	Clans.favour(s, q.species, standing)
+	print("requests: %s is paid: %d gold, %d health%s" % [q.name, gold, s.hp - before, ", a lord's favour" if lord != "" else ""])
+	return {"gold": gold, "healed": s.hp - before}
 
 
 ## What a save holds: whether this is a request, from outside, that can be read. "" when it is.
