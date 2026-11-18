@@ -1,5 +1,6 @@
-## Checks what lasts longer than a run or wears on one: achievements, the legacy between runs, going hungry, and what can be done
-## about that with a friend (issue #40). Prints one line per check and exits with 1 if any failed.
+## Checks what lasts longer than a run or wears on one: achievements, the legacy between runs, going hungry, what can be done
+## about that with a friend (issue #40), and that every script keeps its `.uid` beside it. Prints one line per check and exits
+## with 1 if any failed.
 ##   godot --headless --path . -s res://tools/meta_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
@@ -39,6 +40,7 @@ func _run() -> void:
 	Menus = load("res://src/menu/menus.gd")
 	Progress = load("res://src/menu/progress.gd")
 	Store = root.get_node("Store")
+	_uid_files()
 	_declared()
 	await _without_them()
 	await _achievements()
@@ -73,6 +75,50 @@ func _clear_store() -> void:
 
 func _ally(species := "slime", who := "DRIP", loyalty := 60.0):
 	return Ally.make(species, who, loyalty)
+
+
+## Every script keeps its `.uid` beside it, and no two `.uid` files carry the same `uid://`: Godot writes one for each
+## script on import, and a script copied from another brings that one's id along, so one of the two paths is left without
+## an id of its own. The walk leaves out what is not the project's: its import cache (a hidden directory) and the
+## directories it is told to ignore (`.gdignore`). A `.uid` of anything else (a scene, a shader, the film) is not a
+## script's and is not asked about.
+func _uid_files() -> void:
+	var scripts := []
+	var uids := []
+	_uid_walk("res://", scripts, uids)
+	var offenders := []
+	var ids := {}
+	for script in scripts:
+		if not FileAccess.file_exists(script + ".uid"):
+			offenders.append("%s: no .uid beside it" % script.trim_prefix("res://"))
+	for uid in uids:
+		var script: String = uid.trim_suffix(".uid")
+		if not scripts.has(script):
+			offenders.append("%s: no script beside it" % uid.trim_prefix("res://"))
+			continue
+		var id := FileAccess.get_file_as_string(uid).strip_edges()
+		if not id.begins_with("uid://"):
+			offenders.append("%s: no uid:// in it" % uid.trim_prefix("res://"))
+		elif ids.has(id):
+			offenders.append("%s, %s: one %s between them" % [ids[id].trim_prefix("res://"), uid.trim_prefix("res://"), id])
+		else:
+			ids[id] = uid
+	var detail := "%d scripts" % scripts.size() if offenders.is_empty() else ", ".join(offenders)
+	_check(offenders.is_empty(), "every script has its .uid beside it (%s)" % detail)
+
+
+## Every script and `.gd.uid` under a directory, not going into its import cache or a directory marked `.gdignore`.
+func _uid_walk(dir: String, scripts: Array, uids: Array) -> void:
+	for file in DirAccess.get_files_at(dir):
+		if file.ends_with(".gd"):
+			scripts.append(dir.path_join(file))
+		elif file.ends_with(".gd.uid"):
+			uids.append(dir.path_join(file))
+	for child in DirAccess.get_directories_at(dir):
+		var path := dir.path_join(child)
+		if child.begins_with(".") or FileAccess.file_exists(path.path_join(".gdignore")):
+			continue
+		_uid_walk(path, scripts, uids)
 
 
 func _declared() -> void:
