@@ -5,19 +5,23 @@
 
 Both ways in (OpenRouter's speech endpoint and Google's Interactions endpoint) are asked for two lines; the server
 answers one of them 429 the first time and refuses a third outright. The checks: what was sent, that the reply is on disk
-as it arrived, that the WAV is 24 kHz mono 16-bit, that a second run asks nobody, and that the key is in no file."""
+as it arrived, that the WAV is 24 kHz mono 16-bit, that a second run asks nobody, that the key is in no file, and that the
+bank holds no line under words the game never says (a name another monster only gets when the line is said)."""
 import base64
 import http.server
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
 import wave
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "engines"))
 import gemini  # noqa: E402
+import render  # noqa: E402  (the roster, to compare the committed bank with the lines the game can ask for)
 
 KEY = "test-key-never-real"
 PCM = b"\x01\x02" * 12000  # half a second at 24 kHz
@@ -133,6 +137,20 @@ def main():
     want_s = 1300 / gemini.CHARS_PER_S + 0.4
     check(abs(cost["seconds"] - want_s) < 0.01 and abs(cost["usd"] - (325 * 0.5 + want_s * 25 * 9.0) / 1e6) < 1e-9, "the estimate is the text in and 25 audio tokens a second out ($%.4f)" % cost["usd"])
     check(gemini.estimate([], "some-new-model")["usd"] is None, "a model with no listed price gets no made-up one")
+    # the committed bank against the roster: a line that names another monster has no words to file it under until the
+    # game says it, so no such key may be in the manifest (it was rendered as a fragment with the name cut out once)
+    species = json.load(open(os.path.join(render.ROOT, "data", "species.json")))
+    roster = render.roster_lines()
+    stray = set()
+    for entry in roster["left_out"]:
+        spec = species[entry["species"]]
+        for name in spec["names"] + spec.get("spare_names", []):
+            fill = {"name": name[:1].upper() + name[1:].lower(), "target": "you"}
+            filled = re.sub(r"\{(\w+)\}", lambda m: fill.get(m.group(1), m.group(0)), entry["line"])
+            stray.add((entry["species"], render.line_key(filled)))
+    manifest = json.load(open(os.path.join(render.ROOT, "assets", "voices", "gemini", "manifest.json")))
+    filed = {(sp, key) for sp, lines in manifest["lines"].items() for key in lines}
+    check(not (filed & stray), "no line that names another monster is filed under words it does not say (%d left to the made-up voice)" % len(stray))
     server.shutdown()
     print("test_gemini: %s" % ("all checks passed" if failed == 0 else "%d CHECK(S) FAILED" % failed))
     sys.exit(1 if failed else 0)

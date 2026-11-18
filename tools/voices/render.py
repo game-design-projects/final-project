@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Renders a voice bank: every line a monster can say (data/species.json), spoken in that monster's voice, as Ogg
-files in assets/voices/<bank>/ with the manifest.json src/audio/voices.gd reads.
+"""Renders a voice bank: the lines a monster can say (data/species.json) whose words are fixed, spoken in that monster's
+voice, as Ogg files in assets/voices/<bank>/ with the manifest.json src/audio/voices.gd reads.
 
 Each monster's voice is cloned from a Creative Commons recording (voices.json "refs", credited in
 assets/CREDITS.txt), then shaped a little (voices.json "shape": semitones and tempo, so a dragon rumbles and a slime
@@ -86,15 +86,21 @@ def line_key(line):
 
 
 def roster_lines():
-    """{"species": {species: [{key, text}]}}: every line a monster says (data/species.json "lines"), as the game fills it
-    in: each of the species' names and spare names (first letter capital) for {name}, "you" for {target}. A line that is only a stage
-    direction has no words to record and is left out; the game voices it with the synthesiser (src/audio/shout.gd)."""
+    """{"species": {species: [{key, text}]}, "left_out": [{species, line}]}: every line a monster says (data/species.json
+    "lines"), as the game fills it in: each of the species' names and spare names (first letter capital) for {name}, "you"
+    for {target}. A line that is only a stage direction has no words to record and is left out; the game voices it with the
+    synthesiser (src/audio/shout.gd). A line that names another monster ({kin}) is left out too: that name is only known
+    when the line is said, so one recording cannot say it, and the game gives it the made-up voice as well."""
     species = json.load(open(os.path.join(ROOT, "data", "species.json")))
     out = {}
+    left_out = []
     for sid, spec in species.items():
         seen = {}
         for pool in spec["lines"].values():
             for line in pool:
+                if any(name not in ("name", "target") for name in re.findall(r"\{(\w+)\}", line)):
+                    left_out.append({"species": sid, "line": line})
+                    continue
                 for name in spec["names"] + spec.get("spare_names", []):
                     fill = {"name": name[:1].upper() + name[1:].lower(), "target": "you"}
                     filled = re.sub(r"\{(\w+)\}", lambda m: fill.get(m.group(1), m.group(0)), line)
@@ -102,7 +108,7 @@ def roster_lines():
                     if text:
                         seen.setdefault(line_key(filled), text)
         out[sid] = [{"key": k, "text": t} for k, t in sorted(seen.items())]
-    return {"species": out}
+    return {"species": out, "left_out": left_out}
 
 
 def has_rubberband():
@@ -261,6 +267,8 @@ def main():
                              "out": raw, "species": species})
                 if is_gemini:
                     todo[-1].update({"voice": cast[species]["voice"], "style": cast[species].get("style", "")})
+    if data["left_out"]:
+        log(f"{args.bank}: {len(data['left_out'])} lines name another monster, a name only known when they are said: left to the made-up voice")
     log(f"{args.bank}: {len(plan)} lines, {len(todo)} to render")
     responses_dir = os.path.join(ROOT, "build", "voices", args.bank, "responses")
     if is_gemini:
