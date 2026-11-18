@@ -28,7 +28,7 @@ func _init(owner) -> void:
 ## Whether tips are given: not with the TIPS setting off or with `notips`. The slow first fights (stages/dodge.gd) and the
 ## practice floor go with them.
 func active() -> bool:
-	return enabled and not Flags.on("notips")
+	return enabled and not Flags.on("notips") and not flow.state.testing
 
 
 ## Show this tip, if it is due. True when it went up.

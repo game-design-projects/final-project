@@ -35,6 +35,26 @@
   "door": "It only opens for someone who is not alone.",
   "line": "You robbed the Hoard. It threw you down here, five floors above the Last Door."
  },
+ "test_room": {
+  "header": "TEST ROOM",
+  "title": "THE TEST ROOM",
+  "banner": "Every monster there is stands here. Walk into one to fight it. Nothing done here is kept.",
+  "line": "B1F's kinds stand in the first row and deeper floors behind it, then the elites, then the champions.",
+  "kind": "%s the %s, of B%dF: %s, %d HP.",
+  "elite": "%s the ELITE %s, of B%dF: %s, %d HP.",
+  "champion": "%s, the champion of B%dF: %d HP, and every attack of its floor.",
+  "beside": "%s on your left, %s on your right.",
+  "nobody": "nobody",
+  "reset": "The room is as it was, and so are you.",
+  "back": "BACK TO THE ROOM",
+  "out": "The way out of the test room.",
+  "stay": "STAY",
+  "stay_sub": "Back to the room",
+  "menu": "TEST ROOM",
+  "menu_sub": "Every monster in one room. Nothing is kept.",
+  "gold": 60,
+  "elites": ["brood", "captain", "hypno", "golem"]
+ },
  "practice": {
   "layout": [
    "#########",

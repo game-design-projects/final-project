@@ -142,6 +142,8 @@ func _ready() -> void:
 		_rise_from_film()
 	if _debug:
 		print("gameplay: debug on, the foe's mind panel stays open and every game event is logged")
+	if request.is_empty() and Flags.asked("test-room"): # the scene opened by a tool, with the flag
+		request = {"kind": "test"}
 	if request.is_empty() and Flags.value("meet") == "" and not Flags.on("social-demo"):
 		_on_title = true
 		_overlay.title_card = true
@@ -181,6 +183,8 @@ func _start_request() -> void:
 		if not await flow.load_state(request.state):
 			push_warning("gameplay: that save can't be loaded, starting a new run")
 			await flow.new_run()
+	elif request.get("kind", "new") == "test":
+		await flow.test_room()
 	else:
 		flow.film_seen = request.get("cg", "") == "whole"
 		await flow.new_run(_practice_due())
@@ -718,7 +722,9 @@ func _open_pause() -> void:
 	_dock.set_talking(false)
 	_tips.visible = false
 	var ctx := {"resume": _resume, "to_main_menu": _leave, "load_slot": _load_slot, "achievements": show_trophies}
-	if flow.state.stage == "explore": # a fight can't be saved (it would come back as a walk)
+	if flow.state.testing: # the test room is not a run: there is nothing to save
+		ctx["no_save"] = "Not in the test room"
+	elif flow.state.stage == "explore": # a fight can't be saved (it would come back as a walk)
 		ctx["save_slot"] = _save_slot
 	if not OS.has_feature("web"):
 		ctx["quit"] = func(): get_tree().quit()

@@ -48,7 +48,7 @@ const FIELDS := {
 	"charted": ["how", "cells"], # the rest of the floor's layout went onto the map: "instinct" (enough of it seen) or "map" (a monster was carrying one), and how many cells that was
 	"butchered": ["species"], # a friend went into the bag
 	"found_out": ["species"], # a friend worked out what happened to another
-	"state_replaced": ["how"], # a new run ("new"), the next floor ("floor") or a loaded save ("load") replaced the game state; whoever holds the old one must let go
+	"state_replaced": ["how"], # a new run ("new"), the next floor ("floor"), a loaded save ("load") or the test room ("test") replaced the game state; whoever holds the old one must let go
 	"pause_requested": [],
 	"leave": ["to"], # the player chose to go back to the main menu
 }

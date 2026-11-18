@@ -272,7 +272,7 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 ## A clan's hostility moved (Clans.record or Clans.favour): the first move is said on the picture, or in the log when something
 ## else holds the picture. Returns the log lines, [] when the picture said it.
 func tell_hostility(moved: Array) -> Array:
-	if moved.is_empty():
+	if moved.is_empty() or flow.state.testing: # the test room forgets it at once, so it isn't said
 		return []
 	var words: Dictionary = Clans.moved_words(moved[0])
 	if Clans.rank(moved[0].to) > Clans.rank(moved[0].from):
@@ -306,7 +306,7 @@ func _reward_for_champion(m) -> void:
 	var healed := _heal(reward.heal)
 	flow.announce(Texts.champion_down(m), Texts.stronger(int(reward.max_hp), healed))
 	print("encounter: %s is out of the way: max HP %d, healed %d" % [m.name, s.max_hp, healed])
-	if flow.feature("keepsakes") and not s.practice and not Floors.is_last(s.depth):
+	if flow.feature("keepsakes") and not s.practice and not s.testing and not Floors.is_last(s.depth):
 		s.keepsake_due = m.name
 
 

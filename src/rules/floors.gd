@@ -38,7 +38,7 @@ static func plan(depth: int, way := {}) -> Dictionary:
 ## How much more health this floor's monsters have than B1F's, in percent: the depth, and the steep stair if it was taken (the
 ## floor keeps the scale it was made with; a save from before that falls back on the depth). 0 on the practice floor and on B1F.
 static func toughness_pct(s) -> int:
-	if s.practice or s.floor_map == null:
+	if s.practice or s.testing or s.floor_map == null:
 		return 0
 	var scale: float = s.floor_map.hp_scale if s.floor_map.hp_scale > 0.0 else plan(s.depth).hp_scale
 	return maxi(0, roundi((scale - 1.0) * 100.0))

@@ -1,5 +1,6 @@
 ## The first scene: the title and the main menu. Starting or loading a run hands a request to session.gd and changes to the
-## gameplay scene. Flags `meet=<species>` and `social-demo` skip the menu and start a fight at once (testing hooks).
+## gameplay scene. Flags `meet=<species>` and `social-demo` skip the menu and start a fight at once, and `test-room` named
+## outright starts in the test room (testing hooks).
 extends Control
 
 const Flags = preload("res://src/utils/flags.gd")
@@ -39,6 +40,10 @@ func _ready() -> void:
 	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(back)
 	add_child(_keyart())
+	if Flags.asked("test-room"):
+		print("menu: straight to the test room (flag)")
+		_start(Session.start_test)
+		return
 	if Flags.value("meet") != "" or Flags.on("social-demo"):
 		print("menu: straight to a fight (flag)")
 		_start(Session.start_new)
@@ -80,7 +85,7 @@ func _keyart() -> TextureRect:
 
 ## The first page is the main menu; Esc on it just shows it again.
 func _reopen() -> void:
-	var ctx := {"new_game": _new_game, "load_slot": _load_slot, "achievements": _show_trophies}
+	var ctx := {"new_game": _new_game, "load_slot": _load_slot, "achievements": _show_trophies, "test_room": _test_room}
 	if not OS.has_feature("web"):
 		ctx["quit"] = func(): get_tree().quit()
 	panel.open(func(): return Menus.main(panel, ctx))
@@ -88,6 +93,11 @@ func _reopen() -> void:
 
 func _show_trophies() -> void:
 	trophies.open(Achievements.board(Progress.earned_at(), Progress.facts()))
+
+
+func _test_room() -> void:
+	print("menu: the test room")
+	_start(Session.start_test)
 
 
 func _new_game() -> void:

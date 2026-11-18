@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- TEST ROOM on the main menu (the feature `test-room`; `-- test-room` or `?test-room` starts in it): one hall with every kind of monster in rows by floor, an elite of each clan and all five champions, each as tough and as fast as on its own floor. Walk into one to fight it; after every fight the room and the party are put back as they were, the stairs in the corner are the way out, and nothing in it is saved, earns an achievement or leaves embers (`src/rules/test_room.gd`).
+- `tools/room_shots.gd` takes pictures of the test room.
 - SETTINGS, SOUND has MONSTER VOICES: how loud monsters speak, from 0 (silent, and the music no longer ducks for them) to 10, for their recorded lines and their made-up voices alike. It is on the pause menu too, and changes what is being said as it moves.
 - The strike bar is heard: the line ticks as it crosses each eighth of the bar, a note higher the nearer the middle and a bell on the middle itself, so a strike has a beat to land on (the event `sweep`, the sounds `sweep_1` to `sweep_4`).
 - Achievements have a panel of their own (`src/view/trophy_panel.gd`): a meter of how many are earned, then every one by group, each with a badge. It opens from the main menu, the pause menu, **K**, or a click on the header's count, and the game holds still under it.

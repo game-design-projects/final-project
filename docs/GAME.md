@@ -145,6 +145,10 @@ At camp a friend can also become two roasts: to eat, to sell to a trader who won
 
 A run that ends leaves embers, by what you did in it. On the main menu's Legacy page they buy boons every later run starts with: more max HP, gold, salves in the bag, a harder first strike. Deeds worth keeping are achievements (18 of them, four of them secrets until earned), and stay earned whichever slot you play. Each has a badge of its own in its group's colour. The moment one is earned a toast slides in at the picture's top left with its badge, its name and how many that makes, and a jingle plays. The header keeps the count beside a trophy: a click on it, or **K**, opens the achievements' panel over the game, which holds still under it. The panel is also on the main menu and the pause menu: a meter of how many are earned, then every one by group, lit with the day it was earned, or grey with what to do to earn it. The card that ends a run shows the badges that run earned.
 
+## The test room
+
+TEST ROOM on the main menu is one hall with every monster in it: each floor's five kinds in a row, B1F nearest, then an elite of each clan, then the five champions. Walk into one to fight it as it is on its own floor. After every fight everyone is back in their place and you are as you walked in; nothing there is saved or counted. The stairs in the corner behind you lead out.
+
 ## Routes and saves
 
 The stairs name how you played: ghost (met no one), quiet (killed no one), blood (spared no one) or tangled.

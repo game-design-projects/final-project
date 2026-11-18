@@ -63,7 +63,34 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	await _pad_and_debug()
+	await _test_room_scene()
 	_finish()
+
+
+## The scene asked for the test room (menu/session.gd) starts in it, with no title card, and writes no save from it.
+func _test_room_scene() -> void:
+	var Session = load("res://src/menu/session.gd")
+	Saves.delete_all()
+	Session.start_test()
+	var game = load("res://src/gameplay/gameplay.tscn").instantiate()
+	root.add_child(game)
+	for _i in 30:
+		await process_frame
+		if game.flow.state.stage == "explore":
+			break
+	var s = game.flow.state
+	_check(not game._on_title and s.testing and s.stage == "explore" and s.floor_map.monsters.size() > 30, "asked for the test room, the scene starts in it (%d monsters)" % (s.floor_map.monsters.size() if s.floor_map != null else 0))
+	var foe = s.floor_map.monsters[0]
+	await game.flow.go("intro", {"foe": foe})
+	await game.flow.go("menu")
+	await game.flow.encounter.defeat(foe, "slain")
+	await process_frame
+	_check(s.stage == "explore" and Saves.info(Saves.AUTO).empty, "back on the walk after a fight there, no autosave is written")
+	game._open_pause()
+	_check(game._pause._page.items.any(func(i): return i.label == "SAVE GAME" and i.get("disabled", false)), "and the pause menu can't save it")
+	game._resume()
+	game.queue_free()
+	await process_frame
 
 
 func _ambush_prompt(game) -> void:

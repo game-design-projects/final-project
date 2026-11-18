@@ -17,7 +17,7 @@ const KNOWN := {
 	"nojev": "monsters think with the local rules and never call Jev (the tools and tests always do)",
 	"seed": "seed=N: fixed random seed for the floor and the monsters (0 to 9223372036854775807, as the game prints it)",
 	"floor": "floor=N: start the run on floor N",
-	"meet": "meet=<species or kind>: start in a fight with that monster (a kind from another floor is tried on one of this floor's)",
+	"meet": "meet=<species or kind>: start in a fight with that monster (a kind from another floor is tried on one of this floor's; with `test-room`, the one standing in the room)",
 	"nofx": "no post-processing shader",
 	"pacifist": "for tools/autoplay.gd: never strike, only ACT and SPARE",
 	"practice": "for tools/autoplay.gd: start each game on the practice floor, as a first run does",
@@ -58,6 +58,7 @@ const FEATURES := {
 	"follow-through": "with friends, a strike that lands doesn't stop the line: each friend has a mark further along the bar, and a press as the line crosses it is that friend's strike (a HEAVY blow is too quick for them)",
 	"nerve": "a dodge with no hit in it, and every close call (stepping off a square in its last moments before it lands), earns nerve: a strike that lands or a SPARE spends it for a harder hit or better odds, and a hit shakes one out of you",
 	"mood-attacks": "how a monster feels shows in its attack: a friendly one drops hearts to catch (each heals you and pleases it), a frightened one falters (one hazard in three never comes) and breaks off early",
+	"test-room": "TEST ROOM on the main menu: one hall with every kind of monster, an elite of each clan and every champion, each fight starting afresh and nothing kept (rules/test_room.gd); named outright (`test-room`), the game starts in it",
 	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",
 }
 
@@ -103,6 +104,15 @@ static func enabled(name: String) -> bool:
 	if all.has(name):
 		return not str(all[name]) in OFF_WORDS
 	return not OPT_IN.has(name)
+
+
+## Whether a feature was named outright (`test-room`), not just left on: for one that does more when asked for by name.
+static func asked(name: String) -> bool:
+	if not FEATURES.has(name):
+		push_error("flags: '%s' is not a declared feature (see Flags.FEATURES)" % name)
+		return false
+	var all := _all()
+	return all.has(name) and not all.has("no-" + name) and not str(all[name]) in OFF_WORDS
 
 
 ## The features that are on now, for the logs.

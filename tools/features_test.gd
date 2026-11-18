@@ -4,6 +4,7 @@
 extends "res://tools/test_base.gd"
 
 const Ally = preload("res://src/game/ally.gd")
+const Chart = preload("res://src/rules/chart.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
@@ -26,6 +27,7 @@ const ChoicePopup = preload("res://src/view/choice_popup.gd")
 const Hud = preload("res://src/view/hud.gd")
 const Vignette = preload("res://src/view/vignette.gd")
 const Items = preload("res://src/rules/items.gd")
+const Kinds = preload("res://src/rules/kinds.gd")
 const Lore = preload("res://src/rules/lore.gd")
 const JevMind = preload("res://src/mind/jev_mind.gd")
 const Keepsakes = preload("res://src/rules/keepsakes.gd")
@@ -40,6 +42,7 @@ const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Vision = preload("res://src/rules/vision.gd")
+const TestRoom = preload("res://src/rules/test_room.gd")
 const Texts = preload("res://src/game/texts.gd")
 const Tips = preload("res://src/view/tips.gd")
 const Transitions = preload("res://src/game/transitions.gd")
@@ -85,6 +88,7 @@ func _run() -> void:
 	await _follow_through()
 	await _keepsakes()
 	await _skill_combat()
+	await _test_room()
 	_close_camera()
 	_finish()
 
@@ -115,6 +119,139 @@ func _flags() -> void:
 		_use([f + "=off"])
 		_check(not Flags.enabled(f), "%s=off turns it off" % f)
 	_check(not Flags.KNOWN.has("classic"), "there is no switch that turns every feature off at once")
+	_use()
+
+
+## test-room: one hall with every monster there is, each fight its own, and nothing kept.
+func _test_room() -> void:
+	# who stands in it
+	var words := TestRoom.table()
+	var room = TestRoom.make(Rng.new(5))
+	var plain: Array = room.monsters.filter(func(m): return not m.boss and not m.elite)
+	var kinds: Array = plain.map(func(m): return m.kind)
+	_check(kinds.size() == Kinds.all().size() and Kinds.all().keys().all(func(id): return kinds.count(id) == 1), "the test room holds one of every kind (%d)" % kinds.size())
+	_check(plain.all(func(m): return m.max_hp == roundi(float(Kinds.info(m.kind).hp) * float(Floors.plan(int(Kinds.info(m.kind).depth)).hp_scale))), "each as tough as on its own floor")
+	var elites: Array = room.monsters.filter(func(m): return m.elite)
+	var clans := {}
+	for m in elites:
+		clans[m.species] = true
+	_check(elites.size() == words.elites.size() and clans.size() == elites.size() and clans.size() == Content.table("encounter").roster.map(func(e): return e.species).reduce(func(seen, sp): return seen if seen.has(sp) else seen + [sp], []).size(), "an elite of every clan (%d)" % elites.size())
+	_check(elites.all(func(m): return m.max_hp > roundi(float(Kinds.info(m.kind).hp) * float(Floors.plan(int(Kinds.info(m.kind).depth)).hp_scale))), "tougher than their kind")
+	var champions: Array = room.monsters.filter(func(m): return m.boss)
+	var named: Array = Content.table("floors").champions
+	_check(champions.size() == Floors.run_floors() and range(champions.size()).all(func(i): return champions[i].name == str(named[i].name) and champions[i].max_hp == int(named[i].hp) and champions[i].genres == Kinds.genres_at(i + 1) and TestRoom.depth_of(champions[i]) == i + 1), "and every champion, with its floor's attacks")
+	_check(room.monsters.size() == TestRoom.count(), "that is everyone (%d)" % room.monsters.size())
+	var names := {}
+	var cells := {}
+	for m in room.monsters:
+		names[m.name] = true
+		cells[m.cell] = true
+	_check(names.size() == room.monsters.size() and cells.size() == room.monsters.size(), "no two share a name or a cell")
+	# every one can be walked up to without fighting anyone else
+	var reach := {room.start: true}
+	var queue := [room.start]
+	while not queue.is_empty():
+		var at: Vector2i = queue.pop_back()
+		for dir in FloorMap.DIRS:
+			var next: Vector2i = at + dir
+			if room.is_open(next) and not reach.has(next) and room.monster_at(next) == null:
+				reach[next] = true
+				queue.append(next)
+	_check(room.monsters.all(func(m): return room.is_open(m.cell) and FloorMap.DIRS.any(func(dir): return reach.has(m.cell + dir))), "everyone can be walked up to without a fight on the way")
+	_check(room.is_open(room.start) and reach.has(room.stairs) and room.stairs != room.start and room.monster_at(room.start) == null, "the way out can be walked to")
+	_check(room.grid.size() == room.size and room.grid.all(func(row): return row.size() == room.size), "the room is a square floor like any other")
+	var again = TestRoom.make(Rng.new(5))
+	_check(range(room.monsters.size()).all(func(i): return again.monsters[i].name == room.monsters[i].name and again.monsters[i].traits == room.monsters[i].traits), "the same seed makes the same room")
+	# walking in
+	Flags.set_args(PackedStringArray(["nosave", "nosound"])) # without BASE's no-wick: she walks in with you
+	var flow = Flow.new(Rng.new(5), LocalMind.new())
+	var earned := []
+	flow.happened.connect(func(n, d): if n == "trophy": earned.append(d.id))
+	var replaced := []
+	flow.happened.connect(func(n, d): if n == "state_replaced": replaced.append(d.how))
+	await flow.test_room()
+	var s = flow.state
+	var f = s.floor_map
+	_check(s.testing and s.stage == "explore" and s.cell == f.start and f.monsters.size() == TestRoom.count(), "the flow opens the test room")
+	_check(replaced == ["test"], "and says the state is the test room's")
+	_check(s.gold == int(words.gold) and s.hp == s.max_hp and s.has_ally("witch"), "with a purse to bribe with and the friend a run starts with")
+	_check(s.banner != null and s.banner.title == str(words.title) and s.lines.any(func(l): return l.text == str(words.line)), "a banner and the log say what it is")
+	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and the line fits a narrow log")
+	_check(not flow.autosave_allowed() and flow.close_run(true) == 0 and not flow.coach.active(), "nothing is saved from it, it leaves no embers and it gives no tips")
+	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))) != null, "its state reads back, which is how it is put back")
+	_check(Floors.toughness_pct(s) == 0 and not Chart.open(s), "the header boasts of no toughness, and no map is drawn for you")
+	# the walk
+	_check(f.is_open(s.cell + FloorMap.DIRS[s.facing]), "you start facing down an aisle")
+	var before: Array = f.monsters.map(func(m): return m.cell)
+	for _i in 4:
+		await flow.press("up")
+	_check(s.cell == f.start + FloorMap.DIRS[0] * 4 and f.monsters.map(func(m): return m.cell) == before and s.hunger == 0.0, "walking, nobody moves and nobody gets hungry")
+	s.cell = f.start + FloorMap.DIRS[0]
+	await flow.press("left")
+	var front = f.monster_at(s.cell + FloorMap.DIRS[s.facing])
+	_check(front != null and s.lines.size() == 1 and s.lines[0].text == TestRoom.describe(front), "facing one, the log says who it is: %s" % (s.lines[0].text if not s.lines.is_empty() else ""))
+	await flow.press("right")
+	_check(s.lines[0].text == str(words.beside) % [Kinds.title(front), Kinds.title(f.monster_at(s.cell + FloorMap.DIRS[1]))], "between two, who is on each side: %s" % s.lines[0].text)
+	_check(f.monsters.all(func(m): return Hud.log_fits([State.sys_line(TestRoom.describe(m))], 760.0) == 1), "every such line fits a narrow log")
+	# a fight is its own
+	var deep = f.monsters.filter(func(m): return m.kind == "cobra")[0]
+	var deep_at: Vector2i = deep.cell
+	await flow.go("intro", {"foe": deep})
+	await flow.go("menu")
+	_check(s.depth == int(Kinds.info("cobra").depth) and s.depth > 1, "a fight runs at the pace of the floor its monster is from (B%dF)" % s.depth)
+	s.hp = 3
+	s.gold = 0
+	s.items = ["salve"]
+	s.allies = []
+	s.banner = null
+	await flow.encounter.defeat(deep, "slain")
+	var back = f.monster_at(deep_at)
+	_check(s.stage == "explore" and back != null and back != deep and back.name == deep.name and back.hp == back.max_hp and f.monsters_left() == TestRoom.count(), "after it, whoever you slew stands in its place again")
+	_check(s.hp == s.max_hp and s.gold == int(words.gold) and s.items.is_empty() and s.has_ally("witch") and s.depth == 1, "and the party is as it walked in")
+	_check(s.reputation.is_empty() and s.deeds.is_empty() and s.tally.slain == 0, "no clan remembers it, and it is on no tally")
+	_check(s.lines.any(func(l): return l.text == str(words.reset)), "the log says the room is as it was")
+	_check(s.banner == null, "and no banner says a clan took it badly (%s)" % [s.banner.title if s.banner != null else ""])
+	# a champion gives nothing to keep
+	var champion = f.monsters.filter(func(m): return m.boss)[1]
+	var max_before: int = s.max_hp
+	await flow.go("intro", {"foe": champion})
+	await flow.go("menu")
+	await flow.encounter.defeat(champion, "slain")
+	_check(s.stage == "explore" and s.max_hp == max_before and s.keepsakes.is_empty() and s.keepsake_due == "", "a champion slain here leaves no keepsake and no health to keep")
+	_check(earned.is_empty() and flow.trophies.earned.is_empty(), "and nothing in the room earns an achievement")
+	# falling
+	await flow.go("intro", {"foe": f.monsters[0]})
+	s.stage = "dodge"
+	s.hp = 0
+	await flow.go("dead")
+	_check(s.menu.size() == 3 and s.menu[1].label == str(words.back), "falling there offers the way back to the room")
+	await flow.tick(flow.clock + 60000.0) # the keys are held off for a moment after a fight; that moment has passed
+	await flow.press("2")
+	_check(s.stage == "explore" and s.testing and s.hp == s.max_hp and f.monsters_left() == TestRoom.count(), "which stands you up in it, whole")
+	# the way out
+	flow.tick(flow.clock + 60000.0)
+	s.cell = f.stairs + FloorMap.DIRS[1]
+	s.facing = 3
+	await flow.press("up")
+	_check(s.stage == "end" and not s.run_over and s.menu.size() == 2 and s.menu[0].label == str(words.stay) and s.menu[1].label == "MAIN MENU", "its stairs are the way out: stay, or the main menu")
+	_check(Transitions.DECIDING.has("end") and s.vignette == "stairs", "asked in the middle of the picture, as any stairs")
+	await flow.press("1")
+	_check(s.stage == "explore" and s.testing, "staying puts you back on the walk")
+	var left := []
+	flow.happened.connect(func(n, d): if n == "leave": left.append(d.to))
+	await flow.go("end")
+	await flow.press("2")
+	_check(left == ["menu"], "and the other leaves for the main menu")
+	# a run started after it is a run
+	await flow.new_run()
+	_check(not flow.state.testing and flow.autosave_allowed() and flow.state.floor_map.monsters.back().boss, "a run started after it is an ordinary run")
+	# the switch
+	_use()
+	_check(Flags.enabled("test-room") and not Flags.asked("test-room"), "the test room is on the menu by default, and not where the game starts")
+	_use(["test-room"])
+	_check(Flags.asked("test-room"), "named outright, the game starts in it")
+	_use(["no-test-room"])
+	_check(not Flags.enabled("test-room") and not Flags.asked("test-room"), "switched off, it is neither")
 	_use()
 
 

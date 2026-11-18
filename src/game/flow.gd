@@ -20,6 +20,7 @@ const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
 const Practice = preload("res://src/rules/practice.gd")
+const TestRoom = preload("res://src/rules/test_room.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
@@ -43,6 +44,8 @@ const BEFORE_KEEPSAKE_MS := 900.0 # and longer before a keepsake is chosen: a pr
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
 const PRACTICE_SEEN := "practice" # its id among the tips seen
+## What the test room puts back after a fight: the party's fields of the state, as State.to_dict keeps them.
+const ROOM_PARTY := ["hp", "max_hp", "gold", "allies", "tally", "reputation", "deeds", "items", "sharpened", "keepsakes", "skills", "hunger", "starved_steps", "butchered", "meals", "left_behind", "found_out", "recent_social", "questers_met"]
 
 const STAGES := {
 	"social": preload("res://src/game/stages/social.gd"),
@@ -89,6 +92,7 @@ var easy_dodge := false
 ## The monsters still to fight, back to back, with no walk between (the social-demo playtest). A new floor, a load or fleeing
 ## clears it.
 var fight_queue: Array = []
+var _room_start := {} # the test room's party and monsters as they were on walking in (State.to_dict): put back after every fight
 
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
@@ -147,6 +151,56 @@ func new_run(practice := false) -> void:
 		_wick_comes = true
 		_teach_walk = state.practice
 	await go("explore", {"lines": lines})
+
+
+## The test room (rules/test_room.gd): every monster there is in one hall, to fight in any order. It is not a run: nothing in it
+## is saved, earned or counted, and after every fight the room and the party are put back as they were (`_in_test_room`).
+func test_room() -> void:
+	await _leave_current()
+	fight_queue = []
+	state = State.new()
+	state.testing = true
+	state.run_seed = rng.seed_value
+	_apply_features()
+	state.floors_of = 0 # the header names the room, not a floor of five
+	var words := TestRoom.table()
+	state.gold = int(words.gold)
+	if feature("wick"):
+		_meet_wick()
+	_make_floor()
+	_room_start = state.to_dict()
+	encounter.pending_notes = []
+	encounter.pending_rows = []
+	_wick_comes = false
+	_teach_walk = false
+	print("flow: the test room, seed %d, %d monsters" % [rng.seed_value, state.floor_map.monsters.size()])
+	event("state_replaced", {"how": "test"})
+	announce(str(words.title), str(words.banner), STORY_BANNER_MS)
+	await go("explore", {"lines": [State.sys_line(str(words.line))]})
+
+
+## The test room's two rules, as the stage changes. A fight begins: it runs at the pace of the floor its monster is from. The
+## walk resumes after one, however it ended: everyone is back in their place, whole and as they first were, and so is the party
+## (its health, gold, bag, friends and what the clans think of it). Where you stand, the map and the log stay.
+func _in_test_room(from: String, to: String, args: Dictionary) -> void:
+	if to == "intro":
+		state.depth = TestRoom.depth_of(args.foe)
+		print("flow: test room, %s fights as on B%dF" % [args.foe.name, state.depth])
+	elif to == "explore" and (from in Transitions.FIGHT or from == "keepsake"):
+		var fresh = State.from_dict(_room_start)
+		if fresh == null:
+			push_error("flow: the test room's start can't be read back, the room stays as the fight left it")
+			return
+		for field in ROOM_PARTY:
+			state.set(field, fresh.get(field))
+		state.floor_map.monsters = fresh.floor_map.monsters
+		state.depth = 1
+		state.struggle = 0.0
+		state.nerve = 0
+		state.keepsake_due = ""
+		state.look()
+		args["lines"] = args.get("lines", []) + [State.sys_line(str(TestRoom.table().reset))]
+		print("flow: test room put back after %s (%d monsters, HP %d/%d, %d gold)" % [from, state.floor_map.monsters_left(), state.hp, state.max_hp, state.gold])
 
 
 ## Whether a run may start on the practice floor: it needs floors to go down to and the tips to teach it, and a run told to start
@@ -217,7 +271,7 @@ func next_floor(way := {}) -> void:
 ## This run is over for good: at the last stairs, or given up after a fall. What it earned in all (0 without the feature legacy). The scene
 ## pays it; a run left and loaded again pays only what is new.
 func close_run(cleared: bool) -> int:
-	if not feature("legacy"):
+	if not feature("legacy") or state.testing: # the test room is not a run
 		return 0
 	var embers := Legacy.earned(state, cleared)
 	print("flow: run closed, %d embers" % embers)
@@ -242,6 +296,8 @@ func _apply_features() -> void:
 func _arrival() -> Array:
 	if state.practice:
 		return [State.sys_line(Practice.line("line"))]
+	if state.testing:
+		return [State.sys_line(str(TestRoom.table().line))]
 	var lines := [State.sys_line(Texts.floor_story(state.depth, Floors.run_floors(), Floors.plan(state.depth).champion))]
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
@@ -278,6 +334,8 @@ func _send_elites() -> void:
 func _make_floor(way := {}) -> void:
 	if state.practice:
 		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)))
+	elif state.testing:
+		state.floor_map = TestRoom.make(Rng.new(Floors.floor_seed(state.run_seed, 0, TestRoom.SEED)))
 	else:
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
@@ -321,9 +379,10 @@ func load_state(saved: Dictionary) -> bool:
 	return true
 
 
-## Whether the scene may write the AUTO save when the walk resumes: not in the social-demo playtest.
+## Whether the scene may write a save (the AUTO one when the walk resumes, or a slot from the pause menu): not in the
+## social-demo playtest, and never from the test room, which is not a run.
 func autosave_allowed() -> bool:
-	return not Flags.on("social-demo")
+	return not Flags.on("social-demo") and not state.testing
 
 
 ## Move to another stage. Moves the table doesn't allow are refused and reported.
@@ -333,6 +392,8 @@ func go(to: String, args := {}) -> void:
 		push_error("flow: %s -> %s is not a move the game allows" % [from if from != "" else "start", to])
 		return
 	await _leave_current()
+	if state.testing:
+		_in_test_room(from, to, args)
 	if to in ["explore", "keepsake"] and from in Transitions.FIGHT:
 		_keys_back_at = clock + (BEFORE_KEEPSAKE_MS if to == "keepsake" else AFTER_FIGHT_MS)
 		_held_over = true

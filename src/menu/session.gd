@@ -1,4 +1,4 @@
-## What the menu hands to the gameplay scene: start a new run, or continue this saved state. Gameplay takes it once when
+## What the menu hands to the gameplay scene: start a new run, continue this saved state, or open the test room. Gameplay takes it once when
 ## it starts; opened with nothing pending (a tool, a test scene) it just starts a new run.
 extends RefCounted
 
@@ -11,6 +11,11 @@ static func start_new() -> void:
 
 static func start_load(state: Dictionary) -> void:
 	pending = {"kind": "load", "state": state}
+
+
+## The test room (rules/test_room.gd) instead of a run.
+static func start_test() -> void:
+	pending = {"kind": "test"}
 
 
 ## The opening CG (menu/intro_cg.gd) ended: watched to its end ("whole", so the run need not bring her in again) or skipped.
