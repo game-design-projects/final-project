@@ -28,8 +28,17 @@ run_mode() {
 		if ! grep -q 'all checks passed' "$log"; then
 			code=1 # a script that doesn't parse never runs and still exits with 0
 		fi
-		if grep -q 'SCRIPT ERROR' "$log"; then
-			code=1 # an error in the middle of a check ends that check and the run still says all passed
+		# A suite that causes faults on purpose says where: `errors expected below` opens a block the script errors are
+		# allowed in, and `errors expected above` closes it (`network_test` hands minds bad answers, and a debug build
+		# logs the fault being checked). Anywhere else, and in every other suite, an error in the middle of a check ends
+		# that check and the run still says all passed (#72).
+		if awk '
+			/errors expected below/ { expected = 1 }
+			/errors expected above/ { expected = 0 }
+			/SCRIPT ERROR/ && !expected { cut = 1 }
+			END { exit cut ? 0 : 1 }
+		' "$log"; then
+			code=1
 		fi
 		echo "$mode $t: exit $code, $fails failed"
 		if [ "$code" != 0 ]; then

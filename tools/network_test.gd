@@ -60,6 +60,21 @@ class Silent extends "res://src/mind/mind.gd":
 		return {"sad": 1.0}
 
 
+## A mind that answers null at once to a question whose answer is a number. A `-> float` override can't write that in a
+## debug build (the parser refuses `return null` as `float`), but an export's script error leaves exactly this: the
+## question answered, the answer unusable — which is not the same as a question still out. Hence a stand-in, not a Mind.
+class NullMercy extends RefCounted:
+	func label() -> String: return "nullmercy"
+	func mercy(_m): return null
+
+
+## A mind whose odds are infinite, or a total too large to divide by: numbers, but not ones the game can roll.
+class Inflated extends "res://src/mind/mind.gd":
+	func label() -> String: return "inflated"
+	func feeling_when_hit(_m) -> Dictionary: return {"sad": INF}
+	func feeling_when_told(_m, _intents: Array) -> Dictionary: return {"sad": 1e308, "enraged": 1e308}
+
+
 func _name() -> String:
 	return "network_test"
 
@@ -299,7 +314,7 @@ func _a_mind_gone_wrong_cannot_stop_a_fight() -> void:
 		var pair: Dictionary = await good.mercy_and_pressure(m)
 		var bare_pair: Dictionary = await bare.mercy_and_pressure(m)
 		_check(same and pair == bare_pair and good.saved == 0, "%s: a good answer passes through untouched, in the same order (a seeded game plays the same)" % ("export" if as_export else "debug"))
-	print("network_test: the errors below are the faults these checks cause on purpose")
+	print("network_test: errors expected below: the faults these checks cause on purpose")
 	# debug: reported, and nothing papered over
 	Fault.forced = false
 	var before := Fault.count
@@ -333,6 +348,18 @@ func _a_mind_gone_wrong_cannot_stop_a_fight() -> void:
 	var took := Time.get_ticks_msec() - began
 	_check(odds == local.mercy(m) and took >= 150 and took < 2000, "export: a mind that never answers is waited for only so long, then the local rules answer (%d ms)" % took)
 	_check(await silent.feeling_when_hit(m) == local.feeling_when_hit(m) and silent.saved == 2, "export: and so for a feeling")
+	# an answer that is null: answered, not waited for
+	before = Fault.count
+	var instant := SafeMind.new(NullMercy.new())
+	_check(await instant.mercy(m) == local.mercy(m) and instant.saved == 1, "export: a null answer that arrived at once is answered by the local rules like any other")
+	_check(Fault.count == before + 1 and Fault.last.begins_with("mind: nullmercy answered <null> to mercy") and not Fault.last.contains("gave no answer"), "export: and the log says it answered null, not that it was waited for (%s)" % Fault.last)
+	# numbers the game can't roll: not odds
+	before = Fault.count
+	var inflated := SafeMind.new(Inflated.new())
+	_check(await inflated.feeling_when_hit(m) == local.feeling_when_hit(m) and await inflated.feeling_when_told(m, intents) == local.feeling_when_told(m, intents), "export: infinite odds, and a total too large to divide by, come from the local rules")
+	_check(inflated.saved == 2 and Fault.count == before + 2, "export: and each one is a counted fault")
+	_check(not SafeMind.is_number(INF, INF) and not SafeMind.is_odds({"sad": INF}) and not SafeMind.is_odds({"sad": 1e308, "enraged": 1e308}), "odds have to be finite numbers with a finite total")
+	print("network_test: errors expected above: the faults these checks caused on purpose")
 	Fault.forced = null
 
 
