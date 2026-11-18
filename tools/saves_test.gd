@@ -32,6 +32,7 @@ func _run() -> void:
 	_round_trip()
 	_numbers_rise()
 	_nosave_in_memory()
+	_a_store_heeds_nosave_said_later()
 	await _state_is_checked()
 	await _a_charted_floor_comes_back_charted()
 	_cleanup()
@@ -179,6 +180,33 @@ func _a_charted_floor_comes_back_charted() -> void:
 	wrong.charted = [[s.floor_map.start.x, s.floor_map.start.y], "x", [2], [999, 999], [0, 0], [float(s.floor_map.stairs.x), float(s.floor_map.stairs.y)]]
 	var kept = State.from_dict(wrong)
 	_check(kept != null and kept.charted.size() == 2 and kept.charted.has(s.floor_map.start) and kept.charted.has(s.floor_map.stairs), "charted cells that are not cells of this floor are dropped, the rest kept (the start, and the stairs given as floats)")
+
+
+## A tool's script sets its flags after the game's autoloads exist, so the store it meets was made with no `nosave` and
+## has read the player's file. It heeds the flag from the moment it is said, and for good.
+func _a_store_heeds_nosave_said_later() -> void:
+	_check(not root.get_node("Store").persists(), "the suite's own store never reaches the player's file")
+	Flags.set_args(PackedStringArray([]))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_dir))
+	var path := "%s/store_test.json" % _dir
+	var store_script = load("res://src/utils/store.gd")
+	var first = store_script.new(path)
+	first.set_value("embers", 7)
+	first.free()
+	var store = store_script.new(path)
+	_check(store.persists() and store.get_value("embers") == 7, "a store made with no nosave reads and writes its file")
+	Flags.set_args(PackedStringArray(["nosave"]))
+	_check(store.get_value("embers", 0) == 0 and not store.persists(), "nosave said later: what it read is put down")
+	store.set_value("embers", 99)
+	store.remove("embers")
+	Flags.set_args(PackedStringArray([]))
+	store.set_value("embers", 50)
+	_check(not store.persists(), "and it stays in memory when the flag is gone again")
+	var again = store_script.new(path)
+	_check(again.get_value("embers") == 7, "the file is as it was (%s)" % [again.get_value("embers")])
+	for s in [store, again]:
+		s.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 
 func _cleanup() -> void:

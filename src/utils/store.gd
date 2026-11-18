@@ -31,17 +31,37 @@ func _init(path := DEFAULT_PATH) -> void:
 
 ## The saved value, or `default` when the key was never saved.
 func get_value(key: String, default = null):
+	_heed_nosave()
 	return _data.get(key, default)
 
 
 func set_value(key: String, value) -> void:
+	_heed_nosave()
 	_data[key] = value
 	_save()
 
 
 func remove(key: String) -> void:
+	_heed_nosave()
 	if _data.erase(key):
 		_save()
+
+
+## Whether what is set here reaches the disk.
+func persists() -> bool:
+	_heed_nosave()
+	return _persist
+
+
+## `nosave` said after this store was made counts too, from then on and for good: a tool's script sets its flags after the
+## game's autoloads exist, so the store it meets has already read the player's file. What was read is put down, and nothing
+## is written again. Without this a suite or a screenshot tool run with no `-- nosave` on its command line wrote its own
+## achievements and embers into the player's store, and cleared the player's.
+func _heed_nosave() -> void:
+	if _persist and Flags.on("nosave"):
+		_persist = false
+		_data = {}
+		print("store: nosave, keeping everything in memory from here on")
 
 
 ## Writes beside the file and renames over it, so a crash mid-write can't leave half a store.
