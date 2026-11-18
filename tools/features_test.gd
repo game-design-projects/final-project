@@ -2858,6 +2858,18 @@ func _lords() -> void:
 	var pact: Dictionary = Lords.pact()
 	var clan_name := Clans.title(clan)
 	_check(Overlay.banner_fits(str(pact.title) % clan_name.to_upper()) and Overlay.banner_fits(str(pact.line) % clan_name), "the pact's banner fits the picture")
+	# no place in the party: the clan opens its warren on the next stairs instead
+	var warren_flow = _flow(7)
+	await warren_flow.new_run()
+	warren_flow.state.allies = [Ally.make("slime", "A", 70.0), Ally.make("rock", "B", 70.0), Ally.make("snake", "C", 70.0)]
+	var joined := Requests.swear(warren_flow.state, "crew", {"species": "bandit", "name": "SIRRA"})
+	_check(not joined and warren_flow.state.lords_warren.has("crew"), "with no place in the party the lord opens its warren instead")
+	var ways: Array = Floors.paths(warren_flow.state.run_seed, 1, true, warren_flow.state.lords_warren)
+	_check(ways.size() == 2 and str(ways[0].get("only_species", "")) == "bandit", "the stairs offer its clan's warren first (%s)" % str(ways[0].get("label", "")))
+	_check(str(ways[0].label) == "THE BANDIT WARREN", "and say what waits below (%s)" % str(ways[0].label))
+	warren_flow.state.allies = []
+	var kept_warren = State.from_dict(warren_flow.state.to_dict())
+	_check(kept_warren != null and kept_warren.lords_warren == ["crew"], "a save keeps the warren the lord opened")
 	Clans.favour(back_flow.state, second_q.species, -200.0)
 	_check(Clans.hostility_of(back_flow.state, second_q.species) == "angry", "a sworn clan never falls past angry (%s)" % Clans.hostility_of(back_flow.state, second_q.species))
 	# The party has three places for monsters, and the little witch takes none of them: the list of allies is not the party.
