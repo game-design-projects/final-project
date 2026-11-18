@@ -25,6 +25,8 @@ tempo-shaped per monster and loudness-normalised (tools/voices/render.py, tools/
 - assets/voices/cosyvoice3/: CosyVoice3 (FunAudioLLM/Fun-CosyVoice3-0.5B-2512, https://github.com/FunAudioLLM/CosyVoice),
   Apache License 2.0. The engine of the Feiyu voice stack; the Feiyu voice library itself is not used.
 - assets/voices/qwen3/: Qwen3-TTS (Qwen/Qwen3-TTS-12Hz-0.6B-Base, https://github.com/QwenLM/Qwen3-TTS), Apache License 2.0.
+- assets/voices/gemini/: Google Gemini TTS (gemini-3.8-flash-tts, prebuilt voices Leda, Algenib, Enceladus, Orus and
+  Charon), reached through OpenRouter; not cloned from a reference. Generated audio used under the Gemini API terms.
 - Reference voices: LibriTTS-R (https://www.openslr.org/141/) by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe,
   N. Morioka, M. Bacchiani, Y. Zhang, W. Han and A. Bapna, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/);
   derived from LibriTTS and LibriSpeech, from LibriVox recordings. Readers (LibriVox) and the clips used:

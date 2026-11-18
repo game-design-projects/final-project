@@ -23,7 +23,7 @@ beside the game's own voices. It is rendered ahead like the others; the game nev
 ```bash
 python3 tools/voices/render.py gemini --dry-run                 # the cast, how many lines, about what it costs
 python3 tools/voices/render.py gemini --only slime --limit 3    # a first listen (the key is read from $OPENROUTER_API_KEY)
-python3 tools/voices/render.py gemini                           # every line (354: about $0.20, 35 min at 10 requests a minute)
+python3 tools/voices/render.py gemini                           # every line (354: it cost $0.35, about 40 min at 10 requests a minute)
 godot --headless --path . --import && godot --path . -- test-room gemini-voices
 python3 tools/voices/test_gemini.py                             # the engine against a stand-in server: no key, nothing paid
 ```

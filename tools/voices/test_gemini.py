@@ -130,7 +130,8 @@ def main():
         except ValueError:
             check(True, "%s is not taken for audio" % why)
     cost = gemini.estimate([{"text": "x" * 1300, "style": ""}], "gemini-3.8-flash-tts")
-    check(abs(cost["seconds"] - 100.4) < 0.01 and abs(cost["usd"] - (325 * 0.5 + 100.4 * 25 * 9.0) / 1e6) < 1e-9, "the estimate is the text in and 25 audio tokens a second out ($%.4f)" % cost["usd"])
+    want_s = 1300 / gemini.CHARS_PER_S + 0.4
+    check(abs(cost["seconds"] - want_s) < 0.01 and abs(cost["usd"] - (325 * 0.5 + want_s * 25 * 9.0) / 1e6) < 1e-9, "the estimate is the text in and 25 audio tokens a second out ($%.4f)" % cost["usd"])
     check(gemini.estimate([], "some-new-model")["usd"] is None, "a model with no listed price gets no made-up one")
     server.shutdown()
     print("test_gemini: %s" % ("all checks passed" if failed == 0 else "%d CHECK(S) FAILED" % failed))
