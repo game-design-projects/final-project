@@ -13,6 +13,7 @@ const BANK := "cosyvoice3" # what every build plays
 const GEMINI := "gemini" # what the feature gemini-voices plays first
 const ROOT := "res://assets/voices/%s/"
 
+static var roots := {} # bank -> the folder it is read from instead of ROOT (a test stands one bank in for another)
 static var _banks := {} # bank -> species -> {key -> relative path}; a bank with no manifest is there, and empty
 static var _stage := RegEx.create_from_string("\\*[^*]*\\*")
 static var _braces := RegEx.create_from_string("\\{[^}]*\\}")
@@ -38,9 +39,18 @@ static func where(species: String, text: String) -> Dictionary:
 	var key := _key(text)
 	for bank in banks():
 		var path: String = lines(bank).get(species, {}).get(key, "")
-		if path != "" and ResourceLoader.exists((ROOT % bank) + path):
-			return {"bank": bank, "path": (ROOT % bank) + path}
+		if path != "" and ResourceLoader.exists(_root(bank) + path):
+			return {"bank": bank, "path": _root(bank) + path}
 	return {}
+
+
+static func _root(bank: String) -> String:
+	return str(roots.get(bank, ROOT % bank))
+
+
+## Forget what was read, so the banks are read again (a test that changed `roots`).
+static func forget() -> void:
+	_banks = {}
 
 
 ## How many lines a bank has (0 for one that was never rendered).
@@ -75,12 +85,12 @@ static func lines(bank: String) -> Dictionary:
 		return _banks[bank]
 	var out := {}
 	_banks[bank] = out
-	var f := FileAccess.open((ROOT % bank) + "manifest.json", FileAccess.READ)
+	var f := FileAccess.open(_root(bank) + "manifest.json", FileAccess.READ)
 	if f == null:
 		if bank == BANK:
 			push_warning("voices: no manifest, monsters use the synthesised voice")
 		else:
-			print("voices: the %s bank is not rendered (tools/voices/render.py %s), the %s bank speaks" % [bank, bank, BANK])
+			print("voices: the %s bank is not rendered (no %smanifest.json; tools/voices/render.py %s), the %s bank speaks" % [bank, _root(bank), bank, BANK])
 		return out
 	var parsed = JSON.parse_string(f.get_as_text())
 	if parsed is Dictionary and parsed.get("lines") is Dictionary:

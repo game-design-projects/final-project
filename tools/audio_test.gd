@@ -91,6 +91,7 @@ func _run() -> void:
 	_flags_exist()
 	_shout_plans()
 	_voice_keys()
+	_voice_banks()
 	await _music_pacing()
 	await _music_fades()
 	await _motifs()
@@ -426,6 +427,31 @@ func _shout_plans() -> void:
 		kinds[Shout.shout_plan(line, "bandit").kind] = true
 	_check(kinds.size() >= 9, "the classifier tells many kinds apart (%d of 13 in 13 lines)" % kinds.size())
 	_check(Shout.KINDS == VOICE_KINDS, "the classifier has the 13 kinds the synth can voice")
+
+
+## gemini-voices: the Gemini bank is asked first, line by line, and the game's own bank says whatever it lacks.
+func _voice_banks() -> void:
+	var line := _first_recorded_line()
+	Flags.set_args(PackedStringArray(["nosave", "seed=7"]))
+	Voices.forget()
+	_check(Voices.banks() == [Voices.BANK] and Voices.where(line.species, line.text).get("bank") == Voices.BANK, "without the feature a line is said from the game's own bank")
+	Flags.set_args(PackedStringArray(["nosave", "seed=7", "gemini-voices"]))
+	_check(Voices.banks() == [Voices.GEMINI, Voices.BANK], "with gemini-voices the Gemini bank is asked first")
+	if Voices.size(Voices.GEMINI) == 0:
+		_check(Voices.where(line.species, line.text).get("bank") == Voices.BANK and Voices.find(line.species, line.text) != null, "a Gemini bank nobody has rendered changes nothing: the line is said as before")
+	# another rendered bank stands in for it, with one line taken out
+	Voices.roots[Voices.GEMINI] = "res://assets/voices/qwen3/"
+	Voices.forget()
+	var stood: Dictionary = Voices.where(line.species, line.text)
+	_check(Voices.size(Voices.GEMINI) > 100 and stood.get("bank") == Voices.GEMINI and str(stood.get("path", "")).begins_with("res://assets/voices/qwen3/"), "a line the Gemini bank has is said from it (%s)" % [stood.get("path", "")])
+	_check(Voices.find(line.species, line.text) is AudioStream, "and it is a recording the game can play")
+	Voices.lines(Voices.GEMINI)[line.species].erase(Voices._key(line.text))
+	_check(Voices.where(line.species, line.text).get("bank") == Voices.BANK, "a line it lacks is said from the game's own bank")
+	_check(Voices.where(line.species, "words nobody ever recorded").is_empty() and Voices.find(line.species, "words nobody ever recorded") == null, "and one neither has is left to the made-up voice")
+	Voices.roots = {}
+	Voices.forget()
+	Flags.set_args(PackedStringArray(["nosave", "seed=7"]))
+	_check(Voices.banks() == [Voices.BANK], "the feature off again, only the game's own bank is asked")
 
 
 func _voice_keys() -> void:
