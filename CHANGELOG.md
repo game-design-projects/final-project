@@ -43,6 +43,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `tools/run_tests.sh` lets a suite mark the script errors its own checks cause on purpose (`network_test` does), so a full run is green again; a `SCRIPT ERROR` anywhere else still fails that suite.
 - `tools/moods_test.gd` is built on `tools/test_base.gd` like every other suite: it counts the script errors the engine logs, and one in its own setup now fails it in 90 s instead of hanging. Before, the one suite outside that file could pass with a function in `moods.gd` or `monster.gd` cut short, and its copy of the verdict kept none of the watchdog.
 - `tools/hold_check.gd` says `nosave` itself, as every tool that runs the game does: the walk it measures used to write its own run over the player's autosave.
+- A choice over the picture keeps the gap the layout counted under the question: at a run's end every choice is a button with nothing to say of itself, and they were set against the last line of what was asked, with the block a gap's half above the middle. The rule for which stages are deciding is one function (`ChoicePopup.deciding`), which the dock and the popup both ask, and `tools/meta_test.gd` checks that a deciding stage is a walk as it checks that a picking stage is a fight.
 
 ## [0.9.4] - 2026-11-17
 
