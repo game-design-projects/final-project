@@ -2840,6 +2840,44 @@ func _lords() -> void:
 	_check(back != null and back.lords_met.is_empty(), "a save from before lords has met none")
 	var kept = State.from_dict(flow.state.to_dict())
 	_check(kept != null and kept.lords_met == [clan], "and a save keeps the ones met")
+	# The four lords on the first floor of their own biome, over enough seeds to meet every one: its own favour; a fetch
+	# names something lying on that floor; a spare names kin; and the lord never stands on a monster.
+	var met := {}
+	var kinds := {}
+	var lost := 0
+	for seed_value in range(1, 21):
+		flow.state.run_seed = seed_value
+		flow.state.lords_met = []
+		for depth in range(1, 4):
+			flow.state.depth = depth
+			flow._make_floor()
+			var f = flow.state.floor_map
+			var lord_q: Dictionary = f.quester
+			if lord_q.is_empty():
+				lost += 1
+				continue
+			var home := str(lord_q.get("lord", ""))
+			met[home] = true
+			kinds[str(lord_q.kind)] = true
+			_check(Lords.table().lords.has(home) and str(lord_q.get("title", "")) != "", "B%dF of seed %d has a lord of the data (%s)" % [depth, seed_value, home])
+			if str(lord_q.kind) == "fetch":
+				_check(f.pickups.any(func(p): return str(p.item) == str(lord_q.want)), "seed %d B%dF: the lord's fetch lies on the floor (%s)" % [seed_value, depth, lord_q.want])
+			else:
+				var target = f.monsters[int(lord_q.target)]
+				_check(not target.boss and not target.lurking, "the lord names a monster that can be dealt with")
+				if str(lord_q.kind) == "spare":
+					_check(target.species == str(lord_q.species), "its kin is one of its own (%s)" % target.species)
+			_check(f.monsters.all(func(m): return m.cell != lord_q.cell), "seed %d B%dF: the lord does not stand on a monster" % [seed_value, depth])
+	_check(lost == 0, "over twenty seeds every first floor of a biome has its lord")
+	_check(met.size() == Lords.table().lords.size(), "over twenty seeds every lord asks (%s)" % str(met.keys()))
+	_check(kinds.has("fetch") and kinds.has("spare") and kinds.has("rid"), "each kind of favour is asked (%s)" % str(kinds.keys()))
+	for home in Lords.table().lords:
+		_check(Content.table("clans").clans.has(home) and str(Lords.table().lords[home].title) != "", "the lord of %s names a clan and a title" % home)
+	var first: Dictionary = Lords.due("caves", 0, [])
+	var second: Dictionary = Lords.due("caves", 0, [first.clan])
+	_check(not first.is_empty() and not second.is_empty() and first.clan != second.clan, "the caves' two lords take turns by the floor's seed")
+	_check(Lords.due("caves", 0, [first.clan, second.clan]).is_empty(), "a run that has met both caves lords meets none")
+	_check(Lords.due("halls", 0, ["crew"]).is_empty(), "a met lord does not ask again")
 
 
 func _npcs() -> void:

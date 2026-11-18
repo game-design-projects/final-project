@@ -330,8 +330,8 @@ func _send_elites() -> void:
 		print("flow: B%dF has %d elites, sent by %s" % [state.depth, state.floor_map.monsters.filter(func(m): return m.elite).size(), ", ".join(senders)])
 
 
-## Whether this floor is the run's first of its biome: a lord is at home there, and the biome comes back two or three floors
-## later (`Floors.biome`), where the same lord is met again.
+## Whether this floor is the run's first of its biome: a lord is at home there. The biomes repeat every three floors
+## (`Floors.biome`); a lord is placed on that first floor only, not where its biome comes back.
 func _first_floor_of_its_biome(state, biome: Dictionary) -> bool:
 	var id := str(biome.get("id", ""))
 	if id == "":
