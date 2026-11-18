@@ -2860,6 +2860,21 @@ func _lords() -> void:
 	_check(Overlay.banner_fits(str(pact.title) % clan_name.to_upper()) and Overlay.banner_fits(str(pact.line) % clan_name), "the pact's banner fits the picture")
 	Clans.favour(back_flow.state, second_q.species, -200.0)
 	_check(Clans.hostility_of(back_flow.state, second_q.species) == "angry", "a sworn clan never falls past angry (%s)" % Clans.hostility_of(back_flow.state, second_q.species))
+	# The party has three places for monsters, and the little witch takes none of them: the list of allies is not the party.
+	var room_flow = await _lord_again(clan)
+	var room_q: Dictionary = room_flow.state.floor_map.quester
+	room_flow.state.allies = [Ally.make("witch", "WICK", 75.0), Ally.make("slime", "GLOP", 60.0), Ally.make("rock", "OLD SHALE", 60.0)]
+	_check(room_flow.state.party_size() == Combat.PARTY_MAX - 1, "with two monsters along, one place is free (%d of %d)" % [room_flow.state.party_size(), Combat.PARTY_MAX])
+	Requests.settle(room_q, room_flow.state)
+	_check(room_flow.state.party_size() == Combat.PARTY_MAX and room_flow.state.has_ally(str(room_q.species)), "a sworn lord takes the last place, not the one before it")
+	room_flow.event("lord_joined", {"species": str(room_q.species)}) # what the request stage says when it came along
+	_check(room_flow.trophies.earned.has("party") and not room_flow.trophies.earned.has("friend"), "filling the table with it is an achievement, though nobody was spared (%s)" % str(room_flow.trophies.earned))
+	var full_flow = await _lord_again(clan)
+	var full_q: Dictionary = full_flow.state.floor_map.quester
+	full_flow.state.allies = [Ally.make("witch", "WICK", 75.0), Ally.make("slime", "GLOP", 60.0), Ally.make("rock", "OLD SHALE", 60.0), Ally.make("snake", "HISS", 60.0)]
+	_check(full_flow.state.party_size() == Combat.PARTY_MAX, "three monsters are a full party with her along")
+	_check(not Requests.settle(full_q, full_flow.state).joined, "a full party leaves a lord no place")
+	_check(full_flow.state.lords_sworn.has(clan), "the clan is sworn even so")
 	# The four lords on the first floor of their own biome, over enough seeds to meet every one: its own favour; a fetch
 	# names something lying on that floor; a spare names kin; and the lord never stands on a monster.
 	var met := {}
@@ -2898,6 +2913,16 @@ func _lords() -> void:
 	_check(not first.is_empty() and not second.is_empty() and first.clan != second.clan, "the caves' two lords take turns by the floor's seed")
 	_check(Lords.due("caves", 0, [first.clan, second.clan]).is_empty(), "a run that has met both caves lords meets none")
 	_check(Lords.due("halls", 0, ["crew"]).is_empty(), "a met lord does not ask again")
+
+
+## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.
+func _lord_again(clan: String) -> Variant:
+	var flow = _flow(7)
+	await flow.new_run()
+	flow.state.lords_met = [clan]
+	flow.state.depth = 4
+	await flow._make_floor()
+	return flow
 
 
 func _npcs() -> void:

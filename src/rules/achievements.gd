@@ -80,6 +80,9 @@ static func earned_by(event: String, data: Dictionary, state) -> Array:
 				out.append("party")
 			if state.foe != null and state.foe.boss:
 				out.append("champion_won")
+		"lord_joined": # a sworn lord comes along unspared, so it fills the table but is nobody's "friend" card
+			if state.party_size() >= Combat.PARTY_MAX:
+				out.append("party")
 		"slain":
 			if data.boss:
 				out.append("champion_slain")

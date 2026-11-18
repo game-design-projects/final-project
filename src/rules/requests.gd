@@ -11,6 +11,7 @@ const Items = preload("res://src/rules/items.gd")
 const Lords = preload("res://src/rules/lords.gd")
 
 const KINDS := ["fetch", "spare", "rid"]
+const LORD_LOYALTY := 90.0 # a sworn lord comes along devoted, not as a stray that was asked along (allies.gd: 70 is DEVOTED)
 
 
 static func table() -> Dictionary:
@@ -128,12 +129,14 @@ static func speak(q: Dictionary, s) -> String:
 	return words % subject(q, s.floor_map)
 
 
-## Paid: what was asked for leaves the bag, the gold and health come, and its clan hears. Returns {gold, healed}.
+## Paid: what was asked for leaves the bag, the gold and health come, and its clan hears. Returns {gold, healed, joined}:
+## `joined` says a sworn lord came along (`joined` is false for every other favour).
 static func settle(q: Dictionary, s) -> Dictionary:
 	var t := table()
 	var gold: int = int(t.gold)
 	var heal: int = int(t.heal)
 	var standing: float = float(t.standing)
+	var joined := false
 	var lord := str(q.get("lord", ""))
 	if lord != "": # a lord pays more, and the run remembers it was met (rules/lords.gd)
 		var pays := Lords.pays()
@@ -141,7 +144,7 @@ static func settle(q: Dictionary, s) -> Dictionary:
 		heal = int(pays.heal)
 		standing = float(pays.standing)
 		if q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
-			swear(s, lord, q)
+			joined = swear(s, lord, q)
 		elif not s.lords_met.has(lord):
 			s.lords_met.append(lord)
 	if q.kind == "fetch":
@@ -151,21 +154,24 @@ static func settle(q: Dictionary, s) -> Dictionary:
 	s.hp = mini(s.max_hp, s.hp + heal)
 	Clans.favour(s, q.species, standing)
 	print("requests: %s is paid: %d gold, %d health%s" % [q.name, gold, s.hp - before, ", a lord's favour" if lord != "" else ""])
-	return {"gold": gold, "healed": s.hp - before}
+	return {"gold": gold, "healed": s.hp - before, "joined": joined}
 
 
 ## A lord's second favour paid: its clan stands friendly and is sworn for the rest of the run, and the lord joins the party if
-## there is room for it.
-static func swear(s, lord: String, q: Dictionary) -> void:
+## there is room for it; true when it did.
+static func swear(s, lord: String, q: Dictionary) -> bool:
 	if not s.lords_sworn.has(lord):
 		s.lords_sworn.append(lord)
 	var friendly := float(Content.table("clans").friendly_at)
 	var now: float = Clans.standing_of(s, str(q.species))
 	if now < friendly:
 		Clans.favour(s, str(q.species), friendly - now)
-	if s.allies.size() < Combat.PARTY_MAX and not s.allies.any(func(a): return str(a.name) == str(q.name)):
-		s.allies.append(Ally.make(str(q.species), str(q.name), 90.0))
-	print("lords: %s swears its clan to you" % lord)
+	var joined := false
+	if s.party_size() < Combat.PARTY_MAX and not s.allies.any(func(a): return str(a.name) == str(q.name)):
+		s.allies.append(Ally.make(str(q.species), str(q.name), LORD_LOYALTY))
+		joined = true
+	print("lords: %s swears its clan to you%s" % [lord, ", and comes along" if joined else ""])
+	return joined
 
 
 ## What a save holds: whether this is a request, from outside, that can be read. "" when it is.
