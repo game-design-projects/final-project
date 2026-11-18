@@ -25,7 +25,7 @@
 ## 约定
 
 - 联网和子进程只经 `network manager`；超时和失败回退放在这一处。
-- 故障策略只在 `utils/fault.gd` 一处：debug 版快速失败，导出版容错。导出版里 GDScript 出错不中断也不记日志（缺的 key 读成 null，函数照常跑完，`assert` 不执行），所以会出错的模块（联网的 mind 是第一个）在边界上校验答案：不合格就 `Fault.report`（debug 版在这里停下），`Fault.tolerant()` 为真时换成备用答案继续。新增这类边界时照 `mind/safe_mind.gd` 写，不在调用处各自判空。
+- 故障策略只在 `utils/fault.gd` 一处：debug 版快速失败，导出版容错。导出版里 GDScript 出错不中断也不记日志（缺的 key 读成 null，函数照常跑完，`assert` 不执行），所以会出错的模块（联网的 mind 是第一个）在边界上校验答案：不合格就 `Fault.report`（debug 版在这里停下），`Fault.tolerant()` 为真时换成备用答案继续。新增这类边界时照 `mind/safe_mind.gd` 写，不在调用处各自判空。debug 这一侧管所有模块：测试套件和 `autoplay` 用 `Fault.watch()` 数脚本错误，任何模块出一个没预期的就判失败。
 - 日志、随机、存储、启动参数是小工具，不画在图里，统一放在 `src/utils/`，由用到的模块直接使用。
 - 场景文件（`.tscn`）跟各自模块放在一起，不单设目录。
 - 新功能默认就是游戏的一部分，不加开关；需要和旧行为对照的才进 `utils/flags.gd` 的 `FEATURES`（默认开，`no-<name>` 单独关掉；`OPT_IN` 里的实验功能例外，不点名不开）。

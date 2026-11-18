@@ -1,6 +1,8 @@
-## What the tools/*_test.gd scripts share: the watchdog, the check lines and the exit code. A test extends this, names itself
+## What the tools/*_test.gd scripts share: the watchdog, the check lines, the script errors that fail a run, and the exit code. A test extends this, names itself
 ## in `_name()`, and does its checks in `_run()`, ending with `_finish()`.
 extends SceneTree
+
+const Fault = preload("res://src/utils/fault.gd")
 
 ## How long a test may take before it is stopped as hung.
 const WATCHDOG_S := 90
@@ -13,7 +15,13 @@ func _name() -> String:
 	return "test"
 
 
+## How many script errors the test causes on purpose (a test of what happens when something trips). Any other count fails it.
+func _script_errors_meant() -> int:
+	return 0
+
+
 func _initialize() -> void:
+	Fault.watch()
 	# a script error inside the awaiting checks would end `_run` without ever reaching quit(), so the run would hang
 	create_timer(WATCHDOG_S).timeout.connect(func():
 		print("%s: FAIL did not finish in %d s (a script error stopped it?)" % [_name(), WATCHDOG_S])
@@ -34,5 +42,10 @@ func _check(ok: bool, what: String) -> void:
 
 ## Print the verdict and end with 1 if any check failed.
 func _finish() -> void:
+	# a debug build fails fast: a script error in any part of the game fails the test, whatever its own checks say
+	var tripped := Fault.script_errors()
+	if tripped != _script_errors_meant():
+		print("%s: FAIL %d script error(s) where %d were meant, the first at %s" % [_name(), tripped, _script_errors_meant(), Fault.first_script_error()])
+		_failed += 1
 	print("%s: %s" % [_name(), "all checks passed" if _failed == 0 else "%d CHECK(S) FAILED" % _failed])
 	quit(1 if _failed > 0 else 0)
