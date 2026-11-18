@@ -2836,10 +2836,30 @@ func _lords() -> void:
 	_check(is_equal_approx(Clans.standing_of(flow.state, q.species) - before, float(pays.standing)), "its clan moves by the lord's number (%.0f)" % float(pays.standing))
 	var old: Dictionary = flow.state.to_dict()
 	old.erase("lordsMet")
+	old.erase("lordsSworn")
 	var back = State.from_dict(old)
-	_check(back != null and back.lords_met.is_empty(), "a save from before lords has met none")
+	_check(back != null and back.lords_met.is_empty() and back.lords_sworn.is_empty(), "a save from before lords has met none")
 	var kept = State.from_dict(flow.state.to_dict())
 	_check(kept != null and kept.lords_met == [clan], "and a save keeps the ones met")
+	# the second favour, where the biome comes back: the same lord, and paying it swears the clan
+	var back_flow = _flow(7)
+	await back_flow.new_run()
+	back_flow.state.lords_met = [clan]
+	back_flow.state.depth = 4
+	await back_flow._make_floor()
+	var second_q: Dictionary = back_flow.state.floor_map.quester
+	_check(not second_q.is_empty() and str(second_q.get("lord", "")) == clan and second_q.get("big", false), "where the biome comes back its lord asks again (%s)" % str(second_q.get("title", "")))
+	_check(str(second_q.get("name", "")) == q.name, "the same lord, not another")
+	back_flow.state.hp = maxi(1, back_flow.state.max_hp - 12)
+	Requests.settle(second_q, back_flow.state)
+	_check(back_flow.state.lords_sworn.has(clan), "its second favour swears the clan")
+	_check(Clans.mood_word(Clans.standing_of(back_flow.state, second_q.species)) == "FRIENDLY", "which now stands friendly")
+	_check(back_flow.state.allies.any(func(a): return str(a.name) == str(second_q.name)), "and the lord comes along while there is room")
+	var pact: Dictionary = Lords.pact()
+	var clan_name := Clans.title(clan)
+	_check(Overlay.banner_fits(str(pact.title) % clan_name.to_upper()) and Overlay.banner_fits(str(pact.line) % clan_name), "the pact's banner fits the picture")
+	Clans.favour(back_flow.state, second_q.species, -200.0)
+	_check(Clans.hostility_of(back_flow.state, second_q.species) == "angry", "a sworn clan never falls past angry (%s)" % Clans.hostility_of(back_flow.state, second_q.species))
 	# The four lords on the first floor of their own biome, over enough seeds to meet every one: its own favour; a fetch
 	# names something lying on that floor; a spare names kin; and the lord never stands on a monster.
 	var met := {}

@@ -3,7 +3,9 @@
 ## A request names its target by its place in the floor's list of monsters, which a retried fight leaves as it was.
 extends RefCounted
 
+const Ally = preload("res://src/game/ally.gd")
 const Clans = preload("res://src/rules/clans.gd")
+const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Items = preload("res://src/rules/items.gd")
 const Lords = preload("res://src/rules/lords.gd")
@@ -34,6 +36,7 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	q.name = str(lord.name)
 	q.species = str(lord.species)
 	q.kind = kind
+	q.big = bool(lord.get("second", false)) # the second favour is the one that swears the clan (`settle`)
 	if kind == "fetch":
 		q.target = -1
 	elif kind == "spare": # its kin: the same species as the lord
@@ -137,7 +140,9 @@ static func settle(q: Dictionary, s) -> Dictionary:
 		gold = int(pays.gold)
 		heal = int(pays.heal)
 		standing = float(pays.standing)
-		if not s.lords_met.has(lord):
+		if q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
+			swear(s, lord, q)
+		elif not s.lords_met.has(lord):
 			s.lords_met.append(lord)
 	if q.kind == "fetch":
 		s.items.erase(q.want)
@@ -147,6 +152,20 @@ static func settle(q: Dictionary, s) -> Dictionary:
 	Clans.favour(s, q.species, standing)
 	print("requests: %s is paid: %d gold, %d health%s" % [q.name, gold, s.hp - before, ", a lord's favour" if lord != "" else ""])
 	return {"gold": gold, "healed": s.hp - before}
+
+
+## A lord's second favour paid: its clan stands friendly and is sworn for the rest of the run, and the lord joins the party if
+## there is room for it.
+static func swear(s, lord: String, q: Dictionary) -> void:
+	if not s.lords_sworn.has(lord):
+		s.lords_sworn.append(lord)
+	var friendly := float(Content.table("clans").friendly_at)
+	var now: float = Clans.standing_of(s, str(q.species))
+	if now < friendly:
+		Clans.favour(s, str(q.species), friendly - now)
+	if s.allies.size() < Combat.PARTY_MAX and not s.allies.any(func(a): return str(a.name) == str(q.name)):
+		s.allies.append(Ally.make(str(q.species), str(q.name), 90.0))
+	print("lords: %s swears its clan to you" % lord)
 
 
 ## What a save holds: whether this is a request, from outside, that can be read. "" when it is.

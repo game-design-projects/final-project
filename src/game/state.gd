@@ -44,6 +44,7 @@ var visited := {} # Vector2i -> true: cells you stood in
 var in_sight := {} # Vector2i -> true: the cells the camera sees right now; worked out again by `look`
 var seen := {} # Vector2i -> true: cells you saw from where you stood (rules/vision.gd), for the automap
 var lords_met: Array = [] # the clans whose lord was paid a favour this run (rules/lords.gd)
+var lords_sworn: Array = [] # and those sworn to you by its second favour
 var charted := {} # Vector2i -> true: cells not seen yet whose layout a map or your instinct told you (rules/chart.gd)
 var _reach := {} # the cells that can be walked to from the floor's start, kept until the floor or its walls change
 var _reach_key := []
@@ -242,6 +243,8 @@ func to_dict() -> Dictionary:
 		out.charted = charted.keys().map(func(c): return [c.x, c.y])
 	if not lords_met.is_empty():
 		out.lordsMet = lords_met.duplicate()
+	if not lords_sworn.is_empty():
+		out.lordsSworn = lords_sworn.duplicate()
 	return out
 
 
@@ -271,6 +274,9 @@ static func from_dict(d: Dictionary):
 	for clan in d.get("lordsMet", []) if d.get("lordsMet") is Array else []:
 		if Clans.is_clan(str(clan)) and not s.lords_met.has(str(clan)):
 			s.lords_met.append(str(clan))
+	for clan in d.get("lordsSworn", []) if d.get("lordsSworn") is Array else []:
+		if Clans.is_clan(str(clan)) and not s.lords_sworn.has(str(clan)):
+			s.lords_sworn.append(str(clan))
 	for c in d.get("charted", []) if d.get("charted") is Array else []:
 		if SaveCheck.is_cell(c) and s.floor_map.is_open(SaveCheck.cell(c)):
 			s.charted[SaveCheck.cell(c)] = true

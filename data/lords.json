@@ -37,5 +37,9 @@
   "standing": 24.0,
   "gold": 8,
   "heal": 6
+ },
+ "pact": {
+  "title": "%s SWEARS TO YOU",
+  "line": "%s keeps its gate for you, and none of its own will turn on you now."
  }
 }

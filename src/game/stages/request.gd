@@ -1,7 +1,9 @@
 ## A monster with a request: what it wants, and whether you'll do it; when it's done, you are paid and it goes. Nothing here takes a turn.
 extends "res://src/game/stages/list_stage.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
+const Lords = preload("res://src/rules/lords.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const State = preload("res://src/game/state.gd")
 
@@ -60,7 +62,12 @@ func _paid(flow) -> void:
 	var q: Dictionary = s.floor_map.quester
 	var t := Requests.table()
 	var got := Requests.settle(q, s)
-	flow.announce(t.done_title, t.done_line % [got.gold, got.healed])
+	if q.get("big", false): # a lord's second favour: the clan is sworn (rules/lords.gd)
+		var pact: Dictionary = Lords.pact()
+		var clan_name: String = Clans.title(str(q.lord))
+		flow.announce(str(pact.title) % clan_name.to_upper(), str(pact.line) % clan_name)
+	else:
+		flow.announce(t.done_title, t.done_line % [got.gold, got.healed])
 	flow.event("sound", {"name": "good"})
 	var thanks: String = t.kinds[q.kind].thanks
 	flow.event("shout", {"text": thanks, "species": q.species, "boss": false})
