@@ -35,7 +35,7 @@ else
   rm -f "$proxy_file"
 fi
 
-# One preset per platform: everything in the project except the tools and the unused voice bank, plus config/ and the text
+# One preset per platform: everything in the project except the tools and the unused voice banks, plus config/ and the text
 # files of assets/ (CREDITS.txt: Godot ships only resources unless an include filter names the rest). The web build has its own page.
 # The two alternate voice banks (Qwen3, Gemini) are experiments heard with a flag or after `tools/voices/render.py`; the game's
 # own bank is `cosyvoice3`. Their audio is most of what a build would carry of them, so it stays out of every export: the flag
