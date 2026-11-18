@@ -346,6 +346,13 @@ func _follow_through() -> void:
 	# alone: as it always was
 	await flow.press("1")
 	_check(s.bar.marks.is_empty(), "alone there are no marks on the bar")
+	var ticks := []
+	var on_sweep := func(name, data): if name == "sweep": ticks.append(int(data.step))
+	flow.happened.connect(on_sweep)
+	for part in range(1, 11):
+		await flow.tick(s.bar.t0 + s.bar.dur * part * 0.05)
+	_check(ticks == [1, 2, 3, 4], "the line is heard crossing each part of the bar, a step higher to the middle (%s)" % [ticks])
+	flow.happened.disconnect(on_sweep)
 	flow.clock = s.bar.t0 + s.bar.dur / 2.0
 	await flow.press("confirm")
 	_check(s.stage != "fightbar" and s.bar == null, "and the strike ends the bar at once (%s)" % s.stage)
@@ -445,6 +452,27 @@ func _meet(flow, m) -> void:
 
 ## A stage that is deciding (Transitions.DECIDING) has its choices over the middle of the picture and not in the dock:
 ## `cards` of them cards with what they do, `plain` of them small buttons, with the moving picture `art` over them.
+## The card that ends a run has a row for what the run earned, between what it says and its choices.
+func _the_run_says_what_it_earned(s) -> void:
+	var achievements = load("res://src/rules/achievements.gd")
+	var cards: Array = ["door", "quiet"].map(func(id): return achievements.card(str(id), {str(id): 0}))
+	for frame in [Vector2(936, 392), Vector2(1400, 600), Vector2(480, 206)]:
+		var popup := ChoicePopup.new()
+		popup.state = s
+		popup.size = frame
+		_check(not popup._layout().badges.has_area(), "the end at %s: no row with nothing to show" % frame)
+		popup.badges = cards
+		var plan: Dictionary = popup._layout()
+		var row: Rect2 = plan.badges
+		var rects: Array[Rect2] = popup.choice_rects()
+		_check(row.has_area() and Rect2(Vector2.ZERO, frame).encloses(row), "the end at %s: what the run earned has a row on the card (%s)" % [frame, row])
+		_check(not row.intersects(plan.ask) and rects.all(func(r): return r.has_area() and not r.intersects(row)) and (not plan.art.has_area() or not plan.art.intersects(row)), "the end at %s: on nothing else" % frame)
+		s.run_over = false
+		_check(not popup._layout().badges.has_area(), "the end at %s: and only on the card that ends the run" % frame)
+		s.run_over = true
+		popup.free()
+
+
 func _choices_over_the_picture(s, art: String, cards: int, plain: int) -> void:
 	var where := "%s (%s)" % [s.stage, art]
 	_check(Transitions.DECIDING.has(s.stage) and Transitions.WALK.has(s.stage), "%s: the choice is the whole moment" % where)
@@ -861,6 +889,7 @@ func _real_floors() -> void:
 	s.allies.append(load("res://src/game/ally.gd").make("slime", "GLOB", 70.0))
 	await _reach_stairs(again)
 	_check(s.stage == "end" and s.run_over, "with a friend, the last floor's stairs end the run")
+	_the_run_says_what_it_earned(s)
 	var ended = s
 	await again.press("1")
 	_check(again.state != ended and again.state.depth == 1, "and NEW RUN starts over on B1F")
@@ -2242,9 +2271,6 @@ func _lore() -> void:
 	var achievements = load("res://src/rules/achievements.gd")
 	_check(achievements.earned_by("found", {"what": "lore", "id": "1-warm", "read": 1, "total": 15}, st) == ["lore"], "reading writing earns an achievement")
 	_check(achievements.earned_by("found", {"what": "lore", "id": "5-cold", "read": 15, "total": 15}, st) == ["lore", "lore_all"], "and reading all of it, another")
-	for id in ["lore", "lore_all"]:
-		var info: Dictionary = achievements.info(id)
-		_check_quietly(Overlay.banner_fits("%s: %s" % [info.label, info.text]), "the achievement %s fits the banner" % id)
 	heard.clear()
 	_face(st, f.lore.cell)
 	await flow.press("up")

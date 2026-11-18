@@ -17,6 +17,7 @@ const SOUNDS := {
 	"dead": "dead", "menu_move": "move", "menu_pick": "pick", "follow": "strike", "second_wind": "shield", "keepsake": "chime",
 }
 
+const SWEEP_NOTES := 4 # the strike bar's ticks, a note higher towards the middle (sfx.gd has sweep_1 to sweep_4)
 const NERVE_NOTES := 5 # one rising note for each point of nerve (sfx.gd has nerve_1 to nerve_5)
 
 var _flow
@@ -57,6 +58,8 @@ func bind(flow) -> void:
 func _process(_dt: float) -> void:
 	if _quiet or _flow == null:
 		return
+	if _voice.playing: # the setting moved while a line is being said
+		_voice.volume_db = linear_to_db(maxf(Mix.voice_gain(), 0.0001))
 	var s = _flow.state
 	Mix.set_danger((0.5 - float(s.hp) / s.max_hp) * 2.0)
 
@@ -81,6 +84,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_music.sting("fanfare")
 		"sound":
 			_sfx.play(data.name)
+		"sweep":
+			_sfx.play("sweep_%d" % clampi(int(data.step), 1, SWEEP_NOTES))
 		"nerve":
 			if data.how in ["close", "clean"]: # each point sounds a step higher than the last
 				_sfx.play("nerve_%d" % clampi(int(data.total), 1, NERVE_NOTES))
@@ -100,10 +105,10 @@ func _speak(data: Dictionary) -> void:
 		print_verbose("audio: no recording for %s: %s" % [data.species, data.text])
 		_sfx.shout(data.text, data.species, {"boss": data.boss})
 		return
-	if not _sfx.enabled:
-		return
+	if not _sfx.enabled or Mix.voice_gain() <= 0.0:
+		return # no sound, or the player turned monsters' voices off: nothing plays and the music stays up
 	_voice.stream = line
-	_voice.volume_db = 0.0
+	_voice.volume_db = linear_to_db(Mix.voice_gain())
 	_voice.play()
 	_music.duck(true)
 

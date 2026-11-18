@@ -42,7 +42,7 @@ const ALIASES := {
 ## Rendered ahead of time, in this order, a few milliseconds per frame (voices depend on the monster and render when first needed).
 const PREWARM := [
 	"hit", "miss", "crit", "hurt", "kill", "bump", "tick", "slash", "stairs", "good", "bad", "death", "holy", "buff", "sad", "odd",
-	"join", "chime", "encounter", "boss", "flee", "step", "alert", "creep", "beat", "move", "pick", "mercy_refused", "shout",
+	"join", "chime", "trophy", "sweep_1", "sweep_2", "sweep_3", "sweep_4", "encounter", "boss", "flee", "step", "alert", "creep", "beat", "move", "pick", "mercy_refused", "shout",
 ]
 const PREWARM_MS := 4.0 # per frame for background rendering...
 const URGENT_MS := 10.0 # ...and per frame while a sound is waiting for its render
@@ -81,9 +81,10 @@ static func recipes() -> Dictionary:
 		_recipes = {
 			"hit": snd_hit, "crit": snd_crit, "miss": snd_miss, "hurt": snd_hurt, "kill": snd_kill, "death": snd_death,
 			"holy": snd_holy, "buff": snd_buff, "slash": snd_slash,
-			"good": snd_good, "bad": snd_bad, "sad": snd_sad, "odd": snd_odd, "join": snd_join, "chime": snd_chime,
+			"good": snd_good, "bad": snd_bad, "sad": snd_sad, "odd": snd_odd, "join": snd_join, "chime": snd_chime, "trophy": snd_trophy,
 			"encounter": snd_encounter, "boss": snd_boss, "flee": snd_flee, "bump": snd_bump, "stairs": snd_stairs,
 			"tick": snd_tick,
+			"sweep_1": snd_sweep.bind(0), "sweep_2": snd_sweep.bind(1), "sweep_3": snd_sweep.bind(2), "sweep_4": snd_sweep.bind(3),
 			"nerve_1": snd_nerve.bind(0), "nerve_2": snd_nerve.bind(1), "nerve_3": snd_nerve.bind(2), "nerve_4": snd_nerve.bind(3), "nerve_5": snd_nerve.bind(4),
 			"voice_roar": snd_voice_roar, "voice_bark": snd_voice_bark, "voice_grunt": snd_voice_grunt,
 			"voice_growl": snd_voice_growl, "voice_hiss": snd_voice_hiss, "voice_squelch": snd_voice_squelch,
@@ -205,7 +206,9 @@ func play(sound: String, opt := {}) -> bool:
 	var rate: float = pow(2.0, ((float(random.call()) * 2.0 - 1.0) * v.cents) / 1200.0) if v != null else 1.0
 	var gain: float = (1.0 + (float(random.call()) * 2.0 - 1.0) * v.gain if v != null else 1.0) / sqrt(near.size())
 	if recipe.begins_with("voice_"):
-		gain *= float(opt.get("vol", 1.0))
+		gain *= float(opt.get("vol", 1.0)) * Mix.voice_gain()
+		if gain <= 0.0:
+			return false # the player turned monsters' voices off
 	gain *= db_to_linear(float(opt.get("db", 0.0)))
 	var key := cache_key(sound, opt)
 	last_play = {"name": sound, "key": key, "at": at, "rate": rate, "gain": gain}
@@ -338,6 +341,16 @@ static func snd_buff(s, t, _o = {}):
 		s.tone(t + i * 0.05, {type = "triangle", f0 = note(notes[i]), dur = 0.7, vol = 0.1, attack = 0.08, room = 1, vibrato = {rate = 5, depth = 3}})
 
 
+## The strike bar's line crossing another part of the bar: a short dry tick, a note higher the nearer the middle (the bound
+## `step`, 0 at the ends to 3), and the middle's has a bell on top: three ticks climb to it, so the strike has a beat.
+static func snd_sweep(s, t, _o = {}, step := 0):
+	var n: int = [64, 67, 71, 76][clampi(step, 0, 3)]
+	s.tone(t, {type = "square", f0 = note(n), dur = 0.045, vol = 0.07, lp = [3200], room = 0.2})
+	s.noise(t, {dur = 0.02, vol = 0.05, f0 = 5000, f1 = 2500, q = 1.2, room = 0.1})
+	if step >= 3:
+		s.tone(t, {type = "triangle", f0 = note(n + 12), dur = 0.12, vol = 0.09, room = 0.5})
+
+
 ## A point of nerve: a bright blip, a step higher for each point held (the bound `step`, 0 to 4), so a run of them climbs.
 static func snd_nerve(s, t, _o = {}, step := 0):
 	var n: int = [76, 79, 81, 84, 88][clampi(step, 0, 4)]
@@ -375,6 +388,13 @@ static func snd_odd(s, t, _o = {}):
 static func snd_chime(s, t, _o = {}):
 	s.tone(t, {type = "sine", f0 = note(84), dur = 0.5, vol = 0.14, room = 0.7})
 	s.tone(t + 0.12, {type = "sine", f0 = note(91), dur = 0.7, vol = 0.12, room = 0.8})
+
+
+## An achievement: four quick steps up and a bright chord held over them.
+static func snd_trophy(s, t, _o = {}):
+	s.arp(t, [72, 76, 79, 84], {step = 0.07, type = "square", dur = 0.22, vol = 0.07})
+	s.arp(t + 0.3, [84, 88, 91], {step = 0, type = "triangle", dur = 1.0, vol = 0.09, room = 0.8})
+	s.tone(t + 0.3, {type = "sine", f0 = note(96), dur = 0.8, vol = 0.07, room = 0.9})
 
 
 static func snd_join(s, t, _o = {}):

@@ -18,6 +18,7 @@ const DEFAULTS := {
 	"seen_tips": [], # the tips already shown
 	"sfx": true,
 	"sfx_volume": 5, # 0..VOLUME_MAX, for the music too
+	"voice_volume": 10, # 0..VOLUME_MAX: how loud monsters speak (their recorded lines and their made-up voices), under the volume above
 }
 const OPTIONS := {
 	"window_mode": ["windowed", "maximized", "fullscreen"],
@@ -25,6 +26,7 @@ const OPTIONS := {
 	"text_size": ["normal", "large"],
 }
 const VOLUME_MAX := 10
+const VOLUMES := ["sfx_volume", "voice_volume"] # the settings that are a step from 0 to VOLUME_MAX
 ## Where the game before the rewrite kept every setting, as one JSON string. Read once, moved to the keys below, and removed.
 const OLD_KEY := "donjon.settings"
 const LABELS := {
@@ -76,7 +78,7 @@ static func valid(key: String, v) -> bool:
 		return false
 	if OPTIONS.has(key):
 		return OPTIONS[key].has(int(v) if DEFAULTS[key] is int and (v is int or v is float) else v)
-	if key == "sfx_volume":
+	if key in VOLUMES:
 		return (v is int or v is float) and int(v) >= 0 and int(v) <= VOLUME_MAX
 	return typeof(v) == typeof(DEFAULTS[key])
 
@@ -113,7 +115,7 @@ static func label(key: String) -> String:
 	var v = get_value(key)
 	if LABELS.has(key):
 		return LABELS[key].get(v, str(v))
-	if key == "sfx_volume":
+	if key in VOLUMES:
 		return "%d / %d" % [int(v), VOLUME_MAX]
 	if v is bool:
 		return "ON" if v else "OFF"
@@ -123,6 +125,7 @@ static func label(key: String) -> String:
 ## Put the settings to work: the window, the frame rate, the volumes. A headless run has no window to change.
 static func apply() -> void:
 	Mix.set_levels(get_value("sfx"), float(get_value("sfx_volume")) / VOLUME_MAX)
+	Mix.set_voice(float(get_value("voice_volume")) / VOLUME_MAX)
 	Engine.max_fps = int(get_value("fps_cap"))
 	if DisplayServer.get_name() == "headless":
 		return

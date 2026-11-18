@@ -143,7 +143,7 @@ At camp a friend can also become two roasts: to eat, to sell to a trader who won
 
 ## What outlasts a run
 
-A run that ends leaves embers, by what you did in it. On the main menu's Legacy page they buy boons every later run starts with: more max HP, gold, salves in the bag, a harder first strike. Deeds worth keeping go up on the picture as achievements (16 of them), and stay earned whichever slot you play.
+A run that ends leaves embers, by what you did in it. On the main menu's Legacy page they buy boons every later run starts with: more max HP, gold, salves in the bag, a harder first strike. Deeds worth keeping are achievements (18 of them, four of them secrets until earned), and stay earned whichever slot you play. Each has a badge of its own in its group's colour. The moment one is earned a toast slides in at the picture's top left with its badge, its name and how many that makes, and a jingle plays. The header keeps the count beside a trophy: a click on it, or **K**, opens the achievements' panel over the game, which holds still under it. The panel is also on the main menu and the pause menu: a meter of how many are earned, then every one by group, lit with the day it was earned, or grey with what to do to earn it. The card that ends a run shows the badges that run earned.
 
 ## Routes and saves
 

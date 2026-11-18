@@ -4,6 +4,7 @@
 ## `hovered` (the scene makes it the picked one, and the tooltip shows its help).
 extends Control
 
+const Badges = preload("res://src/view/badges.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
 const Floors = preload("res://src/rules/floors.gd")
@@ -21,6 +22,7 @@ signal hovered(index: int) ## the pointer is over this command (-1: it left the 
 signal page_selected(index: int) ## show the page containing this command
 signal said(text: String) ## a line was typed (Enter or the SAY IT button)
 signal cancelled ## Esc in the talk box
+signal trophies_pressed ## the header's count of achievements was clicked
 
 # the dock's fixed heights, so the picture above never changes size
 const LOG_H := 66.0
@@ -50,6 +52,12 @@ var part := Part.HEADER
 var state # State, set by the owner
 ## How long the oldest question to Jev has been out (Network.waiting_ms), set by the owner every frame.
 var thinking_ms := 0
+## The header's count of achievements, [earned, of]; empty when the feature is off. `trophy_lit` is the seconds it stays
+## lit for after one is earned.
+var trophies: Array = []
+var trophy_lit := 0.0
+const TROPHY_LIT_S := 5.0
+var _trophy_chip := Rect2()
 ## What that question asks (Network.waiting_what), so the line says what the monster is thinking about.
 var thinking_what := ""
 
@@ -98,6 +106,7 @@ func set_talking(on: bool) -> void:
 
 
 func _process(dt: float) -> void:
+	trophy_lit = maxf(0.0, trophy_lit - dt)
 	if part == Part.STATUS and state != null:
 		_watch_health(dt)
 	if part == Part.DOCK and state != null and size.x > 0.0:
@@ -132,6 +141,13 @@ func _draw() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if part == Part.HEADER and state != null:
+		var over: bool = _trophy_chip.has_area() and _trophy_chip.has_point(event.position) if event is InputEventMouse else false
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if over else Control.CURSOR_ARROW
+		if over and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			accept_event()
+			trophies_pressed.emit()
+		return
 	if part != Part.DOCK or state == null:
 		return
 	if event is InputEventMouseMotion:
@@ -291,7 +307,9 @@ func _header() -> void:
 	var route := "UNWRITTEN" if spared + slain == 0 else "%d SPARED · %d SLAIN" % [spared, slain]
 	var w := _title.get_string_size(route, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	var tough := toughness_tag(state)
-	var room := size.x - w - _title.get_string_size("ROUTE   ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	var count := "%d/%d" % trophies if trophies.size() == 2 else ""
+	var chip_w := 14.0 + 6.0 + _title.get_string_size(count, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x + 18.0 if count != "" else 0.0
+	var room := size.x - w - _title.get_string_size("ROUTE   ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x - chip_w
 	var parts := header_left(floor_name, tough, where, func(t): return _title.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, room)
 	var x := 0.0
 	for piece in [[parts[0], Palette.DIM], [parts[1], Palette.WARN], [parts[2], Palette.WARN if elite else Palette.INK]]:
@@ -299,7 +317,15 @@ func _header() -> void:
 			_text(_title, piece[0], Vector2(x, y), 9, piece[1])
 			x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	_text(_title, route, Vector2(size.x - w, y), 9, Palette.INK)
-	_text(_title, "ROUTE ", Vector2(size.x - w - _title.get_string_size("ROUTE ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x, y), 9, Palette.DIM)
+	var route_x := size.x - w - _title.get_string_size("ROUTE ", HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
+	_text(_title, "ROUTE ", Vector2(route_x, y), 9, Palette.DIM)
+	_trophy_chip = Rect2()
+	if count != "": # the achievements earned, of all there are: a click opens their panel (so does K)
+		var cx := route_x - chip_w
+		_trophy_chip = Rect2(cx - 4.0, 0.0, chip_w - 10.0, size.y)
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 110.0) if trophy_lit > 0.0 else 0.0
+		Badges.glyph(self, "trophy", Rect2(cx, floorf((size.y - 14.0) / 2.0), 14.0, 14.0), Palette.MERCY.lerp(Color.WHITE, pulse * 0.7))
+		_text(_title, count, Vector2(cx + 20.0, y), 9, Palette.MERCY if trophy_lit > 0.0 else Palette.INK)
 
 
 ## The header's left side as [floor, toughness, where], made to fit `room` (width measures a string): on a narrow screen "ENCOUNTER"

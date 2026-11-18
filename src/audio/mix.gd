@@ -33,6 +33,7 @@ const DUCK_UP_S := 0.6
 
 static var _sound_on := true
 static var _level := 0.5 # 0..1, for the music and the effects
+static var _voice := 1.0 # 0..1, how loud monsters speak, within the effects' volume
 
 
 ## Make the buses if they aren't there yet. Safe to call again.
@@ -82,6 +83,17 @@ static func set_levels(sound_on: bool, level: float) -> void:
 			continue # the buses are made when the sound starts, and take these levels then
 		AudioServer.set_bus_volume_db(idx, linear_to_db(maxf(level, 0.0001)))
 		AudioServer.set_bus_mute(idx, not sound_on or level <= 0.0)
+
+
+## How loud monsters speak (0..1), on top of the effects' volume: their recorded lines (audio.gd) and their made-up voices
+## (sfx.gd) both ask `voice_gain()` as they play.
+static func set_voice(level: float) -> void:
+	_voice = clampf(level, 0.0, 1.0)
+	print_verbose("mix: monsters' voices at %.2f" % _voice)
+
+
+static func voice_gain() -> float:
+	return _voice
 
 
 ## 0 = healthy, 1 = about to fall: the music's low-pass follows, exponentially, as the ear hears pitch.

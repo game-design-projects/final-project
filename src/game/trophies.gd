@@ -1,17 +1,17 @@
-## The achievements of a run: it listens to what happens, and puts each new one on the picture, the first time. It never changes the
-## game. A new one waits for a calm moment with no banner up, since what earned it usually has something to say first. What has been earned
-## is remembered across runs by the scene (`earned`, kept by menu/progress.gd), which hears of each through the event "trophy".
+## The achievements of a run: it listens to what happens, and says each new one the moment it is earned, with the event
+## "trophy" (and one sound for however many came at once). It never changes the game and puts nothing on the picture itself:
+## the scene shows a toast in the picture's corner (view/trophy_toast.gd), which is out of the way of whatever earned it. What
+## has been earned is remembered across runs by the scene (`earned`, kept by menu/progress.gd).
 extends RefCounted
 
 const Achievements = preload("res://src/rules/achievements.gd")
 
-const CALM := ["step", "stage", "run_closed"]
-
 ## Id -> true for those already earned.
 var earned := {}
+## The ones earned since this run began, in order.
+var this_run: Array = []
 
 var flow
-var _waiting: Array = []
 
 
 func _init(owner) -> void:
@@ -22,14 +22,15 @@ func _init(owner) -> void:
 func _on_event(name: String, data: Dictionary) -> void:
 	if name == "trophy" or not flow.feature("achievements"):
 		return
+	if name == "state_replaced" and str(data.get("how", "")) != "floor":
+		this_run = [] # a new run, or a save loaded
+	var new := false
 	for id in Achievements.earned_by(name, data, flow.state):
 		if not earned.has(id):
 			earned[id] = true
-			_waiting.append(id)
-			print("trophies: earned %s" % id)
+			this_run.append(id)
+			new = true
+			print("trophies: earned %s (%d of %d)" % [id, earned.size(), Achievements.ids().size()])
 			flow.event("trophy", {"id": id})
-	if name in CALM and not _waiting.is_empty() and not flow.banner_up():
-		var id: String = _waiting.pop_front()
-		var info: Dictionary = Achievements.info(id)
-		flow.announce(str(Achievements.table().title), "%s: %s" % [info.label, info.text])
-		flow.event("sound", {"name": "good"})
+	if new:
+		flow.event("sound", {"name": "trophy"})

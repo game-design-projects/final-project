@@ -38,8 +38,8 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 	]
 	if Flags.enabled("legacy"):
 		items.append({"label": "LEGACY", "sub": "Embers to spend: %d" % Progress.embers(), "act": _go(panel, func(): return legacy(panel))})
-	if Flags.enabled("achievements"):
-		items.append({"label": "ACHIEVEMENTS", "sub": "%d of %d" % [Progress.earned().size(), Achievements.ids().size()], "act": _go(panel, func(): return achievements())})
+	if Flags.enabled("achievements") and ctx.has("achievements"):
+		items.append(_achievements_row(ctx))
 	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{"label": "CREDITS", "act": _go(panel, func(): return credits())},
@@ -55,12 +55,16 @@ static func pause(panel, ctx: Dictionary) -> Dictionary:
 		{"label": "RESUME", "act": func(): ctx.resume.call()},
 		{"label": "SAVE GAME", "disabled": not can_save, "sub": "" if can_save else "Only while walking, not in a fight", "act": _go(panel, func(): return slot_list(panel, ctx, "save"))},
 		{"label": "LOAD GAME", "act": _go(panel, func(): return slot_list(panel, ctx, "load"))},
+	]
+	if Flags.enabled("achievements") and ctx.has("achievements"):
+		items.append(_achievements_row(ctx))
+	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{
 			"label": "MAIN MENU", "sub": "Progress since the last save is lost",
 			"act": _go(panel, func(): return confirm(panel, "LEAVE THE RUN?", "Anything since your last save is lost.", "MAIN MENU", func(): ctx.to_main_menu.call())),
 		},
-	]
+	])
 	if ctx.has("quit"):
 		items.append({
 			"label": "QUIT GAME", "sub": "Progress since the last save is lost",
@@ -236,6 +240,7 @@ static func sound() -> Dictionary:
 	return {"title": "SOUND", "hint": ADJUST_HINT, "items": [
 		_setting("sfx", "SOUND EFFECTS", "Effects and music"),
 		_setting("sfx_volume", "VOLUME"),
+		_setting("voice_volume", "MONSTER VOICES", "How loud monsters speak, under the volume above; 0 is silent"),
 	]}
 
 
@@ -292,15 +297,10 @@ static func legacy(panel) -> Dictionary:
 	return {"title": "LEGACY · EMBERS %d" % Progress.embers(), "items": items, "hint": KEYS_HINT + " · Every run that ends leaves embers."}
 
 
-## What has been earned, by name. The rest stay a surprise.
-static func achievements() -> Dictionary:
-	var earned := Progress.earned()
-	var lines := []
-	for id in earned:
-		var info := Achievements.info(str(id))
-		lines.append("[color=#ffd27a]%s[/color]\n%s" % [str(info.label), str(info.text)])
-	var body := "\n\n".join(lines) if not lines.is_empty() else "Nothing yet. Go and do something worth remembering."
-	return {"title": "ACHIEVEMENTS · %d OF %d" % [earned.size(), Achievements.ids().size()], "body": body, "items": [], "hint": "UP / DOWN SCROLL · ESC BACK"}
+## The row that opens the achievements' own panel (view/trophy_panel.gd), which whoever owns the menu shows over it
+## (`ctx.achievements`). It says how many are earned.
+static func _achievements_row(ctx: Dictionary) -> Dictionary:
+	return {"label": "ACHIEVEMENTS", "sub": "%d of %d earned" % [Progress.earned().size(), Achievements.ids().size()], "act": func(): ctx.achievements.call()}
 
 
 static func credits() -> Dictionary:

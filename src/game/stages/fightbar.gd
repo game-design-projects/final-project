@@ -17,6 +17,11 @@ var _landed := {} # your strike that landed, while the friends' marks are still 
 var _followed: Array = [] # the friends whose strikes landed after it
 var _follow_damage := 0 # and what they did in all
 var _pressed_at := -1e9 # when the last press that counted was, to let a slip of the finger go
+var _swept := 0 # how many of the bar's SWEEP_STEPS parts the line has been heard to cross
+
+## The line is heard as it goes: a tick each time it crosses another of this many parts of the bar, a note higher the nearer
+## the middle (the event "sweep", step 1 at the ends to SWEEP_STEPS / 2 in the middle), so the strike has a beat to land on.
+const SWEEP_STEPS := 8
 
 
 func enter(flow, args: Dictionary) -> void:
@@ -35,6 +40,7 @@ func enter(flow, args: Dictionary) -> void:
 	_landed = {}
 	_followed = []
 	_follow_damage = 0
+	_swept = 0
 	var marks := []
 	if not heavy and flow.feature("follow-through"):
 		var friends: Array = s.allies.filter(func(a): return not Content.table("friends").has(a.species)) # the monsters among them, as party_size counts
@@ -60,6 +66,7 @@ func tick(flow, t: float) -> void:
 	if bar == null:
 		return
 	var p: float = (t - bar.t0) / bar.dur
+	_sweep(flow, p)
 	if _landed.is_empty():
 		if p >= 1.0:
 			await _strike(flow, t) # too late: it swings wide
@@ -69,6 +76,15 @@ func tick(flow, t: float) -> void:
 			mark.state = "lost" # the line has left it behind
 	if p >= 1.0 or bar.marks.all(func(mark): return mark.state != ""):
 		await _finish(flow)
+
+
+## The line has gone on to `p` of the bar: said once for each part it crosses (a slow frame that crosses two says the later).
+func _sweep(flow, p: float) -> void:
+	var crossed := mini(int(p * SWEEP_STEPS), SWEEP_STEPS - 1)
+	if crossed <= _swept:
+		return
+	_swept = crossed
+	flow.event("sweep", {"step": SWEEP_STEPS / 2 - absi(crossed - SWEEP_STEPS / 2)})
 
 
 func _strike(flow, t: float) -> void:
