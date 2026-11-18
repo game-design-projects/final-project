@@ -9,6 +9,7 @@
 extends SceneTree
 
 const Dodge = preload("res://src/rules/dodge.gd")
+const Fault = preload("res://src/utils/fault.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Items = preload("res://src/rules/items.gd")
@@ -37,6 +38,7 @@ var _mercy_before := 0.0
 
 
 func _init() -> void:
+	Fault.watch()
 	Flags.set_args(OS.get_cmdline_user_args() as PackedStringArray)
 	var seeds: Array = DEFAULT_SEEDS
 	var flagged := Rng.flag_seed("playing the default seeds")
@@ -47,7 +49,11 @@ func _init() -> void:
 		if not await _play(int(s)):
 			failed += 1
 	print("autoplay: %d of %d games reached the stairs" % [seeds.size() - failed, seeds.size()])
-	quit(1 if failed > 0 else 0)
+	# a debug build fails fast: a game that reached the stairs over a script error in any part of the game is not a pass
+	var tripped := Fault.script_errors()
+	if tripped > 0:
+		print("autoplay: FAIL %d script error(s) while playing, the first at %s" % [tripped, Fault.first_script_error()])
+	quit(1 if failed > 0 or tripped > 0 else 0)
 
 
 func _play(seed_value: int) -> bool:

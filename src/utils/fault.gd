@@ -13,6 +13,39 @@
 ##       if Fault.tolerant(): answer = spare()              # export: the fight goes on, and the log says why
 extends RefCounted
 
+## Hears every script error the engine logs, whichever part of the game it is in. Only a debug build has any to hear: an
+## export logs none. The tools turn it on (`watch`), so a script error anywhere fails the run instead of scrolling past in a
+## log: a suite's checks can all pass while a function three calls down was cut short.
+class Watch extends Logger:
+	var _lock := Mutex.new() # the engine logs from any thread
+	var _count := 0
+	var _first := ""
+
+	func _log_error(_function: String, file: String, line: int, code: String, rationale: String, _editor_notify: bool, error_type: int, _script_backtraces: Array) -> void:
+		if error_type != Logger.ERROR_TYPE_SCRIPT:
+			return
+		_lock.lock()
+		_count += 1
+		if _first == "":
+			_first = "%s:%d %s" % [file.get_file(), line, (rationale if rationale != "" else code).left(160)]
+		_lock.unlock()
+
+	func _log_message(_message: String, _error: bool) -> void:
+		pass
+
+	func count() -> int:
+		_lock.lock()
+		var n := _count
+		_lock.unlock()
+		return n
+
+	func first() -> String:
+		_lock.lock()
+		var text := _first
+		_lock.unlock()
+		return text
+
+static var _watch: Watch
 static var forced = null # for tests: true = carry on as an export does, false = fail fast, null = as the build says
 static var count := 0 # faults reported since the game started
 static var last := "" # the latest one, for whoever shows or checks it
@@ -30,3 +63,20 @@ static func report(where: String, what: String) -> void:
 	push_error("fault %d: %s" % [count, last])
 	if not tolerant():
 		assert(false, "fault: %s (a debug build stops here; an export carries on without it)" % last)
+
+
+## Start counting script errors (once; calling it again changes nothing).
+static func watch() -> void:
+	if _watch == null:
+		_watch = Watch.new()
+		OS.add_logger(_watch)
+
+
+## How many script errors there have been since `watch`, in any part of the game. 0 when nobody is watching.
+static func script_errors() -> int:
+	return 0 if _watch == null else _watch.count()
+
+
+## Where the first of them was ("encounter.gd:122 Invalid access to ..."), or "".
+static func first_script_error() -> String:
+	return "" if _watch == null else _watch.first()
