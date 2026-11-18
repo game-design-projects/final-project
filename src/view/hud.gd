@@ -504,10 +504,7 @@ func _keys(area: Rect2) -> void:
 	if _grid() and state.menu.size() > 6:
 		hint = "ARROWS / WASD · ENTER PICK"
 	for segment in hint.split(" · "):
-		var key := ""
-		for name in KEY_NAMES:
-			if segment.begins_with(name) and name.length() > key.length():
-				key = name
+		var key := key_of(segment)
 		if key != "":
 			x += _keycap(KEY_NAMES[key], Vector2(x, y)) + 6.0
 			segment = segment.substr(key.length()).strip_edges()
@@ -525,6 +522,16 @@ func _keys(area: Rect2) -> void:
 			var r := _page_rect(next)
 			draw_rect(r, Palette.FAINT, false, 1.0)
 			_text(_title, ">" if next else "<", r.position + Vector2(0, 14), 9, Palette.INK if available else Palette.FAINT, HORIZONTAL_ALIGNMENT_CENTER, r.size.x)
+
+
+## The key a piece of the hints begins with (a name in KEY_NAMES, the longest that fits), or "" when it names none. The key is a
+## word of its own: "I INFO" and "M MAP" begin with one, a dodge's rule such as "IT BOUNCES OFF THE WALLS" does not.
+static func key_of(segment: String) -> String:
+	var key := ""
+	for name in KEY_NAMES:
+		if (segment == name or segment.begins_with(name + " ")) and name.length() > key.length():
+			key = name
+	return key
 
 
 ## What the picked command does, for the line under the key hints ("" when there is nothing to say).

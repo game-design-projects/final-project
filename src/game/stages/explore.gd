@@ -81,8 +81,8 @@ func _step(flow, backwards: bool) -> void:
 	s.steps += 1
 	if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 		s.hp += 1
-	_instinct(flow) # before the cell's own find, so a chest's line is the one that stays in the log
-	_find_secrets(flow)
+	if not _find_secrets(flow): # a cell with news of its own keeps the log and the picture: instinct waits for the next step or turn
+		_instinct(flow)
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
 		return
@@ -154,11 +154,13 @@ func _break_wall(flow, wall: Vector2i) -> void:
 	flow.event("sound", {"name": "hit"})
 
 
-## What the cell you just stepped on was hiding.
-func _find_secrets(flow) -> void:
+## What the cell you just stepped on was hiding. True when there was something, and the log says it.
+func _find_secrets(flow) -> bool:
 	var s = flow.state
+	var found_any := false
 	var gold: int = Keepsakes.gold(s, s.floor_map.take_treasure(s.cell))
 	if gold > 0:
+		found_any = true
 		s.gold += gold
 		s.say([State.sys_line(Floors.secret_line("chest") % gold)])
 		print("explore: a chest at %s, %d gold" % [s.cell, gold])
@@ -166,6 +168,7 @@ func _find_secrets(flow) -> void:
 		flow.event("sound", {"name": "good"})
 	var found: String = s.floor_map.pickup_at(s.cell)
 	if found != "":
+		found_any = true
 		var name := Items.label(found)
 		if Items.carry(s, found):
 			s.floor_map.remove_pickup(s.cell)
@@ -177,15 +180,18 @@ func _find_secrets(flow) -> void:
 		else:
 			s.say([State.sys_line(Items.line("full") % name)])
 	if s.floor_map.lore_at(s.cell) and not s.floor_map.lore.read:
+		found_any = true
 		_read_the_wall(flow)
 	var there = s.floor_map.pad_partner(s.cell)
 	if there != null:
+		found_any = true
 		print("explore: pad from %s to %s" % [s.cell, there])
 		s.cell = there
 		s.visited[there] = true
 		s.look()
 		s.say([State.sys_line(Floors.secret_line("pad"))])
 		flow.event("sound", {"name": "holy"})
+	return found_any
 
 
 ## The writing on the wall here. Which piece it is depends on the floor and on how the halls feel about you as you read it, so another
