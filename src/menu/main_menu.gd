@@ -8,12 +8,15 @@ const IntroCg = preload("res://src/menu/intro_cg.gd")
 const Menus = preload("res://src/menu/menus.gd")
 const MenuPanel = preload("res://src/menu/menu_panel.gd")
 const MenuWick = preload("res://src/menu/menu_wick.gd")
+const Achievements = preload("res://src/rules/achievements.gd")
 const Palette = preload("res://src/view/palette.gd")
+const Progress = preload("res://src/menu/progress.gd")
 const Saves = preload("res://src/menu/saves.gd")
 const Sprites = preload("res://src/view/sprites.gd")
 const Session = preload("res://src/menu/session.gd")
 const Settings = preload("res://src/menu/settings.gd")
 const State = preload("res://src/game/state.gd")
+const TrophyPanel = preload("res://src/view/trophy_panel.gd")
 
 const GAMEPLAY := "res://src/gameplay/gameplay.tscn"
 const INTRO_CG := "res://src/menu/intro_cg.tscn"
@@ -24,6 +27,7 @@ const FILM_FADE_S := 0.45 # the menu goes to black before the film, which comes 
 var _starting := false # NEW GAME or a slot was chosen: a second press can't hand over twice
 
 var panel: MenuPanel
+var trophies: TrophyPanel # the achievements, over the menu
 
 
 func _ready() -> void:
@@ -53,6 +57,9 @@ func _ready() -> void:
 	version.position = Vector2(16, -28)
 	version.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(version)
+	trophies = TrophyPanel.new()
+	trophies.closed.connect(func(): panel.grab_focus())
+	add_child(trophies)
 	panel.closed.connect(_reopen)
 	_reopen()
 	print("menu: ready (%d saves)" % Saves.list().filter(func(i): return not i.empty).size())
@@ -73,10 +80,14 @@ func _keyart() -> TextureRect:
 
 ## The first page is the main menu; Esc on it just shows it again.
 func _reopen() -> void:
-	var ctx := {"new_game": _new_game, "load_slot": _load_slot}
+	var ctx := {"new_game": _new_game, "load_slot": _load_slot, "achievements": _show_trophies}
 	if not OS.has_feature("web"):
 		ctx["quit"] = func(): get_tree().quit()
 	panel.open(func(): return Menus.main(panel, ctx))
+
+
+func _show_trophies() -> void:
+	trophies.open(Achievements.board(Progress.earned_at(), Progress.facts()))
 
 
 func _new_game() -> void:

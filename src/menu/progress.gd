@@ -7,6 +7,7 @@ const Legacy = preload("res://src/rules/legacy.gd")
 const Lore = preload("res://src/rules/lore.gd")
 
 const EARNED_KEY := "achievements"
+const EARNED_AT_KEY := "achievements_at" # id -> when it was earned, in Unix seconds; one earned before this was kept has no entry
 const EMBERS_KEY := "embers"
 const RANKS_KEY := "legacy_ranks"
 const LORE_KEY := "lore_read"
@@ -23,6 +24,27 @@ static func earn(id: String) -> void:
 	if not all.has(id):
 		all.append(id)
 		Store.set_value(EARNED_KEY, all)
+		var at = Store.get_value(EARNED_AT_KEY, {})
+		if not at is Dictionary:
+			at = {}
+		at[id] = int(Time.get_unix_time_from_system())
+		Store.set_value(EARNED_AT_KEY, at)
+		print("progress: earned %s, %d of %d" % [id, all.size(), Achievements.ids().size()])
+
+
+## Every one earned -> when, in Unix seconds (0 for one earned before the day was kept).
+static func earned_at() -> Dictionary:
+	var at = Store.get_value(EARNED_AT_KEY, {})
+	var out := {}
+	for id in earned():
+		var v = at.get(id, 0) if at is Dictionary else 0
+		out[str(id)] = int(v) if v is float or v is int else 0
+	return out
+
+
+## What is known across runs that a counted achievement counts (Achievements.progress).
+static func facts() -> Dictionary:
+	return {"lore": lore_read().size()}
 
 
 ## The pieces of writing read on any run, by id.

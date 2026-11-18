@@ -2242,9 +2242,6 @@ func _lore() -> void:
 	var achievements = load("res://src/rules/achievements.gd")
 	_check(achievements.earned_by("found", {"what": "lore", "id": "1-warm", "read": 1, "total": 15}, st) == ["lore"], "reading writing earns an achievement")
 	_check(achievements.earned_by("found", {"what": "lore", "id": "5-cold", "read": 15, "total": 15}, st) == ["lore", "lore_all"], "and reading all of it, another")
-	for id in ["lore", "lore_all"]:
-		var info: Dictionary = achievements.info(id)
-		_check_quietly(Overlay.banner_fits("%s: %s" % [info.label, info.text]), "the achievement %s fits the banner" % id)
 	heard.clear()
 	_face(st, f.lore.cell)
 	await flow.press("up")

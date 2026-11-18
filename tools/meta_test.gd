@@ -5,6 +5,7 @@ extends "res://tools/test_base.gd"
 
 const Achievements = preload("res://src/rules/achievements.gd")
 const Ally = preload("res://src/game/ally.gd")
+const Badges = preload("res://src/view/badges.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
@@ -13,10 +14,13 @@ const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
+const Lore = preload("res://src/rules/lore.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
 const Transitions = preload("res://src/game/transitions.gd")
+const TrophyPanel = preload("res://src/view/trophy_panel.gd")
+const TrophyToast = preload("res://src/view/trophy_toast.gd")
 
 const BASE := ["nosave", "nosound"]
 const FEATURES := ["achievements", "legacy"]
@@ -63,7 +67,7 @@ func _flow(seed_value: int, words := []) -> Variant:
 
 
 func _clear_store() -> void:
-	for key in [Progress.EARNED_KEY, Progress.EMBERS_KEY, Progress.RANKS_KEY, Progress.PAID_KEY, Progress.LORE_KEY]:
+	for key in [Progress.EARNED_KEY, Progress.EARNED_AT_KEY, Progress.EMBERS_KEY, Progress.RANKS_KEY, Progress.PAID_KEY, Progress.LORE_KEY]:
 		Store.remove(key)
 
 
@@ -85,6 +89,16 @@ func _declared() -> void:
 	for id in Achievements.ids():
 		var info: Dictionary = Achievements.info(id)
 		_check(str(info.label) != "" and str(info.text) != "", "%s says what it is" % id)
+		_check(Achievements.table().groups.has(str(info.get("group", ""))), "%s is in a group there is" % id)
+		_check(Badges.known(str(info.get("icon", ""))) and not str(info.icon) in ["secret", "trophy"], "%s has a badge of its own (%s)" % [id, info.get("icon", "")])
+		_check(Achievements.secret(id) or str(info.get("how", "")) != "", "%s says what to do, or is a secret" % id)
+		for line in [str(info.text), str(info.get("how", ""))]:
+			_check(TrophyToast.line_fits(line), "%s: its line fits the toast and the panel's card (%s)" % [id, line])
+	var icons: Array = Achievements.ids().map(func(id): return str(Achievements.info(id).icon))
+	_check(icons.all(func(i): return icons.count(i) == 1), "no two share a badge")
+	for name in Badges.GLYPHS:
+		var rows: Array = Badges.GLYPHS[name]
+		_check(rows.size() == 7 and rows.all(func(r): return str(r).length() == 7), "the badge %s is seven by seven" % name)
 	for id in Legacy.boons():
 		_check(Legacy.top_rank(id) > 0 and Legacy.next_cost(id, 0) > 0, "%s can be bought" % id)
 		_check(not Legacy.describe(id, 1).contains("%"), "%s says what it does (%s)" % [id, Legacy.describe(id, 1)])
@@ -109,22 +123,25 @@ func _achievements() -> void:
 	flow.happened.connect(func(n, d):
 		if n == "trophy":
 			heard.append(d.id))
-	s.banner = null
+	var jingles := []
+	flow.happened.connect(func(n, d):
+		if n == "sound" and str(d.name) == "trophy":
+			jingles.append(1))
+	s.banner = {"title": "x", "text": "y", "t0": flow.clock, "ms": 1000.0}
 	flow.event("spared", {"boss": false})
 	_check(flow.trophies.earned.has("words"), "sparing a monster earns one")
-	_check(heard == ["words"], "the scene hears of it")
-	_check(s.banner == null, "what earned it has its say first")
-	flow.event("step")
-	_check(s.banner != null and str(s.banner.text).contains(str(Achievements.info("words").label)), "it goes up on the picture")
+	_check(heard == ["words"] and jingles.size() == 1, "the scene hears of it at once, with its sound (%s, %d)" % [heard, jingles.size()])
+	_check(str(s.banner.title) == "x", "and the banner that is up stays: the toast has a corner of its own")
 	flow.event("spared", {"boss": false})
-	_check(heard == ["words"], "earned once")
-	s.banner = {"title": "x", "text": "y", "t0": flow.clock, "ms": 1000.0}
+	_check(heard == ["words"] and jingles.size() == 1, "earned once")
 	flow.event("slain", {"boss": true})
-	flow.event("step")
-	_check(flow.trophies.earned.has("champion_slain") and str(s.banner.title) == "x", "a banner already up isn't pushed off")
+	_check(heard == ["words", "champion_slain"] and flow.trophies.this_run == ["words", "champion_slain"], "the run keeps the ones it earned, in order (%s)" % [flow.trophies.this_run])
+	flow.event("state_replaced", {"how": "floor"})
+	_check(flow.trophies.this_run.size() == 2, "the next floor is the same run")
+	flow.event("state_replaced", {"how": "new"})
+	_check(flow.trophies.this_run.is_empty() and flow.trophies.earned.size() == 2, "a new run starts its own list, and what is earned stays earned")
 	s.banner = null
-	flow.event("step")
-	_check(s.banner != null and str(s.banner.text).contains(str(Achievements.info("champion_slain").label)), "it goes up once the way is clear")
+	await _the_board()
 	# the ends
 	s.tally = {"spared": 2, "slain": 0, "fled": 0, "recruited": 1, "left": 0}
 	s.allies = [_ally()]
@@ -560,15 +577,87 @@ func _endings() -> void:
 	_check(paid.size() == 1 and paid[0] == 3 * int(Legacy.table().earn.slain), "leaving does (%s)" % [paid])
 
 
+## The board the panel shows, what is kept of it, the panel's places and the toast's turns.
+func _the_board() -> void:
+	_use()
+	_clear_store()
+	var total := Achievements.ids().size()
+	var board := Achievements.board({"words": 1700000000}, {"lore": 3})
+	var cards := []
+	for g in board:
+		cards.append_array(g.cards)
+		_check(int(g.got) == g.cards.filter(func(c): return c.earned).size() and not g.cards.is_empty(), "the group %s counts its own (%d of %d)" % [g.label, g.got, g.cards.size()])
+	var by_id := {}
+	for c in cards:
+		by_id[c.id] = c
+	_check(cards.size() == total and by_id.size() == total, "every achievement is on the board once (%d of %d)" % [by_id.size(), total])
+	_check(by_id.words.earned and by_id.words.at == 1700000000 and by_id.words.text == str(Achievements.info("words").text), "an earned one says what was done, and when")
+	_check(not by_id.friend.earned and by_id.friend.text == str(Achievements.info("friend").how), "one still to earn says what to do (%s)" % by_id.friend.text)
+	_check(by_id.roast.hidden and by_id.roast.icon == "secret" and by_id.roast.label != str(Achievements.info("roast").label) and by_id.roast.text != str(Achievements.info("roast").text), "a secret keeps its name, its line and its badge to itself")
+	_check(not Achievements.card("roast", {"roast": 0}).hidden and Achievements.card("roast", {"roast": 0}).label == str(Achievements.info("roast").label), "until it is earned")
+	_check(by_id.lore_all.progress == [3, Lore.total()] and by_id.lore.progress.is_empty(), "a counted one says how far along it is (%s)" % [by_id.lore_all.progress])
+	_check(Badges.day(0) == "" and Badges.day(1700000000).split(" ").size() == 3, "a day reads as a day (%s)" % Badges.day(1700000000))
+	Store.set_value(Progress.EARNED_KEY, ["friend"]) # earned before the day was kept
+	Progress.earn("words")
+	var at: Dictionary = Progress.earned_at()
+	_check(at.get("friend", -1) == 0 and int(at.get("words", 0)) > 1700000000, "earning one keeps the day, and an older one has none (%s)" % [at])
+	_clear_store()
+	for frame in [Vector2(1180, 820), Vector2(960, 540), Vector2(520, 360)]:
+		var panel := TrophyPanel.new()
+		root.add_child(panel)
+		panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		panel.size = frame
+		panel.open(board)
+		var lay: Dictionary = panel.layout()
+		var whole := Rect2(Vector2.ZERO, frame)
+		var sheet := Rect2(0, 0, lay.list.size.x + 0.5, lay.sheet_h + 0.5)
+		var apart := true
+		for a in lay.cells.size():
+			for b in range(a + 1, lay.cells.size()):
+				apart = apart and not lay.cells[a].rect.intersects(lay.cells[b].rect)
+		_check(panel.count() == [1, total] and lay.cells.size() == total and lay.heads.size() == board.size(), "%s: the panel has a card for each, under its group" % frame)
+		_check(whole.encloses(lay.frame) and lay.frame.encloses(lay.list), "%s: it is inside the window (%s)" % [frame, lay.frame])
+		_check(apart and lay.cells.all(func(c): return sheet.encloses(c.rect) and c.rect.size.x >= TrophyPanel.CELL_W_MIN - 0.5 or lay.cols == 1), "%s: the cards have a place each, %d across" % [frame, lay.cols])
+		panel.scroll_by(99999.0)
+		var room: float = panel.scroll_room()
+		_check(is_equal_approx(-panel._sheet.position.y, room), "%s: it scrolls to its end and no further (%.0f)" % [frame, room])
+		var heard := []
+		panel.closed.connect(func(): heard.append(1))
+		panel.close()
+		panel.close()
+		_check(heard.size() == 1 and not panel.visible, "%s: it closes once" % frame)
+		panel.free()
+	var toast := TrophyToast.new()
+	toast.size = Vector2(936, 392)
+	for id in ["words", "friend", "chest"]:
+		toast.add(Achievements.card(id, {id: 0}), 1, total)
+	_check(toast.counts() == [TrophyToast.MAX_UP, 1] and toast.visible, "three at once: two are up and one waits (%s)" % [toast.counts()])
+	toast.advance(TrophyToast.SLIDE_S + 0.1)
+	_check(Rect2(Vector2.ZERO, toast.size).encloses(toast.toast_rect(0)) and not toast.toast_rect(0).intersects(toast.toast_rect(1)), "each is on the picture, in a place of its own")
+	toast.advance(TrophyToast.STAY_S + TrophyToast.SLIDE_S)
+	_check(toast.counts() == [1, 0], "the one that waited takes its turn (%s)" % [toast.counts()])
+	toast.advance(TrophyToast.STAY_S + TrophyToast.SLIDE_S * 2.0)
+	_check(toast.counts() == [0, 0] and not toast.visible, "and then they are gone")
+	toast.free()
+
+
 func _menu_pages() -> void:
 	_use()
 	_clear_store()
 	Progress.earn("words")
 	Store.set_value(Progress.EMBERS_KEY, 7)
 	var panel := MenuStub.new()
-	var main: Dictionary = Menus.main(panel, {"new_game": func(): pass, "load_slot": func(_s): pass})
+	var opened := []
+	var show := func(): opened.append(1)
+	var main: Dictionary = Menus.main(panel, {"new_game": func(): pass, "load_slot": func(_s): pass, "achievements": show})
 	var labels: Array = main.items.map(func(i): return i.label)
 	_check(labels.has("LEGACY") and labels.has("ACHIEVEMENTS"), "the main menu has both pages (%s)" % [labels])
+	var trophy_row: Dictionary = main.items[labels.find("ACHIEVEMENTS")]
+	_check(str(trophy_row.sub).begins_with("1 of %d" % Achievements.ids().size()), "the achievements' row says how many are earned (%s)" % trophy_row.sub)
+	trophy_row.act.call()
+	_check(opened.size() == 1, "and picking it opens their panel")
+	var paused: Dictionary = Menus.pause(panel, {"resume": func(): pass, "to_main_menu": func(): pass, "load_slot": func(_s): pass, "achievements": show})
+	_check(paused.items.map(func(i): return i.label).has("ACHIEVEMENTS"), "the pause menu has the row too")
 	var legacy_line: Dictionary = main.items[labels.find("LEGACY")]
 	_check(str(legacy_line.sub).contains("7"), "and says how many embers (%s)" % legacy_line.sub)
 	var page: Dictionary = Menus.legacy(panel)
@@ -578,9 +667,6 @@ func _menu_pages() -> void:
 	_check(str(purse.label).contains(str(cost)), "each says what it costs (%s)" % purse.label)
 	purse.act.call()
 	_check(Progress.ranks().get("purse", 0) == 1 and Progress.embers() == 7 - cost, "picking one buys it")
-	var trophies: Dictionary = Menus.achievements()
-	_check(str(trophies.title).contains("1") and str(trophies.body).contains(str(Achievements.info("words").label)), "the earned ones are named (%s)" % trophies.title)
-	_check(not str(trophies.body).contains(str(Achievements.info("nobody_asked").label)), "and the others stay a surprise")
 	_use(["no-legacy", "no-achievements"])
 	var without: Dictionary = Menus.main(panel, {"new_game": func(): pass, "load_slot": func(_s): pass})
 	var plain: Array = without.items.map(func(i): return i.label)

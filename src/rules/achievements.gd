@@ -1,9 +1,11 @@
-## What a run can earn for good: deeds worth keeping, across runs. What each is called and says is in data/achievements.json; which
-## moment earns it is here. No rolls and no state of its own: it looks at what just happened.
+## What a run can earn for good: deeds worth keeping, across runs. What each is called and says is in data/achievements.json,
+## with the group it is shown in, its badge (view/badges.gd) and whether it is a secret until earned; which moment earns it is
+## here, and so is the board the panel shows. No rolls and no state of its own: it looks at what just happened.
 extends RefCounted
 
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Lore = preload("res://src/rules/lore.gd")
 
 
 static func table() -> Dictionary:
@@ -20,6 +22,50 @@ static func ids() -> Array:
 
 static func info(id: String) -> Dictionary:
 	return table().list[id]
+
+
+## Whether it keeps its name and line to itself until it is earned.
+static func secret(id: String) -> bool:
+	return bool(info(id).get("secret", false))
+
+
+## How far along a counted one is, as [so far, of], or [] for one earned in a single moment. `facts` is what is known across
+## runs: {"lore": how many pieces of writing have been read}.
+static func progress(id: String, facts: Dictionary) -> Array:
+	if id == "lore_all":
+		return [mini(int(facts.get("lore", 0)), Lore.total()), Lore.total()]
+	return []
+
+
+## One of them as it is shown: {id, group, color, icon, label, text, earned, at, hidden, progress}. An earned one says what
+## was done (`text`), one still to earn says what to do (`how`), and a secret not yet earned says neither. `at` is when it
+## was earned, in Unix seconds, or 0 when that was never kept.
+static func card(id: String, earned_at: Dictionary, facts := {}) -> Dictionary:
+	var i := info(id)
+	var earned := earned_at.has(id)
+	var hidden := secret(id) and not earned
+	var veil: Dictionary = table().secret
+	return {
+		"id": id, "group": str(i.group), "color": str(table().groups[i.group].color),
+		"icon": "secret" if hidden else str(i.icon),
+		"label": str(veil.label if hidden else i.label),
+		"text": str(veil.text) if hidden else str(i.text if earned else i.get("how", i.text)),
+		"earned": earned, "at": int(earned_at.get(id, 0)), "hidden": hidden,
+		"progress": [] if earned else progress(id, facts),
+	}
+
+
+## Everything there is to earn, as the panel shows it: the groups in their order, each {id, label, color, got, cards}.
+static func board(earned_at: Dictionary, facts := {}) -> Array:
+	var out := []
+	for g in table().groups:
+		var cards := []
+		for id in ids():
+			if str(info(id).group) == g:
+				cards.append(card(id, earned_at, facts))
+		var group: Dictionary = table().groups[g]
+		out.append({"id": g, "label": str(group.label), "color": str(group.color), "got": cards.filter(func(c): return c.earned).size(), "cards": cards})
+	return out
 
 
 ## The ones this event earns, whether or not they were earned before. `state` is the run as it stands.

@@ -65,10 +65,10 @@ func _pages(menu) -> void:
 	await _wait(0.3)
 	await _shot("00d_legacy")
 	panel.pop()
-	panel.push(func(): return menus.achievements())
+	menu._show_trophies()
 	await _wait(0.3)
 	await _shot("00e_achievements")
-	panel.pop()
+	menu.trophies.close()
 	store.remove("embers")
 	store.remove("achievements")
 

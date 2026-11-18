@@ -5,6 +5,7 @@
 ## are not here: it only reads `flow.state` and listens to `flow.happened`.
 extends Control
 
+const Achievements = preload("res://src/rules/achievements.gd")
 const Audio = preload("res://src/audio/audio.gd")
 const Automap = preload("res://src/view/automap.gd")
 const Content = preload("res://src/rules/content.gd")
@@ -33,6 +34,8 @@ const StageScript = preload("res://src/view/stage.gd")
 const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
 const Transitions = preload("res://src/game/transitions.gd")
+const TrophyPanel = preload("res://src/view/trophy_panel.gd")
+const TrophyToast = preload("res://src/view/trophy_toast.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
 const MENU_SCENE := "res://src/menu/main_menu.tscn"
@@ -67,6 +70,7 @@ const KEYS := {
 }
 const INFO_KEY := KEY_I # shows the foe's card, then each ally's, then the map's legend (tips.gd); also the pad's INFO
 const MAP_KEY := KEY_M # opens and closes the whole floor's map over the picture (automap.gd drawn `full`); so does a click on the corner map
+const TROPHY_KEY := KEY_K # opens the achievements' panel over the game (view/trophy_panel.gd), which holds still while it is up; so does a click on the header's count
 const WALK_KEYS := ["up", "down", "left", "right"] # the keys that leave the full map open: you can walk with it up
 const REPEATING := ["explore", "dodge"] # stages where holding a key keeps acting
 
@@ -98,6 +102,8 @@ var _dock
 var _social: Control
 var _choice: Control
 var _pause: MenuPanel
+var _trophy: TrophyPanel # the achievements, over everything
+var _toast: TrophyToast # one just earned, in the picture's corner
 var _tips
 var _pad
 var _debug := false # the flag `debug`
@@ -121,6 +127,8 @@ func _ready() -> void:
 		flow.coach.seen[str(id)] = true
 	for id in Progress.earned():
 		flow.trophies.earned[str(id)] = true
+	if Flags.enabled("achievements"):
+		_header.trophies = [flow.trophies.earned.size(), Achievements.ids().size()]
 	flow.legacy_ranks = Progress.ranks()
 	for id in Progress.lore_read():
 		flow.lore_read[id] = true
@@ -255,6 +263,8 @@ func _build_screen() -> void:
 	_header = Hud.new()
 	_header.part = Hud.Part.HEADER
 	_header.custom_minimum_size = Vector2(0, 14)
+	_header.mouse_filter = Control.MOUSE_FILTER_STOP # its count of achievements is clicked
+	_header.trophies_pressed.connect(show_trophies)
 	column.add_child(_header)
 	var rule := ColorRect.new()
 	_rule = rule
@@ -304,6 +314,9 @@ func _build_screen() -> void:
 	_choice.hovered.connect(func(i): flow.select(i))
 	_choice.picked.connect(func(i): _press(str(i + 1)))
 	_frame.add_child(_choice)
+	_toast = TrophyToast.new() # an achievement earned, over the picture and whatever choice dims it
+	_toast.hint = OS.get_keycode_string(TROPHY_KEY)
+	_frame.add_child(_toast)
 	_tips = Tips.new() # the ally chips and the tooltips, over the picture
 	_frame.add_child(_tips)
 
@@ -338,10 +351,13 @@ func _build_screen() -> void:
 	_pause.backdrop = 0.85
 	_pause.closed.connect(_resume)
 	add_child(_pause)
+	_trophy = TrophyPanel.new()
+	_trophy.closed.connect(_trophies_closed)
+	add_child(_trophy)
 
 
 func _process(dt: float) -> void:
-	if flow == null or _pause.visible:
+	if flow == null or _pause.visible or _trophy.visible:
 		return
 	# during a dodge nothing waits on the answer (a question asked ahead, see stages/dodge.gd): no "thinking" to distract
 	_dock.thinking_ms = 0 if flow.state.stage == "dodge" else Network.waiting_ms()
@@ -374,7 +390,7 @@ func _process(dt: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed or flow == null or _pause.visible:
+	if not event is InputEventKey or not event.pressed or flow == null or _pause.visible or _trophy.visible:
 		return
 	if _on_title:
 		if event.keycode == KEY_ESCAPE:
@@ -403,6 +419,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.keycode == MAP_KEY:
 		if not event.echo:
 			show_map(not _map_open)
+		get_viewport().set_input_as_handled()
+		return
+	if event.keycode == TROPHY_KEY and Flags.enabled("achievements"):
+		if not event.echo:
+			show_trophies()
 		get_viewport().set_input_as_handled()
 		return
 	var key := key_name(event)
@@ -643,6 +664,10 @@ func _on_event(name: String, data: Dictionary) -> void:
 			Settings.set_value("seen_tips", flow.coach.seen.keys())
 		"trophy":
 			Progress.earn(data.id)
+			var of: int = Achievements.ids().size()
+			_toast.add(Achievements.card(str(data.id), {str(data.id): 0}), flow.trophies.earned.size(), of)
+			_header.trophies = [flow.trophies.earned.size(), of]
+			_header.trophy_lit = Hud.TROPHY_LIT_S
 		"found":
 			if data.what == "lore":
 				Progress.read_lore(data.id)
@@ -690,7 +715,7 @@ func _shake() -> void:
 func _open_pause() -> void:
 	_dock.set_talking(false)
 	_tips.visible = false
-	var ctx := {"resume": _resume, "to_main_menu": _leave, "load_slot": _load_slot}
+	var ctx := {"resume": _resume, "to_main_menu": _leave, "load_slot": _load_slot, "achievements": show_trophies}
 	if flow.state.stage == "explore": # a fight can't be saved (it would come back as a walk)
 		ctx["save_slot"] = _save_slot
 	if not OS.has_feature("web"):
@@ -707,6 +732,26 @@ func _resume() -> void:
 	_tips.visible = true
 	_dock.set_talking(flow.state.stage == "talk")
 	print("gameplay: resumed")
+
+
+## The achievements' panel, over the game (K, or the header's count) or over the pause menu. The game holds still under it.
+func show_trophies() -> void:
+	if _trophy.visible or not Flags.enabled("achievements"):
+		return
+	if not _pause.visible:
+		_dock.set_talking(false)
+		_tips.visible = false
+		_social.suspended = true
+	_trophy.open(Achievements.board(Progress.earned_at(), Progress.facts()))
+
+
+func _trophies_closed() -> void:
+	if _pause.visible:
+		_pause.grab_focus() # back to the pause menu it was opened from
+		return
+	_social.suspended = false
+	_tips.visible = true
+	_dock.set_talking(flow.state.stage == "talk")
 
 
 ## Save into a slot from the pause menu; the log says whether it worked.
