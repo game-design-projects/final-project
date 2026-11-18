@@ -58,6 +58,8 @@ The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs al
 
 So a paused game in the editor is the debug build doing its job, and what an export needs is a place where a wrong answer is noticed. `src/mind/safe_mind.gd` is that place for the minds: every answer is checked (odds that can be rolled, a number in range, both halves of a pair, an answer within 30 s). A bad one is reported with `Fault.report` (`fault N: mind: ...` in the log); a debug build hands it on untouched so the run fails as before, an export asks the local rules instead. `tools/network_test.gd` runs both sides by setting `Fault.forced`.
 
+The fail-fast side covers every module, not only the minds: the suites and `autoplay` call `Fault.watch()`, which counts the script errors the engine logs wherever they happen, and a run with one it didn't mean fails (`_script_errors_meant()` in a test that trips on purpose). CI runs each tool through `tools/check.sh`, which also fails a tool that exited with 0 without saying it passed: Godot exits with 0 for a script that doesn't load.
+
 To see what an export really does with a piece of code, swap a pack into a copy of a released app (an export template refuses `--path` and `-s`): `godot --headless --path <project> --export-pack <preset> out.pck`, copy it over `Donjon.app/Contents/Resources/Donjon.pck`, run `Donjon.app/Contents/MacOS/Donjon --headless`.
 
 ## Run flags

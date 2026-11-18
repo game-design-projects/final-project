@@ -11,7 +11,6 @@ const Mind = preload("res://src/mind/mind.gd")
 const Minds = preload("res://src/mind/minds.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Network = preload("res://src/network/network.gd")
-const Fault = preload("res://src/utils/fault.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const SafeMind = preload("res://src/mind/safe_mind.gd")
 const SeededMind = preload("res://src/mind/seeded_mind.gd")
@@ -63,6 +62,11 @@ class Silent extends "res://src/mind/mind.gd":
 
 func _name() -> String:
 	return "network_test"
+
+
+## Two faults a debug build asserts on, and one mind that trips on a missing key (_a_mind_gone_wrong_cannot_stop_a_fight).
+func _script_errors_meant() -> int:
+	return 3
 
 
 func _run() -> void:
