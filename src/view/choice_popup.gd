@@ -6,6 +6,7 @@
 ## Reads the state and says what was pressed, like the dock.
 extends Control
 
+const Badges = preload("res://src/view/badges.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Transitions = preload("res://src/game/transitions.gd")
@@ -27,6 +28,11 @@ const ASK_PX := 20
 const ART_H := 96.0 # the moving picture's height when there is room
 const ART_H_BIG := 150.0 # and when there is room to spare: it takes most of what the cards leave
 const ART_H_ALONE := 84.0
+const BADGES_H := 38.0 # the row of what the run earned, on the card that ends it
+const BADGE_PX := 32.0
+
+## What this run has earned (Achievements.card() each), which the scene keeps up to date: shown on the card that ends the run.
+var badges: Array = []
 
 var state # State, set by the owner
 
@@ -116,7 +122,7 @@ func _ask_height(lines: Array, width: float) -> float:
 ## cards are in rows of COLS, the plain choices in one row under them, the whole block in the middle of the picture. When
 ## the picture is short the cards give up height first, then the moving picture does.
 func _layout() -> Dictionary:
-	var out := {"art": Rect2(), "ask": Rect2(), "rects": []}
+	var out := {"art": Rect2(), "ask": Rect2(), "badges": Rect2(), "rects": []}
 	if not deciding():
 		return out
 	var items: Array = state.menu
@@ -134,7 +140,8 @@ func _layout() -> Dictionary:
 	var ask_h := _ask_height(asked(state), width)
 	var plain_h := PLAIN_H if not plain.is_empty() else 0.0
 	var room := size.y - 16.0
-	var fixed := ask_h + (GAP if rows > 0 else 0.0) + (GAP + plain_h if plain_h > 0.0 else 0.0) + GAP * maxi(0, rows - 1)
+	var badge_h := BADGES_H if state.run_over and not badges.is_empty() else 0.0
+	var fixed := ask_h + (GAP * 2.0 + badge_h if badge_h > 0.0 else 0.0) + (GAP if rows > 0 else 0.0) + (GAP + plain_h if plain_h > 0.0 else 0.0) + GAP * maxi(0, rows - 1)
 	var card_h := CARD_H
 	var art_h := 0.0
 	if state.vignette in Vignette.KNOWN:
@@ -151,7 +158,11 @@ func _layout() -> Dictionary:
 		out.art = Rect2((size.x - art_h * Vignette.RATIO) / 2.0, y, art_h * Vignette.RATIO, art_h)
 		y += art_h + GAP
 	out.ask = Rect2((size.x - width) / 2.0, y, width, ask_h)
-	y += ask_h + (GAP if rows > 0 else 0.0)
+	y += ask_h
+	if badge_h > 0.0:
+		out.badges = Rect2((size.x - width) / 2.0, y + GAP, width, badge_h)
+		y += GAP * 2.0 + badge_h
+	y += GAP if rows > 0 else 0.0
 	var rects := []
 	rects.resize(items.size())
 	for n in cards.size():
@@ -197,8 +208,25 @@ func _draw() -> void:
 			y += 20.0
 		draw_multiline_string(_body, Vector2(plan.ask.position.x, y + ASK_PX - 3.0), str(l.text), HORIZONTAL_ALIGNMENT_CENTER, plan.ask.size.x, ASK_PX, -1, Palette.INK)
 		y += _body.get_multiline_string_size(str(l.text), HORIZONTAL_ALIGNMENT_CENTER, plan.ask.size.x, ASK_PX).y + 2.0
+	if plan.badges.has_area():
+		_badges_row(plan.badges)
 	for i in plan.rects.size():
 		_choice(i, plan.rects[i])
+
+
+## What the run earned, in a row: as many badges as fit beside the words.
+func _badges_row(r: Rect2) -> void:
+	var label := "EARNED THIS RUN"
+	var label_w := _title.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8).x
+	var n := clampi(int((r.size.x - label_w - 14.0 + 6.0) / (BADGE_PX + 6.0)), 0, badges.size())
+	var w := label_w + 14.0 + n * BADGE_PX + maxi(0, n - 1) * 6.0
+	var x := r.position.x + (r.size.x - w) / 2.0
+	draw_string(_title, Vector2(x, r.position.y + r.size.y / 2.0 + 4.0), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Palette.DIM)
+	x += label_w + 14.0
+	for i in n:
+		var card: Dictionary = badges[i]
+		Badges.badge(self, str(card.icon), Rect2(x, r.position.y + (r.size.y - BADGE_PX) / 2.0, BADGE_PX, BADGE_PX), Color(str(card.color)), true)
+		x += BADGE_PX + 6.0
 
 
 func _choice(i: int, r: Rect2) -> void:

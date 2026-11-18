@@ -49,7 +49,7 @@ const FEATURES := {
 	"ambush-prompt": "wait for confirmation after enemy dialogue before continuing combat",
 	"motifs": "exploring takes turns with Abdulla's motifs (issue #49), if tools/music/cut_motifs.sh has put them in build/motifs/: nothing ships, so without those files nothing changes",
 	"hum-theme": "exploring plays Abdulla's hum theme and every fight its combat loop (issue #49), in place of the passacaglia and the four battle themes; the victory and stairs stings stay",
-	"achievements": "deeds worth keeping go up on the picture and stay earned across runs, with a page in the main menu",
+	"achievements": "deeds worth keeping are earned with a toast and a badge of their own and stay earned across runs, with a panel on the main menu, the pause menu and K",
 	"legacy": "a run that ends leaves embers, which buy boons between runs that every later run starts with",
 	"toll": "the gate on the third stairs drops unless someone holds its chain and stays: you pay in health, or leave a friend, which the Last Door may make you regret",
 	"wick": "a run opens with a very small witch hopping out of the dark to hand you a heart, and she is your first friend until you lose her",

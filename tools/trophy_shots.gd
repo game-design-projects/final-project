@@ -5,6 +5,7 @@
 ## Nothing reaches the player's saves (`nosave` is always on).
 extends SceneTree
 
+const Ally = preload("res://src/game/ally.gd")
 const Flags = preload("res://src/utils/flags.gd")
 
 var _out := ""
@@ -65,6 +66,14 @@ func _initialize() -> void:
 	await _wait(0.2)
 	await _shot("7_panel_scrolled")
 	_game._trophy.close()
+	# the card that ends the run says what the run earned
+	s.depth = s.floors_of if s.floors_of > 0 else 5
+	s.allies = [Ally.make("slime", "GLOP", 60.0)]
+	s.banner = null
+	await flow.go("explore", {"lines": []})
+	await flow.go("end")
+	await _wait(1.2)
+	await _shot("7b_ending_this_run")
 	# from the pause menu
 	_game._open_pause()
 	await _wait(0.3)

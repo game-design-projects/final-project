@@ -5,6 +5,12 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- Achievements have a panel of their own (`src/view/trophy_panel.gd`): a meter of how many are earned, then every one by group, each with a badge. It opens from the main menu, the pause menu, **K**, or a click on the header's count, and the game holds still under it.
+- Every achievement has a badge of its own, a 7x7 glyph lit in its group's colour once earned (`src/view/badges.gd`); one still to earn is grey and says what to do, a counted one shows how far along it is, and four are secrets until earned.
+- An achievement is said the moment it is earned: a toast slides in at the picture's top left with its badge, its name and the new count, over a choice's dimmed halls too, with a jingle of its own (`src/view/trophy_toast.gd`).
+- The header keeps the count of achievements beside a trophy, lit for a moment when one is earned, and the card that ends a run shows the badges the run earned.
+- The day each achievement was earned is kept (`achievements_at` in the store) and shown on its card.
+- `tools/trophy_shots.gd` takes pictures of the toast, the header's count, the panel and the run's last card.
 - What the walk stops at is shown, not only said: a small moving picture over the corridor for a champion's keepsakes, the gate and its chain, the stairs, the shut door, a run's end and the camp's fire (`src/view/vignette.gd`, named by the stage in `state.vignette`).
 - `tools/event_shots.gd` takes pictures of each of them, twice a moment apart.
 - A script error in any part of the game fails the run it happens in: the suites (`tools/test_base.gd`) and `tools/autoplay.gd` count them with `Fault.watch()`. Before, a game could reach the stairs over 100 of them and pass.
@@ -13,6 +19,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
 
 ### Changed
+- An achievement no longer waits for a calm moment to go up as a banner: the toast has a corner of its own, so nothing has to get out of its way. The main menu's page of text listing only what was earned is gone.
 - A choice that is the whole moment (a keepsake to take, who holds the gate, the way down, how the run ends) is in the middle of the picture instead of the dock: the question, and each choice a card with what it does written on it (`Transitions.DECIDING`, `src/view/choice_popup.gd`). The dock keeps the lines before the question and the keys.
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 

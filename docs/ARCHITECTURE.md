@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `menu` | 主菜单、设置、存档页面（暂停菜单复用同一套页面）、NEW GAME 之后的开场影片（`intro_cg`） | → `gameplay`（经 `session` 交请求） |
 | `gameplay` | 一局游戏的场景：把 `game` `view` `audio` `mind` 接起来、读输入、暂停、自动存档 | `menu` → 它 → `game` |
-| `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，墙饰的位置在 `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、走路停下来时画面中央的选择卡和事件小动画（`choice_popup` `vignette`）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
+| `view` | 3 渲 2 画面：3D 布景（`stage` `dungeon_mesh`；手绘的 `figure` `figure_anim` `wall_art` `opening`，墙饰的位置在 `decor`）、战斗层（`overlay`，手绘的怪物在 `battle_art`）、小地图（`automap`）、文字框（`hud`）、走路停下来时画面中央的选择卡和事件小动画（`choice_popup` `vignette`）、成就的徽章、解锁提示和独立面板（`badges` `trophy_toast` `trophy_panel`，面板内容由 `rules/achievements.gd` 的 `board()` 给出，主菜单、暂停菜单和局内 K 键共用）、提示卡和盟友条（`tips`）、触屏（`pad`） | `assets` `flags` → `view` → `game`（玩家输入） |
 | `audio` | 声音：合成音效（`sfx` `synth`）、音乐（`music`）、怪物录音和合成嗓音（`voices` `shout`）、总线（`mix`） | `assets` `flags` `game`（事件）→ `audio` |
 | `game` | 流程、状态机 | `menu` `view` `audio` `mind` → `game` → `mind` `rules` |
 | `mind` | 怪物怎么思考；`Minds.create` 给出的每个 mind 都包在 `safe_mind` 里，答案在这里校验后才交给 `game` | `game` `data` → `mind` → `rules` `game`（决定） |

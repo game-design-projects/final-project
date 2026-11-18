@@ -591,6 +591,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"state_replaced":
 			_fit_picture()
 			_bind_views()
+			_choice.badges = _run_badges()
 			_fresh_floor = data.how in ["new", "floor"]
 			if data.how == "new":
 				if flow.film_seen:
@@ -668,6 +669,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_toast.add(Achievements.card(str(data.id), {str(data.id): 0}), flow.trophies.earned.size(), of)
 			_header.trophies = [flow.trophies.earned.size(), of]
 			_header.trophy_lit = Hud.TROPHY_LIT_S
+			_choice.badges = _run_badges()
 		"found":
 			if data.what == "lore":
 				Progress.read_lore(data.id)
@@ -732,6 +734,11 @@ func _resume() -> void:
 	_tips.visible = true
 	_dock.set_talking(flow.state.stage == "talk")
 	print("gameplay: resumed")
+
+
+## What this run has earned so far, as the card that ends it shows them.
+func _run_badges() -> Array:
+	return flow.trophies.this_run.map(func(id): return Achievements.card(str(id), {str(id): 0}))
 
 
 ## The achievements' panel, over the game (K, or the header's count) or over the pause menu. The game holds still under it.
