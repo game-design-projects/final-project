@@ -8,6 +8,7 @@ const FIELDS := {
 	"social_reply": ["who", "choice", "cost", "outcome"],
 	"stage": ["from", "to"], # the game moved to another stage
 	"step": [], # the party walked one cell
+	"pad": [], # a pad carried the party to its partner somewhere else on the floor
 	"bump": [], # walked into a wall
 	"encounter": ["boss"], # a fight begins
 	"strike": ["damage", "crit"], # your hit landed
