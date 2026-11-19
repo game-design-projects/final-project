@@ -48,6 +48,7 @@ const FEATURES := {
 	"heavy-strike": "HEAVY in a fight: a faster line and a smaller mark for a harder hit, which some monsters take worse than others, and a miss leaves you off balance",
 	"ambush-prompt": "wait for confirmation after enemy dialogue before continuing combat",
 	"motifs": "exploring takes turns with Abdulla's motifs (issue #49), if tools/music/cut_motifs.sh has put them in build/motifs/: nothing ships, so without those files nothing changes",
+	"clan-requests": "two of the clans' askers stand on every floor, each with two requests of its own (rules/envoys.gd), in place of the stray asker and the lord on its floor; two done for a clan open its teleporter at the stairs, to the hall where its lord is",
 	"hum-theme": "exploring plays Abdulla's hum theme and every fight its combat loop (issue #49), in place of the passacaglia and the four battle themes; the victory and stairs stings stay",
 	"achievements": "deeds worth keeping are earned with a toast and a badge of their own and stay earned across runs, with a panel on the main menu, the pause menu and K",
 	"legacy": "a run that ends leaves embers, which buy boons between runs that every later run starts with",

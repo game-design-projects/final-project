@@ -33,10 +33,14 @@ const JevMind = preload("res://src/mind/jev_mind.gd")
 const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const KeepsakeStage = preload("res://src/game/stages/keepsake.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
+const SeededMind = preload("res://src/mind/seeded_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const Social = preload("res://src/rules/social.gd")
+const ClanHall = preload("res://src/rules/clan_hall.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Lords = preload("res://src/rules/lords.gd")
+const Words = preload("res://src/mind/words.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -81,6 +85,7 @@ func _run() -> void:
 	await _lurkers()
 	await _npcs()
 	await _lords()
+	await _clan_requests()
 	await _roaming()
 	await _input_cooldown()
 	await _charting()
@@ -2847,7 +2852,7 @@ func _lurkers() -> void:
 ## A floor with someone asking for this, whichever seed from `start` gives one.
 func _asking(start: int, kind: String) -> Variant:
 	for i in 200:
-		var flow = _flow(start + i)
+		var flow = _flow(start + i, ["no-clan-requests"])
 		await flow.new_run()
 		if not flow.state.floor_map.quester.is_empty() and flow.state.floor_map.quester.kind == kind:
 			return flow
@@ -2855,15 +2860,220 @@ func _asking(start: int, kind: String) -> Variant:
 	return null
 
 
+## The clans' askers (clan-requests, rules/envoys.gd): two stand on every floor, each with its clan's two requests; a request is
+## done at its asker or wherever it happens, pays, and pleases its clan; two done open the clan's teleporter at the stairs, to
+## the hall where its lord stands among its own, off the run's count.
+func _clan_requests() -> void:
+	# the words: four askers, two requests each, of kinds the rules know, and a hall and a piece for each lord
+	var t: Dictionary = Envoys.table()
+	var ids := {}
+	_check(Envoys.clans().size() == 4 and Envoys.clans().all(func(c): return Clans.is_clan(c) and Lords.table().lords.has(c)), "every clan with a lord has an asker (%s)" % [Envoys.clans()])
+	for clan in Envoys.clans():
+		var e: Dictionary = Envoys.entry(clan)
+		_check(Clans.of(str(e.species)) == clan and str(e.name) != "" and not Floors.biome_named(str(e.hall.biome)).is_empty() and e.lord_says.size() >= 1, "%s's asker is one of its own, with a hall and a piece for its lord" % clan)
+		_check(e.requests.size() == int(t.need), "%s has as many requests as open its teleporter" % clan)
+		for r in e.requests:
+			ids[str(r.id)] = true
+			var need := ["label", "sub", "ask", "wait", "done"] + (["fail", "sounds"] if str(r.kind) == "say" else []) + (["give", "ready"] if str(r.kind) in Envoys.GIVEN_AT else []) + (["answer", "sounds"] if str(r.kind) == "ask_dragon" else [])
+			_check_quietly(str(r.kind) in Envoys.KINDS and need.all(func(k): return str(r.get(k, "")) != "") and Envoys.request(str(r.id)).clan == clan, "%s says everything a %s needs" % [r.id, r.kind])
+			for key in ["ask", "wait", "done", "fail", "ready", "answer"]:
+				if r.has(key):
+					_check_quietly(Hud.log_fits([State.speech(str(e.name), str(r[key]))], 760.0) == 1, "%s's %s has room in the log" % [r.id, key])
+	_check(ids.size() == 8, "eight requests, each with an id of its own")
+
+	# who stands where: two clans a floor, never the same clan twice, and every clan on two of the first four floors
+	for seed_value in range(1, 11):
+		var times := {}
+		for depth in range(1, 5):
+			var here: Array = Envoys.on_floor(seed_value, depth)
+			_check_quietly(here.size() == 2 and here[0] != here[1], "seed %d B%dF has two clans' askers (%s)" % [seed_value, depth, here])
+			for clan in here:
+				times[clan] = int(times.get(clan, 0)) + 1
+		_check_quietly(times.size() == 4 and times.values().all(func(n): return n == 2), "seed %d: every clan's asker is met twice by B4F (%s)" % [seed_value, times])
+	_check(Envoys.on_floor(3, 2) == Envoys.on_floor(3, 2), "the same run has the same askers")
+	var flow = _flow(7)
+	await flow.new_run()
+	var s = flow.state
+	var f = s.floor_map
+	_check(f.envoys.size() == 2 and f.quester.is_empty(), "a floor has its two askers, and no stray one (%d)" % f.envoys.size())
+	_check(f.envoys.all(func(e): return f.is_open(e.cell) and f.monster_at(e.cell) == null and e.cell != f.start and e.cell != f.stairs and f.in_the_way(e.cell)), "each on an open cell of its own, which a route goes round")
+	_check(f.lore.is_empty() or f.envoys.all(func(e): return e.cell != f.lore.cell), "and never on the writing")
+	var plain = _flow(7, ["no-clan-requests"])
+	await plain.new_run()
+	_check(plain.state.floor_map.envoys.is_empty() and plain.state.floor_map.grid == f.grid and plain.state.floor_map.monsters.map(func(m): return [m.cell, m.kind]) == f.monsters.map(func(m): return [m.cell, m.kind]) and plain.state.floor_map.stairs == f.stairs, "no-clan-requests: none, and the floor is laid out the same")
+	_use()
+	var kept = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	_check(kept != null and kept.floor_map.envoys.size() == 2 and kept.floor_map.envoys[0].cell == f.envoys[0].cell and str(kept.floor_map.envoys[0].clan) == str(f.envoys[0].clan), "a save keeps the askers where they stand")
+	var bad: Dictionary = s.to_dict()
+	bad.floor.envoys[0].clan = "nobody"
+	_check(State.from_dict(JSON.parse_string(JSON.stringify(bad))) == null, "and one with an asker of no clan is refused")
+
+	# what the mind makes of a typed line, by rule
+	_check(not Envoys.passes(Words.sounds_like("hiss", "hiss")) and not Envoys.passes(Words.sounds_like("hisss", "hiss")) and Envoys.passes(Words.sounds_like("hisssssssss", "hiss")), "a hiss has to be long")
+	_check(Envoys.passes(Words.sounds_like("i am a rock. i sit. i am a rock.", "monotone")) and not Envoys.passes(Words.sounds_like("HELLO there!!", "monotone")) and not Envoys.passes(Words.sounds_like("hi", "monotone")), "monotone is flat, and long enough to hear")
+	_check(Envoys.passes(Words.sounds_like("do you like slimes?", "likes_slimes")) and not Envoys.passes(Words.sounds_like("do you like gold?", "likes_slimes")), "asking a dragon about slimes names slimes")
+	_check(is_equal_approx(await LocalMind.new().sounds_like("hisssssssss", "hiss"), 1.0) and is_equal_approx(await SeededMind.new(Rng.new(1)).sounds_like("hisssssssss", "hiss"), 1.0), "the local and the seeded mind judge it by that rule")
+
+	# the rules of each kind, on a bare run
+	var run := State.new()
+	var snake := Monster.new()
+	snake.species = "snake"
+	snake.name = "NYSS"
+	_check(Envoys.slain(run, snake).is_empty() and Envoys.count(run, "crew_sport") == 0, "a snake killed before the request is taken doesn't count")
+	Envoys.take(run, "crew_sport")
+	for i in 4:
+		_check_quietly(Envoys.slain(run, snake).is_empty(), "snake %d of 5 doesn't finish it" % (i + 1))
+	_check(Envoys.count(run, "crew_sport") == 4 and Envoys.speak(run, Envoys.request("crew_sport")).contains("4 of 5"), "the asker keeps the count (%s)" % Envoys.speak(run, Envoys.request("crew_sport")))
+	_check(Envoys.slain(run, snake) == ["crew_sport"], "the fifth snake does")
+	var gold_before: int = run.gold
+	var crew_before: float = Clans.standing_of(run, "bandit")
+	var paid: Dictionary = Envoys.finish(run, "crew_sport")
+	_check(int(paid.gold) == int(t.pays.gold) and run.gold == gold_before + int(t.pays.gold) and is_equal_approx(Clans.standing_of(run, "bandit") - crew_before, float(t.pays.standing)) and paid.opened == "", "a request done pays, and pleases its clan (%s)" % str(paid))
+	_check(Envoys.finish(run, "crew_sport").is_empty() and Envoys.status(run, Envoys.request("crew_sport")) == "done", "and only once")
+	Envoys.take(run, "crew_gold")
+	run.gold = 49
+	_check(Envoys.status(run, Envoys.request("crew_gold")) == "waiting", "49 gold is not fifty")
+	run.gold = 50
+	_check(Envoys.status(run, Envoys.request("crew_gold")) == "ready", "50 is")
+	var opened: Dictionary = Envoys.finish(run, "crew_gold")
+	_check(opened.opened == "crew" and run.gates == ["crew"] and Envoys.ways(run) == ["crew"] and str(Envoys.way("crew").label).contains("THE CREW") and Envoys.way("crew").hall == "crew", "the second done for a clan opens its teleporter (%s)" % str(Envoys.way("crew")))
+	var rock := Monster.new()
+	rock.species = "rock"
+	rock.strikes = {"heavy": 2}
+	_check(Envoys.felled(run, rock).is_empty(), "a heavy win before the request is taken doesn't count")
+	Envoys.take(run, "old_stone_heavy")
+	rock.strikes = {"heavy": 2, "light": 1}
+	_check(Envoys.felled(run, rock).is_empty(), "one light strike and the fight was not won heavy")
+	rock.strikes = {}
+	_check(Envoys.felled(run, rock).is_empty(), "nor is a fight with no strike at all")
+	rock.strikes = {"heavy": 1}
+	_check(Envoys.felled(run, rock) == ["old_stone_heavy"], "heavy strikes only is")
+	Envoys.take(run, "burrow_bring")
+	_check(Envoys.status(run, Envoys.request("burrow_bring")) == "waiting" and Envoys.friend_for(run, Envoys.request("burrow_bring")) == null, "bring a slime: none with you yet")
+	run.allies = [Ally.make("snake", "HISS", 60.0), Ally.make("slime", "GLOP", 60.0)]
+	_check(Envoys.status(run, Envoys.request("burrow_bring")) == "ready" and Envoys.friend_for(run, Envoys.request("burrow_bring")).name == "GLOP" and Envoys.speak(run, Envoys.request("burrow_bring")).contains("Glop"), "a slime at your side is the one (%s)" % Envoys.speak(run, Envoys.request("burrow_bring")))
+	var dragon := Monster.new()
+	dragon.species = "dragon"
+	_check(Envoys.to_ask(run, dragon).is_empty(), "nothing to ask a dragon until the Burrow's asker sends you")
+	Envoys.take(run, "burrow_ask")
+	_check(Envoys.to_ask(run, dragon).get("id", "") == "burrow_ask" and Envoys.to_ask(run, rock).is_empty(), "then a dragon is the one to ask, and nobody else")
+	run.floor_map = f
+	var run_saved: Dictionary = JSON.parse_string(JSON.stringify(run.to_dict()))
+	var run_back = State.from_dict(run_saved)
+	_check(run_back != null and run_back.gates == ["crew"] and Envoys.is_done(run_back, "crew_gold") and Envoys.is_taken(run_back, "burrow_ask") and not Envoys.is_done(run_back, "burrow_ask"), "a save keeps the requests and the open teleporter")
+	run_saved.errands = {"nothing": {"taken": true}, "crew_gold": "yes", "coil_hiss": {"taken": true, "done": false, "n": 1e12}}
+	run_saved.gates = ["crew", "nobody", 7]
+	var cleaned = State.from_dict(JSON.parse_string(JSON.stringify(run_saved)))
+	_check(cleaned != null and cleaned.errands.keys() == ["coil_hiss"] and int(cleaned.errands.coil_hiss.n) <= 999 and cleaned.gates == ["crew"], "and what is not a request of ours is dropped (%s, %s)" % [str(cleaned.errands), str(cleaned.gates)])
+
+	# at the asker: its lines, taking one, typing to it, handing over gold and a friend
+	var coil := Envoys.figure("coil", f.envoys[0].cell)
+	await flow.go("envoy", {"who": coil})
+	_check(s.stage == "envoy" and s.menu.size() == 3 and s.menu[0].label == "BRING A BANDIT" and s.menu[1].label == "HISS AT IT" and s.lines.size() == 2 and str(s.lines[0].who) == "SISSEL", "the Coil's asker has a line for each request, and a way out (%s)" % str(s.menu.map(func(row): return row.label)))
+	await flow.press("2")
+	_check(s.stage == "envoy_say" and Envoys.is_taken(s, "coil_hiss") and Transitions.TYPING.has(s.stage), "HISS AT IT is taken, and wants it typed (%s)" % s.stage)
+	await flow.submit_text("hiss")
+	_check(s.stage == "explore" and not Envoys.is_done(s, "coil_hiss") and s.lines.any(func(l): return str(l.text).contains("leak")), "a short hiss won't do, and it says so (%s)" % s.stage)
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu[1].label == "HISS AT IT", "it can be tried again")
+	await flow.press("2")
+	var hp_before: int = s.hp
+	await flow.submit_text("hissssssssssss")
+	_check(s.stage == "explore" and Envoys.is_done(s, "coil_hiss") and s.gates.is_empty() and s.lines.any(func(l): return str(l.text).contains("THAT isss a hisss")), "a long one does: done, paid, and one more for the Coil's teleporter (%s)" % s.stage)
+	_check(s.hp >= hp_before, "and nothing is lost by it")
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu.size() == 2 and s.menu[0].label == "BRING A BANDIT", "the asker has one request left")
+	await flow.press("1")
+	_check(s.stage == "explore" and Envoys.is_taken(s, "coil_bring"), "taking it goes back to the walk")
+	s.allies = [Ally.make("bandit", "JINKS", 60.0)]
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu[0].label == "HERE IS JINKS", "with a bandit at your side the line hands it over (%s)" % s.menu[0].label)
+	await flow.press("1")
+	_check(s.stage == "explore" and s.allies.is_empty() and Envoys.is_done(s, "coil_bring") and s.gates == ["coil"], "the bandit is lectured and storms off, and the Coil's teleporter is open (%s)" % str(s.gates))
+	_check(s.lines.any(func(l): return str(l.text).contains("hunting")) and s.lines.any(func(l): return str(l.text).contains("storms off")) and s.lines.any(func(l): return str(l.text).contains("WILL SEE YOU")), "and the log says all of it (%s)" % str(s.lines.map(func(l): return l.text)))
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu.size() == 1 and s.menu[0].label == "LEAVE", "an asker with nothing left only lets you go")
+	await flow.press("cancel")
+	var crew := Envoys.figure("crew", f.envoys[0].cell)
+	await flow.go("envoy", {"who": crew})
+	await flow.press("2")
+	s.gold = 60
+	await flow.go("envoy", {"who": crew})
+	_check(s.menu[1].label == "HAND OVER 50 GOLD", "fifty gold in the purse and the line hands it over (%s)" % s.menu[1].label)
+	await flow.press("2")
+	_check(s.gold == 60 - 50 + int(t.pays.gold) and Envoys.is_done(s, "crew_gold") and s.lines.any(func(l): return str(l.text).contains("definitely stole it")), "the fifty is gone, the request pays, and the asker says where it thinks it came from (%d gold)" % s.gold)
+
+	# away from the asker: a fight won heavy, and a dragon asked
+	Envoys.take(s, "old_stone_heavy")
+	var foe = f.monsters.filter(func(x): return not x.boss and not x.lurking).front()
+	await flow.go("intro", {"foe": foe})
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	foe.strikes = {"heavy": 1}
+	await flow.encounter.defeat(foe, "slain")
+	_check(Envoys.is_done(s, "old_stone_heavy") and s.lines.any(func(l): return str(l.who) == "SLATE" and str(l.text).contains("brother of ours")), "a foe felled with heavy strikes only finishes the Old Stone's request, in its asker's words (%s)" % s.stage)
+	Envoys.take(s, "burrow_ask")
+	var champion = f.monsters.filter(func(x): return x.boss).front()
+	await flow.go("intro", {"foe": champion})
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	await flow.go("act")
+	await flow.go("talk")
+	await flow.submit_text("do you like slimes?")
+	_check(Envoys.is_done(s, "burrow_ask") and s.lines.any(func(l): return str(l.text).contains("desperate for attention")), "a dragon asked whether it likes slimes answers, and the Burrow's request is done (%s)" % s.stage)
+
+	# the teleporter at the stairs, the hall and its lord, and the way on down
+	var to_hall = _flow(7)
+	await to_hall.new_run()
+	var hs = to_hall.state
+	hs.gates = ["burrow"]
+	var depth_before: int = hs.depth
+	await _reach_stairs(to_hall)
+	await to_hall.press("up")
+	_check(hs.stage == "end" and hs.menu.any(func(row): return row.label == "THE BURROW'S TELEPORTER"), "the stairs offer the open teleporter (%s)" % str(hs.menu.map(func(row): return row.label)))
+	var events: Array = []
+	to_hall.happened.connect(func(name, _data): events.append(name))
+	await to_hall.press(str(hs.menu.find_custom(func(row): return row.label == "THE BURROW'S TELEPORTER") + 1))
+	var hall = hs.floor_map
+	_check(hs.stage == "explore" and hs.visiting == "burrow" and hs.depth == depth_before and hs.gates.is_empty() and events.has("teleport"), "through it: in the Burrow's hall, on no floor of the count, and the picture shows the teleport (%s)" % str(events))
+	_check(hall.monsters.size() == ClanHall.kinds_of("burrow").size() and hall.monsters.all(func(m): return m.species == "slime") and hall.envoys.size() == 1 and hall.envoys[0].get("lord", false) and str(hall.envoys[0].name) == str(Lords.table().lords.burrow.name), "every kind of slime stands there, and MOTHER GLOOP (%d)" % hall.monsters.size())
+	var minion = hall.monsters[0]
+	hs.cell = minion.cell + Vector2i(1, 0) if hall.is_open(minion.cell + Vector2i(1, 0)) else minion.cell - Vector2i(1, 0)
+	hs.facing = FloorMap.DIRS.find(minion.cell - hs.cell)
+	await to_hall.press("up")
+	_check(hs.stage == "explore" and not minion.is_gone() and hs.lines.any(func(l): return str(l.text).contains("means you harm")), "walking into one of them is no fight (%s)" % hs.stage)
+	var hall_saved = State.from_dict(JSON.parse_string(JSON.stringify(hs.to_dict())))
+	_check(hall_saved != null and hall_saved.visiting == "burrow" and hall_saved.floor_map.envoys[0].get("lord", false), "a save keeps you in the hall")
+	var lord: Dictionary = hall.envoys[0]
+	var lord_gold: int = hs.gold
+	await to_hall.go("envoy", {"who": lord})
+	_check(hs.stage == "envoy" and hs.lines.size() == 2 and str(hs.lines[0].text).contains("LORD OF THE BURROW") and hs.menu[0].label == "HEAR IT OUT", "the lord says who it is, and begins (%s)" % str(hs.lines.map(func(l): return l.text)))
+	for i in Envoys.entry("burrow").lord_says.size() - 1:
+		await to_hall.press("1")
+	_check(hs.lords_met == ["burrow"] and hs.gold == lord_gold + int(t.hall.pays.gold) and hs.menu.size() == 1 and str(hs.lines[-1].text).contains("little witch"), "heard out, it pays and the run remembers (%s)" % str(hs.lines.map(func(l): return l.text)))
+	await to_hall.press("1")
+	await to_hall.go("envoy", {"who": lord})
+	_check(hs.gold == lord_gold + int(t.hall.pays.gold) and hs.menu.size() == 1, "and has said its piece: nothing is paid twice")
+	await to_hall.press("1")
+	await _reach_stairs(to_hall)
+	await to_hall.press("up")
+	_check(hs.stage == "end" and not hs.run_over and not hs.menu.any(func(row): return str(row.label).contains("TELEPORTER")), "the hall's stairs offer the ways down, and no teleporter twice (%s)" % str(hs.menu.map(func(row): return row.label)))
+	await to_hall.press("1")
+	_check(hs.stage == "explore" and hs.visiting == "" and hs.depth == depth_before + 1 and hs.floor_map.envoys.size() == 2, "and lead down to the next floor of the run (B%dF)" % hs.depth)
+	_use()
+
+
 ## The faction lords (#77): each biome's lord asks on the first floor of that biome, its name and title from the data, the run
 ## remembers it was met, and paying its favour moves its clan by the lord's number.
 func _lords() -> void:
-	var flow = _flow(7)
+	var flow = _flow(7, ["no-clan-requests"])
 	await flow.new_run()
 	var q: Dictionary = flow.state.floor_map.quester
 	_check(not q.is_empty() and str(q.get("title", "")) != "", "a biome's first floor has its lord asking")
 	_check(str(q.species) == "bandit" and str(q.name) == str(Lords.table().lords.crew.name), "the halls' lord is the Crew's (%s, %s)" % [q.get("name", ""), q.get("title", "")])
-	var again = _flow(7)
+	var again = _flow(7, ["no-clan-requests"])
 	await again.new_run()
 	var bq: Dictionary = again.state.floor_map.quester
 	_check(bq.name == q.name and bq.title == q.title and bq.kind == q.kind, "the same seed gives the same lord")
@@ -2887,7 +3097,7 @@ func _lords() -> void:
 	_check(flow.state.lines.size() == 2 and str(flow.state.lines[0].text).contains("LORD OF") and str(flow.state.lines[1].who) == str(q.name), "the lord says who it is before what it wants (%s)" % str(flow.state.lines[0].text))
 	await flow.press("cancel")
 	# the second favour, where the biome comes back: the same lord, and paying it swears the clan
-	var back_flow = _flow(7)
+	var back_flow = _flow(7, ["no-clan-requests"])
 	await back_flow.new_run()
 	back_flow.state.lords_met = [clan]
 	back_flow.state.depth = 4
@@ -2904,7 +3114,7 @@ func _lords() -> void:
 	var clan_name := Clans.title(clan)
 	_check(Overlay.banner_fits(str(pact.title) % clan_name.to_upper()) and Overlay.banner_fits(str(pact.line) % clan_name), "the pact's banner fits the picture")
 	# no place in the party: the clan opens its warren on the next stairs instead
-	var warren_flow = _flow(7)
+	var warren_flow = _flow(7, ["no-clan-requests"])
 	await warren_flow.new_run()
 	warren_flow.state.allies = [Ally.make("slime", "A", 70.0), Ally.make("rock", "B", 70.0), Ally.make("snake", "C", 70.0)]
 	var joined := Requests.swear(warren_flow.state, "crew", {"species": "bandit", "name": "SIRRA"})
@@ -2931,7 +3141,7 @@ func _lords() -> void:
 	await warren_end.press("1")
 	_check(warren_end.state.depth == 5 and warren_end.state.floor_map.monsters.slice(0, -1).all(func(m): return m.species == "bandit") and warren_end.state.floor_map.monsters.back().boss, "the last floor below is all bandits (%s)" % str(warren_end.state.floor_map.monsters.map(func(m): return m.species)))
 	# with the feature off there is no choice to make, so the mark waits for a stair that offers one
-	var wait_flow = _flow(7, ["no-branching"])
+	var wait_flow = _flow(7, ["no-branching", "no-clan-requests"])
 	await wait_flow.new_run()
 	wait_flow.state.lords_met = ["crew"]
 	wait_flow.state.depth = 4
@@ -3009,7 +3219,7 @@ func _lords() -> void:
 
 ## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.
 func _lord_again(clan: String) -> Variant:
-	var flow = _flow(7)
+	var flow = _flow(7, ["no-clan-requests"])
 	await flow.new_run()
 	flow.state.lords_met = [clan]
 	flow.state.depth = 4

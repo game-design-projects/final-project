@@ -29,6 +29,7 @@ func enter(flow, args: Dictionary) -> void:
 	s.nerve = Keepsakes.DEEP_NERVE if flow.feature("nerve") and Keepsakes.has(s, "deep_breath") else 0
 	s.second_wind_used = false
 	m.spoke = false
+	m.strikes = {}
 	s.social_offer = {}
 	s.social_typing = false
 	s.social_note = ""

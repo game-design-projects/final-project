@@ -20,6 +20,10 @@ func read_words(text: String) -> Dictionary:
 	return Words.read(text)
 
 
+func sounds_like(text: String, what: String) -> float:
+	return Words.sounds_like(text, what)
+
+
 func feeling_when_hit(m) -> Dictionary:
 	var logits := _base_logits()
 	logits.terrified += 0.6 + m.meters.fear / 30.0 + (1.6 if m.hp_fraction() < 0.4 else 0.0)

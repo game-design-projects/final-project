@@ -36,6 +36,10 @@ const FIELDS := {
 	"recruited": ["species"],
 	"lord_joined": ["species"], # a clan's lord, sworn by its second favour, came along (rules/lords.gd)
 	"ally_left": ["species"],
+	"request_done": ["clan", "id"], # one of a clan's requests is done (rules/envoys.gd)
+	"gate_opened": ["clan"], # the second: its teleporter is open at the next stairs
+	"lord_met": ["clan"], # its lord was heard out in its hall
+	"teleport": ["to"], # carried somewhere else: "pad" across the floor, "hall" through a clan's teleporter
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"warmth": ["from", "to"], # the halls moved to another level of how they feel about you (rules/warmth.gd)
 	"dead": [],

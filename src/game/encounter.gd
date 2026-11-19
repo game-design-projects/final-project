@@ -6,6 +6,8 @@ const Ally = preload("res://src/game/ally.gd")
 const Allies = preload("res://src/rules/allies.gd")
 const Chart = preload("res://src/rules/chart.gd")
 const Clans = preload("res://src/rules/clans.gd")
+const Envoy = preload("res://src/game/stages/envoy.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
@@ -266,10 +268,24 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 		verdict = settlement if settlement != "" else Texts.VERDICT_SPARED
 	else:
 		verdict = Texts.VERDICT_SLAIN
-	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + felt_lines(m, how) + told + _take_notes()
+	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + felt_lines(m, how) + told + await _requests_done(m, how) + _take_notes()
 	s.mind_rows = pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## The requests a foe's fall finishes (rules/envoys.gd): a count reached, or a fight won with heavy strikes only. Their asker's
+## words and what they paid, for the log.
+func _requests_done(m, how: String) -> Array:
+	var s = flow.state
+	var lines := []
+	if how != "slain" or s.testing or s.practice or not flow.feature("clan-requests"):
+		return lines
+	for id in Envoys.slain(s, m) + Envoys.felled(s, m):
+		var r := Envoys.request(id)
+		lines.append(State.speech(str(Envoys.entry(r.clan).name), str(r.done)))
+		lines = await Envoy.finished(flow, r, lines, false)
+	return lines
 
 
 ## What the other clans make of a deed done to `m` (Clans.felt), for the log: which clan likes or dislikes it, and why. Nothing

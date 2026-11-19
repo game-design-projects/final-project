@@ -34,7 +34,24 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 | LUCKY COIN | Half again as much gold from every purse and chest |
 | SECOND WIND | Once a fight, the hit that would fell you leaves you on 1 HP |
 
-Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and on some floors someone who asks for a favour instead of a fight. Floors 2 and 4 have a trader.
+Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and two of the clans' askers, who want a favour instead of a fight. Floors 2 and 4 have a trader.
+
+**The clans' askers.** Each clan has one named asker with two requests of its own, and two askers of different clans stand on every floor, so each clan's is met on two of the first four floors (`data/envoys.json`, the feature `clan-requests`). Walk into one to hear it. A request you take is kept for the run. Each one done pays 6 gold and 4 health and pleases its clan.
+
+| Clan | Asker | Request | How it is done |
+| --- | --- | --- | --- |
+| The Burrow | DOLLOP | ASK A DRAGON | In a fight with a dragon, ACT and SAY SOMETHING: ask whether it likes slimes. It answers |
+| The Burrow | DOLLOP | BRING A SLIME | Come back with a slime that chose to follow you. DOLLOP takes it home |
+| The Old Stone | SLATE | WIN HEAVY | Fell a foe with HEAVY strikes only: one light strike in that fight and it doesn't count |
+| The Old Stone | SLATE | SPEAK LIKE A ROCK | Type something to it as flat and monotone as you can |
+| The Crew | MAGPIE | BAG FIVE SNAKES | Kill 5 snakes, on any floors, counted from when you said you would |
+| The Crew | MAGPIE | HAND OVER 50 GOLD | Come back with 50 gold and give it up |
+| The Coil | SISSEL | BRING A BANDIT | Come back with a bandit that chose to follow you. It is lectured, and storms off |
+| The Coil | SISSEL | HISS AT IT | Type a hiss, and a long one: "hiss" is an insult, "hisssssss" will do |
+
+What is typed is judged by the mind: Jev when the game can reach it, and otherwise a rule (the longest run of s; no capitals, question or exclamation; a question about liking that names slimes). Some requests cost you with another clan, as any deed does: five dead snakes enrage the Coil.
+
+**A clan's teleporter.** The second request done for a clan opens its teleporter, which the next stairs offer beside the ways down. It leads to the clan's hall, a room off the run's count of floors: every kind of the clan stands either side of an aisle, nobody there fights, and its lord waits at the far end. Heard out, the lord tells its part of what happened down here, pays 8 gold and 6 health and moves its clan well towards you. The hall's stairs go on down to the next floor. Being carried anywhere, by a teleporter or by a pad on the floor, shows on the picture: it floods with light and its colours tear apart and settle.
 
 **Monsters move when you move**, and turning is free. Slimes drift, bandits patrol, snakes follow for a while, and rocks and dragons stay put, and some kinds have their own ways: a gumdrop or a tide never stops moving, an adder, a pickpocket or a hypnocoil follows you, a boulder patrols, and spitters, lookouts, gazers, cobras, sappers, crushers, brood mothers and golems hold their ground; an angry monster, or one whose clan you have wronged, comes after you. One that has seen you is tagged HUNTING with an alert sound, one in sight makes a soft step as it moves, and an arrow at its feet shows the way it went. A monster that catches you starts the fight and strikes first.
 

@@ -14,6 +14,7 @@ const Lore = preload("res://src/rules/lore.gd")
 const State = preload("res://src/game/state.gd")
 const Survival = preload("res://src/rules/survival.gd")
 const TestRoom = preload("res://src/rules/test_room.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 
 const SIGHT_AHEAD := 6 # how many cells down a straight line the first-time tips look
 
@@ -62,6 +63,9 @@ func _step(flow, backwards: bool) -> void:
 			flow.event("bump")
 		return
 	var monster = s.floor_map.monster_at(next)
+	if monster != null and s.visiting != "": # in a clan's hall nobody fights: it looks you over (rules/clan_hall.gd)
+		s.say([State.sys_line(str(Envoys.table().hall.minion) % monster.name)])
+		return
 	if monster != null:
 		if monster.lurking:
 			_stirred(flow, monster)
@@ -72,6 +76,10 @@ func _step(flow, backwards: bool) -> void:
 		return
 	if s.floor_map.quester_at(next):
 		await flow.go("request")
+		return
+	var envoy: Dictionary = s.floor_map.envoy_at(next)
+	if not envoy.is_empty(): # a clan's asker, or its lord in its hall (rules/envoys.gd)
+		await flow.go("envoy", {"who": envoy})
 		return
 	s.cell = next
 	s.visited[next] = true
@@ -88,7 +96,7 @@ func _step(flow, backwards: bool) -> void:
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
 		return
-	if flow.feature("roaming") and not s.testing and await _monsters_move(flow): # in the test room everyone keeps their place
+	if flow.feature("roaming") and not s.testing and s.visiting == "" and await _monsters_move(flow): # in the test room everyone keeps their place
 		return
 	_notice(flow)
 
@@ -193,6 +201,7 @@ func _find_secrets(flow) -> bool:
 		s.look()
 		s.say([State.sys_line(Floors.secret_line("pad"))])
 		flow.event("sound", {"name": "holy"})
+		flow.event("teleport", {"to": "pad"})
 	return found_any
 
 

@@ -19,6 +19,7 @@ var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find
 var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
 var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
 var merchant := {} # {cell: Vector2i, stock: [item id]}, or empty when no trader is here
+var envoys: Array = [] # [{cell, clan, name, species}]: the clans' askers standing here (rules/envoys.gd); in a clan's hall, its lord ({lord: true, title})
 var quester := {} # {cell, species, name, kind, target, want, taken}, and a lord's {title, lord} (rules/requests.gd), or empty when nobody here is asking
 var lore := {} # {cell: Vector2i, side: int, read: bool}: writing on the wall at `side` of that cell (rules/lore.gd), or empty
 var steps := 0 # how many steps have been taken here, which the monsters' moves are worked out from (rules/roaming.gd)
@@ -67,6 +68,8 @@ func reserved() -> Dictionary:
 		out[merchant.cell] = true
 	if not quester.is_empty():
 		out[quester.cell] = true
+	for e in envoys:
+		out[e.cell] = true
 	if not lore.is_empty():
 		out[lore.cell] = true
 	return out
@@ -74,7 +77,15 @@ func reserved() -> Dictionary:
 
 ## Whether stepping into this cell would take you somewhere other than through it (a pad, a trader, someone asking), so a route goes round it.
 func in_the_way(c: Vector2i) -> bool:
-	return pad_partner(c) != null or merchant_at(c) or quester_at(c)
+	return pad_partner(c) != null or merchant_at(c) or quester_at(c) or not envoy_at(c).is_empty()
+
+
+## The clan's asker (or, in its hall, the lord) standing in this cell, or {}.
+func envoy_at(c: Vector2i) -> Dictionary:
+	for e in envoys:
+		if e.cell == c:
+			return e
+	return {}
 
 
 func quester_at(c: Vector2i) -> bool:
@@ -135,7 +146,7 @@ func start_facing() -> int:
 
 
 func to_dict() -> Dictionary:
-	return {
+	var out := {
 		"size": size, "grid": grid, "stairs": [stairs.x, stairs.y], "start": [start.x, start.y], "seed": seed_value,
 		"monsters": monsters.map(func(m): return m.to_dict()),
 		"biome": biome,
@@ -148,6 +159,12 @@ func to_dict() -> Dictionary:
 		"hpScale": hp_scale,
 		"lore": {} if lore.is_empty() else {"cell": [lore.cell.x, lore.cell.y], "side": lore.side, "read": lore.read},
 	}
+	if not envoys.is_empty(): # only then, so a floor with none reads as it always did
+		out.envoys = envoys.map(func(e):
+			var one: Dictionary = e.duplicate()
+			one.cell = [e.cell.x, e.cell.y]
+			return one)
+	return out
 
 
 func _quester_dict() -> Dictionary:
@@ -185,6 +202,10 @@ static func from_dict(d: Dictionary, monster_script):
 		f.quester.target = int(asking.get("target", -1))
 		f.quester.want = str(asking.get("want", ""))
 		f.quester.taken = bool(asking.get("taken", false))
+	for e in d.get("envoys", []):
+		var one: Dictionary = e.duplicate()
+		one.cell = _cell(e.cell)
+		f.envoys.append(one)
 	return f
 
 
