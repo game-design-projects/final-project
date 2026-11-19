@@ -9,6 +9,10 @@ Music (assets/audio/ambient.ogg, battle-*.ogg, fanfare.ogg, victory.ogg)
   https://creativecommons.org/licenses/by-sa/3.0/
 - Kettle drums and tabor: synthesised in tools/music/sampler.py, no samples.
 
+Music (assets/audio/set-fight.ogg, set-boss.ogg, set-final.ogg)
+- The music set, by Abdulla Alfalasi: the piano battle for a fight, the boss theme for a champion and the final-boss
+  theme for the last one. The renders and their MIDI are in tools/music/music-set/.
+
 Music (assets/audio/hum-explore.ogg, hum-combat.ogg)
 - The hum theme, by Abdulla Alfalasi: an exploring loop and a combat loop on the same hummed melody. Source, MIDI and
   the render script are in tools/music/hum-theme/.

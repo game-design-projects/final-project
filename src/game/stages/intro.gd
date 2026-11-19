@@ -42,7 +42,8 @@ func enter(flow, args: Dictionary) -> void:
 		"recent_social": s.recent_social, "foe": m.to_dict(), "gold": s.gold, "tally": s.tally.duplicate(), "items": s.items.duplicate(), "sharpened": s.sharpened,
 		"allies": s.allies.map(func(a): return a.to_dict()),
 	}
-	flow.event("encounter", {"boss": m.boss})
+	var champions: Array = Content.table("floors").champions
+	flow.event("encounter", {"boss": m.boss, "final": m.boss and str(m.name) == str(champions[-1].name)})
 	var enraged := Clans.enraged(s, m)
 	var rule: String
 	if m.boss:

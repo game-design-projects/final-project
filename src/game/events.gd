@@ -10,7 +10,7 @@ const FIELDS := {
 	"step": [], # the party walked one cell
 	"pad": [], # a pad carried the party to its partner somewhere else on the floor
 	"bump": [], # walked into a wall
-	"encounter": ["boss"], # a fight begins
+	"encounter": ["boss", "final"], # a fight begins: with a champion (`boss`), and with the last of them, who waits at the Last Door (`final`)
 	"strike": ["damage", "crit"], # your hit landed
 	"miss": [], # your swing missed
 	"sweep": ["step"], # the strike bar's line crossed another part of the bar: 1 at the ends, up to 4 in the middle

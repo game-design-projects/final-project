@@ -14,6 +14,10 @@ Abdulla's hum theme plays by default: two loops on one hummed melody, "Cantiga t
 
 The loops are mastered 1 dB hotter than the old music (−18 and −16 dBFS RMS), so `HUM_TRIM_DB` plays them 1 dB under the same volumes. `no-hum-theme` brings back the old music below.
 
+### The music set's fights (the default, feature `music-set`)
+
+A fight plays the theme of who it is with, from Abdulla's music set (`tools/music/music-set/`): `set-fight.ogg` (the piano battle, 41.86 s) for a monster, `set-boss.ogg` (41.86 s) for a champion, and `set-final.ogg` (45.33 s) for the last champion, at the Last Door. Each is one whole loop. The game says who the fight is with as it begins (the event `encounter`, `boss` and `final`), and `Music.fight_with` picks the track. They are 0.9 dB hotter than the hum theme's combat loop, so `SET_TRIM_DB` plays them 2 dB under the battle volume. `no-music-set` plays the hum theme's combat loop in every fight.
+
 ### The old music (`no-hum-theme`)
 
 All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: one small band of real samples (harpsichord, church organ, strings, choir, music box and tubular bells, from the MusyngKite soundfont) plus synthesised kettle drums and a tabor, all in the same stone hall. Every piece is built on the game's own melody, **A B C D D D E D E D C C C D D D**, with its repeated notes short-short-long. The pieces are rendered offline and ship as Ogg Vorbis files in `assets/audio/` (about 5 MB in all).
