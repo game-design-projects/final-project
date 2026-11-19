@@ -62,6 +62,7 @@ func _run() -> void:
 	await _pad_warp(game)
 	await _pad_landing(game)
 	await _nerve_is_shown(game)
+	await _status_row(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
 	await _wide_view(game)
@@ -727,6 +728,35 @@ func _thinking(game) -> void:
 ## A close call says how much nerve it left you with, where the pips alone would not (`CLOSE CALL · NERVE 2/5`,
 ## `CLEAN DODGE · NERVE 3/5`): the playtest earned nerve and never noticed (#175); #196 put a second count in the status row and
 ## #198 took it back out, leaving the pips and these popups to say it.
+## The status row says everything it has, always, in type big enough to read (#164): HP, gold, the party and how you are eating.
+func _status_row(game) -> void:
+	var status = game._status
+	status.state = game.flow.state
+	var s = game.flow.state
+	var fonts = load("res://src/view/fonts.gd")
+	var text: String = "".join(status.status_pieces().map(func(p): return str(p[0])))
+	_check(text.contains("HP") and text.contains("GOLD") and text.contains("PARTY"), "the row names health, gold and the party (%s)" % text)
+	_check(status.hunger_word() == "FED", "and says FED when there is nothing wrong (%s)" % status.hunger_word())
+	var width := 0.0
+	for p in status.status_pieces():
+		width += fonts.title().get_string_size(str(p[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, status.STATUS_PX).x
+	_check(width < 640.0, "all of it fits beside the health bar (%d px at %d)" % [int(width), status.STATUS_PX])
+	_set_hunger(s, "hungry")
+	_check(status.hunger_word() == "HUNGRY" and status.hunger_colour() == load("res://src/view/palette.gd").MERCY, "hungry says so in the accent colour (%s)" % status.hunger_word())
+	_set_hunger(s, "starving")
+	_check(status.hunger_word() == "STARVING" and status.hunger_colour() == load("res://src/view/palette.gd").WARN, "starving says so in the warning colour (%s)" % status.hunger_word())
+	_set_hunger(s, "fed")
+
+
+## A hunger value the survival rules read as this stage, or leave the field as it is.
+func _set_hunger(s, stage: String) -> void:
+	var survival = load("res://src/rules/survival.gd")
+	for v in range(0, 200):
+		s.hunger = v
+		if survival.stage_of(s.hunger).to_upper() == stage.to_upper():
+			return
+
+
 func _nerve_is_shown(game) -> void:
 	await _fight(game)
 	game.flow.state.nerve = 2

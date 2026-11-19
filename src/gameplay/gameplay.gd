@@ -327,7 +327,7 @@ func _build_screen() -> void:
 
 	_status = Hud.new()
 	_status.part = Hud.Part.STATUS
-	_status.custom_minimum_size = Vector2(0, 18)
+	_status.custom_minimum_size = Vector2(0, 22) # room for the status row's larger type (#164)
 	column.add_child(_status)
 	_dock = Hud.new()
 	_dock.part = Hud.Part.DOCK
