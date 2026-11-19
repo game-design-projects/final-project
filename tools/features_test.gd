@@ -3208,11 +3208,12 @@ func _roam(flow, steps: int, rng_seed: int, problems: Dictionary) -> Array:
 		for m in f.monsters:
 			if m.is_gone():
 				continue
+			var carried: bool = m.cell != before[m] and f.pad_partner(before[m]) == m.cell # a pad took it, the one jump allowed (#175)
 			if not f.is_open(m.cell):
 				note.call("a monster in a wall")
-			if m.cell != before[m] and (barred.has(m.cell) or m.cell == f.stairs):
+			if m.cell != before[m] and (barred.has(m.cell) or m.cell == f.stairs) and not carried:
 				note.call("a monster on something it may not stand on")
-			if absi(m.cell.x - before[m].x) + absi(m.cell.y - before[m].y) > 1:
+			if absi(m.cell.x - before[m].x) + absi(m.cell.y - before[m].y) > 1 and not carried:
 				note.call("a monster that jumped")
 			if m.lurking and m.cell != before[m]:
 				note.call("something stirring that moved")
@@ -3397,6 +3398,7 @@ func _roaming() -> void:
 	await pad_flow.new_run()
 	var pf = pad_flow.state.floor_map
 	var padder = pf.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
+	var padder2 = pf.monsters.filter(func(o): return not o.lurking and not o.boss and o != padder)[0]
 	pf.monsters = [padder]
 	pf.quester = {}
 	pad_flow.state.reputation = {}
@@ -3439,6 +3441,39 @@ func _roaming() -> void:
 		Roaming.turn(pad_flow.state)
 		on_pad = on_pad or pf.pad_partner(padder.cell) != null
 	_check(not on_pad, "and a monster that is not hunting never stands on a pad (%s)" % str(padder.cell))
+	# a pad that comes out where you stand does not shake a hunter off: it has caught you (#175)
+	var pad_state = pad_flow.state
+	var tiny = FloorMap.new()
+	tiny.size = 5
+	tiny.grid = []
+	for _y in 5:
+		tiny.grid.append([1, 1, 1, 1, 1])
+	tiny.start = Vector2i(0, 0)
+	tiny.stairs = Vector2i(4, 4)
+	tiny.teleports = [{"a": Vector2i(1, 1), "b": Vector2i(1, 2)}]
+	pad_state.floor_map = tiny
+	pad_state.cell = Vector2i(1, 2) # standing on the far pad when it follows you in
+	var hunting := func(m):
+		m.meters = {"friendliness": 0.0, "anger": 60.0, "fear": 0.0}
+		m.hold = 0
+		m.hunting = true
+		m.unseen = 0
+		m.no_hunt = 0
+	padder.cell = Vector2i(1, 0)
+	hunting.call(padder)
+	tiny.monsters = [padder]
+	var caught := Roaming.turn(pad_state)
+	_check(caught.caught == padder and padder.cell != pad_state.cell, "a hunter that follows you onto a pad and comes out where you stand has caught you, not lost you")
+	# a pad whose far end somebody stands on is not taken by a second one: no two monsters in one cell (#175)
+	tiny.teleports = [{"a": Vector2i(1, 1), "b": Vector2i(4, 4)}]
+	pad_state.cell = Vector2i(1, 2)
+	padder.cell = Vector2i(1, 0)
+	padder2.cell = Vector2i(0, 1)
+	hunting.call(padder)
+	hunting.call(padder2)
+	tiny.monsters = [padder, padder2]
+	var crowded := Roaming.turn(pad_state)
+	_check(crowded.caught == null and padder.cell == Vector2i(4, 4) and padder2.cell != padder.cell, "and a pad never sets two of them in one cell (%s, %s)" % [str(padder.cell), str(padder2.cell)])
 	# who is near: put them by the walk from you
 	var field: Dictionary = Roaming._field(f, s.cell, Roaming._barred(f))
 	var cell_at := func(d: int) -> Vector2i:

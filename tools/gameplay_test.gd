@@ -59,6 +59,7 @@ func _run() -> void:
 	await _sub_text_wraps(game)
 	await _sub_text_items(game)
 	await _pad_warp(game)
+	await _pad_landing(game)
 	await _nerve_is_shown(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
@@ -825,6 +826,44 @@ func _pad_warp(game) -> void:
 	await process_frame
 	_check(game._stage.warp_amount() > 0.0, "the picture's field of view swells as it lands (%.2f)" % game._stage.warp_amount())
 	_check(game._postfx.flash_level() > 0.0, "and a flash in the accent colour goes with it (%.2f)" % game._postfx.flash_level())
+
+
+## A monster carried onto a pad stands there until its next turn (#175): stepped into from the other pad, it is a fight,
+## not a cell the party shares with it.
+func _pad_landing(game) -> void:
+	var flow = game.flow
+	await flow.new_run()
+	await flow.go("explore")
+	game.flow._keys_back_at = -1.0
+	var s = flow.state
+	var f = s.floor_map
+	var near: Vector2i = s.cell
+	for dir in f.DIRS:
+		if f.is_open(s.cell + dir) and not f.in_the_way(s.cell + dir) and f.monster_at(s.cell + dir) == null:
+			near = s.cell + dir
+			break
+	_check(near != s.cell, "(a cell beside the party to put a pad on)")
+	for _turn in 3: # a pad is walked onto, so face it first
+		if s.cell + f.DIRS[s.facing] == near:
+			break
+		await flow.press("right")
+	_check(s.cell + f.DIRS[s.facing] == near, "the party faces the pad at %s" % str(near))
+	var far: Vector2i = s.cell
+	for y in f.size:
+		for x in f.size:
+			var c := Vector2i(x, y)
+			if not f.is_open(c) or c == s.cell or c == near or c == f.stairs or f.start == c or f.in_the_way(c) or f.monster_at(c) != null:
+				continue
+			if f.pickup_at(c) != "" or f.lore_at(c) or f.treasure.any(func(t): return t.cell == c):
+				continue
+			far = c # the last one left: a corner away from the party
+	_check(far != s.cell, "(a cell across the floor to put the other end on)")
+	var foe = f.monsters.filter(func(o): return not o.boss and not o.lurking)[0]
+	foe.cell = far
+	f.teleports = [{"a": near, "b": far}]
+	await flow.press("up")
+	_check(s.cell == far and s.stage == "intro" and s.foe == foe, "a pad that sets the party down where a monster stands starts the fight (%s at %s)" % [foe.name, str(far)])
+	await flow.new_run()
 
 
 # ---------------------------------------------------------------- a start that must not race a tick

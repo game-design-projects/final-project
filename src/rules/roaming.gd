@@ -71,8 +71,12 @@ static func turn(state, options := {}) -> Dictionary:
 			out.caught = m
 			print("roaming: %s walks into you at %s" % [m.name, m.cell])
 			return out
-		print_verbose("roaming: %s %s %s -> %s" % [m.name, intent, m.cell, next])
 		var pad = f.pad_partner(next)
+		if pad == state.cell: # the pad comes out where you stand: it has caught you, not lost you
+			out.caught = m
+			print("roaming: %s steps on a pad at %s and comes out on you at %s" % [m.name, next, pad])
+			return out
+		print_verbose("roaming: %s %s %s -> %s" % [m.name, intent, m.cell, next])
 		m.cell = next
 		if pad != null: # the floor took it: a hunter that steps on a pad lands on the other one, away from you
 			m.cell = pad
@@ -188,8 +192,10 @@ static func _far_end(m, index: int, f, barred: Dictionary) -> Vector2i:
 
 ## Whether a monster may step here: floor it may stand on, with nobody on it.
 static func _free(f, c: Vector2i, barred: Dictionary, careless := false) -> bool:
-	if careless and f.pad_partner(c) != null: # a hunter with its eyes on you steps onto a pad (#175)
-		return f.monster_at(c) == null
+	if careless:
+		var pad: Variant = f.pad_partner(c)
+		if pad != null: # a hunter with its eyes on you steps onto a pad (#175), if the far end has nobody either
+			return f.monster_at(c) == null and f.monster_at(pad) == null
 	return f.is_open(c) and not barred.has(c) and f.monster_at(c) == null
 
 
