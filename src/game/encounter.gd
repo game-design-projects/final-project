@@ -424,9 +424,11 @@ func slip_away(m, line: String) -> void:
 	Roaming.hold(m)
 	var backed: String = back_off(m)
 	print("encounter: slipped away from %s" % m.name)
-	var said := [State.sys_line(line)] + _take_notes()
+	var said := [State.sys_line(line)]
 	if backed != "":
 		said.append(State.sys_line(backed))
+	said += _take_notes()
+	pending_rows = [] # the cards were the fight's, and the menu's FLEE drops them: none rides into the next fight
 	await flow.go("explore", {"lines": said})
 
 
