@@ -939,10 +939,15 @@ func _skill_combat() -> void:
 	_check(s.stage in ["wait", "menu"] and f.used == 0, "END TURN with nothing used lets it attack")
 	await _through_dodge(flow)
 	await flow.press("1")
+	# a skill's kill is blessed as a strike's when a friend approves of it (#174)
+	s.allies = [Ally.make("bandit", "SNICK", 70.0)]
+	flow.dice.pin(0.99)
 	m.hp = 3
 	var slain: int = s.tally.slain
 	await flow.press("1")
 	_check(s.stage == "explore" and s.tally.slain == slain + 1 and m.gone == "slain", "a skill that kills ends the fight (%s)" % s.stage)
+	_check(int(s.tally.blessed) == 1, "and the kill a friend approved of is blessed too (blessed %d of %d)" % [int(s.tally.blessed), int(s.tally.slain)])
+	flow.dice.unpin()
 	_check(Skills.damage(Skills.new_fight(), "strike", true) == roundi(8 * Combat.BOSS_DAMAGE_SCALE), "a champion takes less, as from a strike")
 	var held := Skills.start()
 	_check(not Skills.learn(held, "strike") and held.size() == 3 and Skills.slots() == 6, "a skill held already isn't learned twice, and three of six slots are free")
