@@ -9,7 +9,7 @@ const Odds = preload("res://src/rules/odds.gd")
 const SCORES := 5 # a judgement is 0 (hates it) .. 4 (loves it)
 const NEUTRAL := 2
 const LOYALTY_PER_POINT := 10.0
-const LEAVE_BELOW := 30.0
+const LEAVE_BELOW := 40.0 # below this an ally may walk out: a new one starts at 60-80, and the worst deed is 20, so one deed never does it
 const START_LOYALTY_MIN := 60
 const START_LOYALTY_MAX := 80
 const EAGER_LOYALTY := 30.0 # the most wanting to come (or not) moves its starting loyalty, from one end to the other
@@ -48,9 +48,10 @@ static func score_odds(species: String, deed: String) -> Dictionary:
 	return weights
 
 
-## The chance an unhappy ally (loyalty below the line) leaves after this deed.
+## The chance an unhappy ally (loyalty below the line) leaves after this deed. Only asked below the line, so the 0.5 the curve
+## gives at the line itself is never used: at 30 it is 0.84, at 20 0.97, at 10 0.998 (before this it was 0.38, 0.83, 0.98).
 static func leave_odds(loyalty: float) -> float:
-	return Odds.sigmoid((LEAVE_BELOW - loyalty) / 6.0 - 0.5)
+	return Odds.sigmoid((LEAVE_BELOW - loyalty) / 6.0)
 
 
 ## One ally judging one deed. Changes its loyalty and returns what happened: its score, the kind of reaction line

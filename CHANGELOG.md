@@ -30,6 +30,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - Every mind the game uses is inside `src/mind/safe_mind.gd`, which checks each answer before the game rolls it: in an export an answer that isn't one (a `null` where a key was missing, a number out of range, half a pair, none within 30 s) comes from the local rules instead; a debug build reports it and hands it on untouched.
 
 ### Changed
+- An ally may walk out from 40 loyalty rather than 30, and the chance to go below that line is no longer softened by a half point: at 30 loyalty it is 0.84 where it was 0.38, at 20 it is 0.97 where it was 0.83 (#173). A new friend starts at 60–80 and a deed costs at most 20, so a single disliked deed still cannot drive one off; two bad ones now can.
 - An achievement no longer waits for a calm moment to go up as a banner: the toast has a corner of its own, so nothing has to get out of its way. The main menu's page of text listing only what was earned is gone.
 - A choice that is the whole moment (a keepsake to take, who holds the gate, the way down, how the run ends) is in the middle of the picture instead of the dock: the question, and each choice a card with what it does written on it (`Transitions.DECIDING`, `src/view/choice_popup.gd`). The dock keeps the lines before the question and the keys.
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
