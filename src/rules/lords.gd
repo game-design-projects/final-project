@@ -19,7 +19,8 @@ static func homes(biome: String) -> Array:
 
 ## The lord due on this floor, or {}. On the run's first floor of a biome it is a lord there the run has not met (in a biome with
 ## two of them, the one the floor's seed picks); where the biome comes back it is the lord met there, asking its second and last
-## favour, unless its clan is already sworn. `second` says which of the two it is.
+## favour, unless its clan is already sworn. `second` says which of the two it is. `standing` is the run's standings: the lord of a
+## clan that is angry or worse at home here offers a way back rather than its usual favour (`redeem`, rules/requests.gd).
 static func due(biome: String, seed_value: int, met: Array = [], sworn: Array = [], returning := false, standing: Dictionary = {}) -> Dictionary:
 	var here: Array = homes(biome)
 	if returning:
