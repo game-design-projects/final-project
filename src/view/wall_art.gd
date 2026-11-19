@@ -35,7 +35,7 @@ static func build(floor_map, wall_color: Color, accent: Color, torches: Array, l
 			"torch":
 				_draw_on(art, face, "torch", ink, p.roll)
 				_flame(flames, torches, face, p.roll)
-			"chains", "banner":
+			"chains", "banner", "moss", "bat":
 				_draw_on(art, face, p.kind, ink, p.roll)
 			"window":
 				_draw_on(art, face, "window", ink, p.roll)

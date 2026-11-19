@@ -327,12 +327,19 @@ func _wall_art_answers_the_warmth() -> void:
 
 
 ## No plain wall carries a crack: testers learned the decorative ones were decoration and stopped walking into the walls that
-## break (#160). A wall that can break still shows the fissure.
+## break (#160). A wall that can break still shows the fissure, and the slot the crack had draws the moss and the bats the
+## walls were proud of (`docs/ART.md`), so neither drawing is left hanging nowhere.
 func _no_plain_wall_carries_a_crack() -> void:
 	var f = FloorGen.generate(Rng.new(9))
 	_check(not Decor.KINDS.has("crack"), "the crack is not one of the things a plain wall may carry")
 	var placed: Array = Decor.placements(f)
 	_check(placed.all(func(p): return str(p.kind) != "crack"), "and no plain wall is decorated with one (%d decorations)" % placed.size())
+	var kinds := {}
+	for seed_value in range(1, 21):
+		for p in Decor.placements(FloorGen.generate(Rng.new(seed_value))):
+			kinds[str(p.kind)] = true
+	_check(kinds.has("moss") and kinds.has("bat"), "a plain wall still carries moss and a bat (%s)" % str(kinds.keys()))
+	_check(not kinds.has("blemish"), "and every kind it carries names a drawing the wall art hangs")
 	# the one wall that may be cracked: mark a wall by a corridor and look at its face
 	var marked := false
 	for y in f.size:
@@ -344,7 +351,7 @@ func _no_plain_wall_carries_a_crack() -> void:
 				var from: Vector2i = wall + FloorMap.DIRS[side]
 				if not f.is_open(from):
 					continue
-				f.grid[wall.y][wall.x] = 2 # a cracked wall until it is broken
+				f.grid[wall.y][wall.x] = FloorMap.CRACKED # a wall that can break, until it is broken
 				var faces: Array = Decor.placements(f).filter(func(p): return p.cell == from and int(p.side) == (side + 2) % 4)
 				_check(faces.size() == 1 and str(faces[0].kind) == "fissure", "a wall that can break shows its fissure, not a decoration (%s)" % str(faces))
 				marked = true
