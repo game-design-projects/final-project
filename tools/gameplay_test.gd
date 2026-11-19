@@ -727,16 +727,12 @@ func _thinking(game) -> void:
 func _nerve_is_shown(game) -> void:
 	await _fight(game)
 	game.flow.state.nerve = 2
-	game._status.state = game.flow.state
 	game.flow.event("nerve", {"total": 2, "how": "close"})
 	var close_text: String = str(game._overlay._popups.back().text)
 	_check(close_text.contains("CLOSE CALL") and close_text.contains("NERVE 2/5"), "a close call says the nerve it leaves you with (%s)" % close_text)
-	_check(game._status.nerve_text() == "NERVE 2/5", "the status row shows it too (%s)" % game._status.nerve_text())
 	game.flow.event("nerve", {"total": 3, "how": "clean"})
 	var clean_text: String = str(game._overlay._popups.back().text)
 	_check(clean_text.contains("CLEAN DODGE") and clean_text.contains("NERVE 3/5"), "and a clean dodge counts it too (%s)" % clean_text)
-	await game.flow.go("explore", {"lines": []})
-	_check(game._status.nerve_text() == "", "and the walk after the fight shows none of it (%s)" % game._status.nerve_text())
 
 
 ## SPARE's help is about 980 px at the dock's font: in a window narrower than that it wraps to a second line and the dock makes

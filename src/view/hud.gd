@@ -6,7 +6,6 @@ extends Control
 
 const Badges = preload("res://src/view/badges.gd")
 const Fonts = preload("res://src/view/fonts.gd")
-const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const ChoicePopup = preload("res://src/view/choice_popup.gd")
@@ -350,24 +349,12 @@ static func toughness_tag(s) -> String:
 
 # ---------------------------------------------------------------- the status row
 
-## The nerve this fight holds, as the status row says it ("" when there is none, so nothing is drawn for it): the playtest
-## earned nerve by dodging close and never saw it, so the one number behind a strike's extra damage is on screen now (#175).
-## Nerve is the fight's, not the run's: the walk after one shows none, because a fight starts at 0 (2 with DEEP BREATH).
-func nerve_text() -> String:
-	if state == null or int(state.nerve) <= 0 or not state.stage in Transitions.FIGHT:
-		return ""
-	return "NERVE %d/%d" % [int(state.nerve), Combat.NERVE_MAX]
-
 func _status() -> void:
 	var y := size.y * 0.5 + 4.0
 	var x := 0.0
 	for piece in [["HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU], ["   GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY]]:
 		_text(_title, piece[0], Vector2(x, y), 9, piece[1])
 		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-	var nerve := nerve_text()
-	if nerve != "": # a resource you cannot see is one you never spend
-		_text(_title, "   " + nerve, Vector2(x, y), 9, Palette.YOU)
-		x += _title.get_string_size("   " + nerve, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
 	var hunger: String = Survival.stage_of(state.hunger).to_upper()
 	if hunger != "":
 		_text(_title, "   " + hunger, Vector2(x, y), 9, Palette.WARN if hunger == "STARVING" else Palette.MERCY)
