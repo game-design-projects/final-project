@@ -751,32 +751,6 @@ func _sub_text_wraps(game) -> void:
 	dock.free()
 
 
-## A pad carries you across the floor: the picture's field of view swells and settles, with a flash in the run's accent colour
-## (issue #171).
-func _pad_warp(game) -> void:
-	var flow = game.flow
-	await flow.go("explore")
-	game.flow._keys_back_at = -1.0
-	var s = flow.state
-	var f = s.floor_map
-	var near: Vector2i = s.cell
-	var dirs: Array = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-	for dir in dirs:
-		if f.is_open(s.cell + dir) and not f.in_the_way(s.cell + dir):
-			near = s.cell + dir
-			break
-	var far: Vector2i = f.stairs if f.stairs != near else f.start
-	f.teleports = [{"a": near, "b": far}]
-	var before: float = game._stage.warp_amount()
-	_check(before == 0.0, "before a pad the picture is not warping")
-	await flow.press("up")
-	_check(s.cell == far, "the pad carried the party across the floor (%s)" % str(s.cell))
-	await process_frame
-	await process_frame
-	_check(game._stage.warp_amount() > 0.0, "the picture's field of view swells as it lands (%.2f)" % game._stage.warp_amount())
-	_check(game._postfx.flash_level() > 0.0, "and a flash in the accent colour goes with it (%.2f)" % game._postfx.flash_level())
-
-
 ## The trader and the bag say what the picked item does under the key hints, with the keys: before, only the mouse's tooltip
 ## did (issue #172).
 func _sub_text_items(game) -> void:
@@ -801,6 +775,39 @@ func _sub_text_items(game) -> void:
 	dock.state = flow.state
 	_check(not dock.sub_text().is_empty() and dock.sub_text() == str(flow.state.menu[0].get("sub", "")), "and the key row says what the picked item does (%s)" % dock.sub_text())
 	await flow.press("cancel")
+
+
+# ---------------------------------------------------------------- a pad's jump on screen
+
+## A pad carries you across the floor: the picture's field of view swells and settles, with a flash in the run's accent colour
+## (issue #171).
+func _pad_warp(game) -> void:
+	var flow = game.flow
+	await flow.go("explore")
+	game.flow._keys_back_at = -1.0
+	var s = flow.state
+	var f = s.floor_map
+	var near: Vector2i = s.cell
+	for dir in f.DIRS:
+		if f.is_open(s.cell + dir) and not f.in_the_way(s.cell + dir) and f.monster_at(s.cell + dir) == null:
+			near = s.cell + dir
+			break
+	_check(near != s.cell, "(a cell beside the party to put a pad on)")
+	for _turn in 3: # a pad is walked onto, so face it first
+		if s.cell + f.DIRS[s.facing] == near:
+			break
+		await flow.press("right")
+	_check(s.cell + f.DIRS[s.facing] == near, "the party faces the pad at %s" % str(near))
+	var far: Vector2i = f.stairs if f.stairs != near else f.start
+	f.teleports = [{"a": near, "b": far}]
+	var before: float = game._stage.warp_amount()
+	_check(before == 0.0, "before a pad the picture is not warping")
+	await flow.press("up")
+	_check(s.cell == far, "the pad carried the party across the floor (%s)" % str(s.cell))
+	await process_frame
+	await process_frame
+	_check(game._stage.warp_amount() > 0.0, "the picture's field of view swells as it lands (%.2f)" % game._stage.warp_amount())
+	_check(game._postfx.flash_level() > 0.0, "and a flash in the accent colour goes with it (%.2f)" % game._postfx.flash_level())
 
 
 # ---------------------------------------------------------------- a start that must not race a tick

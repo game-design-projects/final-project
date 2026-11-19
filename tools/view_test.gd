@@ -59,6 +59,7 @@ func _run() -> void:
 	await _camera_keeps_turning()
 	await _camera_glides_in_fixed_time()
 	await _camera_lunges_at_a_wall()
+	await _camera_warps_on_a_pad()
 	await _fights_do_not_move_the_camera()
 	await _every_monster_stands_on_the_set()
 	await _name_tags()
@@ -302,6 +303,26 @@ func _camera_lunges_at_a_wall() -> void:
 	stage.update(s, 40.07, FRAME)
 	var calm_lunge: float = (stage._camera.position - rest).dot(fwd)
 	_check(calm_lunge > 0.0 and calm_lunge < 0.15, "with calm the lunge is softer (%.3f)" % calm_lunge)
+	stage.free()
+
+
+## A pad's jump swells the field of view 16° at its peak and settles back in 380 ms; the `calm` setting leaves a third of it.
+func _camera_warps_on_a_pad() -> void:
+	var flow = await _walk(3)
+	var s = flow.state
+	var stage = _stage_for(s)
+	stage.update(s, 50.0, FRAME)
+	_check(stage.warp_amount() == 0.0 and is_equal_approx(stage._camera.fov, Stage.FOV), "with no pad the camera is not warping")
+	stage.warp(50.0)
+	stage.update(s, 50.19, FRAME) # half of WARP_MS: the peak
+	_check(absf(stage.warp_amount() - 1.0) < 0.01, "half way through, the whole swell is up (%.2f)" % stage.warp_amount())
+	_check(absf(stage._camera.fov - (Stage.FOV + Stage.WARP_FOV)) < 0.01, "the field of view is 16° wider at the peak (%.1f)" % stage._camera.fov)
+	stage.update(s, 50.38, FRAME)
+	_check(stage.warp_amount() < 0.01 and absf(stage._camera.fov - Stage.FOV) < 0.01, "and it has settled back at 380 ms")
+	stage.calm = true
+	stage.warp(60.0)
+	stage.update(s, 60.19, FRAME)
+	_check(absf(stage.warp_amount() - Stage.CALM_WARP) < 0.01, "with calm a third of the swell is left (%.2f)" % stage.warp_amount())
 	stage.free()
 
 

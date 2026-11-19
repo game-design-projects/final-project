@@ -612,7 +612,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"bump":
 			_stage.bump(now)
 		"pad": # a warp: the picture's field of view swells and settles, with a flash in the run's accent
-			_stage.warp(_softness())
+			_stage.warp(now)
 			_postfx.flash(Palette.for_run(s.palette_id).accent, 0.28 * _softness())
 		"encounter":
 			_postfx.set_accent(Palette.monster(s.foe))
