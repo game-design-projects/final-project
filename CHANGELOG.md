@@ -43,6 +43,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed
+- No plain wall carries a crack any more (#160): about one wall face in twenty-two had a decorative crack (and half of those were even drawn as one of two other drawings), so testers learned a crack was decoration and stopped walking into the walls that break. The crack is out of the wall decorations, and a cracked wall is the only cracked thing on the floor — in the accent colour, or a guilty smile when the halls are warm.
 - Backing out of a fight a pad set the party down on takes the party back through the pad to the cell it stepped on, so the walk never has two of them in one cell (#175).
 - Smoke ends a fight as FLEE does: the pad's line comes before what the party says of the flight, and the fight's judgement cards are dropped, so the next fight's foe card no longer shows `WICK JUDGES IT` from the fight the smoke left (the escape item kept them, and filed the pad's line after the party's reactions).
 - A pad that comes out where somebody stands is a fight, not a shared cell (#175): a hunter that follows you onto a pad and arrives where you are has caught you, and the party arriving on a monster starts that fight. A pad also does not take a second monster to an end one already stands on, so two of them can't come out in the same cell.

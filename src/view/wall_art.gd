@@ -13,14 +13,13 @@ const Sprites = preload("res://src/view/sprites.gd")
 const LIFT := 0.012 # how far a drawing stands off the wall
 const LORE_SIZE := 1.2 # the banner with the writing on it, against a plain banner's SIZE
 const LORE_DOWN := 0.42 # and hung lower, about at eye height, so it stays on the wall
-const SIZE := {"torch": 0.74, "chains": 0.86, "banner": 0.96, "crack": 0.9, "window": 1.12, "skull": 1.06, "skull_nod": 1.06, "skull_hollow": 1.06, "guilty": 1.5, "fissure": 1.5, "moss": 0.66, "bat": 0.52}
-const DOWN := {"torch": 0.44, "chains": 0.26, "banner": 0.3, "crack": 0.48, "window": 0.42, "skull": 0.5, "skull_nod": 0.5, "skull_hollow": 0.5, "guilty": 0.46, "fissure": 0.46, "moss": 0.82, "bat": 0.16}
+const SIZE := {"torch": 0.74, "chains": 0.86, "banner": 0.96, "window": 1.12, "skull": 1.06, "skull_nod": 1.06, "skull_hollow": 1.06, "guilty": 1.5, "fissure": 1.5, "moss": 0.66, "bat": 0.52}
+const DOWN := {"torch": 0.44, "chains": 0.26, "banner": 0.3, "window": 0.42, "skull": 0.5, "skull_nod": 0.5, "skull_hollow": 0.5, "guilty": 0.46, "fissure": 0.46, "moss": 0.82, "bat": 0.16}
 const TORCH_BOWL := Vector2(0.13, 0.18) # where a flame stands, off the middle of the torch's drawing, as a share of its size
 const EYES_AT_LEVEL := [0, 4, 2, 1, 3] # cold, shut, wary, kind, beloved: what shaders/flame_drawn.gdshader shows
 const SKULL_HOLLOW_BELOW := 2 # at this level and under, a skull's eyes are holes
 const SKULL_NODS_FROM := 3
 const GUILTY_FROM := 2
-const OTHER_CRACKS := ["crack", "crack", "moss", "bat"] # what a plain crack may be instead, by the roll that placed it
 
 
 ## A node holding the drawings of `floor_map` at warmth level `level`. `torches` (an Array) gets {"pos": Vector3, "seed": float} per torch, for the caller to light the walls with.
@@ -40,8 +39,6 @@ static func build(floor_map, wall_color: Color, accent: Color, torches: Array, l
 				_draw_on(art, face, p.kind, ink, p.roll)
 			"window":
 				_draw_on(art, face, "window", ink, p.roll)
-			"crack":
-				_draw_on(art, face, OTHER_CRACKS[int(p.roll * 97.0) % OTHER_CRACKS.size()], ink, p.roll)
 			"niche":
 				if level < SKULL_HOLLOW_BELOW:
 					_draw_on(art, face, "skull_hollow", ink, p.roll)
