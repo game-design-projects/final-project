@@ -13,7 +13,6 @@ const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
-const Transitions = preload("res://src/game/transitions.gd")
 
 enum Part { HEADER, STATUS, DOCK }
 
