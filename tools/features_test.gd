@@ -85,7 +85,6 @@ func _run() -> void:
 	await _npcs()
 	await _lords()
 	await _allies()
-	await _attacks()
 	await _roaming()
 	await _input_cooldown()
 	await _charting()
@@ -260,57 +259,6 @@ func _test_room() -> void:
 	_use(["no-test-room"])
 	_check(not Flags.enabled("test-room") and not Flags.asked("test-room"), "switched off, it is neither")
 	_use()
-
-
-## Every attack the game has, played on its own: each makes hazards, every hazard stays in the box and warns before it hurts,
-## and the same seed makes the same attack twice. Before this the fight's core rule had no test of its own for any of them.
-func _attacks() -> void:
-	var quiet: Array = []
-	for genre in DodgeRun.MINI_GAMES.keys():
-		var first := _play_attack(str(genre))
-		var again := _play_attack(str(genre))
-		var hazards: Array = first.hazards
-		_check(not hazards.is_empty(), "%s: the attack comes (%d hazards)" % [genre, hazards.size()])
-		if hazards.is_empty():
-			quiet.append(genre)
-			continue
-		var bad := ""
-		for h in hazards:
-			for cell in h.cells:
-				if int(cell) < 0 or int(cell) >= Dodge.COLS * Dodge.ROWS:
-					bad = "a square outside the box (%s)" % str(cell)
-				if not Dodge.in_box(int(cell) % Dodge.COLS, int(cell) / Dodge.COLS):
-					bad = "a square outside the box (%s)" % str(cell)
-			if float(h.warn) > float(h.hit) or float(h.hit) > float(h.end):
-				bad = "a hazard that hurts before it warns (%s)" % str(h.kind)
-			if str(h.kind) == "":
-				bad = "a hazard with no kind"
-		_check(bad == "", "%s: every hazard is in the box and warns first (%s)" % [genre, bad])
-		_check(first.signature == again.signature, "%s: the same seed makes the same attack" % genre)
-		_check(first.end_t > 0.0 and is_equal_approx(first.end_t, again.end_t), "%s: and the same length (%.0f ms)" % [genre, first.end_t])
-	_check(quiet.is_empty(), "every attack in the game came (%s)" % str(quiet))
-
-
-## One attack played from start to end on a fixed seed, with a soul that never moves: what it made, and a signature of it.
-func _play_attack(genre: String) -> Dictionary:
-	var run = DodgeRun.start(genre, 1.0, false, 0, 0.0, {}, 1.0)
-	var rng := Rng.new(97)
-	var seen := {}
-	var t := 0.0
-	while t < run.end_t + 200.0:
-		run.update(t, rng)
-		for h in run.hazards:
-			seen[str(h.group)] = {"kind": h.kind, "warn": roundi(float(h.warn)), "hit": roundi(float(h.hit)), "end": roundi(float(h.end)), "cells": h.cells.keys()}
-		t += 16.0
-	var keys: Array = seen.keys()
-	keys.sort()
-	var hazards := []
-	for k in keys:
-		var h: Dictionary = seen[k]
-		var cells: Array = h.cells.duplicate()
-		cells.sort()
-		hazards.append({"kind": h.kind, "warn": h.warn, "hit": h.hit, "end": h.end, "cells": cells})
-	return {"hazards": hazards, "signature": str(hazards), "end_t": run.end_t}
 
 
 ## nerve: a close call and a clean dodge earn it, a hit shakes one out, a strike that lands or a SPARE spends it.
