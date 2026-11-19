@@ -126,11 +126,11 @@ static func status(q: Dictionary, s) -> String:
 ## What it says, for this status.
 static func speak(q: Dictionary, s) -> String:
 	var kind: Dictionary = table().kinds[q.kind]
-	var words: String = {"new": kind.ask, "waiting": kind.wait, "ready": kind.ready, "failed": kind.get("failed", "")}[status(q, s)]
-	if q.get("redeem", false): # a lord of a clan you angered speaks for the clan, not for itself (rules/lords.gd)
-		var mine: Dictionary = Lords.redemption()
-		words = {"new": mine.ask, "waiting": mine.wait, "ready": mine.ready, "failed": kind.get("failed", "")}[status(q, s)]
-	return words % subject(q, s.floor_map)
+	var said: Dictionary = kind
+	if q.get("redeem", false): # a lord of a clan you angered speaks for the clan, not for itself, and names nothing (rules/lords.gd)
+		said = Lords.redemption()
+	var words: String = {"new": said.ask, "waiting": said.wait, "ready": said.ready, "failed": kind.get("failed", "")}[status(q, s)]
+	return words % subject(q, s.floor_map) if words.contains("%s") else words # a line that names nothing is not formatted
 
 
 ## Paid: what was asked for leaves the bag, the gold and health come, and its clan hears. Returns {gold, healed, joined}:
@@ -147,11 +147,11 @@ static func settle(q: Dictionary, s) -> Dictionary:
 		gold = int(pays.gold)
 		heal = int(pays.heal)
 		standing = float(pays.standing)
-		if q.get("redeem", false): # a way back: the clan is cooled to calm, not warmed past it
-			standing = -float(s.reputation.get(lord, 0.0))
+		if q.get("redeem", false): # a way back: the clan is cooled as far as calm and no further (#166)
+			standing = -minf(0.0, float(s.reputation.get(lord, 0.0)))
 		elif q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
 			joined = swear(s, lord, q)
-		elif not s.lords_met.has(lord):
+		if not s.lords_met.has(lord): # a way back is a favour paid like any other: the run remembers the lord it met
 			s.lords_met.append(lord)
 	if q.kind == "fetch":
 		s.items.erase(q.want)

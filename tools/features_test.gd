@@ -2966,6 +2966,70 @@ func _lords() -> void:
 	_check(not first.is_empty() and not second.is_empty() and first.clan != second.clan, "the caves' two lords take turns by the floor's seed")
 	_check(Lords.due("caves", 0, [first.clan, second.clan]).is_empty(), "a run that has met both caves lords meets none")
 	_check(Lords.due("halls", 0, ["crew"]).is_empty(), "a met lord does not ask again")
+	# A clan you angered offers a way back (#166): its lord asks, in the clan's words, and paying it cools the clan as far as
+	# calm and no further — a favour paid, remembered like any other, so the lord's line goes on.
+	var angry = _flow(7)
+	await angry.new_run()
+	angry.state.reputation[clan] = -40.0
+	angry.state.depth = 1
+	await angry._make_floor()
+	var make_up: Dictionary = angry.state.floor_map.quester
+	_check(not make_up.is_empty() and bool(make_up.get("redeem", false)) and str(make_up.get("lord", "")) == clan, "a clan you angered has its lord offer a way back (%s)" % str(make_up.get("title", "")))
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().ask), "and it says so in the clan's own words")
+	make_up.taken = true # its words name nothing, so there is nothing to put in them, before or after the thing is done
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().wait), "while it waits, the clan is still watching")
+	make_up.kind = "fetch"
+	make_up.want = "moss"
+	angry.state.items.append("moss")
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().ready), "and once the thing is done, it says what giving did")
+	angry.state.items.erase("moss")
+	make_up.kind = str(Lords.table().lords[clan].kind)
+	make_up.taken = false
+	angry.state.hp = maxi(1, angry.state.max_hp - 12)
+	var cooled: Dictionary = Requests.settle(make_up, angry.state)
+	_check(is_zero_approx(Clans.standing_of(angry.state, make_up.species)) and Clans.hostility_of(angry.state, make_up.species) == "", "paying it brings the clan to calm, and no warmer (%.0f)" % Clans.standing_of(angry.state, make_up.species))
+	_check(cooled.gold == int(Lords.pays().gold) and cooled.healed == int(Lords.pays().heal), "and it still pays a lord's gold and health")
+	_check(angry.state.lords_met.has(clan), "and the run remembers the lord it met")
+	var holds: Dictionary = Lords.redemption()
+	var holds_name := Clans.title(clan)
+	_check(Overlay.banner_fits(str(holds.done_title) % holds_name.to_upper()) and Overlay.banner_fits(str(holds.done_line) % holds_name), "the way back's banner fits the picture")
+	# paid at the request stage, the picture says the clan holds its hand, not that a debt was paid
+	var stage_flow = _flow(7)
+	await stage_flow.new_run()
+	stage_flow.state.reputation[clan] = -40.0
+	stage_flow.state.depth = 1
+	await stage_flow._make_floor()
+	var stage_q: Dictionary = stage_flow.state.floor_map.quester
+	stage_q.kind = "fetch"
+	stage_q.want = "moss"
+	stage_flow.state.items.append("moss")
+	stage_flow.state.banner = null
+	await stage_flow.go("request")
+	_check(Requests.status(stage_q, stage_flow.state) == "ready", "with the thing in the bag, the way back can be paid")
+	await stage_flow.press("1")
+	_check(stage_flow.state.banner != null and str(stage_flow.state.banner.title) == str(holds.done_title) % holds_name.to_upper(), "and the picture says the clan holds its hand (%s)" % str(stage_flow.state.banner.title if stage_flow.state.banner != null else ""))
+	_check(stage_flow.state.stage == "explore" and stage_flow.state.floor_map.quester.is_empty(), "then it goes, and the walk goes on")
+	# a clan cooled past calm on that floor keeps what it has: the way back is no penalty
+	var early = _flow(7)
+	await early.new_run()
+	early.state.reputation[clan] = -40.0
+	early.state.depth = 1
+	await early._make_floor()
+	var early_q: Dictionary = early.state.floor_map.quester
+	early.state.reputation[clan] = 22.0 # spared its own on the floor, and past calm
+	var kept_make_up = State.from_dict(early.state.to_dict())
+	_check(kept_make_up != null and bool(kept_make_up.floor_map.quester.get("redeem", false)), "a save keeps the way back on its floor")
+	early.state.hp = maxi(1, early.state.max_hp - 12)
+	Requests.settle(early_q, early.state)
+	_check(is_equal_approx(Clans.standing_of(early.state, early_q.species), 22.0), "a clan cooled past calm on the floor is not pulled back down by it (%.0f)" % Clans.standing_of(early.state, early_q.species))
+	# met that way, the lord's second favour is still its own to ask where the biome comes back
+	angry.state.depth = 4
+	await angry._make_floor()
+	var after: Dictionary = angry.state.floor_map.quester
+	_check(not after.is_empty() and str(after.get("lord", "")) == clan and bool(after.get("big", false)) and not bool(after.get("redeem", false)), "and the halls' return still has its second favour to ask (%s)" % str(after.get("title", "")))
+	var calm = _flow(7)
+	await calm.new_run()
+	_check(not calm.state.floor_map.quester.get("redeem", false), "a clan that is only calm gets the usual favour")
 
 
 ## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.
@@ -3022,22 +3086,6 @@ func _allies() -> void:
 	var older: Dictionary = flow.state.to_dict()
 	older.tally.erase("blessed")
 	_check(int(State.from_dict(older).tally.get("blessed", -1)) == 0, "and a save from before it reads as none")
-	# a clan that is angry at home here: its lord offers a way back, and paying it cools the clan to calm (#166)
-	var angry = _flow(7)
-	await angry.new_run()
-	angry.state.reputation["crew"] = -40.0
-	angry.state.depth = 1
-	await angry._make_floor()
-	var make_up: Dictionary = angry.state.floor_map.quester
-	_check(not make_up.is_empty() and make_up.get("redeem", false), "an angered clan's lord offers a way back (%s)" % str(make_up.get("title", "")))
-	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().ask), "and says so in its own words")
-	angry.state.hp = maxi(1, angry.state.max_hp - 12)
-	var cooled: Dictionary = Requests.settle(make_up, angry.state)
-	_check(is_zero_approx(Clans.standing_of(angry.state, make_up.species)) and Clans.hostility_of(angry.state, make_up.species) == "", "paying it brings the clan back to calm (%.0f)" % Clans.standing_of(angry.state, make_up.species))
-	_check(cooled.gold == int(Lords.pays().gold), "and it still pays a lord's gold")
-	var calm = _flow(7)
-	await calm.new_run()
-	_check(not calm.state.floor_map.quester.get("redeem", false), "a calm clan's lord asks its usual favour instead")
 	# the gate is not a wall: below the line the same pinned roll does take it away
 	var b = Ally.make("slime", "DROP", Allies.LEAVE_BELOW - 1.0)
 	var goes: Dictionary = Allies.judge(b, "slay_begging", worst)
