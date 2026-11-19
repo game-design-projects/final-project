@@ -3053,6 +3053,12 @@ func _clan_requests() -> void:
 	hs.facing = FloorMap.DIRS.find(minion.cell - hs.cell)
 	await to_hall.press("up")
 	_check(hs.stage == "explore" and not minion.is_gone() and hs.lines.any(func(l): return str(l.text).contains("means you harm")), "walking into one of them is no fight (%s)" % hs.stage)
+	hs.banner = null
+	for c in hall.size * hall.size: # the whole hall seen: a floor of the run would chart itself now
+		var at := Vector2i(c % hall.size, c / hall.size)
+		if hall.is_open(at) and at != hall.stairs:
+			hs.seen[at] = true
+	_check(Chart.share(hs) >= float(Chart.table().instinct_at) and Chart.share(hs) < 1.0 and not Chart.instinct_due(hs), "a hall is no floor to chart: nearly all of it seen, and explorer's instinct has nothing to say (%.2f)" % Chart.share(hs))
 	var hall_saved = State.from_dict(JSON.parse_string(JSON.stringify(hs.to_dict())))
 	_check(hall_saved != null and hall_saved.visiting == "burrow" and hall_saved.floor_map.envoys[0].get("lord", false), "a save keeps you in the hall")
 	var lord: Dictionary = hall.envoys[0]
