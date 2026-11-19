@@ -43,6 +43,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed
+- A pad that comes out where somebody stands is a fight, not a shared cell (#175): a hunter that follows you onto a pad and arrives where you are has caught you, and the party arriving on a monster starts that fight. A pad also does not take a second monster to an end one already stands on, so two of them can't come out in the same cell.
 - The status row no longer carries a second nerve count (#196): the dodge box already shows the pips beside it and pulses when one lands, which is where the eye is during a fight, so the added `NERVE 3/5` was clutter and did not fit a narrow window. What #196 keeps is the popup saying the total it left you with (`CLOSE CALL · NERVE 3/5`), which the pips do not spell out.
 - The way back's banner names the clan once: its line began `The %s` and was given the clan's title, so it read `The The Crew does not forgive you`; it opens with the title now, as the pact's line does (#166).
 - A clan's way back is a favour like any other: paying a lord's redemption cools its clan as far as calm and no further, so a clan spared past calm on that floor keeps what it has rather than being pulled back down to calm; and the lord is remembered as met, so its line goes on — where the biome comes back its second favour is still its to ask, instead of the lord never coming again (#166).
