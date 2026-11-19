@@ -163,7 +163,10 @@ func _flee(flow) -> void:
 	Roaming.hold(m)
 	if not costly:
 		m.hp = m.max_hp
+	var backed: String = flow.encounter.back_off(m)
 	var lines := [State.sys_line(Texts.flee_cost(m, dropped) if costly else Texts.flee(m))]
+	if backed != "":
+		lines.append(State.sys_line(backed))
 	for n in flow.encounter.pending_notes:
 		lines.append(State.speech(n.who, n.text))
 	flow.encounter.pending_notes = []

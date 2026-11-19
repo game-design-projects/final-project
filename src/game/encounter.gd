@@ -371,6 +371,26 @@ func leave_fight(lines: Array) -> void:
 	await flow.go("explore", {"lines": lines})
 
 
+## Backing out of a fight the party is standing in the foe's cell for: a pad set it down on the foe (#175). The other end of the
+## pad — the cell the party stepped on, free because a fight gives the monsters no turn — takes it back, so the walk never has two
+## of them in one cell and the flee's "it stays where it is" is true. Returns the pad's line for the log, or "" when the party is in
+## a cell of its own.
+func back_off(m) -> String:
+	var s = flow.state
+	var f = s.floor_map
+	if f == null or f.monster_at(s.cell) != m:
+		return ""
+	var there: Variant = f.pad_partner(s.cell)
+	if there == null:
+		return ""
+	s.cell = there
+	s.visited[there] = true
+	s.look()
+	flow.event("pad", {})
+	print("encounter: backing off %s on the pad at %s to %s" % [m.name, m.cell, there])
+	return Floors.secret_line("pad")
+
+
 ## The foe that is now out of the way may have been carrying a map of the floor (rules/chart.gd): the rest of the layout goes onto
 ## your map. Returns `lines` with the log's line for it, or as they were when it had none. With the picture free a banner says it
 ## too, and the log's line comes last. With a banner already up (a purse, a clan, a new friend) the log is the only place that
@@ -402,8 +422,12 @@ func slip_away(m, line: String) -> void:
 	flow.fight_queue = []
 	m.hp = m.max_hp
 	Roaming.hold(m)
+	var backed: String = back_off(m)
 	print("encounter: slipped away from %s" % m.name)
-	await flow.go("explore", {"lines": [State.sys_line(line)] + _take_notes()})
+	var said := [State.sys_line(line)] + _take_notes()
+	if backed != "":
+		said.append(State.sys_line(backed))
+	await flow.go("explore", {"lines": said})
 
 
 ## A fair cut of gold to stand down (bandits and snakes). `label` names the offer; `words` is what was read from a typed one.

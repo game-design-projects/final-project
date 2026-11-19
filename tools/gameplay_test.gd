@@ -829,7 +829,7 @@ func _pad_warp(game) -> void:
 
 
 ## A monster carried onto a pad stands there until its next turn (#175): stepped into from the other pad, it is a fight,
-## not a cell the party shares with it.
+## not a cell the party shares with it; and backing out of that fight leaves the party on the other pad, never in its cell.
 func _pad_landing(game) -> void:
 	var flow = game.flow
 	await flow.new_run()
@@ -863,6 +863,12 @@ func _pad_landing(game) -> void:
 	f.teleports = [{"a": near, "b": far}]
 	await flow.press("up")
 	_check(s.cell == far and s.stage == "intro" and s.foe == foe, "a pad that sets the party down where a monster stands starts the fight (%s at %s)" % [foe.name, str(far)])
+	await flow.go("menu")
+	await flow.press("4") # FLEE is the menu's fourth
+	await process_frame
+	await process_frame
+	_check(s.stage == "explore" and s.cell == near and f.monster_at(s.cell) == null, "and backing out of it takes the party back through the pad, not into the monster's cell (%s, it at %s)" % [str(s.cell), str(foe.cell)])
+	_check(foe.cell == far, "and the monster it backed away from stays where it was")
 	await flow.new_run()
 
 
