@@ -93,6 +93,11 @@ func _step(flow, backwards: bool) -> void:
 		s.hp += 1
 	if not _find_secrets(flow): # a cell with news of its own keeps the log and the picture: instinct waits for the next step or turn
 		_instinct(flow)
+	var company = s.floor_map.monster_at(s.cell) # a pad can set you down where something already stands (#175)
+	if company != null:
+		print("explore: a pad puts you down on %s at %s" % [company.name, s.cell])
+		await flow.go("intro", {"foe": company})
+		return
 	if s.cell == s.floor_map.stairs:
 		await flow.go("end")
 		return

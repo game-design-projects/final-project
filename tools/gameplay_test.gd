@@ -7,6 +7,7 @@
 extends "res://tools/test_base.gd"
 
 const Flags = preload("res://src/utils/flags.gd")
+const Floors = preload("res://src/rules/floors.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
@@ -59,6 +60,7 @@ func _run() -> void:
 	await _sub_text_wraps(game)
 	await _sub_text_items(game)
 	await _pad_warp(game)
+	await _pad_landing(game)
 	await _nerve_is_shown(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
@@ -825,6 +827,77 @@ func _pad_warp(game) -> void:
 	await process_frame
 	_check(game._stage.warp_amount() > 0.0, "the picture's field of view swells as it lands (%.2f)" % game._stage.warp_amount())
 	_check(game._postfx.flash_level() > 0.0, "and a flash in the accent colour goes with it (%.2f)" % game._postfx.flash_level())
+
+
+## A floor set up for the landing: a pad beside the party and a monster on its far end, facing the pad so `up` walks onto it.
+## Returns {flow, s, f, near, far, foe}.
+func _pad_landing_setup(game) -> Dictionary:
+	var flow = game.flow
+	await flow.new_run()
+	await flow.go("explore")
+	game.flow._keys_back_at = -1.0
+	var s = flow.state
+	var f = s.floor_map
+	var near: Vector2i = s.cell
+	for dir in f.DIRS:
+		if f.is_open(s.cell + dir) and not f.in_the_way(s.cell + dir) and f.monster_at(s.cell + dir) == null:
+			near = s.cell + dir
+			break
+	_check(near != s.cell, "(a cell beside the party to put a pad on)")
+	for _turn in 3: # a pad is walked onto, so face it first
+		if s.cell + f.DIRS[s.facing] == near:
+			break
+		await flow.press("right")
+	_check(s.cell + f.DIRS[s.facing] == near, "the party faces the pad at %s" % str(near))
+	var far: Vector2i = s.cell
+	for y in f.size:
+		for x in f.size:
+			var c := Vector2i(x, y)
+			if not f.is_open(c) or c == s.cell or c == near or c == f.stairs or f.start == c or f.in_the_way(c) or f.monster_at(c) != null:
+				continue
+			if f.pickup_at(c) != "" or f.lore_at(c) or f.treasure.any(func(t): return t.cell == c):
+				continue
+			far = c # the last one left: a corner away from the party
+	_check(far != s.cell, "(a cell across the floor to put the other end on)")
+	var foe = f.monsters.filter(func(o): return not o.boss and not o.lurking)[0]
+	foe.cell = far
+	f.teleports = [{"a": near, "b": far}]
+	return {"flow": flow, "s": s, "f": f, "near": near, "far": far, "foe": foe}
+
+
+## A monster carried onto a pad stands there until its next turn (#175): stepped into from the other pad, it is a fight,
+## not a cell the party shares with it; and backing out of that fight leaves the party on the other pad, never in its cell.
+## The escape item's way out ends the fight as FLEE does: the pad's line before what the party says of it, and no card of the
+## fight left behind riding into the next one.
+func _pad_landing(game) -> void:
+	var at := await _pad_landing_setup(game)
+	var flow = at.flow
+	var s = at.s
+	var f = at.f
+	await flow.press("up")
+	_check(s.cell == at.far and s.stage == "intro" and s.foe == at.foe, "a pad that sets the party down where a monster stands starts the fight (%s at %s)" % [at.foe.name, str(at.far)])
+	await flow.go("menu")
+	await flow.press("4") # FLEE is the menu's fourth
+	await process_frame
+	await process_frame
+	_check(s.stage == "explore" and s.cell == at.near and f.monster_at(s.cell) == null, "and backing out of it takes the party back through the pad, not into the monster's cell (%s, it at %s)" % [str(s.cell), str(at.foe.cell)])
+	_check(at.foe.cell == at.far, "and the monster it backed away from stays where it was")
+	var smoke := await _pad_landing_setup(game)
+	await smoke.flow.press("up")
+	_check(smoke.s.stage == "intro" and smoke.s.foe == smoke.foe, "(and the same landing starts the fight again for the smoke)")
+	smoke.s.items = ["smoke"]
+	var said := {"who": "WICK", "text": "*looks at the floor for a while*"} # a line of the party's, so the pad's line has something to come before
+	smoke.flow.encounter.pending_notes = [said]
+	await smoke.flow.go("menu")
+	await smoke.flow.press("6") # ITEM, the sixth with something in the bag
+	await smoke.flow.press("1")
+	await process_frame
+	_check(smoke.s.stage == "explore" and smoke.s.cell == smoke.near and smoke.foe.cell == smoke.far, "and smoke slips the party out through the pad too (%s, it at %s)" % [str(smoke.s.cell), str(smoke.foe.cell)])
+	_check(smoke.flow.encounter.pending_rows.is_empty(), "and the fight's cards are dropped, as FLEE drops them")
+	var pad_at: int = smoke.s.lines.find_custom(func(l): return l.text == Floors.secret_line("pad"))
+	var note_at: int = smoke.s.lines.find_custom(func(l): return l.text == said.text)
+	_check(pad_at >= 0 and note_at > pad_at, "and the pad's line comes before what the party makes of it (line %d, theirs %d)" % [pad_at, note_at])
+	await smoke.flow.new_run()
 
 
 # ---------------------------------------------------------------- a start that must not race a tick

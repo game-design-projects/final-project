@@ -26,7 +26,11 @@ static func turn(state, options := {}) -> Dictionary:
 	var f = state.floor_map
 	f.steps += 1
 	var barred := _barred(f)
-	var to_you := _field(f, state.cell, barred)
+	var paths := barred.duplicate() # the field a monster walks down lets it see a pad as a step; only a hunter will take one (#175)
+	for t in f.teleports:
+		paths.erase(t.a)
+		paths.erase(t.b)
+	var to_you := _field(f, state.cell, paths)
 	var out := {"caught": null, "noticed": [], "moved": [], "lost": []}
 	for i in f.monsters.size():
 		var m = f.monsters[i]
@@ -67,8 +71,16 @@ static func turn(state, options := {}) -> Dictionary:
 			out.caught = m
 			print("roaming: %s walks into you at %s" % [m.name, m.cell])
 			return out
+		var pad = f.pad_partner(next)
+		if pad == state.cell: # the pad comes out where you stand: it has caught you, not lost you
+			out.caught = m
+			print("roaming: %s steps on a pad at %s and comes out on you at %s" % [m.name, next, pad])
+			return out
 		print_verbose("roaming: %s %s %s -> %s" % [m.name, intent, m.cell, next])
 		m.cell = next
+		if pad != null: # the floor took it: a hunter that steps on a pad lands on the other one, away from you
+			m.cell = pad
+			print("roaming: %s steps on a pad at %s and lands at %s" % [m.name, next, pad])
 		out.moved.append(m)
 	return out
 
@@ -122,7 +134,7 @@ static func _sees(m, f, you: Vector2i) -> bool:
 static func _next(m, index: int, f, intent: String, to_you: Dictionary, barred: Dictionary, you: Vector2i) -> Variant:
 	match intent:
 		"hunt", "come":
-			return _downhill(m, f, to_you, barred, you)
+			return _downhill(m, f, to_you, barred, you, intent == "hunt")
 		"away":
 			var best: Variant = null
 			var far: int = to_you.get(m.cell, -1)
@@ -144,11 +156,11 @@ static func _next(m, index: int, f, intent: String, to_you: Dictionary, barred: 
 
 
 ## One step closer on this field, if the way isn't taken.
-static func _downhill(m, f, field: Dictionary, barred: Dictionary, you: Vector2i) -> Variant:
+static func _downhill(m, f, field: Dictionary, barred: Dictionary, you: Vector2i, careless := false) -> Variant:
 	var here: int = field.get(m.cell, FAR)
 	for d in FloorMap.DIRS:
 		var c: Vector2i = m.cell + d
-		if field.get(c, FAR) < here and (c == you or _free(f, c, barred)):
+		if field.get(c, FAR) < here and (c == you or _free(f, c, barred, careless)):
 			return c
 	return null
 
@@ -179,7 +191,11 @@ static func _far_end(m, index: int, f, barred: Dictionary) -> Vector2i:
 
 
 ## Whether a monster may step here: floor it may stand on, with nobody on it.
-static func _free(f, c: Vector2i, barred: Dictionary) -> bool:
+static func _free(f, c: Vector2i, barred: Dictionary, careless := false) -> bool:
+	if careless:
+		var pad: Variant = f.pad_partner(c)
+		if pad != null: # a hunter with its eyes on you steps onto a pad (#175), if the far end has nobody either
+			return f.monster_at(c) == null and f.monster_at(pad) == null
 	return f.is_open(c) and not barred.has(c) and f.monster_at(c) == null
 
 
