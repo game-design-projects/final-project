@@ -38,6 +38,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed
+- The way back's banner names the clan once: its line began `The %s` and was given the clan's title, so it read `The The Crew does not forgive you`; it opens with the title now, as the pact's line does (#166).
 - A clan's way back is a favour like any other: paying a lord's redemption cools its clan as far as calm and no further, so a clan spared past calm on that floor keeps what it has rather than being pulled back down to calm; and the lord is remembered as met, so its line goes on — where the biome comes back its second favour is still its to ask, instead of the lord never coming again (#166).
 - A skill's kill is counted as `blessed` when a friend approved of it, as a strike's is: only the strike bar passed `Encounter.judge`'s answer to `defeat`, so the same kill turned the halls away on one path and not on the other (#174).
 - The trader's stock and the bag in a fight say what the picked item does under the key hints, as the fight's own commands do: moving with the keys showed nothing there, and only the mouse's tooltip knew (#172).

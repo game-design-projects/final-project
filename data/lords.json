@@ -47,6 +47,6 @@
   "wait": "The thing is not done. My clan still watches for you.",
   "ready": "Done. You gave, where you could have taken.",
   "done_title": "%s HOLDS ITS HAND",
-  "done_line": "The %s does not forgive you. It stops sending its own after you."
+  "done_line": "%s does not forgive you. It stops sending its own after you."
  }
 }

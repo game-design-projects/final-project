@@ -2992,7 +2992,9 @@ func _lords() -> void:
 	_check(angry.state.lords_met.has(clan), "and the run remembers the lord it met")
 	var holds: Dictionary = Lords.redemption()
 	var holds_name := Clans.title(clan)
-	_check(Overlay.banner_fits(str(holds.done_title) % holds_name.to_upper()) and Overlay.banner_fits(str(holds.done_line) % holds_name), "the way back's banner fits the picture")
+	var holds_line := str(holds.done_line) % holds_name
+	_check(Overlay.banner_fits(str(holds.done_title) % holds_name.to_upper()) and Overlay.banner_fits(holds_line), "the way back's banner fits the picture")
+	_check(holds_line.begins_with(holds_name), "and opens with the clan's name (%s)" % holds_line)
 	# paid at the request stage, the picture says the clan holds its hand, not that a debt was paid
 	var stage_flow = _flow(7)
 	await stage_flow.new_run()
