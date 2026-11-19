@@ -720,10 +720,11 @@ func _thinking(game) -> void:
 	Network._flights.erase(-1)
 
 
-# ---------------------------------------------------------------- the help line under the keys
+# ---------------------------------------------------------------- the nerve you hold
 
-## A point of nerve says how many you hold, right where the eye is: the playtest earned them and never noticed (#175). It is the
-## fight's number: the walk after one shows none, because a fight starts at 0 (2 with DEEP BREATH), not with the last fight's.
+## A close call says how much nerve it left you with, where the pips alone would not (`CLOSE CALL · NERVE 2/5`,
+## `CLEAN DODGE · NERVE 3/5`): the playtest earned nerve and never noticed (#175); #196 put a second count in the status row and
+## #198 took it back out, leaving the pips and these popups to say it.
 func _nerve_is_shown(game) -> void:
 	await _fight(game)
 	game.flow.state.nerve = 2
@@ -734,6 +735,8 @@ func _nerve_is_shown(game) -> void:
 	var clean_text: String = str(game._overlay._popups.back().text)
 	_check(clean_text.contains("CLEAN DODGE") and clean_text.contains("NERVE 3/5"), "and a clean dodge counts it too (%s)" % clean_text)
 
+
+# ---------------------------------------------------------------- the help line under the keys
 
 ## SPARE's help is about 980 px at the dock's font: in a window narrower than that it wraps to a second line and the dock makes
 ## room for it, rather than running off the bottom of the window.
