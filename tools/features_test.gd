@@ -3022,6 +3022,22 @@ func _allies() -> void:
 	var older: Dictionary = flow.state.to_dict()
 	older.tally.erase("blessed")
 	_check(int(State.from_dict(older).tally.get("blessed", -1)) == 0, "and a save from before it reads as none")
+	# a clan that is angry at home here: its lord offers a way back, and paying it cools the clan to calm (#166)
+	var angry = _flow(7)
+	await angry.new_run()
+	angry.state.reputation["crew"] = -40.0
+	angry.state.depth = 1
+	await angry._make_floor()
+	var make_up: Dictionary = angry.state.floor_map.quester
+	_check(not make_up.is_empty() and make_up.get("redeem", false), "an angered clan's lord offers a way back (%s)" % str(make_up.get("title", "")))
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().ask), "and says so in its own words")
+	angry.state.hp = maxi(1, angry.state.max_hp - 12)
+	var cooled: Dictionary = Requests.settle(make_up, angry.state)
+	_check(is_zero_approx(Clans.standing_of(angry.state, make_up.species)) and Clans.hostility_of(angry.state, make_up.species) == "", "paying it brings the clan back to calm (%.0f)" % Clans.standing_of(angry.state, make_up.species))
+	_check(cooled.gold == int(Lords.pays().gold), "and it still pays a lord's gold")
+	var calm = _flow(7)
+	await calm.new_run()
+	_check(not calm.state.floor_map.quester.get("redeem", false), "a calm clan's lord asks its usual favour instead")
 	# the gate is not a wall: below the line the same pinned roll does take it away
 	var b = Ally.make("slime", "DROP", Allies.LEAVE_BELOW - 1.0)
 	var goes: Dictionary = Allies.judge(b, "slay_begging", worst)
