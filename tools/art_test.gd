@@ -212,6 +212,15 @@ func _warmth_is_read_off_the_deeds() -> void:
 	_check(Warmth.level_id(Warmth.level(Warmth.of(s))) == "shut", "four, and they shut their eyes (%.2f)" % Warmth.of(s))
 	s.tally.slain = 6
 	_check(Warmth.level(Warmth.of(s)) == 0 and Warmth.of(s) == 0.0, "six, and the halls are cold wire")
+	# a kill the party was glad of is not held against you (#174)
+	s.tally.blessed = 6
+	_check(is_equal_approx(Warmth.of(s), float(table.start)), "six kills a friend approved of leave the halls as they were (%.2f)" % Warmth.of(s))
+	s.tally.blessed = 3
+	s.tally.slain = 6
+	_check(Warmth.level_id(Warmth.level(Warmth.of(s))) == "wary", "and the ones it did not are still counted (%.2f)" % Warmth.of(s))
+	s.tally.blessed = 9 # more than were killed: it cannot warm the halls past the kills made
+	_check(Warmth.of(s) >= float(table.start) - 1e-6, "a blessed count past the kills adds nothing")
+	s.tally.blessed = 0
 	s.tally.slain = 0
 	s.butchered = [{"species": "slime", "name": "A"}]
 	var after_one := Warmth.of(s)
