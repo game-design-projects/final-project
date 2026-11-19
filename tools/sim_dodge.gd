@@ -10,7 +10,8 @@
 ##   doomed   how often every square within two steps would hurt before the bot could get anywhere (should be 0)
 ##   blind    hazards on your square drawn less than REACT_MS before they hurt (should be 0)
 ##   quiet    the longest stretch with nothing warning or hurting, in ms (a long one is dead air)
-## `only=a,b` limits it to those attacks, `seeds=N` sets how many (default 40), `csv=1` prints one CSV line per row.
+## `only=a,b` limits it to those attacks, `seeds=N` sets how many (default 40), `csv=1` prints one CSV line per row, and
+## `boss=1` plays it as a champion's attack (longer, at a champion's intensity) rather than a usual monster's.
 ##   godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound [only=spit,bounce] [seeds=40]
 extends SceneTree
 
@@ -26,7 +27,9 @@ const SLOW_DECIDE_MS := 260.0
 const SLOW_LATENCY_MS := 380.0
 const REACT_MS := 300.0 # warning a person needs to see a square light and step off it
 const INTENSITIES := [1.0, 1.3, 1.6]
-const MINI := ["gates", "stars", "dance"] # mini-games, not attacks: measured too, but the stars and pads heal
+const MINI := ["gates", "stars", "dance"]
+
+var _boss := false # # `boss=1`: play each attack as a champion's rather than a usual monster's # mini-games, not attacks: measured too, but the stars and pads heal
 
 
 func _init() -> void:
@@ -38,6 +41,9 @@ func _init() -> void:
 	if not only.is_empty():
 		genres = genres.filter(func(g): return only.has(g))
 	var csv := Flags.value("csv") == "1"
+	for arg in OS.get_cmdline_user_args():
+		if str(arg) == "boss=1": # not a declared flag: a tool argument, read here (Flags drops unknown names)
+			_boss = true
 	if csv:
 		print("genre,intensity,hits,slow,clean,lit,peak,doomed,blind,quiet")
 	else:
@@ -70,7 +76,7 @@ func _measure(genre: String, intensity: float, seeds: int, latency: float, decid
 	for i in seeds:
 		var rng := Rng.new(1000 + i)
 		# pressure is chosen so the run's intensity is the one asked for (Combat.dodge_intensity = 0.8 + 0.25 * pressure)
-		var run = DodgeRun.start(genre, (intensity - 0.8) / 0.25, false, i % 3, 0.0, {}, 1.0, {})
+		var run = DodgeRun.start(genre, (intensity - 0.8) / 0.25, _boss, i % 3, 0.0, {}, 1.0, {})
 		var t := 0.0
 		var next_decide := 0.0
 		var got := 0
