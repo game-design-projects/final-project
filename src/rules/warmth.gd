@@ -16,7 +16,8 @@ static func of(state) -> float:
 	var d: Dictionary = t.deeds
 	var v: float = t.start
 	v += float(d.spared) * state.tally.spared + float(d.recruited) * state.tally.recruited
-	v += float(d.slain) * state.tally.slain + float(d.left) * state.tally.left
+	var kills: int = maxi(0, int(state.tally.slain) - int(state.tally.get("blessed", 0))) # a kill the party approved of is left out
+	v += float(d.slain) * kills + float(d.left) * state.tally.left
 	v += float(d.butchered) * state.butchered.size() + float(d.left_behind) * state.left_behind.size() + float(d.meals) * state.meals
 	return clampf(v, 0.0, 1.0)
 

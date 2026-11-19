@@ -165,8 +165,8 @@ func _finish(flow) -> void:
 	Combat.apply_hit_to_mood(m)
 	var begging: bool = flow.encounter.begging()
 	if m.hp <= 0:
-		flow.encounter.judge("slay_begging" if begging else "slay")
-		await flow.encounter.defeat(m, "slain")
+		var blessed: bool = flow.encounter.judge("slay_begging" if begging else "slay")
+		await flow.encounter.defeat(m, "slain", true, "", blessed)
 		return
 	var decision: Dictionary = await flow.encounter.decide(m, "fight", "YOU HIT IT")
 	if begging:
