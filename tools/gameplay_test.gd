@@ -59,6 +59,7 @@ func _run() -> void:
 	await _sub_text_wraps(game)
 	await _sub_text_items(game)
 	await _pad_warp(game)
+	await _nerve_is_shown(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
 	await _wide_view(game)
@@ -723,6 +724,20 @@ func _thinking(game) -> void:
 
 ## SPARE's help is about 980 px at the dock's font: in a window narrower than that it wraps to a second line and the dock makes
 ## room for it, rather than running off the bottom of the window.
+## A point of nerve says how many you hold, right where the eye is: the playtest earned them and never noticed (#175).
+func _nerve_is_shown(game) -> void:
+	await _fight(game)
+	game.flow.state.nerve = 2
+	game._status.state = game.flow.state
+	game.flow.event("nerve", {"total": 2, "how": "close"})
+	var close_text: String = str(game._overlay._popups.back().text)
+	_check(close_text.contains("CLOSE CALL") and close_text.contains("NERVE 2/5"), "a close call says the nerve it leaves you with (%s)" % close_text)
+	_check(game._status.nerve_text() == "NERVE 2/5", "the status row shows it too (%s)" % game._status.nerve_text())
+	game.flow.event("nerve", {"total": 3, "how": "clean"})
+	var clean_text: String = str(game._overlay._popups.back().text)
+	_check(clean_text.contains("CLEAN DODGE") and clean_text.contains("NERVE 3/5"), "and a clean dodge counts it too (%s)" % clean_text)
+
+
 func _sub_text_wraps(game) -> void:
 	await _fight(game)
 	var Hud = load("res://src/view/hud.gd")

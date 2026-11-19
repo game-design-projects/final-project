@@ -8,6 +8,7 @@ extends Control
 const Achievements = preload("res://src/rules/achievements.gd")
 const Audio = preload("res://src/audio/audio.gd")
 const Automap = preload("res://src/view/automap.gd")
+const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
@@ -645,12 +646,15 @@ func _on_event(name: String, data: Dictionary) -> void:
 		"keepsake":
 			_postfx.flash(Palette.MERCY, 0.3 * _softness())
 		"nerve":
+			# A point of nerve says how many you hold, so the resource is not just a word over the soul (#175: testers earned
+			# close calls and never noticed).
+			var held := "NERVE %d/%d" % [int(data.get("total", 0)), Combat.NERVE_MAX]
 			match data.how:
 				"close":
-					_overlay.popup("CLOSE CALL", Palette.YOU, _overlay.soul_at() + Vector2(0, -6))
+					_overlay.popup("CLOSE CALL · %s" % held, Palette.YOU, _overlay.soul_at() + Vector2(0, -6))
 					_postfx.flash(Palette.YOU, 0.12 * _softness())
 				"clean":
-					_overlay.popup("CLEAN DODGE · NERVE +1", Palette.YOU, Vector2(224, 150))
+					_overlay.popup("CLEAN DODGE · %s" % held, Palette.YOU, Vector2(224, 150))
 		"heart":
 			_overlay.popup("+1", Palette.MERCY, _overlay.soul_at() + Vector2(0, -6))
 			_postfx.flash(Palette.MERCY, 0.12 * _softness())
