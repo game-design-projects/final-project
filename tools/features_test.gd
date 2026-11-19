@@ -3296,51 +3296,102 @@ func _roaming() -> void:
 	# a hunter that cannot see you for a few steps loses your track and goes back to its own way (#169)
 	var lost_flow = _flow(861)
 	await lost_flow.new_run()
-	var lost_map = lost_flow.state.floor_map
+	var lost_state = lost_flow.state
+	var lost_map = lost_state.floor_map
 	var hunter = lost_map.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
 	lost_map.monsters = [hunter]
-	lost_map.quester = {}
-	lost_flow.state.reputation = {}
-	hunter.meters = {"friendliness": 0.0, "anger": 60.0, "fear": 0.0}
-	hunter.hold = 0
-	hunter.hunting = false
-	hunter.unseen = 0
-	hunter.no_hunt = 0
-	var field_l: Dictionary = Roaming._field(lost_map, lost_flow.state.cell, Roaming._barred(lost_map))
-	var near_in_sight: Variant = null
-	var near_out_of_sight: Variant = null
-	for c in field_l:
-		if field_l[c] < 2 or field_l[c] > int(Roaming.table().angry_sense):
-			continue
+	lost_map.quester = {} # a floor with a request keeps the monster it asks about; this one is down to one and a save must still load
+	lost_state.reputation = {}
+	var lost_t: Dictionary = Roaming.table()
+	var lost_field: Dictionary = Roaming._field(lost_map, lost_state.cell, Roaming._barred(lost_map))
+	var in_view: Variant = null
+	var hid: Variant = null
+	var far_off: Variant = null
+	for c in lost_field:
 		hunter.cell = c
-		if Roaming._sees(hunter, lost_map, lost_flow.state.cell):
-			near_in_sight = c if near_in_sight == null else near_in_sight
-		else:
-			near_out_of_sight = c if near_out_of_sight == null else near_out_of_sight
-	if near_in_sight != null and near_out_of_sight != null:
-		hunter.cell = near_in_sight
-		var began: Dictionary = Roaming.turn(lost_flow.state)
+		var seen_from: bool = Roaming._sees(hunter, lost_map, lost_state.cell)
+		if lost_field[c] >= 2 and lost_field[c] <= 4 and seen_from and in_view == null:
+			in_view = c
+		if lost_field[c] >= 2 and lost_field[c] <= 4 and not seen_from and hid == null:
+			hid = c
+		if lost_field[c] >= 10 and far_off == null:
+			far_off = c
+	if in_view == null or hid == null or far_off == null:
+		_check(false, "no cell on this floor in sight, hidden or far off: cannot check losing the track")
+	else:
+		var angry := func(sp: String):
+			hunter.species = sp
+			hunter.meters = {"friendliness": 0.0, "anger": 60.0, "fear": 0.0}
+			hunter.hold = 0
+			hunter.hunting = false
+			hunter.unseen = 0
+			hunter.no_hunt = 0
+			hunter.cell = hid
+		angry.call("bandit")
+		hunter.cell = in_view
+		var began: Dictionary = Roaming.turn(lost_state)
 		_check(hunter.hunting and began.noticed.has(hunter), "a monster near you and in sight starts hunting")
-		var gave_up := false
+		hunter.hunting = true
+		hunter.unseen = 0
 		var lost_at := 0
-		for step in int(Roaming.table().lose_track) + 2:
-			hunter.cell = near_out_of_sight # it keeps moving toward where it last had you; keep it out of sight instead
-			var one := Roaming.turn(lost_flow.state)
-			if one.lost.has(hunter):
-				gave_up = true
+		for step in int(lost_t.lose_track) + 2:
+			hunter.cell = hid # it keeps moving toward where it last had you; keep it out of sight instead
+			if Roaming.turn(lost_state).lost.has(hunter):
 				lost_at = step + 1
 				break
-		_check(gave_up and not hunter.hunting and hunter.no_hunt > 0, "out of its sight for a few steps, it loses your track (%d steps, then %d off)" % [lost_at, hunter.no_hunt])
-		var kept := false
+		_check(lost_at == int(lost_t.lose_track) and not hunter.hunting, "out of its sight %d steps, it loses your track (%d)" % [int(lost_t.lose_track), lost_at])
+		var off := 0
+		var came_back := false
+		for _k in int(lost_t.lose_track_cooldown) + 1:
+			hunter.cell = hid
+			var one: Dictionary = Roaming.turn(lost_state)
+			if hunter.hunting:
+				break
+			came_back = came_back or one.noticed.has(hunter)
+			off += 1
+		_check(off == int(lost_t.lose_track_cooldown) and hunter.hunting and not came_back, "its own way for %d steps, then it hunts you again" % int(lost_t.lose_track_cooldown))
+		# a stalker that has given up stays off it, though you are well within its reach
+		angry.call("snake")
+		for _k in int(lost_t.lose_track) + 1:
+			hunter.cell = hid
+			Roaming.turn(lost_state)
+		_check(hunter.no_hunt > 0 and not hunter.hunting, "a stalker loses it too (%d steps off)" % hunter.no_hunt)
+		var again := false
 		for _k in 3:
-			hunter.cell = near_out_of_sight
-			Roaming.turn(lost_flow.state)
-			kept = kept or hunter.hunting
-		_check(not kept, "and it stays off the hunt while it has given up")
-		var carried = State.from_dict(lost_flow.state.to_dict())
+			hunter.cell = hid
+			again = again or Roaming.turn(lost_state).noticed.has(hunter)
+		_check(not again and not hunter.hunting, "and it does not come after you again while it has given up")
+		var carried = State.from_dict(lost_state.to_dict())
 		_check(int(carried.floor_map.monsters[0].no_hunt) == hunter.no_hunt and not carried.floor_map.monsters[0].hunting, "a save keeps it off the hunt (%d)" % int(carried.floor_map.monsters[0].no_hunt))
-	else:
-		_check(false, "no cell on this floor both near and hidden: cannot check losing the track")
+		# a hunt it broke off some other way starts the next one's count over
+		angry.call("snake")
+		hunter.hunting = true
+		hunter.unseen = 3
+		hunter.cell = far_off # out of its reach, and it does not lose you there
+		Roaming.turn(lost_state)
+		_check(not hunter.hunting and hunter.unseen == 0, "a hunt that ends another way does not carry its count into the next")
+		var took := 0
+		for step in int(lost_t.lose_track) + 2:
+			hunter.cell = hid
+			if Roaming.turn(lost_state).lost.has(hunter):
+				took = step + 1
+				break
+		_check(took == int(lost_t.lose_track), "and the next one takes the full %d steps (%d)" % [int(lost_t.lose_track), took])
+		# a pad on the line takes a hunter's sight of you; the camera still sees across it
+		var pad: Dictionary = lost_map.teleports[0] if not lost_map.teleports.is_empty() else {}
+		var pair: Array = []
+		if not pad.is_empty():
+			for d in FloorMap.DIRS:
+				if lost_map.is_open(pad.a + d) and lost_map.is_open(pad.a - d):
+					pair = [pad.a + d, pad.a - d]
+					break
+		if pair.is_empty():
+			_check(false, "no floor either side of a pad: cannot check what a pad hides")
+		else:
+			hunter.cell = pair[0]
+			var from := Vector2(pair[0]) + Vector2(0.5, 0.5)
+			var to := Vector2(pair[1]) + Vector2(0.5, 0.5)
+			_check(not Roaming._sees(hunter, lost_map, pair[1]) and Vision.clear_line(lost_map, from, to), "a pad between you hides you from a hunter, and not from the camera")
 	# who is near: put them by the walk from you
 	var field: Dictionary = Roaming._field(f, s.cell, Roaming._barred(f))
 	var cell_at := func(d: int) -> Vector2i:

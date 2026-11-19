@@ -10,24 +10,11 @@
  "revenge_at": -14,
  "revenge_sense": 14,
  "species": {
-  "slime": {
-   "kind": "drift",
-   "every": 2
-  },
-  "bandit": {
-   "kind": "patrol"
-  },
-  "snake": {
-   "kind": "stalk",
-   "sense": 5,
-   "keeps_on": 3
-  },
-  "rock": {
-   "kind": "still"
-  },
-  "dragon": {
-   "kind": "still"
-  }
+  "slime": {"kind": "drift", "every": 2},
+  "bandit": {"kind": "patrol"},
+  "snake": {"kind": "stalk", "sense": 5, "keeps_on": 3},
+  "rock": {"kind": "still"},
+  "dragon": {"kind": "still"}
  },
  "tag": "HUNTING",
  "caught": "%s caught up with you.",
