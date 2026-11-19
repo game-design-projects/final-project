@@ -11,6 +11,7 @@ const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
+const Vision = preload("res://src/rules/vision.gd")
 
 const FAR := 1 << 30 # not within reach
 
@@ -26,7 +27,7 @@ static func turn(state, options := {}) -> Dictionary:
 	f.steps += 1
 	var barred := _barred(f)
 	var to_you := _field(f, state.cell, barred)
-	var out := {"caught": null, "noticed": [], "moved": []}
+	var out := {"caught": null, "noticed": [], "moved": [], "lost": []}
 	for i in f.monsters.size():
 		var m = f.monsters[i]
 		if m.is_gone() or m.lurking:
@@ -35,7 +36,21 @@ static func turn(state, options := {}) -> Dictionary:
 			m.hold -= 1
 			m.hunting = false
 			continue
+		if m.no_hunt > 0:
+			m.no_hunt -= 1
 		var intent := _intent(m, f, to_you, state, options)
+		if intent == "hunt" and not m.boss: # a hunter that cannot see you for a while loses your track (#169)
+			if _sees(m, f, state.cell):
+				m.unseen = 0
+			else:
+				m.unseen += 1
+				if m.unseen >= int(table().lose_track):
+					m.hunting = false
+					m.unseen = 0
+					m.no_hunt = int(table().lose_track_cooldown)
+					out.lost.append(m)
+					print("roaming: %s loses your track at %s" % [m.name, m.cell])
+					intent = "still"
 		if intent == "hunt" and not m.hunting:
 			out.noticed.append(m)
 			print("roaming: %s starts hunting you from %s" % [m.name, m.cell])
@@ -69,9 +84,11 @@ static func _intent(m, f, to_you: Dictionary, state, options: Dictionary) -> Str
 		return "hunt" if options.get("boss_chase", false) and m.cell != f.stairs and seen else "still"
 	if m.meters.fear >= float(t.afraid_at) and near <= int(t.afraid_sense):
 		return "away"
-	if options.get("revenge", false) and near <= int(t.revenge_sense) and float(state.reputation.get(Clans.of(m.species), 0.0)) <= float(t.revenge_at):
+	if m.no_hunt > 0: # it has lost you: it goes back to its own way about the floor
+		pass
+	elif options.get("revenge", false) and near <= int(t.revenge_sense) and float(state.reputation.get(Clans.of(m.species), 0.0)) <= float(t.revenge_at):
 		return "hunt"
-	if m.meters.anger >= float(t.angry_at) and near <= int(t.angry_sense):
+	elif m.meters.anger >= float(t.angry_at) and near <= int(t.angry_sense):
 		return "hunt"
 	if m.meters.friendliness >= float(t.friendly_at) and near <= int(t.friendly_sense):
 		return "come"
@@ -87,6 +104,12 @@ static func _intent(m, f, to_you: Dictionary, state, options: Dictionary) -> Str
 			var reach: int = int(way.sense) + (int(way.keeps_on) if m.hunting else 0)
 			return "hunt" if near <= reach else "still"
 	return "still"
+
+
+## Whether a monster has you in sight: an open line between you, which is what a corridor or a corner takes away (#169).
+static func _sees(m, f, you: Vector2i) -> bool:
+	var mine := Vector2(m.cell) + Vector2(0.5, 0.5)
+	return Vision.clear_line(f, mine, Vector2(you) + Vector2(0.5, 0.5))
 
 
 ## The cell it moves to, or null to stay. It may be yours.

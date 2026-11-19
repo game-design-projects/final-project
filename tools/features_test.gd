@@ -3293,6 +3293,54 @@ func _roaming() -> void:
 		Roaming.turn(s)
 		seen_cells[m.cell] = true
 	_check(seen_cells.size() > 3 and m.patrol.size() == 2, "a bandit walks a beat (%d cells)" % seen_cells.size())
+	# a hunter that cannot see you for a few steps loses your track and goes back to its own way (#169)
+	var lost_flow = _flow(861)
+	await lost_flow.new_run()
+	var lost_map = lost_flow.state.floor_map
+	var hunter = lost_map.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
+	lost_map.monsters = [hunter]
+	lost_map.quester = {}
+	lost_flow.state.reputation = {}
+	hunter.meters = {"friendliness": 0.0, "anger": 60.0, "fear": 0.0}
+	hunter.hold = 0
+	hunter.hunting = false
+	hunter.unseen = 0
+	hunter.no_hunt = 0
+	var field_l: Dictionary = Roaming._field(lost_map, lost_flow.state.cell, Roaming._barred(lost_map))
+	var near_in_sight: Variant = null
+	var near_out_of_sight: Variant = null
+	for c in field_l:
+		if field_l[c] < 2 or field_l[c] > int(Roaming.table().angry_sense):
+			continue
+		hunter.cell = c
+		if Roaming._sees(hunter, lost_map, lost_flow.state.cell):
+			near_in_sight = c if near_in_sight == null else near_in_sight
+		else:
+			near_out_of_sight = c if near_out_of_sight == null else near_out_of_sight
+	if near_in_sight != null and near_out_of_sight != null:
+		hunter.cell = near_in_sight
+		var began: Dictionary = Roaming.turn(lost_flow.state)
+		_check(hunter.hunting and began.noticed.has(hunter), "a monster near you and in sight starts hunting")
+		var gave_up := false
+		var lost_at := 0
+		for step in int(Roaming.table().lose_track) + 2:
+			hunter.cell = near_out_of_sight # it keeps moving toward where it last had you; keep it out of sight instead
+			var one := Roaming.turn(lost_flow.state)
+			if one.lost.has(hunter):
+				gave_up = true
+				lost_at = step + 1
+				break
+		_check(gave_up and not hunter.hunting and hunter.no_hunt > 0, "out of its sight for a few steps, it loses your track (%d steps, then %d off)" % [lost_at, hunter.no_hunt])
+		var kept := false
+		for _k in 3:
+			hunter.cell = near_out_of_sight
+			Roaming.turn(lost_flow.state)
+			kept = kept or hunter.hunting
+		_check(not kept, "and it stays off the hunt while it has given up")
+		var carried = State.from_dict(lost_flow.state.to_dict())
+		_check(int(carried.floor_map.monsters[0].no_hunt) == hunter.no_hunt and not carried.floor_map.monsters[0].hunting, "a save keeps it off the hunt (%d)" % int(carried.floor_map.monsters[0].no_hunt))
+	else:
+		_check(false, "no cell on this floor both near and hidden: cannot check losing the track")
 	# who is near: put them by the walk from you
 	var field: Dictionary = Roaming._field(f, s.cell, Roaming._barred(f))
 	var cell_at := func(d: int) -> Vector2i:
