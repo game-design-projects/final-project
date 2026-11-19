@@ -73,7 +73,7 @@ func _paid(flow) -> void:
 	else:
 		flow.announce(t.done_title, t.done_line % [got.gold, got.healed])
 	flow.event("sound", {"name": "good"})
-	var thanks: String = t.kinds[q.kind].thanks
+	var thanks: String = Requests.thanks(q, s.floor_map)
 	flow.event("shout", {"text": thanks, "species": q.species, "boss": false})
 	s.floor_map.quester = {}
 	await flow.go("explore", {"lines": [State.speech(q.name, thanks)]})

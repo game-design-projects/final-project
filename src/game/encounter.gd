@@ -71,7 +71,10 @@ func greeting(m):
 	flow.event("mood", {"tone": news.tone})
 	if not flow.banner_up():
 		flow.announce("WORD HAS SPREAD", Clans.news(news))
-	return memory if memory != null else foe_line(m, news.kind, news.who)
+	if memory != null:
+		return memory
+	var said = foe_line(m, news.kind, news.who)
+	return said if said != null else foe_line(m, "converse")
 
 
 ## Whether it was begging when you struck: the odds as the gauge last showed them, not asked again, so a blow that ends the
@@ -263,10 +266,23 @@ func defeat(m, how: String, allow_join := true, settlement := "") -> void:
 		verdict = settlement if settlement != "" else Texts.VERDICT_SPARED
 	else:
 		verdict = Texts.VERDICT_SLAIN
-	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + told + _take_notes()
+	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + felt_lines(m, how) + told + _take_notes()
 	s.mind_rows = pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## What the other clans make of a deed done to `m` (Clans.felt), for the log: which clan likes or dislikes it, and why. Nothing
+## on the practice floor, which is still teaching the fight, nor in the test room, which forgets the deed at once.
+func felt_lines(m, deed: String) -> Array:
+	var s = flow.state
+	if s.testing or s.practice:
+		return []
+	var out := []
+	for felt in Clans.felt(m.species, deed):
+		out.append(State.sys_line(felt.text))
+		print("encounter: %s" % felt.text)
+	return out
 
 
 ## A clan's hostility moved (Clans.record or Clans.favour): the first move is said on the picture, or in the log when something
@@ -321,7 +337,7 @@ func take_along(m, wants: float) -> void:
 	var healed := _heal(Allies.gift(m.species).heal)
 	flow.announce(Texts.joined_title(m), "%s: %s" % [charm.name, charm.text])
 	print("encounter: %s joins, loyalty %.0f, healed %d" % [m.name, s.allies.back().loyalty, healed])
-	await leave_fight([State.sys_line(Texts.joined(m, charm, healed))] + _take_notes())
+	await leave_fight([State.sys_line(Texts.joined(m, charm, healed))] + felt_lines(m, "recruited") + _take_notes())
 
 
 ## The answer at the ask stage: it goes its own way, and leaves you something.
@@ -333,7 +349,7 @@ func part_ways(m) -> void:
 	print("encounter: %s leaves a gift: %d gold, healed %d" % [m.name, gift.gold, healed])
 	var line = foe_line(m, "leave_peacefully")
 	var lines := [line] if line != null else []
-	await leave_fight(lines + [State.sys_line(Texts.parted(int(gift.gold), healed))] + _take_notes())
+	await leave_fight(lines + [State.sys_line(Texts.parted(int(gift.gold), healed))] + felt_lines(m, "spared") + _take_notes())
 
 
 ## Up to `amount` health back; returns how much it was.

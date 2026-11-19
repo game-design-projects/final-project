@@ -1760,7 +1760,13 @@ func _clans() -> void:
 	_check(Clans.of("slime") != "" and Clans.of("bandit") != "" and Clans.of("slime") != Clans.of("bandit"), "the kinds of monster belong to different clans")
 	for species in Content.table("species"):
 		_check(Clans.of(species) != "", "%s has a clan" % species)
-		for kind in ["kin_spared", "kin_slain", "side_spared", "side_slain"]:
+		var clan_of: String = Clans.of(species)
+		var kinds := ["kin_spared", "kin_slain"]
+		if not Clans.felt_by(clan_of, "likes").is_empty() or float(Content.table("clans").clans[clan_of].get("hears_all", 0.0)) > 0.0:
+			kinds += ["friend_spared", "friend_slain"] # it hears of someone it doesn't dislike
+		if not Clans.felt_by(clan_of, "dislikes").is_empty():
+			kinds += ["rival_slain", "rival_kept"]
+		for kind in kinds:
 			_check(not Content.species(species).lines.get(kind, []).is_empty(), "%s has %s lines" % [species, kind])
 
 	# the test the issue asks for: spare one, and a later one of the same group reacts and starts in another mood
@@ -1829,34 +1835,69 @@ func _clans() -> void:
 	var clamped = State.from_dict(JSON.parse_string(JSON.stringify(huge)))
 	_check(clamped.reputation[clan] <= Clans.STANDING_MAX and not clamped.reputation.has("nobody"), "reputation out of range is brought back (%s)" % str(clamped.reputation))
 
-	# word spills to the clan's side, the dragon hears a little of everything, killing turns them the other way
+	# word reaches the clans with a feeling about the victim's: a friend takes it as its own, by half; a rival is glad of a killing
+	# and sore when you take one in; a clan with no feeling hears nothing, and the dragon hears a little of the rest
 	var slain := State.new()
 	var victim := Monster.new()
 	victim.species = "slime"
 	victim.name = "OOZE"
 	Clans.record(slain, victim, "slain")
-	var side_clans: Array = Clans.side_of(clan)
-	_check(side_clans.size() >= 1, "a clan has others on its side")
-	_check(slain.reputation[clan] < 0.0 and slain.reputation[side_clans[0]] < 0.0 and slain.reputation[side_clans[0]] > slain.reputation[clan], "killing one hurts its clan most, its side less (%s)" % str(slain.reputation))
-	var rival: String = Clans.of("bandit")
-	_check(not side_clans.has(rival) and slain.reputation.get(rival, 0.0) == 0.0, "another side doesn't care (%s)" % str(slain.reputation))
-	_check(slain.reputation[Clans.of("dragon")] < 0.0, "the dragon hears of everything")
+	var friends: Array = Clans.who_feels("likes", clan)
+	var rivals: Array = Clans.who_feels("dislikes", clan)
+	_check(friends == [Clans.of("snake")] and rivals == [Clans.of("rock")], "the Coil likes the Burrow and the Old Stone dislikes it (%s, %s)" % [friends, rivals])
+	_check(Clans.felt_by(clan, "likes").has(Clans.of("dragon")) and Clans.feeling(Clans.of("dragon"), clan) == "ignores", "the Burrow adores the Hoard, which has never noticed it")
+	_check(Clans.feeling(Clans.of("bandit"), Clans.of("snake")) == "dislikes" and Clans.feeling(Clans.of("snake"), Clans.of("bandit")) == "dislikes", "the Crew hunts the Coil, and the Coil wants it paid back")
+	_check(Clans.feeling(Clans.of("bandit"), Clans.of("rock")) == "dislikes" and Clans.feeling(Clans.of("rock"), Clans.of("bandit")) == "", "rocks fall on the Crew, and the Old Stone has no idea")
+	_check(Clans.feeling(Clans.of("dragon"), Clans.of("bandit")) == "dislikes", "the Hoard hates thieves")
+	_check(slain.reputation[clan] < 0.0 and slain.reputation[friends[0]] < 0.0 and slain.reputation[friends[0]] > slain.reputation[clan], "killing one hurts its clan most, its friends less (%s)" % str(slain.reputation))
+	_check(slain.reputation[rivals[0]] > 0.0, "and its rival is glad of it (%s)" % str(slain.reputation))
+	_check(slain.reputation.get(Clans.of("bandit"), 0.0) == 0.0 and slain.reputation.get(Clans.of("dragon"), 0.0) == 0.0, "a clan with no feeling about it doesn't care, nor one that ignores it (%s)" % str(slain.reputation))
+	var stone := Monster.new()
+	stone.species = "rock"
+	stone.name = "FLINT"
+	var heard_all := State.new()
+	Clans.record(heard_all, stone, "slain")
+	_check(heard_all.reputation[Clans.of("dragon")] < 0.0 and heard_all.reputation[Clans.of("bandit")] > 0.0, "the dragon hears a little of the rest, and the Crew is glad of a rock gone (%s)" % str(heard_all.reputation))
 	var grudge = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0], Vector2i.ONE)
 	var was_angry: float = grudge.meters.anger
 	var was_kind: float = grudge.meters.friendliness
 	var heard: Dictionary = Clans.hear(grudge, slain)
 	_check(heard.kind == "kin_slain" and heard.who == "OOZE" and heard.tone == "bad", "kin of the slain knows who did it (%s)" % str(heard))
 	_check(grudge.meters.anger > was_angry and grudge.meters.friendliness < was_kind, "and starts angrier")
-	var on_side = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(side_clans[0]))[0], Vector2i.ONE)
-	_check(Clans.hear(on_side, slain).kind == "side_slain", "its side has heard too")
+	var a_friend = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(friends[0]))[0], Vector2i.ONE)
+	_check(Clans.hear(a_friend, slain).kind == "friend_slain", "its friends have heard too")
+	var a_rival = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(rivals[0]))[0], Vector2i.ONE)
+	var rival_kind: float = a_rival.meters.friendliness
+	var glad: Dictionary = Clans.hear(a_rival, slain)
+	_check(glad.kind == "rival_slain" and glad.tone == "good" and a_rival.meters.friendliness > rival_kind, "its rival has heard, and starts friendlier (%s)" % str(glad))
 	var far = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "bandit")[0], Vector2i.ONE)
 	var far_mood: float = far.meters.friendliness
-	_check(Clans.hear(far, slain).is_empty() and far.meters.friendliness == far_mood and far.heard.is_empty(), "another side has nothing to say")
+	_check(Clans.hear(far, slain).is_empty() and far.meters.friendliness == far_mood and far.heard.is_empty(), "a clan with no feeling has nothing to say")
+	var taken_in := State.new()
+	var rival_before: float = 0.0
+	Clans.record(taken_in, victim, "spared")
+	_check(taken_in.reputation.get(rivals[0], 0.0) == rival_before, "sparing one costs nothing with its rival")
+	Clans.record(taken_in, victim, "recruited")
+	var sore_rival = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(rivals[0]))[0], Vector2i.ONE)
+	var sore: Dictionary = Clans.hear(sore_rival, taken_in)
+	_check(taken_in.reputation[rivals[0]] < 0.0 and sore.kind == "rival_kept" and sore.tone == "bad", "taking one in does: its rival is sore about it (%s, %s)" % [str(taken_in.reputation), str(sore)])
+
+	# every deed says which clans like it or dislike it, and why
+	var told_slain: Array = Clans.felt("slime", "slain")
+	_check(told_slain.size() == 2 and not told_slain[0].glad and told_slain[0].clan == friends[0] and told_slain[1].glad and told_slain[1].clan == rivals[0], "a slime killed: the Coil dislikes it, the Old Stone likes it, the sore one first (%s)" % str(told_slain))
+	_check(told_slain[1].text == "The Old Stone likes that you killed a slime: slimes are too soft.", "and the line says who, what and why: %s" % told_slain[1].text)
+	_check(Clans.felt("slime", "spared").all(func(f): return f.glad) and Clans.felt("slime", "recruited").any(func(f): return not f.glad and f.clan == rivals[0]), "sparing one only pleases; taking one in is disliked by its rival")
+	_check(Clans.felt("dragon", "slain").size() == 1 and Clans.felt("dragon", "slain")[0].clan == clan, "a dragon killed: only the Burrow minds")
+	for species in Content.table("species"):
+		for deed in ["spared", "recruited", "slain"]:
+			for felt in Clans.felt(species, deed):
+				_check_quietly(felt.text.begins_with(Clans.title(felt.clan)) and felt.text.ends_with(".") and not felt.text.contains("%") and Hud.log_fits([State.sys_line(felt.text)], 760.0) == 1, "what a clan makes of a deed reads as one line: %s" % felt.text)
+	_check(true, "every clan's reaction to every deed is a sentence the log has room for")
 
 	# every sentence fits the banner, and a hated monster can still be won over
 	for id in Content.table("clans").clans:
 		for tone in ["good", "bad"]:
-			for deed in ["spared", "slain"]:
+			for deed in ["spared", "recruited", "slain"]:
 				var text: String = Clans.news({"clan": id, "deed": deed, "who": "WWWWWWWW", "tone": tone})
 				_check(Overlay.banner_fits(text), "the news fits the banner: %s" % text)
 	_check(Clans.mood(-1000.0).friendliness >= -Clans.MOOD_MAX and Clans.mood(1000.0).friendliness <= Clans.MOOD_MAX, "a clan's opinion only moves a mood so far")
@@ -1864,10 +1905,10 @@ func _clans() -> void:
 
 
 ## Kills climb a clan through angry, furious and enraged (#77). A furious clan sends elites to the floors made after it got so; an
-## enraged one won't take mercy, a cut or an offer; sparing its side or a favour cools it; the header and the cards say why it's harder.
+## enraged one won't take mercy, a cut or an offer; sparing its own, its friends or a favour cools it; the header and the cards say why it's harder.
 func _hostility() -> void:
 	var clan: String = Clans.of("slime")
-	var side: String = Clans.side_of(clan)[0]
+	var side: String = Clans.who_feels("likes", clan)[0] # the Coil: a friend takes a slime's death as half its own
 	var slime_line: Dictionary = Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0]
 	var tally := State.new()
 	var kill := func(species: String, who: String) -> Array:
@@ -1881,8 +1922,8 @@ func _hostility() -> void:
 	_check(not Clans.sends_elites(tally, "slime"), "and sends no elites yet")
 	kill.call("slime", "B")
 	_check(Clans.hostility_of(tally, "slime") == "furious" and Clans.sends_elites(tally, "slime"), "two kills: furious, and it sends elites")
-	_check(Clans.hostility(float(tally.reputation[side])) == "angry" and not Clans.sends_elites(tally, side_species(side)), "its side is only angry (%s)" % str(tally.reputation))
-	_check(not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "another side doesn't care")
+	_check(Clans.hostility(float(tally.reputation[side])) == "angry" and not Clans.sends_elites(tally, side_species(side)), "its friend is only angry (%s)" % str(tally.reputation))
+	_check(not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "a clan with no feeling about it doesn't care")
 	var goo = Monster.make(Rng.new(5), slime_line, Vector2i.ONE)
 	_check(not Clans.enraged(tally, goo), "furious still takes mercy")
 	kill.call("slime", "C")
@@ -1892,7 +1933,7 @@ func _hostility() -> void:
 	rock.species = side_species(side)
 	rock.name = "R"
 	var cooled: Array = Clans.record(tally, rock, "spared")
-	_check(not Clans.enraged(tally, goo) and cooled.any(func(c): return c.clan == clan and c.to == "furious"), "sparing one on its side cools it back to furious (%s)" % str(cooled))
+	_check(not Clans.enraged(tally, goo) and cooled.any(func(c): return c.clan == clan and c.to == "furious"), "sparing one of its friends cools it back to furious (%s)" % str(cooled))
 	var favoured: Array = Clans.favour(tally, "slime", 30.0)
 	_check(favoured.any(func(c): return c.clan == clan and Clans.rank(c.to) < Clans.rank(c.from)), "and a favour to its kind cools it further (%s)" % str(favoured))
 	_check(Clans.mood_word(20.0) == "FRIENDLY", "a clan that likes you says so")
@@ -2946,6 +2987,13 @@ func _lords() -> void:
 				_check(not target.boss and not target.lurking, "the lord names a monster that can be dealt with")
 				if str(lord_q.kind) == "spare":
 					_check(target.species == str(lord_q.species), "its kin is one of its own (%s)" % target.species)
+				var hunts: Array = Lords.table().lords[home].get("hunts", [])
+				if str(lord_q.kind) == "rid" and not hunts.is_empty() and f.monsters.any(func(m): return hunts.has(m.species) and not m.boss and not m.lurking):
+					_check(hunts.has(target.species), "seed %d B%dF: %s wants one its grudge names gone (%s)" % [seed_value, depth, lord_q.name, target.species])
+			var own: Dictionary = Lords.says(home, str(lord_q.kind), "" if str(lord_q.kind) == "fetch" else str(f.monsters[int(lord_q.target)].species))
+			if not own.is_empty():
+				var asked: String = Requests.speak(lord_q, flow.state)
+				_check_quietly(asked == str(own.ask) % Requests.subject(lord_q, f) and asked != str(Requests.table().kinds[lord_q.kind].ask) % Requests.subject(lord_q, f) and Requests.thanks(lord_q, f) == str(own.thanks), "seed %d B%dF: %s asks in its own words (%s)" % [seed_value, depth, lord_q.name, asked])
 			_check(f.monsters.all(func(m): return m.cell != lord_q.cell), "seed %d B%dF: the lord does not stand on a monster" % [seed_value, depth])
 	_check(lost == 0, "over twenty seeds every first floor of a biome has its lord")
 	_check(met.size() == Lords.table().lords.size(), "over twenty seeds every lord asks (%s)" % str(met.keys()))
@@ -2975,6 +3023,13 @@ func _npcs() -> void:
 	for kind in t.kinds:
 		for key in ["ask", "wait", "ready", "thanks", "yes", "give", "sub"]:
 			_check(t.kinds[kind].has(key), "%s says %s" % [kind, key])
+	for clan in Lords.table().lords: # a lord has its own words for its own favour, one per thing an asker says, each naming what it's about
+		var lord: Dictionary = Lords.table().lords[clan]
+		var need := ["ask", "wait", "ready", "thanks"] + (["failed"] if t.kinds[lord.kind].has("failed") else [])
+		for key in need:
+			var line := str(lord.get("says", {}).get(key, ""))
+			_check(line != "" and (key == "thanks" or line.count("%s") == 1) and Hud.log_fits([State.speech(str(lord.name), line % "WWWWWWWW" if line.contains("%s") else line)], 760.0) == 1, "%s says %s in its own words, and the log has room: %s" % [lord.name, key, line])
+		_check(Lords.says(clan, "nothing").is_empty() and (lord.get("hunts", []).is_empty() or Lords.says(clan, str(lord.kind), "nobody").is_empty()), "%s speaks as any asker of another favour, or of one its grudge doesn't name" % lord.name)
 	# fetching
 	var flow = await _asking(100, "fetch")
 	var s = flow.state
