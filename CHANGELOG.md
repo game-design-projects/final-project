@@ -37,6 +37,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - `Chart.instinct_due` and `Chart.drop_chance` count the cells seen once instead of twice, and the full map asks for the seen cells once a redraw.
 
 ### Fixed
+- A skill's kill is counted as `blessed` when a friend approved of it, as a strike's is: only the strike bar passed `Encounter.judge`'s answer to `defeat`, so the same kill turned the halls away on one path and not on the other (#174).
 - The trader's stock and the bag in a fight say what the picked item does under the key hints, as the fight's own commands do: moving with the keys showed nothing there, and only the mouse's tooltip knew (#172).
 - A lord says who it is before what it wants when met: the request stage built the title line and the favour, then called `State.say` twice, and `say` replaces the log, so `SIRRA, LORD OF THE CREW.` never appeared (#154). The two lines are said together, and the checks that read the log at the request stage now look for the speech rather than for the first line.
 - A sworn lord's warren is now the stair from B4F to the last floor: the second favour is only paid on B4F or B5F, and the last floor is reached by one stair that `Floors.paths` left empty, so the warren was marked and then cleared without ever being offered. The warren is that stair, and with `branching` off the mark waits for a stair that offers a choice; a warren also says "an orange slime", not "a orange slime" (#158).

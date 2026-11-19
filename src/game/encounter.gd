@@ -224,7 +224,8 @@ func _take_notes() -> Array:
 
 
 ## Each ally with an opinion judges a deed ("slay", "spare", "flee", or a kind of words). Their reactions wait in
-## pending_notes to be said with the next message.
+## pending_notes to be said with the next message. Returns whether any of them approved of it (a score above neutral),
+## which a kill passes on to `defeat` so the halls leave it out (rules/warmth.gd).
 func judge(deed: String) -> bool:
 	var s = flow.state
 	var approved := false
@@ -247,7 +248,8 @@ func judge(deed: String) -> bool:
 
 
 ## The monster is out of the fight, spared or slain. A spared one goes on to ask whether it may come along (the ask stage),
-## unless `allow_join` is off, as when it took a cut of gold and left. `settlement` replaces the usual verdict line.
+## unless `allow_join` is off, as when it took a cut of gold and left. `settlement` replaces the usual verdict line. `blessed`
+## says the party was glad of a kill (the answer from `judge`), so the halls do not hold it against you (rules/warmth.gd).
 func defeat(m, how: String, allow_join := true, settlement := "", blessed := false) -> void:
 	var s = flow.state
 	m.gone = how
