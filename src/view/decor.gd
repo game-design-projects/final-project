@@ -1,13 +1,14 @@
-## Which walls carry what: torches, chains, banners, cracks, barred windows, skull niches. Which wall gets which is decided
-## by a hash of its place and the floor's seed, so a wall is always decorated the same way. wall_art.gd draws them; a cracked
-## wall always shows a fissure, in the accent colour: it can be breakable only if it can be told apart from the cracks that are
-## only cracks. The wall with the writing on it (rules/lore.gd) carries that and nothing else.
+## Which walls carry what: torches, chains, banners, barred windows, skull niches. Which wall gets which is decided by a hash of
+## its place and the floor's seed, so a wall is always decorated the same way. wall_art.gd draws them. A cracked wall always
+## shows a fissure in the accent colour, and **no plain wall carries a crack** (#160): testers learned the decorative cracks
+## were decoration and stopped walking into the real ones. The wall with the writing on it (rules/lore.gd) carries that and
+## nothing else.
 extends RefCounted
 
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 
-const KINDS := ["torch", "torch", "chains", "banner", "crack", "window", "niche"]
+const KINDS := ["torch", "torch", "chains", "banner", "window", "window", "niche"]
 const SHARE := 0.32 # about this share of wall faces carry something
 
 ## Which walls carry what: [{"cell": Vector2i, "side": int, "kind": String, "roll": float}], the same every time for a floor.
