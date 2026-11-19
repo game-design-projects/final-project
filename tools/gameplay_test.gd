@@ -58,6 +58,7 @@ func _run() -> void:
 	await _thinking(game)
 	await _sub_text_wraps(game)
 	await _sub_text_items(game)
+	await _pad_warp(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
 	await _wide_view(game)
@@ -748,6 +749,32 @@ func _sub_text_wraps(game) -> void:
 	dock._process(0.0)
 	_check(is_equal_approx(dock.custom_minimum_size.y, dock_height), "and goes back when the window is wide again")
 	dock.free()
+
+
+## A pad carries you across the floor: the picture's field of view swells and settles, with a flash in the run's accent colour
+## (issue #171).
+func _pad_warp(game) -> void:
+	var flow = game.flow
+	await flow.go("explore")
+	game.flow._keys_back_at = -1.0
+	var s = flow.state
+	var f = s.floor_map
+	var near: Vector2i = s.cell
+	var dirs: Array = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	for dir in dirs:
+		if f.is_open(s.cell + dir) and not f.in_the_way(s.cell + dir):
+			near = s.cell + dir
+			break
+	var far: Vector2i = f.stairs if f.stairs != near else f.start
+	f.teleports = [{"a": near, "b": far}]
+	var before: float = game._stage.warp_amount()
+	_check(before == 0.0, "before a pad the picture is not warping")
+	await flow.press("up")
+	_check(s.cell == far, "the pad carried the party across the floor (%s)" % str(s.cell))
+	await process_frame
+	await process_frame
+	_check(game._stage.warp_amount() > 0.0, "the picture's field of view swells as it lands (%.2f)" % game._stage.warp_amount())
+	_check(game._postfx.flash_level() > 0.0, "and a flash in the accent colour goes with it (%.2f)" % game._postfx.flash_level())
 
 
 ## The trader and the bag say what the picked item does under the key hints, with the keys: before, only the mouse's tooltip

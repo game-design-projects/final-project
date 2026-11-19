@@ -112,6 +112,11 @@ func hurt() -> void:
 		_split = minf(SPLIT_MAX, _split + SPLIT_HIT)
 
 
+## How strong the flash is now, 0..1 (for the checks; the picture reads it from the shader).
+func flash_level() -> float:
+	return _flash
+
+
 func flash(color: Color, strength: float) -> void:
 	_flash_color = color
 	_flash = maxf(_flash, strength)

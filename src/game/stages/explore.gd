@@ -192,6 +192,7 @@ func _find_secrets(flow) -> bool:
 		s.visited[there] = true
 		s.look()
 		s.say([State.sys_line(Floors.secret_line("pad"))])
+		flow.event("pad", {})
 		flow.event("sound", {"name": "holy"})
 	return found_any
 
