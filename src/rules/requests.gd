@@ -38,6 +38,7 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	q.species = str(lord.species)
 	q.kind = kind
 	q.big = bool(lord.get("second", false)) # the second favour is the one that swears the clan (`settle`)
+	q.redeem = bool(lord.get("redeem", false)) # the lord of a clan you angered: paying it cools the clan to calm (`settle`)
 	if kind == "fetch":
 		q.target = -1
 	elif kind == "spare": # its kin: the same species as the lord
@@ -126,6 +127,9 @@ static func status(q: Dictionary, s) -> String:
 static func speak(q: Dictionary, s) -> String:
 	var kind: Dictionary = table().kinds[q.kind]
 	var words: String = {"new": kind.ask, "waiting": kind.wait, "ready": kind.ready, "failed": kind.get("failed", "")}[status(q, s)]
+	if q.get("redeem", false): # a lord of a clan you angered speaks for the clan, not for itself (rules/lords.gd)
+		var mine: Dictionary = Lords.redemption()
+		words = {"new": mine.ask, "waiting": mine.wait, "ready": mine.ready, "failed": kind.get("failed", "")}[status(q, s)]
 	return words % subject(q, s.floor_map)
 
 
@@ -143,7 +147,9 @@ static func settle(q: Dictionary, s) -> Dictionary:
 		gold = int(pays.gold)
 		heal = int(pays.heal)
 		standing = float(pays.standing)
-		if q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
+		if q.get("redeem", false): # a way back: the clan is cooled to calm, not warmed past it
+			standing = -float(s.reputation.get(lord, 0.0))
+		elif q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
 			joined = swear(s, lord, q)
 		elif not s.lords_met.has(lord):
 			s.lords_met.append(lord)
