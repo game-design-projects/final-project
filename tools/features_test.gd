@@ -4,6 +4,8 @@
 extends "res://tools/test_base.gd"
 
 const Ally = preload("res://src/game/ally.gd")
+const Dice = preload("res://src/utils/dice.gd")
+const Allies = preload("res://src/rules/allies.gd")
 const Chart = preload("res://src/rules/chart.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
@@ -81,6 +83,7 @@ func _run() -> void:
 	await _lurkers()
 	await _npcs()
 	await _lords()
+	await _allies()
 	await _roaming()
 	await _input_cooldown()
 	await _charting()
@@ -2967,6 +2970,25 @@ func _lord_again(clan: String) -> Variant:
 	flow.state.depth = 4
 	await flow._make_floor()
 	return flow
+
+
+## Friends: how loyal they start, when they may leave, and that one bad deed never drives off a new one (issue #173).
+func _allies() -> void:
+	var dice := Dice.new(Rng.new(3))
+	_check(Allies.LEAVE_BELOW == 40.0, "an ally may leave below 40 loyalty")
+	_check(Allies.START_LOYALTY_MIN - 2.0 * Allies.LOYALTY_PER_POINT >= Allies.LEAVE_BELOW, "even the least loyal new friend, after the worst deed it can see, is still at the line")
+	_check(Allies.mood(40.0) == "UNEASY" and Allies.mood(39.0) == "MAY LEAVE", "at the line it is uneasy, below it may go")
+	_check(Allies.mood(45.0) == "CONTENT" and Allies.mood(70.0) == "DEVOTED", "and the other words still hold")
+	_check(Allies.leave_odds(30.0) > 0.75 and Allies.leave_odds(20.0) > 0.9, "well below the line it is likely to go (%.2f, %.2f)" % [Allies.leave_odds(30.0), Allies.leave_odds(20.0)])
+	_check(Allies.leave_odds(10.0) > Allies.leave_odds(30.0) and Allies.leave_odds(30.0) > Allies.leave_odds(39.0), "and the further below, the likelier")
+	var starts: Array = []
+	for i in 40:
+		starts.append(Allies.start_loyalty(dice))
+	_check(starts.all(func(v): return v >= Allies.START_LOYALTY_MIN and v <= Allies.START_LOYALTY_MAX), "a new friend starts at 60..80 loyalty")
+	# one deed, the worst there is, on the least loyal start: it never leaves, because the gate is not passed
+	var a = Ally.make("slime", "GLOP", Allies.START_LOYALTY_MIN)
+	a.loyalty = float(Allies.START_LOYALTY_MIN) - 2.0 * Allies.LOYALTY_PER_POINT
+	_check(a.loyalty >= Allies.LEAVE_BELOW and not (a.loyalty < Allies.LEAVE_BELOW), "a single disliked deed leaves a new friend at the line, not below it (%d)" % int(a.loyalty))
 
 
 func _npcs() -> void:
