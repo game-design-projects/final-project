@@ -70,11 +70,13 @@ static func sees_body(floor_map, from: Vector2, cell: Vector2i) -> bool:
 	return false
 
 
-## Whether open floor lies all the way between two points of the floor plan.
-static func clear_line(floor_map, a: Vector2, b: Vector2) -> bool:
+## Whether open floor lies all the way between two points of the floor plan, with none of `blocked`'s cells on the way (a
+## hunter's eye, rules/roaming.gd, cannot see across a pad; the camera's can).
+static func clear_line(floor_map, a: Vector2, b: Vector2, blocked: Dictionary = {}) -> bool:
 	var n := maxi(1, ceili(a.distance_to(b) / STEP))
 	for i in range(1, n):
 		var p := a.lerp(b, float(i) / n)
-		if not floor_map.is_open(Vector2i(floori(p.x), floori(p.y))):
+		var c := Vector2i(floori(p.x), floori(p.y))
+		if not floor_map.is_open(c) or blocked.has(c):
 			return false
 	return true
