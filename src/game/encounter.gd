@@ -229,13 +229,17 @@ func _take_notes() -> Array:
 
 
 ## Each ally with an opinion judges a deed ("slay", "spare", "flee", or a kind of words). Their reactions wait in
-## pending_notes to be said with the next message.
-func judge(deed: String) -> void:
+## pending_notes to be said with the next message. Returns whether any of them approved of it (a score above neutral),
+## which a kill passes on to `defeat` so the halls leave it out (rules/warmth.gd).
+func judge(deed: String) -> bool:
 	var s = flow.state
+	var approved := false
 	for a in s.allies.duplicate():
 		if deed == "" or not Allies.has_opinion(a.species, deed):
 			continue
 		var verdict := Allies.judge(a, deed, flow.dice)
+		if int(verdict.score) > Allies.NEUTRAL:
+			approved = true
 		pending_rows.append({"id": "judge-" + a.name, "label": "%s JUDGES IT (0 HATES - 4 LOVES)" % a.name, "answer": verdict.score, "odds": verdict.odds})
 		var reactions: Dictionary = Content.species(a.species).reactions
 		if verdict.reaction != "":
@@ -245,14 +249,18 @@ func judge(deed: String) -> void:
 			s.tally.left += 1
 			flow.event("ally_left", {"species": a.species})
 			pending_notes.append({"who": a.name, "text": Content.fill(flow.rng.pick(reactions.leave), {"name": a.name}) + " " + Texts.ally_gone(a.charm().name)})
+	return approved
 
 
 ## The monster is out of the fight, spared or slain. A spared one goes on to ask whether it may come along (the ask stage),
-## unless `allow_join` is off, as when it took a cut of gold and left. `settlement` replaces the usual verdict line.
-func defeat(m, how: String, allow_join := true, settlement := "") -> void:
+## unless `allow_join` is off, as when it took a cut of gold and left. `settlement` replaces the usual verdict line. `blessed`
+## says the party was glad of a kill (the answer from `judge`), so the halls do not hold it against you (rules/warmth.gd).
+func defeat(m, how: String, allow_join := true, settlement := "", blessed := false) -> void:
 	var s = flow.state
 	m.gone = how
 	s.tally[how] += 1
+	if how == "slain" and blessed: # a kill the party was glad of: the halls do not hold it against you (rules/warmth.gd)
+		s.tally.blessed += 1
 	flow.event(how, {"boss": m.boss})
 	var moved := Clans.record(s, m, how)
 	if m.boss:

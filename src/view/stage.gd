@@ -38,6 +38,9 @@ const FOV := 68.0
 const EYE := 0.85 # camera height
 const STEP_MS := 150.0 # how long the camera takes over a step, a turn, and a lunge at a wall and back
 const TURN_MS := 170.0
+const WARP_MS := 380.0 # a pad's jump: the field of view swells and settles over this
+const WARP_FOV := 16.0 # degrees it swells by at the peak
+const CALM_WARP := 0.35 # the share of that swell left with the `calm` setting
 const BUMP_MS := 140.0
 const LUNGE := 0.28 # how far the lunge goes, in world units
 const CALM_LUNGE := 0.35 # the share of it left with the `calm` setting
@@ -61,7 +64,7 @@ const TORCH_REACH2 := 100.0 # world units, squared
 const FLICKER_FPS := 12.0
 
 var palette := {}
-var calm := false # the `calm` setting: a softer lunge
+var calm := false # the `calm` setting: a softer lunge and a softer pad's warp
 var _decor: Node3D
 var _torches: Array = [] # {"pos": Vector3, "seed": float}, the floor's
 # One timestamp texel per cell, uploaded only on steps or exploration changes. UV2 keeps
@@ -118,6 +121,7 @@ var _spin := -1 # which way the last quarter turn went (-1 right, 1 left), for a
 var _glide = null # {from_pos, from_yaw, t0, ms}: the move under way, or null
 var _now := 0.0
 var _bump_at := -1000.0
+var _warp_at := -1000.0
 var _hit_at := {} # Monster -> seconds when it was last hit
 
 
@@ -434,6 +438,20 @@ func _move_camera(state, now: float) -> void:
 	_apply_camera()
 
 
+## A pad carried the party: the field of view swells and settles, as if the floor had folded under it (stage 3 of #171: the
+## flash in the accent colour is the scene's, this is the picture's own part). A third of it is left with the `calm` setting.
+func warp(now: float) -> void:
+	_warp_at = now
+
+
+## How much of that swell is left, 0..1 (0 once it has settled).
+func warp_amount() -> float:
+	var p := (_now - _warp_at) * 1000.0 / WARP_MS
+	if p < 0.0 or p >= 1.0:
+		return 0.0
+	return sin(PI * p) * (CALM_WARP if calm else 1.0)
+
+
 ## Each quarter turn since the last frame moves the goal on by a quarter in the same direction, so holding a turn key
 ## spins on and on. (Taking the shortest way to the heading, which is what lerp_angle does, flips between left and
 ## right as soon as the key runs ahead of the camera: the view shakes instead of turning.) The turns are counted by the
@@ -470,6 +488,7 @@ func _apply_camera() -> void:
 		lunge = sin(PI * p) * LUNGE * (CALM_LUNGE if calm else 1.0)
 	_camera.position = _pos + Vector3(-sin(_yaw), 0.0, -cos(_yaw)) * lunge
 	_camera.rotation = Vector3(0.0, _yaw, 0.0)
+	_camera.fov = FOV + WARP_FOV * warp_amount()
 
 
 ## Every monster still on the floor stands in its cell, turned toward the camera, with a name tag; walls hide them. Not

@@ -61,8 +61,8 @@ func pick(flow, index: int) -> void:
 		words.append(Skills.line("hit") % [Skills.label(id), did.damage])
 		if m.hp <= 0:
 			var begging: bool = flow.encounter.begging()
-			flow.encounter.judge("slay_begging" if begging else "slay")
-			await flow.encounter.defeat(m, "slain")
+			var blessed: bool = flow.encounter.judge("slay_begging" if begging else "slay")
+			await flow.encounter.defeat(m, "slain", true, "", blessed)
 			return
 	if did.block > 0:
 		flow.event("sound", {"name": "buff"}) # "shield" is for a hit soaked in the dodge, which says BLOCKED

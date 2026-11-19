@@ -117,6 +117,11 @@ func hurt() -> void:
 		_split = minf(SPLIT_MAX, _split + SPLIT_HIT)
 
 
+## How strong the flash is now, 0..1 (for the checks; the picture reads it from the shader).
+func flash_level() -> float:
+	return _flash
+
+
 func flash(color: Color, strength: float) -> void:
 	_flash_color = color
 	_flash = maxf(_flash, strength)
@@ -126,7 +131,7 @@ func beat() -> void:
 	_pulse = 1.0
 
 
-## You were carried somewhere else (a pad, a clan's teleporter): a flood of `color` that falls away while the colours tear
+## You were carried somewhere else (a clan's teleporter): a flood of `color` that falls away while the colours tear
 ## apart and come back together. `strength` softens it (the calm setting).
 func warp(color: Color, strength := 1.0) -> void:
 	_warp = 1.0

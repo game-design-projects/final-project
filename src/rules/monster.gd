@@ -46,6 +46,8 @@ var hold := 0
 var patrol: Array = []
 var leg := 0
 var hunting := false
+var unseen := 0 # steps since a hunter last had you in sight (rules/roaming.gd)
+var no_hunt := 0 # steps it has given up hunting for, having lost you
 var last_seen := Vector2i(-1, -1)
 
 
@@ -211,6 +213,7 @@ func to_dict() -> Dictionary:
 		"checks": checks, "tried": tried.duplicate(), "knownTraits": known_traits.duplicate(), "heard": heard.duplicate(),
 		"lurking": lurking, "purse": purse,
 		"hold": hold, "patrol": patrol.map(func(c): return [c.x, c.y]), "leg": leg, "hunting": hunting, "lastSeen": [last_seen.x, last_seen.y],
+		"unseen": unseen, "noHunt": no_hunt,
 	}
 
 
@@ -248,6 +251,8 @@ static func from_dict(d: Dictionary):
 	m.lurking = bool(d.get("lurking", false))
 	m.purse = maxi(0, int(d.get("purse", 0)))
 	m.hold = maxi(0, int(d.get("hold", 0)))
+	m.unseen = maxi(0, int(d.get("unseen", 0)))
+	m.no_hunt = maxi(0, int(d.get("noHunt", 0)))
 	m.patrol = d.get("patrol", []).map(func(v): return Vector2i(int(v[0]), int(v[1])))
 	m.leg = clampi(int(d.get("leg", 0)), 0, 1)
 	m.hunting = bool(d.get("hunting", false))

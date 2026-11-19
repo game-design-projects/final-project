@@ -26,7 +26,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `menu_test` | Menu pages and their keys, the opening film is there and plays |
 | `saves_test` | Save slots, `nosave`, refusing a bad save |
 | `rules_test` | Strike, odds, dodge cells, word reading, hints |
-| `kinds_test` | Five kinds to a floor and none on two, each clan on every floor, a floor's monsters and champion, warrens, old saves, and every attack: it makes hazards, warns your square 0.3 s ahead, never lights the whole box or walls you in |
+| `kinds_test` | Five kinds to a floor and none on two, each clan on every floor, a floor's monsters and champion, warrens, old saves, and every attack: it makes hazards, warns your square 0.3 s ahead, never lights the whole box or walls you in, and is the same attack twice on one seed |
 | `network_test` | Timeouts, retries, Jev's answers |
 | `view_test` | Models, sight, camera, automap, palettes |
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
@@ -48,7 +48,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 | `sim_chart` | How much of a floor is seen when the stairs first show, and the steps instinct saves on the way to them, per biome and depth (`seeds=N`); for tuning `chart` in `data/floors.json` |
-| `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`); it prints hits, how much of the box is lit, and moments with no way out |
+| `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`, `boss=1` for a champion's attack: 6200 ms at a fifth more intensity, and its rows print the intensity the run got); it prints hits, how much of the box is lit, and moments with no way out |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
 

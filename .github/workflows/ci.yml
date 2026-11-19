@@ -82,6 +82,12 @@ jobs:
         run: |
           set -euo pipefail
           tools/check.sh res://tools/rules_test.gd
+      # The kinds of monster and their attacks: five to a floor, a champion in all of them, and every attack played whole — it
+      # makes hazards, keeps to the box, warns your square in time, never walls you in, and is the same attack twice on one seed.
+      - name: Check the kinds and their attacks
+        run: |
+          set -euo pipefail
+          tools/check.sh res://tools/kinds_test.gd
       # The talk with Jev against a stand-in transport: a proxy with no key is not retried, mercy and pressure are one request.
       - name: Check the network
         run: |

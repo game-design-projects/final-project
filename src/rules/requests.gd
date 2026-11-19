@@ -38,6 +38,7 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	q.species = str(lord.species)
 	q.kind = kind
 	q.big = bool(lord.get("second", false)) # the second favour is the one that swears the clan (`settle`)
+	q.redeem = bool(lord.get("redeem", false)) # the lord of a clan you angered: paying it cools the clan to calm (`settle`)
 	if kind == "fetch":
 		q.target = -1
 	elif kind == "spare": # its kin: the same species as the lord
@@ -128,14 +129,20 @@ static func status(q: Dictionary, s) -> String:
 static func speak(q: Dictionary, s) -> String:
 	var kind: Dictionary = table().kinds[q.kind]
 	var now := status(q, s)
-	var words: String = {"new": kind.ask, "waiting": kind.wait, "ready": kind.ready, "failed": kind.get("failed", "")}[now]
-	var own_key: String = {"new": "ask", "waiting": "wait", "ready": "ready", "failed": "failed"}[now]
-	words = str(_own_words(q, s.floor_map).get(own_key, words))
-	return words % subject(q, s.floor_map)
+	var said: Dictionary = kind
+	if q.get("redeem", false): # a lord of a clan you angered speaks for the clan, not for itself, and names nothing (rules/lords.gd)
+		said = Lords.redemption()
+	var words: String = {"new": said.ask, "waiting": said.wait, "ready": said.ready, "failed": kind.get("failed", "")}[now]
+	if not q.get("redeem", false): # a lord asking its own favour asks in its own words
+		var own_key: String = {"new": "ask", "waiting": "wait", "ready": "ready", "failed": "failed"}[now]
+		words = str(_own_words(q, s.floor_map).get(own_key, words))
+	return words % subject(q, s.floor_map) if words.contains("%s") else words # a line that names nothing is not formatted
 
 
 ## What it says once paid.
 static func thanks(q: Dictionary, f) -> String:
+	if q.get("redeem", false): # a way back is the clan's business, and thanked as any favour is
+		return str(table().kinds[q.kind].thanks)
 	return str(_own_words(q, f).get("thanks", table().kinds[q.kind].thanks))
 
 
@@ -161,9 +168,11 @@ static func settle(q: Dictionary, s) -> Dictionary:
 		gold = int(pays.gold)
 		heal = int(pays.heal)
 		standing = float(pays.standing)
-		if q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
+		if q.get("redeem", false): # a way back: the clan is cooled as far as calm and no further (#166)
+			standing = -minf(0.0, float(s.reputation.get(lord, 0.0)))
+		elif q.get("big", false): # its second favour: the clan is sworn, and its lord comes along
 			joined = swear(s, lord, q)
-		elif not s.lords_met.has(lord):
+		if not s.lords_met.has(lord): # a way back is a favour paid like any other: the run remembers the lord it met
 			s.lords_met.append(lord)
 	if q.kind == "fetch":
 		s.items.erase(q.want)

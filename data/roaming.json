@@ -17,5 +17,8 @@
   "dragon": {"kind": "still"}
  },
  "tag": "HUNTING",
- "caught": "%s caught up with you.", "first": "It strikes first."
+ "caught": "%s caught up with you.",
+ "first": "It strikes first.",
+ "lose_track": 5,
+ "lose_track_cooldown": 10
 }

@@ -9,7 +9,9 @@ const Odds = preload("res://src/rules/odds.gd")
 const SCORES := 5 # a judgement is 0 (hates it) .. 4 (loves it)
 const NEUTRAL := 2
 const LOYALTY_PER_POINT := 10.0
-const LEAVE_BELOW := 30.0
+const LEAVE_BELOW := 40.0 # below this an ally may walk out
+const WORST_DEED_LOSS := NEUTRAL * LOYALTY_PER_POINT # a deed judged 0 (it hates it), against the neutral 2: 20
+const SAFE_START := LEAVE_BELOW + WORST_DEED_LOSS # the least a new friend may start: one worst deed still leaves it at the line
 const START_LOYALTY_MIN := 60
 const START_LOYALTY_MAX := 80
 const EAGER_LOYALTY := 30.0 # the most wanting to come (or not) moves its starting loyalty, from one end to the other
@@ -19,9 +21,10 @@ static func start_loyalty(dice: Dice) -> float:
 	return float(dice.int_between(START_LOYALTY_MIN, START_LOYALTY_MAX))
 
 
-## How loyal one starts that chose to come: the usual start, and more or less by how much it wanted to (0..1).
+## How loyal one starts that chose to come: the usual start, and more or less by how much it wanted to (0..1), but never
+## below SAFE_START: one worst deed on the day it joins must not take it under the line.
 static func eager_loyalty(dice: Dice, wants: float) -> float:
-	return clampf(start_loyalty(dice) + (wants - 0.5) * EAGER_LOYALTY, LEAVE_BELOW + 1.0, 100.0)
+	return clampf(start_loyalty(dice) + (wants - 0.5) * EAGER_LOYALTY, SAFE_START, 100.0)
 
 
 ## What a monster you made peace with leaves you, {gold, heal}. Gold only comes from one that goes its own way.
@@ -48,9 +51,10 @@ static func score_odds(species: String, deed: String) -> Dictionary:
 	return weights
 
 
-## The chance an unhappy ally (loyalty below the line) leaves after this deed.
+## The chance an unhappy ally (loyalty below the line) leaves after this deed. Only asked below the line, so the 0.5 the curve
+## gives at the line itself is never used: at 30 it is 0.84, at 20 0.97, at 10 0.99 (before this it was 0.38, 0.76, 0.94).
 static func leave_odds(loyalty: float) -> float:
-	return Odds.sigmoid((LEAVE_BELOW - loyalty) / 6.0 - 0.5)
+	return Odds.sigmoid((LEAVE_BELOW - loyalty) / 6.0)
 
 
 ## One ally judging one deed. Changes its loyalty and returns what happened: its score, the kind of reaction line

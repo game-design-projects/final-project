@@ -10,10 +10,13 @@
 ##   doomed   how often every square within two steps would hurt before the bot could get anywhere (should be 0)
 ##   blind    hazards on your square drawn less than REACT_MS before they hurt (should be 0)
 ##   quiet    the longest stretch with nothing warning or hurting, in ms (a long one is dead air)
-## `only=a,b` limits it to those attacks, `seeds=N` sets how many (default 40), `csv=1` prints one CSV line per row.
-##   godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound [only=spit,bounce] [seeds=40]
+## `only=a,b` limits it to those attacks, `seeds=N` sets how many (default 40), `csv=1` prints one CSV line per row, and
+## `boss=1` plays it as a champion's attack: 6200 ms instead of 5400, at 1.2 times the intensity of a usual monster's at the
+## same ask, so its rows print 1.2, 1.56 and 1.92 in `int` against a usual monster's 1.0, 1.3 and 1.6.
+##   godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound [only=spit,bounce] [seeds=40] [boss=1]
 extends SceneTree
 
+const Combat = preload("res://src/rules/combat.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const DodgeRun = preload("res://src/rules/dodge_run.gd")
 const Flags = preload("res://src/utils/flags.gd")
@@ -38,26 +41,29 @@ func _init() -> void:
 	if not only.is_empty():
 		genres = genres.filter(func(g): return only.has(g))
 	var csv := Flags.value("csv") == "1"
+	var boss := Flags.value("boss") == "1"
 	if csv:
 		print("genre,intensity,hits,slow,clean,lit,peak,doomed,blind,quiet")
 	else:
-		print("attack     | int | hits | slow | clean | lit  | peak | doomed | blind | quiet ms")
+		print("attack     | int  | hits | slow | clean | lit  | peak | doomed | blind | quiet ms")
 	var failed := false
 	for g in genres:
 		for intensity in INTENSITIES:
-			var r := _measure(g, intensity, seeds, LATENCY_MS, DECIDE_MS)
-			var slow: float = _measure(g, intensity, seeds, SLOW_LATENCY_MS, SLOW_DECIDE_MS).hits
+			# a champion's dodge is denser than a usual monster's at the same ask: print the intensity the run really has
+			var actual := _shown(Combat.dodge_intensity(_pressure(intensity), boss))
+			var r := _measure(g, intensity, boss, seeds, LATENCY_MS, DECIDE_MS)
+			var slow: float = _measure(g, intensity, boss, seeds, SLOW_LATENCY_MS, SLOW_DECIDE_MS).hits
 			if csv:
-				print("%s,%.1f,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d" % [g, intensity, r.hits, slow, r.clean, r.lit, r.peak, r.doomed, r.blind, r.quiet])
+				print("%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%d,%d,%d" % [g, actual, r.hits, slow, r.clean, r.lit, r.peak, r.doomed, r.blind, r.quiet])
 			else:
-				print("%-10s | %.1f | %4.2f | %4.2f | %4.0f%% | %3.0f%% | %3.0f%% | %6d | %5d | %d" % [g, intensity, r.hits, slow, r.clean * 100.0, r.lit * 100.0, r.peak * 100.0, r.doomed, r.blind, r.quiet])
+				print("%-10s | %4s | %4.2f | %4.2f | %4.0f%% | %3.0f%% | %3.0f%% | %6d | %5d | %d" % [g, actual, r.hits, slow, r.clean * 100.0, r.lit * 100.0, r.peak * 100.0, r.doomed, r.blind, r.quiet])
 			if r.hazards == 0 and not MINI.has(g):
 				print("  %s makes no hazards at all" % g)
 				failed = true
 	quit(1 if failed else 0)
 
 
-func _measure(genre: String, intensity: float, seeds: int, latency: float, decide: float) -> Dictionary:
+func _measure(genre: String, intensity: float, boss: bool, seeds: int, latency: float, decide: float) -> Dictionary:
 	var hits := 0
 	var clean := 0
 	var lit_sum := 0.0
@@ -69,8 +75,7 @@ func _measure(genre: String, intensity: float, seeds: int, latency: float, decid
 	var hazards := 0
 	for i in seeds:
 		var rng := Rng.new(1000 + i)
-		# pressure is chosen so the run's intensity is the one asked for (Combat.dodge_intensity = 0.8 + 0.25 * pressure)
-		var run = DodgeRun.start(genre, (intensity - 0.8) / 0.25, false, i % 3, 0.0, {}, 1.0, {})
+		var run = DodgeRun.start(genre, _pressure(intensity), boss, i % 3, 0.0, {}, 1.0, {})
 		var t := 0.0
 		var next_decide := 0.0
 		var got := 0
@@ -116,6 +121,18 @@ func _measure(genre: String, intensity: float, seeds: int, latency: float, decid
 		if got == 0:
 			clean += 1
 	return {"hits": float(hits) / seeds, "clean": float(clean) / seeds, "lit": lit_sum / maxf(1.0, lit_n), "peak": peak, "doomed": doomed, "blind": blind, "quiet": int(quiet), "hazards": hazards}
+
+
+## The pressure that gives a usual monster's dodge this intensity (Combat.dodge_intensity is 0.8 + 0.25 * pressure); at the
+## same pressure a champion's run is a fifth denser, so the table prints the intensity the run got rather than the ask.
+static func _pressure(intensity: float) -> float:
+	return (intensity - 0.8) / 0.25
+
+
+## An intensity as the table shows it: 1.2, 1.56, 1.0 (a champion's fall off the tenths).
+static func _shown(intensity: float) -> String:
+	var out: String = "%.2f" % intensity
+	return out.trim_suffix("0") if out.ends_with("0") else out
 
 
 ## The bot's next step: the first step of the safest two-step path (staying put counts as a step), and whether every path hurts.

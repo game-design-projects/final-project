@@ -8,6 +8,7 @@ const FIELDS := {
 	"social_reply": ["who", "choice", "cost", "outcome"],
 	"stage": ["from", "to"], # the game moved to another stage
 	"step": [], # the party walked one cell
+	"pad": [], # a pad carried the party to its partner somewhere else on the floor
 	"bump": [], # walked into a wall
 	"encounter": ["boss"], # a fight begins
 	"strike": ["damage", "crit"], # your hit landed
@@ -39,7 +40,7 @@ const FIELDS := {
 	"request_done": ["clan", "id"], # one of a clan's requests is done (rules/envoys.gd)
 	"gate_opened": ["clan"], # the second: its teleporter is open at the next stairs
 	"lord_met": ["clan"], # its lord was heard out in its hall
-	"teleport": ["to"], # carried somewhere else: "pad" across the floor, "hall" through a clan's teleporter
+	"teleport": ["to"], # carried off the floor through a clan's teleporter, `to` its "hall" (a pad across the floor is "pad")
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"warmth": ["from", "to"], # the halls moved to another level of how they feel about you (rules/warmth.gd)
 	"dead": [],

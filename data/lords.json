@@ -68,5 +68,12 @@
  "pact": {
   "title": "%s SWEARS TO YOU",
   "line": "%s keeps its gate for you, and none of its own will turn on you now."
+ },
+ "redemption": {
+  "ask": "My clan has your name cut into it. Do this one thing, and I will not send another after you.",
+  "wait": "The thing is not done. My clan still watches for you.",
+  "ready": "Done. You gave, where you could have taken.",
+  "done_title": "%s HOLDS ITS HAND",
+  "done_line": "%s does not forgive you. It stops sending its own after you."
  }
 }

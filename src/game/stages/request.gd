@@ -64,7 +64,11 @@ func _paid(flow) -> void:
 	var q: Dictionary = s.floor_map.quester
 	var t := Requests.table()
 	var got := Requests.settle(q, s)
-	if q.get("big", false): # a lord's second favour: the clan is sworn (rules/lords.gd)
+	if q.get("redeem", false): # a lord of a clan you angered: the way back is paid (rules/lords.gd)
+		var mine: Dictionary = Lords.redemption()
+		var name: String = Clans.title(str(q.lord))
+		flow.announce(str(mine.done_title) % name.to_upper(), str(mine.done_line) % name)
+	elif q.get("big", false): # a lord's second favour: the clan is sworn (rules/lords.gd)
 		var pact: Dictionary = Lords.pact()
 		var clan_name: String = Clans.title(str(q.lord))
 		flow.announce(str(pact.title) % clan_name.to_upper(), str(pact.line) % clan_name)

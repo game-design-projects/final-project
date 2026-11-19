@@ -4,6 +4,8 @@
 extends "res://tools/test_base.gd"
 
 const Ally = preload("res://src/game/ally.gd")
+const Dice = preload("res://src/utils/dice.gd")
+const Allies = preload("res://src/rules/allies.gd")
 const Chart = preload("res://src/rules/chart.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
@@ -45,6 +47,7 @@ const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Vision = preload("res://src/rules/vision.gd")
 const TestRoom = preload("res://src/rules/test_room.gd")
@@ -85,6 +88,7 @@ func _run() -> void:
 	await _lurkers()
 	await _npcs()
 	await _lords()
+	await _allies()
 	await _clan_requests()
 	await _roaming()
 	await _input_cooldown()
@@ -940,10 +944,15 @@ func _skill_combat() -> void:
 	_check(s.stage in ["wait", "menu"] and f.used == 0, "END TURN with nothing used lets it attack")
 	await _through_dodge(flow)
 	await flow.press("1")
+	# a skill's kill is blessed as a strike's when a friend approves of it (#174)
+	s.allies = [Ally.make("bandit", "SNICK", 70.0)]
+	flow.dice.pin(0.99)
 	m.hp = 3
 	var slain: int = s.tally.slain
 	await flow.press("1")
 	_check(s.stage == "explore" and s.tally.slain == slain + 1 and m.gone == "slain", "a skill that kills ends the fight (%s)" % s.stage)
+	_check(int(s.tally.blessed) == 1, "and the kill a friend approved of is blessed too (blessed %d of %d)" % [int(s.tally.blessed), int(s.tally.slain)])
+	flow.dice.unpin()
 	_check(Skills.damage(Skills.new_fight(), "strike", true) == roundi(8 * Combat.BOSS_DAMAGE_SCALE), "a champion takes less, as from a strike")
 	var held := Skills.start()
 	_check(not Skills.learn(held, "strike") and held.size() == 3 and Skills.slots() == 6, "a skill held already isn't learned twice, and three of six slots are free")
@@ -1177,7 +1186,7 @@ func _recruiting() -> void:
 	_check(s.stage == "explore" and s.allies.size() == 1 and s.tally.recruited == 1, "COME ALONG: it joins, always")
 	_check(s.banner != null and s.banner.title.contains("JOINS"), "joining puts a banner up (%s)" % str(s.banner))
 	_check(s.hp > 5, "peace heals you a little (%d)" % s.hp)
-	_check(s.allies[0].loyalty >= 31.0 and s.allies[0].loyalty <= 100.0, "an ally starts loyal (%.0f)" % s.allies[0].loyalty)
+	_check(s.allies[0].loyalty >= Allies.SAFE_START and s.allies[0].loyalty <= 100.0, "an ally starts at the safe floor or better (%.0f)" % s.allies[0].loyalty)
 
 	flow = _flow(22)
 	m = await _at_menu(flow)
@@ -3215,6 +3224,72 @@ func _lords() -> void:
 	_check(not first.is_empty() and not second.is_empty() and first.clan != second.clan, "the caves' two lords take turns by the floor's seed")
 	_check(Lords.due("caves", 0, [first.clan, second.clan]).is_empty(), "a run that has met both caves lords meets none")
 	_check(Lords.due("halls", 0, ["crew"]).is_empty(), "a met lord does not ask again")
+	# A clan you angered offers a way back (#166): its lord asks, in the clan's words, and paying it cools the clan as far as
+	# calm and no further — a favour paid, remembered like any other, so the lord's line goes on.
+	var angry = _flow(7, ["no-clan-requests"])
+	await angry.new_run()
+	angry.state.reputation[clan] = -40.0
+	angry.state.depth = 1
+	await angry._make_floor()
+	var make_up: Dictionary = angry.state.floor_map.quester
+	_check(not make_up.is_empty() and bool(make_up.get("redeem", false)) and str(make_up.get("lord", "")) == clan, "a clan you angered has its lord offer a way back (%s)" % str(make_up.get("title", "")))
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().ask), "and it says so in the clan's own words")
+	make_up.taken = true # its words name nothing, so there is nothing to put in them, before or after the thing is done
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().wait), "while it waits, the clan is still watching")
+	make_up.kind = "fetch"
+	make_up.want = "moss"
+	angry.state.items.append("moss")
+	_check(Requests.speak(make_up, angry.state) == str(Lords.redemption().ready), "and once the thing is done, it says what giving did")
+	angry.state.items.erase("moss")
+	make_up.kind = str(Lords.table().lords[clan].kind)
+	make_up.taken = false
+	angry.state.hp = maxi(1, angry.state.max_hp - 12)
+	var cooled: Dictionary = Requests.settle(make_up, angry.state)
+	_check(is_zero_approx(Clans.standing_of(angry.state, make_up.species)) and Clans.hostility_of(angry.state, make_up.species) == "", "paying it brings the clan to calm, and no warmer (%.0f)" % Clans.standing_of(angry.state, make_up.species))
+	_check(cooled.gold == int(Lords.pays().gold) and cooled.healed == int(Lords.pays().heal), "and it still pays a lord's gold and health")
+	_check(angry.state.lords_met.has(clan), "and the run remembers the lord it met")
+	var holds: Dictionary = Lords.redemption()
+	var holds_name := Clans.title(clan)
+	var holds_line := str(holds.done_line) % holds_name
+	_check(Overlay.banner_fits(str(holds.done_title) % holds_name.to_upper()) and Overlay.banner_fits(holds_line), "the way back's banner fits the picture")
+	_check(holds_line.begins_with(holds_name), "and opens with the clan's name (%s)" % holds_line)
+	# paid at the request stage, the picture says the clan holds its hand, not that a debt was paid
+	var stage_flow = _flow(7, ["no-clan-requests"])
+	await stage_flow.new_run()
+	stage_flow.state.reputation[clan] = -40.0
+	stage_flow.state.depth = 1
+	await stage_flow._make_floor()
+	var stage_q: Dictionary = stage_flow.state.floor_map.quester
+	stage_q.kind = "fetch"
+	stage_q.want = "moss"
+	stage_flow.state.items.append("moss")
+	stage_flow.state.banner = null
+	await stage_flow.go("request")
+	_check(Requests.status(stage_q, stage_flow.state) == "ready", "with the thing in the bag, the way back can be paid")
+	await stage_flow.press("1")
+	_check(stage_flow.state.banner != null and str(stage_flow.state.banner.title) == str(holds.done_title) % holds_name.to_upper(), "and the picture says the clan holds its hand (%s)" % str(stage_flow.state.banner.title if stage_flow.state.banner != null else ""))
+	_check(stage_flow.state.stage == "explore" and stage_flow.state.floor_map.quester.is_empty(), "then it goes, and the walk goes on")
+	# a clan cooled past calm on that floor keeps what it has: the way back is no penalty
+	var early = _flow(7, ["no-clan-requests"])
+	await early.new_run()
+	early.state.reputation[clan] = -40.0
+	early.state.depth = 1
+	await early._make_floor()
+	var early_q: Dictionary = early.state.floor_map.quester
+	early.state.reputation[clan] = 22.0 # spared its own on the floor, and past calm
+	var kept_make_up = State.from_dict(early.state.to_dict())
+	_check(kept_make_up != null and bool(kept_make_up.floor_map.quester.get("redeem", false)), "a save keeps the way back on its floor")
+	early.state.hp = maxi(1, early.state.max_hp - 12)
+	Requests.settle(early_q, early.state)
+	_check(is_equal_approx(Clans.standing_of(early.state, early_q.species), 22.0), "a clan cooled past calm on the floor is not pulled back down by it (%.0f)" % Clans.standing_of(early.state, early_q.species))
+	# met that way, the lord's second favour is still its own to ask where the biome comes back
+	angry.state.depth = 4
+	await angry._make_floor()
+	var after: Dictionary = angry.state.floor_map.quester
+	_check(not after.is_empty() and str(after.get("lord", "")) == clan and bool(after.get("big", false)) and not bool(after.get("redeem", false)), "and the halls' return still has its second favour to ask (%s)" % str(after.get("title", "")))
+	var calm = _flow(7, ["no-clan-requests"])
+	await calm.new_run()
+	_check(not calm.state.floor_map.quester.get("redeem", false), "a clan that is only calm gets the usual favour")
 
 
 ## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.
@@ -3225,6 +3300,57 @@ func _lord_again(clan: String) -> Variant:
 	flow.state.depth = 4
 	await flow._make_floor()
 	return flow
+
+
+## Friends: how loyal they start, when they may leave, and that one bad deed never drives off a new one (issue #173).
+func _allies() -> void:
+	var dice := Dice.new(Rng.new(3))
+	_check(Allies.LEAVE_BELOW == 40.0, "an ally may leave below 40 loyalty")
+	_check(Allies.START_LOYALTY_MIN - Allies.WORST_DEED_LOSS >= Allies.LEAVE_BELOW, "even the least loyal start, after the worst deed it can see, is still at the line")
+	_check(Allies.mood(40.0) == "UNEASY" and Allies.mood(39.0) == "MAY LEAVE", "at the line it is uneasy, below it may go")
+	_check(Allies.mood(45.0) == "CONTENT" and Allies.mood(70.0) == "DEVOTED", "and the other words still hold")
+	_check(Allies.leave_odds(30.0) > 0.75 and Allies.leave_odds(20.0) > 0.9, "well below the line it is likely to go (%.2f, %.2f)" % [Allies.leave_odds(30.0), Allies.leave_odds(20.0)])
+	_check(Allies.leave_odds(10.0) > Allies.leave_odds(30.0) and Allies.leave_odds(30.0) > Allies.leave_odds(39.0), "and the further below, the likelier")
+	var starts: Array = []
+	for i in 40:
+		starts.append(Allies.start_loyalty(dice))
+	_check(starts.all(func(v): return v >= Allies.START_LOYALTY_MIN and v <= Allies.START_LOYALTY_MAX), "a new friend starts at 60..80 loyalty")
+	# the way one actually joins (encounter.take_along): even wanting it least, it never starts below the safe floor
+	var joins: Array = []
+	for i in 40:
+		joins.append(Allies.eager_loyalty(dice, 0.0))
+	_check(joins.all(func(v): return v >= Allies.SAFE_START), "a friend that barely wanted to come still starts at the safe floor")
+	# the worst deed there is, on that start, through the rule's own path: the roll is pinned to the score it hates (a slime
+	# on slay_begging), so it lands at the line, and the gate does not let it go
+	var worst := Dice.new(Rng.new(3))
+	worst.pin(0.0)
+	var a = Ally.make("slime", "GLOP", Allies.SAFE_START)
+	var hates: Dictionary = Allies.judge(a, "slay_begging", worst)
+	_check(hates.score == 0 and a.loyalty == Allies.LEAVE_BELOW and not hates.leaves, "one worst deed leaves a new friend at the line, not below it (%d)" % int(a.loyalty))
+	# a kill the party was glad of is blessed, and warmth leaves it out (#174)
+	var flow = _flow(7)
+	await flow.new_run()
+	var friend = Ally.make("bandit", "SNICK", 70.0) # a bandit likes a kill
+	flow.state.allies = [friend]
+	flow.dice.pin(0.99) # the highest score it can give
+	var approved: bool = flow.encounter.judge("slay")
+	_check(approved, "a kill a friend likes is approved of")
+	await flow.encounter.defeat(flow.state.floor_map.monsters.filter(func(m): return not m.boss).front(), "slain", true, "", approved)
+	flow.dice.unpin()
+	_check(int(flow.state.tally.blessed) == 1 and int(flow.state.tally.slain) == 1, "and the run counts it as a blessed kill (blessed %d of %d)" % [int(flow.state.tally.blessed), int(flow.state.tally.slain)])
+	var quiet = _flow(8)
+	await quiet.new_run()
+	_check(is_equal_approx(Warmth.of(flow.state), Warmth.of(quiet.state)), "so the halls hold it against nobody")
+	var saved: State = State.from_dict(flow.state.to_dict())
+	_check(int(saved.tally.get("blessed", -1)) == 1, "a save keeps the blessed count")
+	var older: Dictionary = flow.state.to_dict()
+	older.tally.erase("blessed")
+	_check(int(State.from_dict(older).tally.get("blessed", -1)) == 0, "and a save from before it reads as none")
+	# the gate is not a wall: below the line the same pinned roll does take it away
+	var b = Ally.make("slime", "DROP", Allies.LEAVE_BELOW - 1.0)
+	var goes: Dictionary = Allies.judge(b, "slay_begging", worst)
+	_check(goes.score == 0 and b.loyalty < Allies.LEAVE_BELOW and goes.leaves, "below the line the same deed can drive it off (%d)" % int(b.loyalty))
+	worst.unpin()
 
 
 func _npcs() -> void:
@@ -3432,6 +3558,105 @@ func _roaming() -> void:
 		Roaming.turn(s)
 		seen_cells[m.cell] = true
 	_check(seen_cells.size() > 3 and m.patrol.size() == 2, "a bandit walks a beat (%d cells)" % seen_cells.size())
+	# a hunter that cannot see you for a few steps loses your track and goes back to its own way (#169)
+	var lost_flow = _flow(861)
+	await lost_flow.new_run()
+	var lost_state = lost_flow.state
+	var lost_map = lost_state.floor_map
+	var hunter = lost_map.monsters.filter(func(o): return not o.lurking and not o.boss)[0]
+	lost_map.monsters = [hunter]
+	lost_map.quester = {} # a floor with a request keeps the monster it asks about; this one is down to one and a save must still load
+	lost_state.reputation = {}
+	var lost_t: Dictionary = Roaming.table()
+	var lost_field: Dictionary = Roaming._field(lost_map, lost_state.cell, Roaming._barred(lost_map))
+	var in_view: Variant = null
+	var hid: Variant = null
+	var far_off: Variant = null
+	for c in lost_field:
+		hunter.cell = c
+		var seen_from: bool = Roaming._sees(hunter, lost_map, lost_state.cell)
+		if lost_field[c] >= 2 and lost_field[c] <= 4 and seen_from and in_view == null:
+			in_view = c
+		if lost_field[c] >= 2 and lost_field[c] <= 4 and not seen_from and hid == null:
+			hid = c
+		if lost_field[c] >= 10 and far_off == null:
+			far_off = c
+	if in_view == null or hid == null or far_off == null:
+		_check(false, "no cell on this floor in sight, hidden or far off: cannot check losing the track")
+	else:
+		var angry := func(sp: String):
+			hunter.species = sp
+			hunter.meters = {"friendliness": 0.0, "anger": 60.0, "fear": 0.0}
+			hunter.hold = 0
+			hunter.hunting = false
+			hunter.unseen = 0
+			hunter.no_hunt = 0
+			hunter.cell = hid
+		angry.call("bandit")
+		hunter.cell = in_view
+		var began: Dictionary = Roaming.turn(lost_state)
+		_check(hunter.hunting and began.noticed.has(hunter), "a monster near you and in sight starts hunting")
+		hunter.hunting = true
+		hunter.unseen = 0
+		var lost_at := 0
+		for step in int(lost_t.lose_track) + 2:
+			hunter.cell = hid # it keeps moving toward where it last had you; keep it out of sight instead
+			if Roaming.turn(lost_state).lost.has(hunter):
+				lost_at = step + 1
+				break
+		_check(lost_at == int(lost_t.lose_track) and not hunter.hunting, "out of its sight %d steps, it loses your track (%d)" % [int(lost_t.lose_track), lost_at])
+		var off := 0
+		var came_back := false
+		for _k in int(lost_t.lose_track_cooldown) + 1:
+			hunter.cell = hid
+			var one: Dictionary = Roaming.turn(lost_state)
+			if hunter.hunting:
+				break
+			came_back = came_back or one.noticed.has(hunter)
+			off += 1
+		_check(off == int(lost_t.lose_track_cooldown) and hunter.hunting and not came_back, "its own way for %d steps, then it hunts you again" % int(lost_t.lose_track_cooldown))
+		# a stalker that has given up stays off it, though you are well within its reach
+		angry.call("snake")
+		for _k in int(lost_t.lose_track) + 1:
+			hunter.cell = hid
+			Roaming.turn(lost_state)
+		_check(hunter.no_hunt > 0 and not hunter.hunting, "a stalker loses it too (%d steps off)" % hunter.no_hunt)
+		var again := false
+		for _k in 3:
+			hunter.cell = hid
+			again = again or Roaming.turn(lost_state).noticed.has(hunter)
+		_check(not again and not hunter.hunting, "and it does not come after you again while it has given up")
+		var carried = State.from_dict(lost_state.to_dict())
+		_check(int(carried.floor_map.monsters[0].no_hunt) == hunter.no_hunt and not carried.floor_map.monsters[0].hunting, "a save keeps it off the hunt (%d)" % int(carried.floor_map.monsters[0].no_hunt))
+		# a hunt it broke off some other way starts the next one's count over
+		angry.call("snake")
+		hunter.hunting = true
+		hunter.unseen = 3
+		hunter.cell = far_off # out of its reach, and it does not lose you there
+		Roaming.turn(lost_state)
+		_check(not hunter.hunting and hunter.unseen == 0, "a hunt that ends another way does not carry its count into the next")
+		var took := 0
+		for step in int(lost_t.lose_track) + 2:
+			hunter.cell = hid
+			if Roaming.turn(lost_state).lost.has(hunter):
+				took = step + 1
+				break
+		_check(took == int(lost_t.lose_track), "and the next one takes the full %d steps (%d)" % [int(lost_t.lose_track), took])
+		# a pad on the line takes a hunter's sight of you; the camera still sees across it
+		var pad: Dictionary = lost_map.teleports[0] if not lost_map.teleports.is_empty() else {}
+		var pair: Array = []
+		if not pad.is_empty():
+			for d in FloorMap.DIRS:
+				if lost_map.is_open(pad.a + d) and lost_map.is_open(pad.a - d):
+					pair = [pad.a + d, pad.a - d]
+					break
+		if pair.is_empty():
+			_check(false, "no floor either side of a pad: cannot check what a pad hides")
+		else:
+			hunter.cell = pair[0]
+			var from := Vector2(pair[0]) + Vector2(0.5, 0.5)
+			var to := Vector2(pair[1]) + Vector2(0.5, 0.5)
+			_check(not Roaming._sees(hunter, lost_map, pair[1]) and Vision.clear_line(lost_map, from, to), "a pad between you hides you from a hunter, and not from the camera")
 	# who is near: put them by the walk from you
 	var field: Dictionary = Roaming._field(f, s.cell, Roaming._barred(f))
 	var cell_at := func(d: int) -> Vector2i:

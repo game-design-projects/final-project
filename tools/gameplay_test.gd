@@ -58,6 +58,8 @@ func _run() -> void:
 	await _thinking(game)
 	await _sub_text_wraps(game)
 	await _sub_text_items(game)
+	await _pad_warp(game)
+	await _nerve_is_shown(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
 	await _wide_view(game)
@@ -718,6 +720,22 @@ func _thinking(game) -> void:
 	Network._flights.erase(-1)
 
 
+# ---------------------------------------------------------------- the nerve you hold
+
+## A close call says how much nerve it left you with, where the pips alone would not (`CLOSE CALL · NERVE 2/5`,
+## `CLEAN DODGE · NERVE 3/5`): the playtest earned nerve and never noticed (#175); #196 put a second count in the status row and
+## #198 took it back out, leaving the pips and these popups to say it.
+func _nerve_is_shown(game) -> void:
+	await _fight(game)
+	game.flow.state.nerve = 2
+	game.flow.event("nerve", {"total": 2, "how": "close"})
+	var close_text: String = str(game._overlay._popups.back().text)
+	_check(close_text.contains("CLOSE CALL") and close_text.contains("NERVE 2/5"), "a close call says the nerve it leaves you with (%s)" % close_text)
+	game.flow.event("nerve", {"total": 3, "how": "clean"})
+	var clean_text: String = str(game._overlay._popups.back().text)
+	_check(clean_text.contains("CLEAN DODGE") and clean_text.contains("NERVE 3/5"), "and a clean dodge counts it too (%s)" % clean_text)
+
+
 # ---------------------------------------------------------------- the help line under the keys
 
 ## SPARE's help is about 980 px at the dock's font: in a window narrower than that it wraps to a second line and the dock makes
@@ -774,6 +792,39 @@ func _sub_text_items(game) -> void:
 	dock.state = flow.state
 	_check(not dock.sub_text().is_empty() and dock.sub_text() == str(flow.state.menu[0].get("sub", "")), "and the key row says what the picked item does (%s)" % dock.sub_text())
 	await flow.press("cancel")
+
+
+# ---------------------------------------------------------------- a pad's jump on screen
+
+## A pad carries you across the floor: the picture's field of view swells and settles, with a flash in the run's accent colour
+## (issue #171).
+func _pad_warp(game) -> void:
+	var flow = game.flow
+	await flow.go("explore")
+	game.flow._keys_back_at = -1.0
+	var s = flow.state
+	var f = s.floor_map
+	var near: Vector2i = s.cell
+	for dir in f.DIRS:
+		if f.is_open(s.cell + dir) and not f.in_the_way(s.cell + dir) and f.monster_at(s.cell + dir) == null:
+			near = s.cell + dir
+			break
+	_check(near != s.cell, "(a cell beside the party to put a pad on)")
+	for _turn in 3: # a pad is walked onto, so face it first
+		if s.cell + f.DIRS[s.facing] == near:
+			break
+		await flow.press("right")
+	_check(s.cell + f.DIRS[s.facing] == near, "the party faces the pad at %s" % str(near))
+	var far: Vector2i = f.stairs if f.stairs != near else f.start
+	f.teleports = [{"a": near, "b": far}]
+	var before: float = game._stage.warp_amount()
+	_check(before == 0.0, "before a pad the picture is not warping")
+	await flow.press("up")
+	_check(s.cell == far, "the pad carried the party across the floor (%s)" % str(s.cell))
+	await process_frame
+	await process_frame
+	_check(game._stage.warp_amount() > 0.0, "the picture's field of view swells as it lands (%.2f)" % game._stage.warp_amount())
+	_check(game._postfx.flash_level() > 0.0, "and a flash in the accent colour goes with it (%.2f)" % game._postfx.flash_level())
 
 
 # ---------------------------------------------------------------- a start that must not race a tick

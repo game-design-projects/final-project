@@ -388,6 +388,7 @@ func _make_floor(way := {}) -> void:
 		plan.lords_return = not plan.lords # where the biome comes back, its lord asks its second favour
 		plan.lords_done = state.lords_met.duplicate()
 		plan.lords_sworn = state.lords_sworn.duplicate()
+		plan.lords_standing = state.reputation.duplicate() # a clan that is angry at home here has its lord offer a way back
 		if feature("clan-requests"): # the clans' askers stand here, in place of the stray asker and the lord on its floor (rules/envoys.gd)
 			plan.lords = false
 			plan.lords_return = false

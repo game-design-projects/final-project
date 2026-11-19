@@ -11,6 +11,7 @@ const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
+const Vision = preload("res://src/rules/vision.gd")
 
 const FAR := 1 << 30 # not within reach
 
@@ -19,14 +20,14 @@ static func table() -> Dictionary:
 	return Content.table("roaming")
 
 
-## Everybody takes a turn. `options` are {revenge, boss_chase}: both on in the game, off by default so a test can watch one rule at a time. Returns {caught, noticed, moved}: the monster that
-## walked into you (the rest stay put), or null, those that have just started hunting you, and those that moved.
+## Everybody takes a turn. `options` are {revenge, boss_chase}: both on in the game, off by default so a test can watch one rule at a time. Returns {caught, noticed, moved, lost}: the
+## monster that walked into you (the rest stay put), or null, those that have just started hunting you, those that moved, and those that have just given you up (#169).
 static func turn(state, options := {}) -> Dictionary:
 	var f = state.floor_map
 	f.steps += 1
 	var barred := _barred(f)
 	var to_you := _field(f, state.cell, barred)
-	var out := {"caught": null, "noticed": [], "moved": []}
+	var out := {"caught": null, "noticed": [], "moved": [], "lost": []}
 	for i in f.monsters.size():
 		var m = f.monsters[i]
 		if m.is_gone() or m.lurking:
@@ -34,8 +35,25 @@ static func turn(state, options := {}) -> Dictionary:
 		if m.hold > 0:
 			m.hold -= 1
 			m.hunting = false
+			m.unseen = 0
 			continue
 		var intent := _intent(m, f, to_you, state, options)
+		var gave_up := false
+		if intent == "hunt" and not m.boss: # a hunter that cannot see you for a while loses your track (#169)
+			if _sees(m, f, state.cell):
+				m.unseen = 0
+			else:
+				m.unseen += 1
+				if m.unseen >= int(table().lose_track):
+					gave_up = true
+					m.no_hunt = int(table().lose_track_cooldown)
+					out.lost.append(m)
+					print("roaming: %s loses your track at %s" % [m.name, m.cell])
+					intent = "still"
+		if intent != "hunt":
+			m.unseen = 0 # steps without sight only count while it is after you: one hunt's count is not the next one's
+		if m.no_hunt > 0 and not gave_up:
+			m.no_hunt -= 1 # counted after its turn, so the steps off are as many as the table says
 		if intent == "hunt" and not m.hunting:
 			out.noticed.append(m)
 			print("roaming: %s starts hunting you from %s" % [m.name, m.cell])
@@ -69,9 +87,10 @@ static func _intent(m, f, to_you: Dictionary, state, options: Dictionary) -> Str
 		return "hunt" if options.get("boss_chase", false) and m.cell != f.stairs and seen else "still"
 	if m.meters.fear >= float(t.afraid_at) and near <= int(t.afraid_sense):
 		return "away"
-	if options.get("revenge", false) and near <= int(t.revenge_sense) and float(state.reputation.get(Clans.of(m.species), 0.0)) <= float(t.revenge_at):
+	var may_hunt: bool = m.no_hunt <= 0 # it lost you a few steps ago: it goes back to its own way about the floor (#169)
+	if may_hunt and options.get("revenge", false) and near <= int(t.revenge_sense) and float(state.reputation.get(Clans.of(m.species), 0.0)) <= float(t.revenge_at):
 		return "hunt"
-	if m.meters.anger >= float(t.angry_at) and near <= int(t.angry_sense):
+	if may_hunt and m.meters.anger >= float(t.angry_at) and near <= int(t.angry_sense):
 		return "hunt"
 	if m.meters.friendliness >= float(t.friendly_at) and near <= int(t.friendly_sense):
 		return "come"
@@ -85,8 +104,18 @@ static func _intent(m, f, to_you: Dictionary, state, options: Dictionary) -> Str
 			return "patrol"
 		"stalk":
 			var reach: int = int(way.sense) + (int(way.keeps_on) if m.hunting else 0)
-			return "hunt" if near <= reach else "still"
+			return "hunt" if may_hunt and near <= reach else "still"
 	return "still"
+
+
+## Whether a monster has you in sight: an open line between you. A wall or a corner takes it away, and so does a pad, which is the
+## way out of the floor rather than floor to see across (#169).
+static func _sees(m, f, you: Vector2i) -> bool:
+	var pads := {}
+	for t in f.teleports:
+		pads[t.a] = true
+		pads[t.b] = true
+	return Vision.clear_line(f, Vector2(m.cell) + Vector2(0.5, 0.5), Vector2(you) + Vector2(0.5, 0.5), pads)
 
 
 ## The cell it moves to, or null to stay. It may be yours.
