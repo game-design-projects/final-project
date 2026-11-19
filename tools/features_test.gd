@@ -1175,7 +1175,7 @@ func _recruiting() -> void:
 	_check(s.stage == "explore" and s.allies.size() == 1 and s.tally.recruited == 1, "COME ALONG: it joins, always")
 	_check(s.banner != null and s.banner.title.contains("JOINS"), "joining puts a banner up (%s)" % str(s.banner))
 	_check(s.hp > 5, "peace heals you a little (%d)" % s.hp)
-	_check(s.allies[0].loyalty >= 31.0 and s.allies[0].loyalty <= 100.0, "an ally starts loyal (%.0f)" % s.allies[0].loyalty)
+	_check(s.allies[0].loyalty >= Allies.SAFE_START and s.allies[0].loyalty <= 100.0, "an ally starts at the safe floor or better (%.0f)" % s.allies[0].loyalty)
 
 	flow = _flow(22)
 	m = await _at_menu(flow)
@@ -2976,7 +2976,7 @@ func _lord_again(clan: String) -> Variant:
 func _allies() -> void:
 	var dice := Dice.new(Rng.new(3))
 	_check(Allies.LEAVE_BELOW == 40.0, "an ally may leave below 40 loyalty")
-	_check(Allies.START_LOYALTY_MIN - 2.0 * Allies.LOYALTY_PER_POINT >= Allies.LEAVE_BELOW, "even the least loyal new friend, after the worst deed it can see, is still at the line")
+	_check(Allies.START_LOYALTY_MIN - Allies.WORST_DEED_LOSS >= Allies.LEAVE_BELOW, "even the least loyal start, after the worst deed it can see, is still at the line")
 	_check(Allies.mood(40.0) == "UNEASY" and Allies.mood(39.0) == "MAY LEAVE", "at the line it is uneasy, below it may go")
 	_check(Allies.mood(45.0) == "CONTENT" and Allies.mood(70.0) == "DEVOTED", "and the other words still hold")
 	_check(Allies.leave_odds(30.0) > 0.75 and Allies.leave_odds(20.0) > 0.9, "well below the line it is likely to go (%.2f, %.2f)" % [Allies.leave_odds(30.0), Allies.leave_odds(20.0)])
@@ -2985,10 +2985,23 @@ func _allies() -> void:
 	for i in 40:
 		starts.append(Allies.start_loyalty(dice))
 	_check(starts.all(func(v): return v >= Allies.START_LOYALTY_MIN and v <= Allies.START_LOYALTY_MAX), "a new friend starts at 60..80 loyalty")
-	# one deed, the worst there is, on the least loyal start: it never leaves, because the gate is not passed
-	var a = Ally.make("slime", "GLOP", Allies.START_LOYALTY_MIN)
-	a.loyalty = float(Allies.START_LOYALTY_MIN) - 2.0 * Allies.LOYALTY_PER_POINT
-	_check(a.loyalty >= Allies.LEAVE_BELOW and not (a.loyalty < Allies.LEAVE_BELOW), "a single disliked deed leaves a new friend at the line, not below it (%d)" % int(a.loyalty))
+	# the way one actually joins (encounter.take_along): even wanting it least, it never starts below the safe floor
+	var joins: Array = []
+	for i in 40:
+		joins.append(Allies.eager_loyalty(dice, 0.0))
+	_check(joins.all(func(v): return v >= Allies.SAFE_START), "a friend that barely wanted to come still starts at the safe floor")
+	# the worst deed there is, on that start, through the rule's own path: the roll is pinned to the score it hates (a slime
+	# on slay_begging), so it lands at the line, and the gate does not let it go
+	var worst := Dice.new(Rng.new(3))
+	worst.pin(0.0)
+	var a = Ally.make("slime", "GLOP", Allies.SAFE_START)
+	var hates: Dictionary = Allies.judge(a, "slay_begging", worst)
+	_check(hates.score == 0 and a.loyalty == Allies.LEAVE_BELOW and not hates.leaves, "one worst deed leaves a new friend at the line, not below it (%d)" % int(a.loyalty))
+	# the gate is not a wall: below the line the same pinned roll does take it away
+	var b = Ally.make("slime", "DROP", Allies.LEAVE_BELOW - 1.0)
+	var goes: Dictionary = Allies.judge(b, "slay_begging", worst)
+	_check(goes.score == 0 and b.loyalty < Allies.LEAVE_BELOW and goes.leaves, "below the line the same deed can drive it off (%d)" % int(b.loyalty))
+	worst.unpin()
 
 
 func _npcs() -> void:
