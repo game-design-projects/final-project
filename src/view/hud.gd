@@ -14,6 +14,7 @@ const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 
 enum Part { HEADER, STATUS, DOCK }
 
@@ -349,10 +350,11 @@ static func toughness_tag(s) -> String:
 
 # ---------------------------------------------------------------- the status row
 
-## The nerve the run holds, as the status row says it ("" when there is none, so nothing is drawn for it): the playtest earned
-## nerve by dodging close and never saw it, so the one number behind a strike's extra damage is on screen now (#175).
+## The nerve this fight holds, as the status row says it ("" when there is none, so nothing is drawn for it): the playtest
+## earned nerve by dodging close and never saw it, so the one number behind a strike's extra damage is on screen now (#175).
+## Nerve is the fight's, not the run's: the walk after one shows none, because a fight starts at 0 (2 with DEEP BREATH).
 func nerve_text() -> String:
-	if state == null or int(state.nerve) <= 0:
+	if state == null or int(state.nerve) <= 0 or not state.stage in Transitions.FIGHT:
 		return ""
 	return "NERVE %d/%d" % [int(state.nerve), Combat.NERVE_MAX]
 
