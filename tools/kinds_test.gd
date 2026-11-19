@@ -1,7 +1,8 @@
 ## The kinds of monster (data/kinds.json, rules/kinds.gd) and their attacks (rules/minigames/): five kinds to a floor with no kind
 ## on two floors and every clan on every floor, each kind with its own attack; a generated floor holds one of each of its kinds and
 ## a champion that fights in all their attacks; a warren keeps to one clan; an old save's monster is its species' own kind; and
-## every attack makes hazards, warns the square you stand on in time, never lights the whole box and never walls you in.
+## every attack makes hazards, warns the square you stand on in time, never lights the whole box and never walls you in, and is
+## the same attack twice on one seed.
 ##   godot --headless --path . -s res://tools/kinds_test.gd -- nosave nosound
 extends "res://tools/test_base.gd"
 
@@ -19,6 +20,7 @@ const CLANS := ["slime", "bandit", "snake", "rock"]
 const REACT_MS := 300.0 # the least warning the square you stand on gets
 const STEP_MS := 200.0 # how fast a person taps an arrow: five steps a second
 const TICK_MS := 16.0
+const SAME_SEED := 4242 # the seed an attack is played twice on, to see it come out the same
 const ROAMS := ["drift", "patrol", "stalk", "still"]
 
 
@@ -150,7 +152,8 @@ func _champion_cycle() -> void:
 ## Each attack played for a whole dodge at a low and a high pace of intensity, with the soul standing still and with it wandering:
 ## it makes hazards, keeps its cells in the box, warns your square at least REACT_MS before it hurts, leaves a square you can walk
 ## to at STEP_MS a step before it lands, never lights every open square at once, never puts a pillar on you and never shuts you
-## into fewer than four squares. The high pace is a champion's on B5F with the dodge pressed hard.
+## into fewer than four squares. The high pace is a champion's on B5F with the dodge pressed hard. Then the same attack twice on
+## SAME_SEED: a run that drifts with the clock, or leans on something left over from the run before it, can't be played again.
 func _every_attack() -> void:
 	var genres: Array = DodgeRun.MINI_GAMES.keys()
 	genres.sort()
@@ -168,6 +171,28 @@ func _every_attack() -> void:
 		_check(worst.full == 0, "%s never lights every open square at once (%d frames did)" % [g, worst.full])
 		_check(worst.pinned == 0, "%s never puts a pillar where you stand" % g)
 		_check(worst.boxed == 0, "%s never shuts you into fewer than four squares (%d frames did)" % [g, worst.boxed])
+		var made := _signature(g)
+		_check(not made.is_empty() and made == _signature(g), "%s is the same attack twice on one seed (%d hazards)" % [g, made.size()])
+
+
+## What one attack made for a whole dodge on SAME_SEED, in the order it came: a line a hazard, with its kind, the squares it
+## lights and when it warns, hurts and ends.
+func _signature(genre: String) -> Array:
+	var rng := Rng.new(SAME_SEED)
+	var run = DodgeRun.start(genre, 1.0, false, 0, 0.0, {}, 1.0)
+	var made: Array = []
+	var t := 0.0
+	while not run.is_over(t):
+		run.update(t, rng)
+		for h in run.hazards:
+			if h.has("_signed"):
+				continue
+			h._signed = true
+			var cells: Array = h.cells.keys()
+			cells.sort()
+			made.append("%s warns from %d, hurts from %d, ends %d: %s" % [h.kind, roundi(float(h.warn)), roundi(float(h.hit)), roundi(float(h.end)), str(cells)])
+		t += TICK_MS
+	return made
 
 
 func _play(genre: String, intensity: float, i: int, wander: bool) -> Dictionary:
