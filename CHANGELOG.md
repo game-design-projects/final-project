@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [0.9.5] - 2026-11-20
 
 ### Added
+- CI reads the builds back: `tools/pack_version_test.py` opens the macOS zip and fails when `Donjon.app`'s version is not `config/version` (0.9.5's said 1.0, #229), and the web job plays the exported `index.pck` headless until the menu prints, so an export that loses a scene or a script cannot ship a bundle that only looks complete.
 - `saves_test` checks that a save made before the run's newest keys still loads: the kills a friend approved of (`blessed`), the lords met, sworn and waiting on a warren all read as none, and the kills still count (#154, #185).
 - `sim_strike` prints what the fight bar's two commands are worth, species by species: the window a plain and a heavy strike have in ms, and the damage at a perfect, a middling and an edge hit (`boss=1`, `charms=rock|dragon`). It is the table #163 needs before HEAVY is retuned — today a heavy blow is better than a plain one on four of the five species, edges included.
 - A hunting monster that steps on a pad is carried to the other one (#175: "trick enemies onto a teleport pad"): the field it walks down now lets it see a pad as a step, and only a hunter takes one — anything else still keeps off pads, and stands on none. A pad therefore breaks a chase, the way a wall or a corner does since #190.
