@@ -11,6 +11,9 @@ const Floors = preload("res://src/rules/floors.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
+const STATUS_WINDOW := 640.0 # the narrowest window the game is checked at (`tools/hold_check.gd` runs 640x360)
+const BAR_W_MIN := 240.0 # the health bar is what the row is for, so the row's words must leave it this much of it
+
 var Saves = null # loaded when the test runs, like the other scripts that reach the Store autoload
 
 
@@ -723,40 +726,49 @@ func _thinking(game) -> void:
 	Network._flights.erase(-1)
 
 
-# ---------------------------------------------------------------- the nerve you hold
+# ---------------------------------------------------------------- the status row
 
-## A close call says how much nerve it left you with, where the pips alone would not (`CLOSE CALL · NERVE 2/5`,
-## `CLEAN DODGE · NERVE 3/5`): the playtest earned nerve and never noticed (#175); #196 put a second count in the status row and
-## #198 took it back out, leaving the pips and these popups to say it.
 ## The status row says everything it has, always, in type big enough to read (#164): HP, gold, the party and how you are eating.
 func _status_row(game) -> void:
 	var status = game._status
 	status.state = game.flow.state
 	var s = game.flow.state
+	var palette = load("res://src/view/palette.gd")
 	var fonts = load("res://src/view/fonts.gd")
+	var was: float = s.hunger
+	var word_was: String = status.hunger_word()
+	s.hunger = 0.0 # where a run starts (meta_test says so): the rules have no word for it, the row says FED
 	var text: String = "".join(status.status_pieces().map(func(p): return str(p[0])))
 	_check(text.contains("HP") and text.contains("GOLD") and text.contains("PARTY"), "the row names health, gold and the party (%s)" % text)
 	_check(status.hunger_word() == "FED", "and says FED when there is nothing wrong (%s)" % status.hunger_word())
 	var width := 0.0
 	for p in status.status_pieces():
 		width += fonts.title().get_string_size(str(p[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, status.STATUS_PX).x
-	_check(width < 640.0, "all of it fits beside the health bar (%d px at %d)" % [int(width), status.STATUS_PX])
-	_set_hunger(s, "hungry")
-	_check(status.hunger_word() == "HUNGRY" and status.hunger_colour() == load("res://src/view/palette.gd").MERCY, "hungry says so in the accent colour (%s)" % status.hunger_word())
-	_set_hunger(s, "starving")
-	_check(status.hunger_word() == "STARVING" and status.hunger_colour() == load("res://src/view/palette.gd").WARN, "starving says so in the warning colour (%s)" % status.hunger_word())
-	_set_hunger(s, "fed")
+	_check(STATUS_WINDOW - width > BAR_W_MIN, "the row's %d px of words at %d leave the health bar %d px of a %d px window" % [int(width), status.STATUS_PX, int(STATUS_WINDOW - width), int(STATUS_WINDOW)])
+	_check(_set_hunger(s, "hungry"), "the rules have a hungry value the row can be tried at")
+	_check(status.hunger_word() == "HUNGRY" and status.hunger_colour() == palette.MERCY, "hungry says so in the accent colour (%s)" % status.hunger_word())
+	_check(_set_hunger(s, "starving"), "and a starving one")
+	_check(status.hunger_word() == "STARVING" and status.hunger_colour() == palette.WARN, "starving says so in the warning colour (%s)" % status.hunger_word())
+	s.hunger = was
+	_check(is_equal_approx(s.hunger, was) and status.hunger_word() == word_was, "and the run is left as hungry as this found it (%.0f, %s)" % [s.hunger, status.hunger_word()])
 
 
-## A hunger value the survival rules read as this stage, or leave the field as it is.
-func _set_hunger(s, stage: String) -> void:
+## Puts hunger at a value the survival rules read as this stage, and says whether it found one: the rules own where the lines
+## are, so a moved `hungry_at` or `starving_at` still moves what the row is tried at.
+func _set_hunger(s, stage: String) -> bool:
 	var survival = load("res://src/rules/survival.gd")
 	for v in range(0, 200):
 		s.hunger = v
-		if survival.stage_of(s.hunger).to_upper() == stage.to_upper():
-			return
+		if survival.stage_of(s.hunger) == stage:
+			return true
+	return false
 
 
+# ---------------------------------------------------------------- the nerve you hold
+
+## A close call says how much nerve it left you with, where the pips alone would not (`CLOSE CALL · NERVE 2/5`,
+## `CLEAN DODGE · NERVE 3/5`): the playtest earned nerve and never noticed (#175); #196 put a second count in the status row and
+## #198 took it back out, leaving the pips and these popups to say it.
 func _nerve_is_shown(game) -> void:
 	await _fight(game)
 	game.flow.state.nerve = 2
