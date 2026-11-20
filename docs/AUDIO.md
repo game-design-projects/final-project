@@ -31,6 +31,8 @@ All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: 
 
 None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and keeps it for the whole fight, because switching tunes mid-fight was jarring. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
 
+**The fight's theme** is picked from the four battle loops at random, never the one the last fight used — except a champion's fight, which always has `battle-crusade` (a champion's own theme; a dedicated track is #49's business).
+
 **Good news: one-shot cues** by the same band. `fanfare.ogg` (3.9 s) plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.ogg` (2.3 s) plays when a fight ends in mercy (a spare or a foe let go); a kill ends the fight with its own sound and no sting (#168: the fanfare is for the good act, not for the winning). Both quote the melody's opening in D major (D E F♯ G G G) and land on a IV6–V7–I cadence with bells.
 
 **Levels.** The renders are mastered to −19 dBFS RMS (explore) and −17 dBFS RMS (fights and stings). The volumes in `TRACKS`/`STINGS` (0.7 and 0.75) put a fight about 2.6 dB above the exploring music.
