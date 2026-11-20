@@ -76,9 +76,11 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_music.set_mode("battle")
 		"strike":
 			_sfx.play("crit" if data.crit else "strike")
-		"spared", "slain":
+		"spared": # the fanfare is for a mercy: a kill has its own sound and no triumph over it (#168)
 			_sfx.play(name)
 			_music.sting("victory")
+		"slain":
+			_sfx.play(name)
 		"stairs":
 			_sfx.play("stairs")
 			_music.sting("fanfare")
