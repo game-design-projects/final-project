@@ -98,6 +98,8 @@ func set_fade(amount: float) -> void:
 	_material.set_shader_parameter("fade_out", amount)
 
 
-## How high a name over it should float: over what the drawing may raise above its head.
+## How high a name over it should float: over what the drawing may raise above its head, and never lower than the head of one
+## whose drawing fills its frame (a lord).
 func top() -> float:
-	return float(Sprites.sheet(sheet).feet[1]) * _per_px * 0.86
+	var s := Sprites.sheet(sheet)
+	return maxf(float(s.feet[1]) * _per_px * 0.86, float(s.world_h) if s.has("anims") else 0.0)

@@ -108,6 +108,11 @@ godot --headless --path . --import                  # a new PNG needs importing;
 
 `process.py` prints how much each frame moves from the one before it and marks a jump: read that before looking at the GIF. A figure's silhouette (the alpha of its atlas) is worked out by flood fill, so a drawing with an open outline shows through; the script warns.
 
+Two sheets were drawn outside that pipeline (ChatGPT's image tool, from the prompt and the reference sheets a playtester was given) and touched up by hand before they went into `tools/art/source/`: `lords.png`, the four clan lords, and `events.png`, the pictures the choice screens show.
+
+- **A lord is a still**: a figure made from one drawing. Its entry in `sheets.json` names the sheet and the cell (`"still"`), and `process.py` bends that drawing into the six frames of an `idle`: the body rises off its feet with a breath, `moves` shift a part with it (`bob`, `sway`, `lean`, `pump`, `grow`), `eyes` are squashed flat for a blink and `brows` lifted for a face with no eyes to shut. `fill` dims the inside of a filled-in shape (a beard, a pale belly), which the figure shader would otherwise light like a lamp. The rects are in the source cell's pixels. A still has no other action, so the game hops and flinches it in code, as it does for a blank face.
+- **`events.png`** has a drawing for each name in `Vignette.KNOWN`, and the gate's bars and chain as drawings of their own so they can move. `src/view/vignette.gd` holds where the moving and coloured parts are, as shares of each drawing's ink: a redrawn picture needs them measured again (`art_test` checks they still lie inside it).
+
 ### The opening film
 
 NEW GAME plays `assets/video/intro.ogv` (`src/menu/intro_cg.gd`) before the run. Godot plays Ogg Theora only, so a rendered mp4 is re-encoded by a script; the prompt it came from, and what each render got right and wrong, are in [intro/seedance-prompt.md](intro/seedance-prompt.md).

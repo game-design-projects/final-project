@@ -353,7 +353,8 @@ func _build_trader() -> void:
 		_trader_tag = _name_tag("TRADER", Palette.MERCY, _top_of(_trader))
 		_trader.add_child(_trader_tag)
 	if not _floor_map.quester.is_empty():
-		_quester = _figure(_floor_map.quester.species, Palette.YOU, _floor_map.quester.cell)
+		var asks: Dictionary = _floor_map.quester
+		_quester = _figure(Sprites.lord_look(str(asks.species)) if str(asks.get("lord", "")) != "" else str(asks.species), Palette.YOU, asks.cell)
 		_quester_tag = _name_tag(str(Requests.table().tag), Palette.YOU, _top_of(_quester))
 		_quester.add_child(_quester_tag)
 	for old in _envoys:
@@ -362,7 +363,7 @@ func _build_trader() -> void:
 	for e in _floor_map.envoys:
 		var lord: bool = e.get("lord", false)
 		var color: Color = Palette.MERCY if lord else Palette.YOU
-		var node := _figure(str(e.species), color, e.cell)
+		var node := _figure(Sprites.lord_look(str(e.species)) if lord else str(e.species), color, e.cell)
 		var tag := _name_tag(str(Envoys.table().hall.tag if lord else Envoys.table().tag), color, _top_of(node))
 		node.add_child(tag)
 		_envoys.append({"node": node, "tag": tag, "cell": e.cell})

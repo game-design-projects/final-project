@@ -293,5 +293,285 @@
  "keyart": {
   "plain": true,
   "width": 1024
+ },
+ "lord_slime": {
+  "still": {
+   "sheet": "lords",
+   "cols": 2,
+   "rows": 2,
+   "cell": 0
+  },
+  "cell_px": 300,
+  "world_h": 1.15,
+  "tint": "#ffd27a",
+  "breath": 0.03,
+  "eyes": [
+   [
+    385,
+    138,
+    88,
+    50
+   ],
+   [
+    247,
+    220,
+    55,
+    37
+   ],
+   [
+    204,
+    368,
+    58,
+    42
+   ],
+   [
+    414,
+    347,
+    67,
+    46
+   ],
+   [
+    602,
+    326,
+    46,
+    36
+   ],
+   [
+    398,
+    271,
+    36,
+    34
+   ]
+  ],
+  "moves": [
+   {
+    "rect": [
+     120,
+     20,
+     620,
+     440
+    ],
+    "lean": 7,
+    "feather": 0
+   },
+   {
+    "rect": [
+     335,
+     18,
+     168,
+     92
+    ],
+    "bob": -5
+   },
+   {
+    "rect": [
+     198,
+     146,
+     58,
+     56
+    ],
+    "bob": -6
+   },
+   {
+    "rect": [
+     558,
+     150,
+     46,
+     46
+    ],
+    "bob": 5
+   },
+   {
+    "rect": [
+     168,
+     266,
+     36,
+     36
+    ],
+    "bob": -4
+   }
+  ]
+ },
+ "lord_bandit": {
+  "still": {
+   "sheet": "lords",
+   "cols": 2,
+   "rows": 2,
+   "cell": 1
+  },
+  "cell_px": 300,
+  "world_h": 1.4,
+  "tint": "#ffd27a",
+  "breath": 0.02,
+  "eyes": [
+   [
+    300,
+    80,
+    72,
+    38
+   ]
+  ],
+  "moves": [
+   {
+    "rect": [
+     80,
+     105,
+     540,
+     280
+    ],
+    "pump": 0.04,
+    "feather": 24
+   },
+   {
+    "rect": [
+     86,
+     68,
+     78,
+     84
+    ],
+    "bob": -5
+   },
+   {
+    "rect": [
+     563,
+     76,
+     74,
+     86
+    ],
+    "bob": -5
+   }
+  ]
+ },
+ "lord_rock": {
+  "still": {
+   "sheet": "lords",
+   "cols": 2,
+   "rows": 2,
+   "cell": 2
+  },
+  "cell_px": 300,
+  "world_h": 1.2,
+  "tint": "#ffd27a",
+  "breath": 0.012,
+  "brows": [
+   {
+    "rect": [
+     298,
+     128,
+     226,
+     50
+    ],
+    "bob": -6
+   }
+  ],
+  "moves": [
+   {
+    "rect": [
+     285,
+     185,
+     246,
+     245
+    ],
+    "sway": 8,
+    "feather": 6
+   },
+   {
+    "rect": [
+     244,
+     40,
+     72,
+     72
+    ],
+    "bob": -6
+   },
+   {
+    "rect": [
+     466,
+     28,
+     60,
+     52
+    ],
+    "bob": 5
+   },
+   {
+    "rect": [
+     524,
+     70,
+     44,
+     42
+    ],
+    "bob": -5
+   },
+   {
+    "rect": [
+     193,
+     118,
+     40,
+     40
+    ],
+    "bob": 4
+   }
+  ],
+  "fill": 0.16
+ },
+ "lord_snake": {
+  "still": {
+   "sheet": "lords",
+   "cols": 2,
+   "rows": 2,
+   "cell": 3
+  },
+  "cell_px": 300,
+  "world_h": 1.4,
+  "tint": "#ffd27a",
+  "breath": 0.02,
+  "eyes": [
+   [
+    296,
+    24,
+    42,
+    24
+   ]
+  ],
+  "moves": [
+   {
+    "rect": [
+     140,
+     120,
+     360,
+     180
+    ],
+    "pump": 0.03,
+    "feather": 24
+   },
+   {
+    "rect": [
+     428,
+     4,
+     62,
+     70
+    ],
+    "grow": -0.4,
+    "feather": 4
+   }
+  ],
+  "fill": 0.16
+ },
+ "events": {
+  "cols": 2,
+  "rows": 4,
+  "cell_px": 384,
+  "feet": "middle",
+  "closed": false,
+  "frames": [
+   "keepsakes",
+   "camp",
+   "gate",
+   "stairs",
+   "door",
+   "ending",
+   "gate_bars",
+   "gate_chain"
+  ]
  }
 }
