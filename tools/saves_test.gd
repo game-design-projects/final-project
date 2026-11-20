@@ -35,6 +35,7 @@ func _run() -> void:
 	_a_store_heeds_nosave_said_later()
 	await _state_is_checked()
 	await _a_charted_floor_comes_back_charted()
+	await _a_save_from_before_the_new_keys_loads()
 	_cleanup()
 	_finish()
 
@@ -180,6 +181,30 @@ func _a_charted_floor_comes_back_charted() -> void:
 	wrong.charted = [[s.floor_map.start.x, s.floor_map.start.y], "x", [2], [999, 999], [0, 0], [float(s.floor_map.stairs.x), float(s.floor_map.stairs.y)]]
 	var kept = State.from_dict(wrong)
 	_check(kept != null and kept.charted.size() == 2 and kept.charted.has(s.floor_map.start) and kept.charted.has(s.floor_map.stairs), "charted cells that are not cells of this floor are dropped, the rest kept (the start, and the stairs given as floats)")
+
+
+## What a run has added to its save lately — the kills a friend approved of, the lords met, sworn and their warren — is read as
+## none in a save made before it was there, so a build with them loads an older run instead of refusing it (#154, #185).
+func _a_save_from_before_the_new_keys_loads() -> void:
+	var flow := Flow.new(Rng.new(19), LocalMind.new())
+	await flow.new_run()
+	var s = flow.state
+	s.tally.slain = 3
+	s.tally.blessed = 2
+	s.lords_met = ["crew"]
+	s.lords_sworn = ["crew"]
+	s.lords_warren = ["crew"]
+	var back = State.from_dict(s.to_dict())
+	_check(back != null and int(back.tally.get("blessed", -1)) == 2 and back.lords_met == ["crew"] and back.lords_sworn == ["crew"] and back.lords_warren == ["crew"], "the run's newer keys come back as they went (blessed %d)" % int(s.tally.blessed))
+	var old: Dictionary = s.to_dict()
+	old.tally.erase("blessed")
+	old.erase("lordsMet")
+	old.erase("lordsSworn")
+	old.erase("lordsWarren")
+	var before = State.from_dict(old)
+	_check(before != null, "a save from before those keys still loads")
+	_check(before != null and int(before.tally.get("blessed", -1)) == 0 and before.lords_met.is_empty() and before.lords_sworn.is_empty() and before.lords_warren.is_empty(), "with a bless count of none and no lords met, sworn or waiting on a warren")
+	_check(before != null and int(before.tally.slain) == 3, "and its kills still counted")
 
 
 ## A tool's script sets its flags after the game's autoloads exist, so the store it meets was made with no `nosave` and

@@ -1,5 +1,5 @@
 ## The music: a quiet loop while exploring that plays a stretch and then rests (it does not play nonstop), one of four
-## battle themes in a fight (a random one, never the last), and short stings: the victory when a fight is won, the
+## battle themes in a fight (a random one, never the last), and short stings: the victory when a foe is spared, the
 ## fanfare at the stairs. A sting takes the loops out of its way, and the exploring music comes back after it has rung
 ## out and a few seconds more. The tracks are in assets/audio/.
 ## With the feature `hum-theme` (`hum`), Abdulla's hum theme takes the loops' place: its exploring loop, and its combat loop in
@@ -130,7 +130,7 @@ func set_mode(mode: String) -> void:
 			_fade_out_explore(FADES.explore.out)
 
 
-## A short fanfare, over the music: "victory" (a fight won) or "fanfare" (the stairs). The loops get out of its way, and
+## A short fanfare, over the music: "victory" (a foe spared) or "fanfare" (the stairs). The loops get out of its way, and
 ## the exploring music returns after it and a few seconds of quiet.
 func sting(name: String) -> void:
 	if not enabled:

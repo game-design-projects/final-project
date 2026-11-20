@@ -35,7 +35,8 @@ const KNOWN := {
 	"seeds": "seeds=N: for tools/sim_dodge.gd, how many dodges per attack and intensity; for tools/sim_chart.gd, how many floors per biome and depth",
 	"at": "at=0.65: for tools/sim_chart.gd, the share of a floor seen at which instinct charts the rest, instead of the data's",
 	"csv": "csv=1: for tools/sim_dodge.gd, print CSV lines",
-	"boss": "boss=1: for tools/sim_dodge.gd, play each attack as a champion's (its 6200 ms fight, a fifth denser than a usual monster's)",
+	"boss": "boss=1: for tools/sim_dodge.gd, play each attack as a champion's (its 6200 ms fight, a fifth denser than a usual monster's); for tools/sim_strike.gd, a strike's champion's damage scale",
+	"charms": "charms=none|rock|dragon: for tools/sim_strike.gd, the party's charm: the rock's slower bar, or the dragon's fire on every strike",
 }
 
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.

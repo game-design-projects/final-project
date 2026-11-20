@@ -47,6 +47,7 @@ const CALM_LUNGE := 0.35 # the share of it left with the `calm` setting
 const FLASH_S := 0.25
 # the name tags: real 3D text the same size on screen near or far, over the model's real top
 const TAG_FONT_PX := 16
+const CHAMPION_SCALE := 1.2 # how much taller a champion stands than its kind (#167)
 const TAG_PIXEL_SIZE := 0.00234 # with fixed_size and this FOV, 16 font pixels come out 8 view pixels tall: whole, so nearest stays sharp
 const TAG_GAP := 0.12 # above the head
 const TAG_FADE_S := 0.12 # how long a tag takes to come and go
@@ -677,6 +678,8 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 func _add_monster(m) -> void:
 	var model := _body(Sprites.look_of(m), Palette.monster(m), str(m.name).hash())
 	model.position = DungeonMesh.center(m.cell)
+	if m.boss: # a champion stands taller than its kind (#167)
+		model.scale = Vector3.ONE * CHAMPION_SCALE
 	add_child(model)
 	_models[m] = model
 	var tag := Label3D.new()
@@ -691,8 +694,8 @@ func _add_monster(m) -> void:
 	tag.no_depth_test = true # a wall's edge must not slice the name in two; it is hidden when no line reaches its monster
 	tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	tag.outline_size = 0
-	tag.modulate = Palette.monster(m)
-	tag.position = model.position + Vector3(0.0, _top_of(model) + TAG_GAP, 0.0)
+	tag.modulate = Palette.monster(m) # the boss red comes from here, as the body's does
+	tag.position = model.position + Vector3(0.0, _top_of(model) * model.scale.y + TAG_GAP, 0.0)
 	add_child(tag)
 	_tags[m] = tag
 	_tag_light[m] = 0.0

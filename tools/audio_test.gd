@@ -277,12 +277,16 @@ func _events_call_for_sounds() -> void:
 	sfx.clear()
 	audio._on_event("strike", {"damage": 4, "crit": false})
 	_check(sfx.played == ["strike"], "an ordinary strike plays strike (%s)" % [sfx.played])
-	# victory on every spared and slain, fanfare at the stairs and only there
-	for name in ["spared", "slain"]:
-		for boss in [false, true]:
-			music.clear()
-			audio._on_event(name, {"boss": boss})
-			_check(music.calls == ["sting:victory"], "%s%s: the victory sting (%s)" % [name, " (champion)" if boss else "", music.calls])
+	# the victory sting is a mercy's: a spare gets it, a kill only its own sound (#168), and the fanfare is the stairs'
+	for boss in [false, true]:
+		music.clear()
+		sfx.clear()
+		audio._on_event("spared", {"boss": boss})
+		_check(music.calls == ["sting:victory"] and sfx.played == ["spared"], "a spare%s: the victory sting (%s %s)" % [" (champion)" if boss else "", music.calls, sfx.played])
+		music.clear()
+		sfx.clear()
+		audio._on_event("slain", {"boss": boss})
+		_check(music.calls.is_empty() and sfx.played == ["slain"], "a kill%s: its own sound and no fanfare (%s %s)" % [" (champion)" if boss else "", music.calls, sfx.played])
 	music.clear()
 	sfx.clear()
 	audio._on_event("stairs", {})
@@ -675,7 +679,7 @@ func _hum_theme() -> void:
 	var b: AudioStreamPlayer = m.loop_player("battle")
 	_check(b != null and b.stream.loop and absf(b.stream.get_length() - 65.45) < 0.05, "which loops whole, 65.45 s (%.2f)" % b.stream.get_length())
 	m.sting("victory")
-	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a won fight still plays the victory sting over it")
+	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a spared foe: the victory sting is loaded (%.1f s) and the combat loop is off" % m.sting_length())
 	m.free()
 	m = _music()
 	await process_frame
