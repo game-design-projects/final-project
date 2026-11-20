@@ -40,6 +40,9 @@ fi
 # The two alternate voice banks (Qwen3, Gemini) are experiments heard with a flag or after `tools/voices/render.py`; the game's
 # own bank is `cosyvoice3`. Their audio is most of what a build would carry of them, so it stays out of every export: the flag
 # then falls back on the usual bank, as it does where no bank was rendered.
+# The macOS preset leaves the app's own two version fields empty on purpose: with them empty the exporter writes
+# `config/version` from project.godot into Info.plist, the value the menu shows, so a literal here (0.9.5 shipped with "1.0"
+# in its bundle) cannot drift from the game inside. `tools/macos_version_test.py` reads the built plist back; CI runs it.
 cat > export_presets.cfg <<'PRESETS'
 [preset.0]
 name="Web"
@@ -85,8 +88,8 @@ export_path=""
 [preset.2.options]
 binary_format/architecture="universal"
 application/bundle_identifier="app.donjon.game"
-application/short_version="__VERSION__"
-application/version="__VERSION__"
+application/short_version=""
+application/version=""
 codesign/codesign=0
 notarization/notarization=0
 
@@ -105,9 +108,6 @@ binary_format/architecture="x86_64"
 PRESETS
 
 version=$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)
-# The app bundle's own version is the game's: before this it was written as 1.0 in every build, so a 0.9.5 mac app said 1.0
-# in Get Info and to anything that reads the bundle. The presets carry a placeholder for it, filled here.
-sed -i.bak "s/__VERSION__/$version/g" export_presets.cfg && rm -f export_presets.cfg.bak
 # What the game asks when a build ships no address of its own: the default proxy in src/mind/minds.gd (DEFAULT_URL).
 default_url=$(sed -n 's/^const DEFAULT_URL := "\(.*\)"/\1/p' src/mind/minds.gd)
 "$GODOT" --headless --path . --import >/dev/null 2>&1 || true
