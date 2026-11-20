@@ -4,11 +4,11 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-### Changed
-- The manual's attack table says when it was measured: every row and the five floor averages are 0.9.5's, re-read with `godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound seeds=40 csv=1` (the slow bot's column at intensity 1.3), which is the command a later change to an attack can be checked with.
-
 ### Added
 - CI reads the builds back: `tools/pack_version_test.py` opens the macOS zip and fails when `Donjon.app`'s version is not the game's (0.9.5's said 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints, so a pack that cannot bring its own menu up fails before it is uploaded.
+
+### Changed
+- The manual's attack table says when it was measured: every row and the five floor averages are 0.9.5's, re-read with `godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound seeds=40 csv=1` (the slow bot's column at intensity 1.3), which is the command a later change to an attack can be checked with.
 
 ### Fixed
 - A mac app built from this repo says the game's version, not 1.0: the export presets wrote `application/short_version` and `application/version` as the literal "1.0", so Donjon.app's Info.plist said 1.0 in every release — the 0.9.5 mac zip does — while the game inside was right. The presets now carry a placeholder that `tools/build.sh` fills from `config/version` (0.9.5 today), so the bundle and the game cannot drift again.
