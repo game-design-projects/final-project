@@ -38,6 +38,14 @@ jobs:
             echo '::error::The project has script errors'
             exit 1
           fi
+      # The changelog's version links: every released section has one, [Unreleased] compares from the newest, and the newest
+      # section is the version in project.godot. It costs nothing and needs no Godot, so it runs before the game does. 0.9.5
+      # went out with no [0.9.5] link and an [Unreleased] still comparing from v0.9.4, so the notes of a shipped version read
+      # as unreleased, and nothing failed: release.yml asks for the heading, and markdown is never compiled.
+      - name: Check the changelog's links
+        run: |
+          set -euo pipefail
+          python3 tools/changelog_test.py
       # Whole games from the start to the stairs with an autopilot, on the local rules and on the seeded mind. The tool exits
       # with 1 when a game stalls, never reaches the stairs, or runs into a script error in any part of the game.
       # Every tool below goes through tools/check.sh: Godot exits with 0 for a script that doesn't load, so the exit code
