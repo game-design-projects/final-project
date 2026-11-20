@@ -159,7 +159,11 @@ Until the Worker has its key it answers 503, and the game falls back to the loca
 
 The itch.io page (`stevenli-phoenix-work/donjon`) must have **Kind of project = HTML** and the `html5` upload ticked **This file will be played in the browser** (embed 1280x720, Fullscreen button on; SharedArrayBuffer off, the build has no threads). With the kind left on Downloadable, `butler push` succeeds but the page only offers the web zip as a download and the game can't be played there.
 
-- Commits: `<type>: <description>` (feat, fix, refactor, docs, test, chore, perf, ci). Keep a Changelog format in `CHANGELOG.md` (version-grouped, one-liners). A `vX.Y.Z` tag must equal `config/version` in `project.godot` and have a `## [X.Y.Z]` section in the changelog, or `release.yml` fails. A change made after a release goes under `## [Unreleased]`, and only the release commit moves it under the new `## [X.Y.Z]`: `release.yml` builds that version's notes out of that one section, so a line filed under the release already tagged is never read by anything.
+### Cutting a release
+
+A release is one commit. It bumps `config/version` in `project.godot`, moves the `## [Unreleased]` block under a new `## [X.Y.Z] - <date>`, and moves the link block at the bottom with it: a `[X.Y.Z]:` compare link of its own, and `[Unreleased]` comparing from that version. `release.yml` builds the notes out of that one section, so a line filed under a version already tagged is never read by anything. Then the tag `vX.Y.Z`, which must equal `config/version` and have that section, or `release.yml` stops before it builds anything. Commit style and the changelog's general form are in [AGENTS.md](../AGENTS.md) (Conventions); this is the only place a release's steps are written.
+
+`python3 tools/changelog_test.py` runs in CI's check job, so a pull request fails before a tag is cut, and runs by hand the same way. It fails on any of those left out of a release commit, on a link whose section isn't there, on a version filed twice, and on a newest section that isn't `config/version`. Nothing else reads a markdown link: 0.9.5 shipped with no `[0.9.5]` link and an `[Unreleased]` still comparing from `v0.9.4`, so the notes of a version already shipped read as unreleased and its heading showed as bare text. Only 0.5.3 has no link, and the comment above the block says which version that is, because its tag was never cut.
 
 ## Godot MCP for AI agents
 

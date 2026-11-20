@@ -3378,6 +3378,13 @@ func _npcs() -> void:
 	var f = s.floor_map
 	var q: Dictionary = f.quester
 	_check(f.pickups.any(func(p): return p.item == q.want), "what it wants lies on this floor")
+	_check(f.pickups.filter(func(p): return str(p.item) == str(q.want)).size() == 1, "and lies there once, where it lay: no second copy is put down for it (%s)" % str(f.pickups.map(func(p): return str(p.item))))
+	_check(Requests.want_for(f, "bandit") == Requests.want_for(f, "slime"), "the ask is what lies there, not what the asker's kind loves (%s)" % Requests.want_for(f, "bandit"))
+	var no_finds = FloorMap.new()
+	no_finds.seed_value = int(f.seed_value)
+	_check(Requests.want_for(no_finds, "rock") == Items.gift_for("rock"), "a floor with nothing lying about asks for its kind's gift (%s)" % Requests.want_for(no_finds, "rock"))
+	no_finds.pickups = [{"cell": Vector2i.ZERO, "item": "whetstone"}]
+	_check(Requests.want_for(no_finds, "rock") == "whetstone", "a floor with a thing lying about asks for that (%s)" % Requests.want_for(no_finds, "rock"))
 	_check(f.in_the_way(q.cell) and f.reserved().has(q.cell), "routes go round it")
 	s.banner = null
 	_face(s, q.cell)
