@@ -362,9 +362,8 @@ func status_pieces() -> Array:
 		["  GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY],
 		["  PARTY ", Palette.DIM], ["%d" % state.party_size(), Palette.MERCY],
 	]
-	if fed != "":
-		out.append(["  ", Palette.DIM])
-		out.append([fed, hunger_colour()])
+	out.append(["  ", Palette.DIM])
+	out.append([fed, hunger_colour()])
 	return out
 
 
