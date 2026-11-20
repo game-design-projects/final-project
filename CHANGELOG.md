@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-11-20
+
 ### Added
 - `saves_test` checks that a save made before the run's newest keys still loads: the kills a friend approved of (`blessed`), the lords met, sworn and waiting on a warren all read as none, and the kills still count (#154, #185).
 - `sim_strike` prints what the fight bar's two commands are worth, species by species: the window a plain and a heavy strike have in ms, and the damage at a perfect, a middling and an edge hit (`boss=1`, `charms=rock|dragon`). It is the table #163 needs before HEAVY is retuned — today a heavy blow is better than a plain one on four of the five species, edges included.
