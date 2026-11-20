@@ -3107,6 +3107,8 @@ func _npcs() -> void:
 	var f = s.floor_map
 	var q: Dictionary = f.quester
 	_check(f.pickups.any(func(p): return p.item == q.want), "what it wants lies on this floor")
+	_check(Requests.want_for(f, "bandit") == Requests.want_for(f, "bandit"), "and the same floor asks for the same thing twice")
+	_check(Requests.want_for(f, "bandit") == str(f.pickups[0].item) or Requests.want_for(f, "bandit") == Items.gift_for("bandit"), "which is one of the floor's own pickups, or its kind's gift when there are none (%s)" % Requests.want_for(f, "bandit"))
 	_check(f.in_the_way(q.cell) and f.reserved().has(q.cell), "routes go round it")
 	s.banner = null
 	_face(s, q.cell)
