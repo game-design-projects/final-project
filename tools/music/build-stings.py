@@ -12,8 +12,8 @@ on a clear perfect cadence, IV6 - V7 - I, with tubular bells ringing on the fina
 
   fanfare: going down the stairs to a new floor. In eighths at 104 BPM: organ and strings in octaves,
            a kettle-drum roll into the landing, bells. About 3.9 s.
-  victory: winning a fight. The same shape twice as fast (16ths at 120 BPM), a harpsichord flourish up
-           into the landing, bells. About 2.3 s.
+  victory: a foe spared, not a kill. The same shape twice as fast (16ths at 120 BPM), a harpsichord
+           flourish up into the landing, bells. About 2.3 s.
 
 Needs numpy and scipy:  python3 tools/music/build-stings.py /tmp   (writes /tmp/fanfare.wav and /tmp/victory.wav)
 Then encode each:       tools/music/to_ogg.sh sting /tmp/fanfare.wav assets/audio/fanfare.ogg
