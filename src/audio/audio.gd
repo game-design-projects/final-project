@@ -71,10 +71,12 @@ func _on_event(name: String, data: Dictionary) -> void:
 	match name:
 		"stage":
 			if data.to in ["explore", "end", "keepsake"]:
+				_music.champion = false
 				_music.set_mode("explore")
 		"encounter":
 			_sfx.play("boss" if data.boss else "encounter")
 			_music.fight_with("final" if data.get("final", false) else ("boss" if data.boss else "fight"))
+			_music.champion = bool(data.boss) # a champion's fight keeps its own theme (#167)
 			_music.set_mode("battle")
 		"strike":
 			_sfx.play("crit" if data.crit else "strike")

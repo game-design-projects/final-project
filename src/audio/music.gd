@@ -13,6 +13,9 @@ const Mix = preload("res://src/audio/mix.gd")
 
 const EXPLORE := "res://assets/audio/ambient.ogg"
 const BATTLES := ["battle-toccata", "battle-charge", "battle-crusade", "battle-gallop"]
+## A champion's fight always has this one of them (#167: "boss needs its own music"). A dedicated track is #49's business; until
+## one exists, the one theme a champion always has is what makes its fight sound like no other.
+const CHAMPION_THEME := "battle-crusade"
 const STINGS := ["victory", "fanfare"]
 ## The hum theme (tools/music/hum-theme/): one exploring loop of 174.55 s (88 BPM) and one combat loop of 65.45 s (176 BPM).
 const HUM_EXPLORE := "res://assets/audio/hum-explore.ogg"
@@ -62,6 +65,7 @@ var _battle: AudioStreamPlayer # this fight's theme, or null
 var _battle_name := ""
 var _last_battle := ""
 var _foe := "fight" # who the next fight is with: "fight" (a monster), "boss" (a champion) or "final" (the last one)
+var champion := false # the fight is a champion's: its theme is fixed rather than picked
 var _sting: AudioStreamPlayer
 var _mode := ""
 var _resting := false # the exploring music is between stretches
@@ -228,6 +232,8 @@ func pick_battle() -> String:
 	if music_set: # the music set: the theme of who the fight is with
 		return str(SET_BATTLES[_foe])
 	var all := battles()
+	if champion and all.has(CHAMPION_THEME):
+		return CHAMPION_THEME
 	var fresh := all.filter(func(n): return n != _last_battle)
 	if fresh.is_empty():
 		fresh = all

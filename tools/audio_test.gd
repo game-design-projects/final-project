@@ -60,6 +60,7 @@ class FakeSfx:
 class FakeMusic:
 	extends RefCounted
 	var calls: Array = []
+	var champion := false # set by an encounter's boss flag (#167)
 
 	var foes: Array = [] # who each fight was said to be with
 
@@ -549,6 +550,19 @@ func _music_pacing() -> void:
 	_check(absf(m.pending_in() - 2.0) < 0.01, "after a fight the explore loop waits 2 s (%.2f)" % m.pending_in())
 	# the sting holds the explore loop back for its length plus 4 s
 	m.set_mode("battle")
+	# a champion's fight has its own theme, the same every time, and a usual fight still picks among the four (#167)
+	m.champion = false
+	var usual := {}
+	for i in 8:
+		usual[m.pick_battle()] = true
+	_check(usual.size() > 1, "a usual fight picks among the themes (%s)" % str(usual.keys()))
+	m.champion = true
+	var champion_picks := {}
+	for i in 4:
+		champion_picks[m.pick_battle()] = true
+	_check(champion_picks.keys() == [Music.CHAMPION_THEME], "a champion's fight always has its own theme (%s)" % str(champion_picks.keys()))
+	_check(Music.BATTLES.has(Music.CHAMPION_THEME), "and that theme is one of the tracks that ship")
+	m.champion = false
 	m.sting("victory")
 	var len: float = m.sting_length()
 	_check(len > 1.0, "the victory sting is loaded (%.1f s)" % len)
@@ -637,6 +651,11 @@ func _music_set() -> void:
 		_check(m.battle_name() == Music.SET_BATTLES[who] and b != null and b.stream.loop and absf(b.stream.get_length() - lengths[who]) < 0.05, "a fight with a %s plays %s, looping whole (%.2f s)" % [who, m.battle_name(), b.stream.get_length() if b != null else 0.0])
 		m.set_mode("explore")
 	_check(Music.SET_BATTLES.values().size() == 3 and Music.SET_BATTLES.fight != Music.SET_BATTLES.boss and Music.SET_BATTLES.boss != Music.SET_BATTLES.final, "a monster, a champion and the last champion each have a theme of their own")
+	# the set's boss theme is the champion's own music here: the old music's fixed champion theme (#167) is for the game without it
+	m.champion = true
+	m.fight_with("boss")
+	_check(m.pick_battle() == Music.SET_BATTLES.boss, "a champion's fight plays the set's boss theme, not the old music's (%s)" % m.pick_battle())
+	m.champion = false
 	m.fight_with("nobody")
 	m.set_mode("battle")
 	_check(m.battle_name() == Music.SET_BATTLES.fight, "a fight with anyone else is a fight")
