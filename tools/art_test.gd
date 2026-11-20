@@ -412,11 +412,16 @@ func _the_set_wears_it() -> void:
 	stage.update(s, 0.1, FRAME)
 	_check(stage._models[m] is Figure, "a monster is a figure")
 	var champion = s.floor_map.monsters.filter(func(o): return o.boss)[0]
-	_check(stage._models[champion].scale.y > 1.0, "a champion stands taller than its kind (%.2f)" % stage._models[champion].scale.y)
+	var champion_model: Node3D = stage._models[champion]
+	_check(is_equal_approx(champion_model.scale.y, stage.CHAMPION_SCALE), "a champion stands taller than its kind (%.2f)" % champion_model.scale.y)
+	var lift: float = stage._tags[champion].position.y - champion_model.position.y
+	_check(is_equal_approx(lift, stage._top_of(champion_model) * champion_model.scale.y + stage.TAG_GAP), "and its name sits over its taller head (%.2f above its feet)" % lift)
 	var tag_color: Color = stage._tags[champion].modulate
 	_check(Color(tag_color.r, tag_color.g, tag_color.b) == Color(Palette.BOSS.r, Palette.BOSS.g, Palette.BOSS.b), "and its name is the boss colour (%s)" % tag_color)
 	var plain_color: Color = stage._tags[m].modulate
 	_check(Color(plain_color.r, plain_color.g, plain_color.b) != Color(Palette.BOSS.r, Palette.BOSS.g, Palette.BOSS.b), "while a monster's is its own")
+	var plain_lift: float = stage._tags[m].position.y - stage._models[m].position.y
+	_check(is_equal_approx(plain_lift, stage._top_of(stage._models[m]) + stage.TAG_GAP), "and its name sits on its own head (%.2f above its feet)" % plain_lift)
 	_check(stage._wall_mat.get_shader_parameter("drawn") == 1.0 and stage._flat_mat.get_shader_parameter("drawn") == 1.0, "the walls and floors have their stones")
 	_check(stage._decor.get_node("Props").material_override.get_shader_parameter("sheet") == Sprites.texture("decor"), "what hangs on them is drawn")
 	m.meters.anger = 90.0

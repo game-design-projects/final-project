@@ -664,7 +664,7 @@ func _show_stir(m, showing: bool, f, now: float) -> void:
 func _add_monster(m) -> void:
 	var model := _body(Sprites.look_of(m), Palette.monster(m), str(m.name).hash())
 	model.position = DungeonMesh.center(m.cell)
-	if m.boss: # a champion stands taller than its kind, and its name is the boss colour (#167)
+	if m.boss: # a champion stands taller than its kind (#167)
 		model.scale = Vector3.ONE * CHAMPION_SCALE
 	add_child(model)
 	_models[m] = model
@@ -680,7 +680,7 @@ func _add_monster(m) -> void:
 	tag.no_depth_test = true # a wall's edge must not slice the name in two; it is hidden when no line reaches its monster
 	tag.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	tag.outline_size = 0
-	tag.modulate = Palette.BOSS if m.boss else Palette.monster(m)
+	tag.modulate = Palette.monster(m) # the boss red comes from here, as the body's does
 	tag.position = model.position + Vector3(0.0, _top_of(model) * model.scale.y + TAG_GAP, 0.0)
 	add_child(tag)
 	_tags[m] = tag
