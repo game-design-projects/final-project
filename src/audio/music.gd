@@ -1,7 +1,7 @@
 ## The music: a quiet loop while exploring that plays a stretch and then rests (it does not play nonstop), one of four
-## battle themes in a fight (a random one, never the last), and short stings: the victory when a foe is spared, the
-## fanfare at the stairs. A sting takes the loops out of its way, and the exploring music comes back after it has rung
-## out and a few seconds more. The tracks are in assets/audio/.
+## battle themes in a fight (a random one, never the last, or a champion's `battle-crusade`), and short stings: the victory
+## when a foe is spared, the fanfare at the stairs. A sting takes the loops out of its way, and the exploring music
+## comes back after it has rung out and a few seconds more. The tracks are in assets/audio/.
 ## With the feature `hum-theme` (`hum`), Abdulla's hum theme takes the loops' place: its exploring loop, and its combat loop in
 ## every fight. The stings stay the same either way.
 ## A loop's fade belongs to the player it fades, and a new fade cancels the old one on the same player, so an old fade
@@ -91,7 +91,7 @@ func _process(dt: float) -> void:
 	advance(dt)
 
 
-## "explore", "battle" (a random theme, not the last one's) or "silence".
+## "explore", "battle" (a random theme, not the last one's, or a champion's `battle-crusade`) or "silence".
 func set_mode(mode: String) -> void:
 	if not enabled or (mode == _mode and (mode != "battle" or _battle != null)):
 		return
@@ -209,7 +209,7 @@ func battles() -> Array:
 	return HUM_BATTLES if hum else BATTLES
 
 
-## A theme that is not the last one's, unless there is only the one.
+## A theme that is not the last one's, unless there is only the one; a champion's fight always has `battle-crusade`.
 func pick_battle() -> String:
 	var all := battles()
 	if champion and all.has(CHAMPION_THEME):
