@@ -633,7 +633,7 @@ func _hum_theme() -> void:
 	var b: AudioStreamPlayer = m.loop_player("battle")
 	_check(b != null and b.stream.loop and absf(b.stream.get_length() - 65.45) < 0.05, "which loops whole, 65.45 s (%.2f)" % b.stream.get_length())
 	m.sting("victory")
-	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a won fight still plays the victory sting over it")
+	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a spared foe: the victory sting is loaded (%.1f s) and the combat loop is off" % m.sting_length())
 	m.free()
 	m = _music()
 	await process_frame
