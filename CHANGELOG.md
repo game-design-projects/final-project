@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- `sim_strike` prints what the fight bar's two commands are worth, species by species: the window a plain and a heavy strike have in ms, and the damage at a perfect, a middling and an edge hit (`boss=1`, `charms=rock|dragon`). It is the table #163 needs before HEAVY is retuned — today a heavy blow is better than a plain one on four of the five species, edges included.
 - A hunting monster that steps on a pad is carried to the other one (#175: "trick enemies onto a teleport pad"): the field it walks down now lets it see a pad as a step, and only a hunter takes one — anything else still keeps off pads, and stands on none. A pad therefore breaks a chase, the way a corridor does since #190.
 - Nerve is on screen: a pip for each point held sits beside the dodge box, and under the kind of fight when the box is away, once you hold any; a close call or a clean dodge says the total it left you with (`CLOSE CALL · NERVE 3/5`) instead of only "close call" (#175: the playtest earned nerve and never noticed).
 - `sim_dodge` plays an attack as a champion's (`boss=1`): the 6200 ms fight a champion has instead of a usual monster's 5400, at a fifth more intensity, so a champion's pattern can be read against a usual monster's (#170). Its `int` column now prints the intensity the run got rather than the one asked for, so a champion's rows read 1.2, 1.56 and 1.92 against a usual monster's 1.0, 1.3 and 1.6.
