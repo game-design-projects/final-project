@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 - The changelog's version links follow a release again (#225): 0.9.5 went out with no `[0.9.5]` compare link and with `[Unreleased]` still comparing from `v0.9.4`, so its own notes read as unreleased and its heading showed as bare text. `tools/changelog_test.py` runs in CI's check job now, so a release that leaves the link block behind fails before a tag is cut rather than after.
+- A release's steps are written once (#226): `docs/DEVELOPMENT.md` carried its own copy of the changelog rules, and the copy stayed one step short of what `tools/changelog_test.py` enforces, so the doc a releaser reads asked for less than the check does. What the release commit moves is in its "Building and releasing" section now, and commit style and the changelog's form are in `AGENTS.md` alone, so the next change to the rule has one place to go.
 
 ## [0.9.5] - 2026-11-20
 
