@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+- The changelog's version links follow a release again (#225): 0.9.5 went out with no `[0.9.5]` compare link and with `[Unreleased]` still comparing from `v0.9.4`, so its own notes read as unreleased and its heading showed as bare text. `tools/changelog_test.py` runs in CI's check job now, so a release that leaves the link block behind fails before a tag is cut rather than after.
+
 ## [0.9.5] - 2026-11-20
 
 ### Added
@@ -565,7 +568,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.4...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.5...main
+[0.9.5]: https://github.com/game-design-projects/final-project/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/game-design-projects/final-project/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/game-design-projects/final-project/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/game-design-projects/final-project/compare/v0.9.1...v0.9.2
