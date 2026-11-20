@@ -49,7 +49,7 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	else:
 		q.target = int(rng.pick(targets))
 	q.taken = false
-	q.want = Items.gift_for(q.species) if kind == "fetch" else ""
+	q.want = want_for(f, q.species) if kind == "fetch" else ""
 	print("lords: %s, %s, asks: %s %s" % [q.name, q.title, kind, q.want if kind == "fetch" else f.monsters[q.target].name])
 	return true
 
@@ -80,7 +80,7 @@ static func fill(rng, f, plan: Dictionary) -> bool:
 	q.taken = false
 	if q.kind == "fetch":
 		q.target = -1
-		q.want = Items.gift_for(q.species)
+		q.want = want_for(f, q.species)
 	else:
 		q.want = ""
 	print("requests: %s the %s asks: %s %s" % [q.name, q.species, q.kind, q.want if q.kind == "fetch" else target.name])
@@ -102,6 +102,18 @@ static func _free_name(rng, f, species: String, taken: Dictionary) -> String:
 ## The names off `names` that neither this floor's monsters (`here`) nor the run (`taken`) have had.
 static func _free_names(names: Array, here: Array, taken: Dictionary) -> Array:
 	return names.map(func(n): return str(n).to_upper()).filter(func(n): return not here.has(n) and not taken.has(n))
+
+
+## What a fetch asks for: a thing that already lies on the floor, if any does (so the ask is something you may have walked
+## past, and two floors do not always want the same thing from the same kind of monster), else the kind's own gift. Chosen
+## from the floor's seed, so the same floor always asks for the same thing and no draw is spent.
+static func want_for(f, species: String) -> String:
+	var lying := []
+	for p in f.pickups:
+		lying.append(str(p.item))
+	if lying.is_empty():
+		return Items.gift_for(species)
+	return str(lying[posmod(int(f.seed_value), lying.size())])
 
 
 ## What it is about, as the words say it: the thing wanted, or who.
