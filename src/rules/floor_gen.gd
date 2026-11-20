@@ -126,7 +126,9 @@ static func _add_lurkers(rng: Rng, f, cells: Array, plan: Dictionary) -> void:
 	f.monsters.append(champion)
 
 
-## Who asks, and what it asks for; what's fetched lies on this floor. Nobody asks when there is nothing to ask about.
+## Who asks, and what it asks for; what's fetched lies on this floor. Nobody asks when there is nothing to ask about. A thing
+## the floor already has is asked for where it lies, and nothing is put down for it; only a floor with nothing lying about
+## has its kind's gift placed, as it always did.
 static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan: Dictionary, stirs: Dictionary) -> void:
 	var draws = rng # what places what's fetched: the floor's own draws, or a lord's (rules/lords.gd)
 	if f.quester.has("lord"): # a lord asks its own favour, on its own draws
@@ -141,6 +143,8 @@ static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan:
 		return
 	if f.quester.kind != "fetch":
 		return
+	if f.pickups.any(func(p): return str(p.item) == str(f.quester.want)):
+		return # the ask is a thing already lying here: it is not put down a second time (requests.gd: want_for)
 	var taken := stirs.duplicate()
 	for m in f.monsters:
 		taken[m.cell] = true

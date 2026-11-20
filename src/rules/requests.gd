@@ -105,8 +105,9 @@ static func _free_names(names: Array, here: Array, taken: Dictionary) -> Array:
 
 
 ## What a fetch asks for: a thing that already lies on the floor, if any does (so the ask is something you may have walked
-## past, and two floors do not always want the same thing from the same kind of monster), else the kind's own gift. Chosen
-## from the floor's seed, so the same floor always asks for the same thing and no draw is spent.
+## past, and two floors do not always want the same thing from the same kind of monster), else the kind's own gift, which the
+## generator then puts down for it (`FloorGen`, which adds no second copy of what is already lying there). Chosen from the
+## floor's seed, so the same floor always asks for the same thing and no draw is spent.
 static func want_for(f, species: String) -> String:
 	var lying := []
 	for p in f.pickups:

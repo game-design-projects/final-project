@@ -229,7 +229,7 @@ func _thousand_floors(biome: Dictionary) -> void:
 				note.call("someone asking whom nobody can walk up to")
 			if f.reserved().has(f.quester.cell) and f.monster_at(f.quester.cell) != null:
 				note.call("a monster on someone asking")
-			if f.quester.kind == "fetch" and f.pickup_at(f.pickups[-1].cell) != f.quester.want:
+			if f.quester.kind == "fetch" and not f.pickups.any(func(p): return str(p.item) == str(f.quester.want)):
 				note.call("what is wanted isn't on the floor")
 			if f.quester.kind != "fetch" and (f.monsters[f.quester.target].boss or f.monsters[f.quester.target].lurking):
 				note.call("a request about the wrong monster")
