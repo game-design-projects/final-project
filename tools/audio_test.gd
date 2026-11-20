@@ -60,6 +60,7 @@ class FakeSfx:
 class FakeMusic:
 	extends RefCounted
 	var calls: Array = []
+	var champion := false # set by an encounter's boss flag (#167)
 
 	func set_mode(mode: String) -> void:
 		calls.append("mode:" + mode)
@@ -543,6 +544,19 @@ func _music_pacing() -> void:
 	_check(absf(m.pending_in() - 2.0) < 0.01, "after a fight the explore loop waits 2 s (%.2f)" % m.pending_in())
 	# the sting holds the explore loop back for its length plus 4 s
 	m.set_mode("battle")
+	# a champion's fight has its own theme, the same every time, and a usual fight still picks among the four (#167)
+	m.champion = false
+	var usual := {}
+	for i in 8:
+		usual[m.pick_battle()] = true
+	_check(usual.size() > 1, "a usual fight picks among the themes (%s)" % str(usual.keys()))
+	m.champion = true
+	var champion_picks := {}
+	for i in 4:
+		champion_picks[m.pick_battle()] = true
+	_check(champion_picks.keys() == [Music.CHAMPION_THEME], "a champion's fight always has its own theme (%s)" % str(champion_picks.keys()))
+	_check(Music.BATTLES.has(Music.CHAMPION_THEME), "and that theme is one of the tracks that ship")
+	m.champion = false
 	m.sting("victory")
 	var len: float = m.sting_length()
 	_check(len > 1.0, "the victory sting is loaded (%.1f s)" % len)
