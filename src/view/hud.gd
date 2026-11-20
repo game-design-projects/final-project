@@ -15,6 +15,7 @@ const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
 
 const STATUS_PX := 11 # the status row's type: 9 was small enough that the playtest never found gold (#164)
+const STATUS_GAP := 12.0 # between the row's last piece and the health bar, which starts after the pieces
 
 enum Part { HEADER, STATUS, DOCK }
 
@@ -367,28 +368,34 @@ func status_pieces() -> Array:
 	return out
 
 
+## The stage the survival rules read hunger as, upper-cased for the row: "" while fed, then HUNGRY and STARVING.
+func hunger_stage() -> String:
+	return Survival.stage_of(state.hunger).to_upper()
+
+
 ## How the run is eating: FED when there is nothing wrong, so the piece is always on the row.
 func hunger_word() -> String:
-	var stage: String = Survival.stage_of(state.hunger).to_upper()
+	var stage := hunger_stage()
 	return stage if stage != "" else "FED"
 
 
 ## The colour of that word: a warning while starving, the accent once it is hungry, dim when fed.
 func hunger_colour() -> Color:
-	var stage: String = Survival.stage_of(state.hunger).to_upper()
-	if stage == "STARVING":
-		return Palette.WARN
-	return Palette.MERCY if stage != "" else Palette.DIM
+	match hunger_stage():
+		"STARVING":
+			return Palette.WARN
+		"HUNGRY":
+			return Palette.MERCY
+	return Palette.DIM
 
 
 func _status() -> void:
 	var y := size.y * 0.5 + 5.0
 	var x := 0.0
-	var px := STATUS_PX
 	for piece in status_pieces():
-		_text(_title, piece[0], Vector2(x, y), px, piece[1])
-		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
-	var bar := Rect2(maxf(x, 170.0) + 12.0, size.y * 0.5 - 6.0, 0.0, 12.0)
+		_text(_title, piece[0], Vector2(x, y), STATUS_PX, piece[1])
+		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, STATUS_PX).x
+	var bar := Rect2(x + STATUS_GAP, size.y * 0.5 - 6.0, 0.0, 12.0)
 	bar.size.x = size.x - bar.position.x
 	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)
 	draw_rect(bar, Palette.FAINT)
