@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- CI reads the builds back: `tools/pack_version_test.py` opens the macOS zip and fails when `Donjon.app`'s version is not the game's (0.9.5's said 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints, so a pack that cannot bring its own menu up fails before it is uploaded.
+
 ### Fixed
 - A mac app built from this repo says the game's version, not 1.0: the export presets wrote `application/short_version` and `application/version` as the literal "1.0", so Donjon.app's Info.plist said 1.0 in every release — the 0.9.5 mac zip does — while the game inside was right. The presets now carry a placeholder that `tools/build.sh` fills from `config/version` (0.9.5 today), so the bundle and the game cannot drift again.
 - The changelog's version links follow a release again (#225): 0.9.5 went out with no `[0.9.5]` compare link and with `[Unreleased]` still comparing from `v0.9.4`, so its own notes read as unreleased and its heading showed as bare text. `tools/changelog_test.py` runs in CI's check job now, so a release that leaves the link block behind fails before a tag is cut rather than after.
@@ -12,7 +15,6 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [0.9.5] - 2026-11-20
 
 ### Added
-- CI reads the builds back: `tools/pack_version_test.py` opens the macOS zip and fails when `Donjon.app`'s version is not `config/version` (0.9.5's said 1.0, #229), and the web job plays the exported `index.pck` headless until the menu prints, so an export that loses a scene or a script cannot ship a bundle that only looks complete.
 - `saves_test` checks that a save made before the run's newest keys still loads: the kills a friend approved of (`blessed`), the lords met, sworn and waiting on a warren all read as none, and the kills still count (#154, #185).
 - `sim_strike` prints what the fight bar's two commands are worth, species by species: the window a plain and a heavy strike have in ms, and the damage at a perfect, a middling and an edge hit (`boss=1`, `charms=rock|dragon`). It is the table #163 needs before HEAVY is retuned — today a heavy blow is better than a plain one on four of the five species, edges included.
 - A hunting monster that steps on a pad is carried to the other one (#175: "trick enemies onto a teleport pad"): the field it walks down now lets it see a pad as a step, and only a hunter takes one — anything else still keeps off pads, and stands on none. A pad therefore breaks a chase, the way a wall or a corner does since #190.
