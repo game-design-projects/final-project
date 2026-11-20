@@ -14,6 +14,7 @@ const Figure = preload("res://src/view/figure.gd")
 const FigureAnim = preload("res://src/view/figure_anim.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
+const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Flow = preload("res://src/game/flow.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
@@ -40,6 +41,7 @@ func _run() -> void:
 	_the_atlases_are_whole()
 	_a_figure_moves_without_jumps()
 	_warmth_is_read_off_the_deeds()
+	_no_plain_wall_carries_a_crack()
 	_moods_are_read_off_the_meters()
 	_figure_nodes()
 	_wall_art_answers_the_warmth()
@@ -322,6 +324,39 @@ func _wall_art_answers_the_warmth() -> void:
 	_check(cold.get_node("Flames").material_override.shader != load("res://src/view/shaders/flame_drawn.gdshader"), "at the coldest they are the old wire flames")
 	cold.free()
 	_check(WallArt.EYES_AT_LEVEL.size() == Warmth.table().levels.size(), "there is a face for every level")
+
+
+## No plain wall carries a crack: testers learned the decorative ones were decoration and stopped walking into the walls that
+## break (#160). A wall that can break still shows the fissure, and the slot the crack had draws the moss and the bats the
+## walls were proud of (`docs/ART.md`), so neither drawing is left hanging nowhere.
+func _no_plain_wall_carries_a_crack() -> void:
+	var f = FloorGen.generate(Rng.new(9))
+	_check(not Decor.KINDS.has("crack"), "the crack is not one of the things a plain wall may carry")
+	var placed: Array = Decor.placements(f)
+	_check(placed.all(func(p): return str(p.kind) != "crack"), "and no plain wall is decorated with one (%d decorations)" % placed.size())
+	var kinds := {}
+	for seed_value in range(1, 21):
+		for p in Decor.placements(FloorGen.generate(Rng.new(seed_value))):
+			kinds[str(p.kind)] = true
+	_check(kinds.has("moss") and kinds.has("bat"), "a plain wall still carries moss and a bat (%s)" % str(kinds.keys()))
+	_check(not kinds.has("blemish"), "and every kind it carries names a drawing the wall art hangs")
+	# the one wall that may be cracked: mark a wall by a corridor and look at its face
+	var marked := false
+	for y in f.size:
+		for x in f.size:
+			var wall := Vector2i(x, y)
+			if marked or f.is_open(wall):
+				continue
+			for side in 4:
+				var from: Vector2i = wall + FloorMap.DIRS[side]
+				if not f.is_open(from):
+					continue
+				f.grid[wall.y][wall.x] = FloorMap.CRACKED # a wall that can break, until it is broken
+				var faces: Array = Decor.placements(f).filter(func(p): return p.cell == from and int(p.side) == (side + 2) % 4)
+				_check(faces.size() == 1 and str(faces[0].kind) == "fissure", "a wall that can break shows its fissure, not a decoration (%s)" % str(faces))
+				marked = true
+				break
+	_check(marked, "(a wall by a corridor was found to crack)")
 
 
 func _wick() -> void:

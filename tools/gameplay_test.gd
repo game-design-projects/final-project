@@ -11,6 +11,8 @@ const Floors = preload("res://src/rules/floors.gd")
 const Flow = preload("res://src/game/flow.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
+const BAR_W_MIN := 240.0 # the health bar is what the row is for, so the row's words must leave it this much of it
+
 var Saves = null # loaded when the test runs, like the other scripts that reach the Store autoload
 
 
@@ -62,6 +64,7 @@ func _run() -> void:
 	await _pad_warp(game)
 	await _pad_landing(game)
 	await _nerve_is_shown(game)
+	await _status_row(game)
 	await _start_is_guarded(game)
 	await _keys_after_a_fight(game)
 	await _wide_view(game)
@@ -720,6 +723,48 @@ func _thinking(game) -> void:
 	game._process(0.016)
 	_check(not dock.is_thinking(), "a quick answer does not flicker it")
 	Network._flights.erase(-1)
+
+
+# ---------------------------------------------------------------- the status row
+
+## The status row says everything it has, always, in type big enough to read (#164): HP, gold, the party and how you are eating.
+func _status_row(game) -> void:
+	var status = game._status
+	status.state = game.flow.state
+	var s = game.flow.state
+	var palette = load("res://src/view/palette.gd")
+	var fonts = load("res://src/view/fonts.gd")
+	var was: float = s.hunger
+	var word_was: String = status.hunger_word()
+	s.hunger = 0.0 # where a run starts (meta_test says so): the rules have no word for it, the row says FED
+	var text: String = "".join(status.status_pieces().map(func(p): return str(p[0])))
+	_check(text.contains("HP") and text.contains("GOLD") and text.contains("PARTY"), "the row names health, gold and the party (%s)" % text)
+	_check(status.hunger_word() == "FED", "and says FED when there is nothing wrong (%s)" % status.hunger_word())
+	_check(_set_hunger(s, "hungry"), "the rules have a hungry value the row can be tried at")
+	_check(status.hunger_word() == "HUNGRY" and status.hunger_colour() == palette.MERCY, "hungry says so in the accent colour (%s)" % status.hunger_word())
+	_check(_set_hunger(s, "starving"), "and a starving one")
+	_check(status.hunger_word() == "STARVING" and status.hunger_colour() == palette.WARN, "starving says so in the warning colour (%s)" % status.hunger_word())
+	# STARVING is the widest the row gets, and `size.x` is the width `_status` draws the bar into. The test runs at the project's
+	# base window, the narrowest canvas `stretch/aspect=expand` ever shows, so this is the bar at its shortest.
+	var width := 0.0
+	for p in status.status_pieces():
+		width += fonts.title().get_string_size(str(p[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, status.STATUS_PX).x
+	var bar_w: float = status.size.x - width - status.STATUS_GAP
+	_check(bar_w > BAR_W_MIN, "the row's widest words, %d px at %d, leave the health bar %d px of its %d px" % [int(width), status.STATUS_PX, int(bar_w), int(status.size.x)])
+	s.hunger = was
+	_check(is_equal_approx(s.hunger, was) and status.hunger_word() == word_was, "and the run is left as hungry as this found it (%.0f, %s)" % [s.hunger, status.hunger_word()])
+
+
+## Puts hunger at a value the survival rules read as this stage, and says whether it found one: the rules own where the lines
+## are, so a moved `hungry_at` or `starving_at` still moves what the row is tried at.
+func _set_hunger(s, stage: String) -> bool:
+	var survival = load("res://src/rules/survival.gd")
+	var top: int = ceili(float(survival.table().hunger.starving_at)) # the walk never takes hunger past it, so no value beyond it is worth trying
+	for v in range(0, top + 1):
+		s.hunger = v
+		if survival.stage_of(s.hunger) == stage:
+			return true
+	return false
 
 
 # ---------------------------------------------------------------- the nerve you hold

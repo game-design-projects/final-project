@@ -15,6 +15,9 @@ const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const Survival = preload("res://src/rules/survival.gd")
 
+const STATUS_PX := 11 # the status row's type: 9 was small enough that the playtest never found gold (#164)
+const STATUS_GAP := 12.0 # between the row's last piece and the health bar, which starts after the pieces
+
 enum Part { HEADER, STATUS, DOCK }
 
 signal picked(index: int) ## a command was clicked
@@ -351,17 +354,50 @@ static func toughness_tag(s) -> String:
 
 # ---------------------------------------------------------------- the status row
 
+## What the status row says, in the order it draws it: every piece that matters is always there and labelled (#164: the
+## playtest could not find gold, and never learned hunger or the party were things to watch).
+func status_pieces() -> Array:
+	if state == null:
+		return []
+	var fed := hunger_word()
+	var out := [
+		["HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU],
+		["  GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY],
+		["  PARTY ", Palette.DIM], ["%d" % state.party_size(), Palette.MERCY],
+	]
+	out.append(["  ", Palette.DIM])
+	out.append([fed, hunger_colour()])
+	return out
+
+
+## The stage the survival rules read hunger as, upper-cased for the row: "" while fed, then HUNGRY and STARVING.
+func hunger_stage() -> String:
+	return Survival.stage_of(state.hunger).to_upper()
+
+
+## How the run is eating: FED when there is nothing wrong, so the piece is always on the row.
+func hunger_word() -> String:
+	var stage := hunger_stage()
+	return stage if stage != "" else "FED"
+
+
+## The colour of that word: a warning while starving, the accent once it is hungry, dim when fed.
+func hunger_colour() -> Color:
+	match hunger_stage():
+		"STARVING":
+			return Palette.WARN
+		"HUNGRY":
+			return Palette.MERCY
+	return Palette.DIM
+
+
 func _status() -> void:
-	var y := size.y * 0.5 + 4.0
+	var y := size.y * 0.5 + 5.0
 	var x := 0.0
-	for piece in [["HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU], ["   GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY]]:
-		_text(_title, piece[0], Vector2(x, y), 9, piece[1])
-		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-	var hunger: String = Survival.stage_of(state.hunger).to_upper()
-	if hunger != "":
-		_text(_title, "   " + hunger, Vector2(x, y), 9, Palette.WARN if hunger == "STARVING" else Palette.MERCY)
-		x += _title.get_string_size("   " + hunger, HORIZONTAL_ALIGNMENT_LEFT, -1, 9).x
-	var bar := Rect2(maxf(x, 150.0) + 12.0, size.y * 0.5 - 6.0, 0.0, 12.0)
+	for piece in status_pieces():
+		_text(_title, piece[0], Vector2(x, y), STATUS_PX, piece[1])
+		x += _title.get_string_size(piece[0], HORIZONTAL_ALIGNMENT_LEFT, -1, STATUS_PX).x
+	var bar := Rect2(x + STATUS_GAP, size.y * 0.5 - 6.0, 0.0, 12.0)
 	bar.size.x = size.x - bar.position.x
 	var frac: float = clampf(float(state.hp) / state.max_hp, 0.0, 1.0)
 	draw_rect(bar, Palette.FAINT)
