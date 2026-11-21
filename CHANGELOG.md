@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - After a fight the log says what each clan with a feeling makes of the deed, and why: "The Old Stone likes that you killed a slime: slimes are too soft." (`Clans.felt`; not on the practice floor or in the test room).
 - A monster that hears of a deed done to a clan it dislikes has lines for it (`rival_slain`, glad; `rival_kept`, sore that you took one in); the lines about a clan it likes are `friend_spared` and `friend_slain`.
 - Each lord asks its favour in its own words (`data/lords.json` `says`), and a lord that wants someone gone names one its grudge is with when one is on the floor (`hunts`): SIRRA a snake or a rock, THE COILED ONE a bandit.
+- The test room has a clan's lord on the aisle, asking its favour: the walk's other half (a request, its stage and its pay) can be tried without reaching a floor of a run that has one, which the room could not show before. A fetch's thing is put on the floor so the favour can be finished there, and the room's line says so.
 - CI reads the builds back: `tools/pack_version_test.py` opens the macOS zip and fails when `Donjon.app`'s version is not the game's (0.9.5's said 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints, so a pack that cannot bring its own menu up fails before it is uploaded.
 
 ### Changed

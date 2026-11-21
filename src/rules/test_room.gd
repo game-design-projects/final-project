@@ -13,6 +13,8 @@ const FloorGen = preload("res://src/rules/floor_gen.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
+const Lords = preload("res://src/rules/lords.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
@@ -80,6 +82,18 @@ static func make(rng: Rng):
 			if row[c].get("elite", false):
 				m.become_elite(float(Clans.elite().hp_scale))
 			f.monsters.append(m)
+	# a clan's lord asking its favour, on the aisle beside the start: the walk's other half, so a playtest can try a favour
+	# (and the request stage that carries it) without reaching the floor of a run that has one
+	var lord: Dictionary = Lords.due("halls", f.seed_value, [], [], false, {})
+	var asker_at := f.start + Vector2i(2, 0)
+	if not lord.is_empty() and f.is_open(asker_at):
+		f.quester = {"cell": asker_at}
+		if Requests.fill_lord(Rng.new(f.seed_value), f, lord, {"items": true}):
+			if str(f.quester.kind) == "fetch": # the thing it wants has to lie here, or the favour could never be done
+				var lying_at := f.start - Vector2i(2, 0)
+				f.pickups.append({"cell": lying_at if f.is_open(lying_at) else asker_at + Vector2i(2, 0), "item": str(f.quester.want)})
+		else:
+			f.quester = {}
 	print("test room: %dx%d, %d monsters in %d rows, in %d ms" % [f.size, f.size, f.monsters.size(), all.size(), (Time.get_ticks_usec() - t0) / 1000])
 	return f
 
