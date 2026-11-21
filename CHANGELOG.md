@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- The test room has a clan's lord on the aisle, asking its favour: the walk's other half (a request, its stage and its pay) can be tried without reaching a floor of a run that has one, which the room could not show before. A fetch's thing is put on the floor so the favour can be finished there, and the room's line says so.
 - CI reads the builds back: `tools/pack_version_test.py` opens the macOS zip and fails when `Donjon.app`'s version is not the game's (0.9.5's said 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints, so a pack that cannot bring its own menu up fails before it is uploaded.
 
 ### Changed
