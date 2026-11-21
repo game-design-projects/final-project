@@ -1,7 +1,7 @@
 ## Plays whole games with no window, to see that a run can be played from the start to the stairs without stalling.
 ## A simple autopilot presses keys (takes the floor's favour and finishes it, walks to the monster it chose for the first two
-## fights, keeping it until it is gone, then the stairs; picks menu entries at random, dodges at random) while the clock runs
-## in 16 ms frames.
+## fights, keeping it until it is gone, then the stairs; takes SPARE for the kin a spare favour names and picks the rest of the
+## menu at random, dodges at random) while the clock runs in 16 ms frames.
 ## Nothing is saved or shown; it prints one line per game.
 ##   godot --headless --path . -s res://tools/autoplay.gd                  seeds 1..5, the local mind
 ##   godot --headless --path . -s res://tools/autoplay.gd -- seed=7 mock    one seed, the seeded random mind
@@ -115,7 +115,12 @@ func _press_something(flow) -> void:
 		"keepsake":
 			await flow.press(str(_autopilot.int_range(1, s.menu.size())))
 		"menu", "act":
-			if _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
+			# a monster a favour named to be spared is worth more alive: take SPARE whenever it is on offer, so that favour is
+			# finished the way it asks (the pilot used to kill it and fail the request)
+			var spare_at := _spare_index(s) if s.stage == "menu" else 0
+			if spare_at > 0:
+				await flow.press(str(spare_at))
+			elif _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
 				await flow.press(str(_kindest_act(flow)))
 			elif _autopilot.chance(0.08):
 				var pool := [1, 2, 3, 4] if s.stage == "menu" else range(1, s.menu.size() + 1)
@@ -230,6 +235,20 @@ func _explore_key(s) -> String:
 	if s.facing == step:
 		return "up"
 	return "right" if (step - s.facing + 4) % 4 <= 2 else "left"
+
+
+## The menu number of SPARE when this foe is the kin a favour wants spared and SPARE can be taken, else 0.
+func _spare_index(s) -> int:
+	var q: Dictionary = s.floor_map.quester
+	if q.is_empty() or not q.get("taken", false) or str(q.get("kind", "")) != "spare" or s.foe == null:
+		return 0
+	var i := int(q.get("target", -1))
+	if i < 0 or i >= s.floor_map.monsters.size() or s.floor_map.monsters[i] != s.foe:
+		return 0
+	for n in s.menu.size():
+		if str(s.menu[n].label) == "SPARE" and not s.menu[n].get("disabled", false):
+			return n + 1
+	return 0
 
 
 ## Where to go for the favour it has taken, or (-1, -1) when there is none to do here.
