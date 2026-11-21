@@ -32,7 +32,8 @@ The order matters less than the coverage; the numbers are ten-minute blocks.
 7. **The end.** The Last Door wants company. Ask what the ending screen said, and whether embers meant anything to them.
 
 The **TEST ROOM** on the main menu is for a question the run cannot ask in thirty minutes: every kind of monster in a row, so
-a tester can fight a deep one without walking there, and say whether it felt different from a first-floor one.
+a tester can fight a deep one without walking there, and say whether it felt different from a first-floor one. A clan's lord
+stands on its aisle with a favour to ask, so the ask, the walk for the thing and the pay can be tried in one room.
 
 ## What to watch for
 

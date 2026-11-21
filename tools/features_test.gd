@@ -156,9 +156,11 @@ func _test_room() -> void:
 	_check(room.monsters.size() == TestRoom.count(), "that is everyone (%d)" % room.monsters.size())
 	# and a lord asking its favour, so the walk's other half can be tried without a run that has one
 	_check(not room.quester.is_empty() and str(room.quester.get("title", "")) != "", "a lord asks its favour in the test room (%s)" % str(room.quester.get("title", "")))
+	_check(str(room.quester.get("kind", "")) == "fetch", "and asks the one favour the room can pay (%s)" % str(room.quester.get("kind", "")))
 	_check(room.is_open(room.quester.cell) and not room.reserved().has(room.stairs), "standing on the aisle, not on the way out")
-	if str(room.quester.get("kind", "")) == "fetch":
-		_check(room.pickups.any(func(p): return str(p.item) == str(room.quester.want)), "and what it wants lies there (%s)" % str(room.quester.want))
+	_check(Items.known(str(room.quester.get("want", ""))), "for a thing the room knows (%s)" % str(room.quester.get("want", "")))
+	_check(room.pickups.any(func(p): return str(p.item) == str(room.quester.want)), "and what it wants lies there (%s)" % str(room.quester.want))
+	_check(room.pickups.all(func(p): return room.is_open(p.cell) and p.cell != room.stairs and p.cell != room.start and p.cell != room.quester.cell), "on an open cell of its own, off the way out (%s)" % str(room.pickups.map(func(p): return p.cell)))
 	var names := {}
 	var cells := {}
 	for m in room.monsters:
@@ -197,6 +199,19 @@ func _test_room() -> void:
 	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and the line fits a narrow log")
 	_check(not flow.autosave_allowed() and flow.close_run(true) == 0 and not flow.coach.active(), "nothing is saved from it, it leaves no embers and it gives no tips")
 	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))) != null, "its state reads back, which is how it is put back")
+	# What the room puts back is read off the save, after a fight, against the one on walking in (see the fight below): a key the
+	# fight changed that the room does not put back shows there however the save carries it, one kept only when it is not empty
+	# included, so no list of the fields a save may carry has to be kept in step. The comparison leaves out the few the room leaves
+	# as walking left them: the run's seed and colours, the practice floor, where you stand, the floor, the map of it and the log.
+	var kept := ["depth", "run_seed", "palette", "practice", "floor", "cell", "facing", "visited", "seen", "charted", "chat"]
+	var walk_in: Dictionary = s.to_dict()
+	# `state.set()` says nothing about a name that isn't a field, so a typo in the room's list would put nothing back unread.
+	var fields := []
+	for p in s.get_property_list():
+		if p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			fields.append(str(p.name))
+	var nameless := Flow.ROOM_PARTY.filter(func(f): return not fields.has(str(f)))
+	_check(nameless.is_empty(), "and every field it puts back is one the state has (%s)" % str(nameless))
 	_check(Floors.toughness_pct(s) == 0 and not Chart.open(s), "the header boasts of no toughness, and no map is drawn for you")
 	# the walk
 	_check(f.is_open(s.cell + FloorMap.DIRS[s.facing]), "you start facing down an aisle")
@@ -211,6 +226,34 @@ func _test_room() -> void:
 	await flow.press("right")
 	_check(s.lines[0].text == str(words.beside) % [Kinds.title(front), Kinds.title(f.monster_at(s.cell + FloorMap.DIRS[1]))], "between two, who is on each side: %s" % s.lines[0].text)
 	_check(f.monsters.all(func(m): return Hud.log_fits([State.sys_line(TestRoom.describe(m))], 760.0) == 1), "every such line fits a narrow log")
+	# its lord's favour is the walk's other half, and the room can pay it
+	var asker: Vector2i = f.quester.cell
+	var clan: String = str(f.quester.lord)
+	var thing: Vector2i = f.pickups[0].cell
+	var purse: int = s.gold
+	s.cell = asker + FloorMap.DIRS[3]
+	s.facing = 1
+	await flow.press("up")
+	_check(s.stage == "request" and s.menu.size() == 2 and str(s.menu[0].label) == str(Requests.table().kinds.fetch.yes), "walking into the lord opens its favour (%s)" % s.stage)
+	await flow.press("1")
+	_check(s.stage == "explore" and bool(f.quester.taken), "taking it leaves you on the walk")
+	s.cell = thing + FloorMap.DIRS[0]
+	s.facing = 2
+	await flow.press("up")
+	_check(s.cell == thing and s.items.has(str(f.quester.want)) and not f.pickups.any(func(p): return p.cell == thing), "what it wants is picked up where it lies (%s)" % str(f.quester.want))
+	s.cell = asker + FloorMap.DIRS[3]
+	s.facing = 1
+	await flow.press("up")
+	_check(s.stage == "request" and Requests.status(f.quester, s) == "ready" and str(s.menu[0].label) == str(Requests.table().kinds.fetch.give), "coming back with it, there is a thing to give")
+	await flow.press("1")
+	_check(s.stage == "explore" and f.quester.is_empty() and s.items.is_empty() and s.gold == purse + int(Lords.pays().gold), "paid: the gold comes and the thing goes")
+	_check(s.lords_met.has(clan) and float(s.reputation.get(clan, 0.0)) > 0.0, "and its clan has heard of you (%s)" % str(s.reputation))
+	# a fight puts the lord and the thing back with the room
+	await flow.go("intro", {"foe": f.monsters[0]})
+	await flow.go("menu")
+	await flow.encounter.defeat(f.monsters[0], "slain")
+	_check(not f.quester.is_empty() and f.pickups.size() == 1 and Requests.status(f.quester, s) == "new", "after a fight, the lord asks again and the thing lies there again")
+	_check(s.gold == purse and s.items.is_empty() and s.reputation.is_empty() and s.questers_met.is_empty() and s.lords_met.is_empty(), "and the party is as it walked in, no lord met (%s)" % str(s.lords_met))
 	# a fight is its own
 	var deep = f.monsters.filter(func(m): return m.kind == "cobra")[0]
 	var deep_at: Vector2i = deep.cell
@@ -222,10 +265,23 @@ func _test_room() -> void:
 	s.items = ["salve"]
 	s.allies = []
 	s.banner = null
+	s.heavy_known[deep.species] = true # as the first heavy blow to land on one leaves it (stages/fightbar.gd)
 	await flow.encounter.defeat(deep, "slain")
 	var back = f.monster_at(deep_at)
 	_check(s.stage == "explore" and back != null and back != deep and back.name == deep.name and back.hp == back.max_hp and f.monsters_left() == TestRoom.count(), "after it, whoever you slew stands in its place again")
 	_check(s.hp == s.max_hp and s.gold == int(words.gold) and s.items.is_empty() and s.has_ally("witch") and s.depth == 1, "and the party is as it walked in")
+	_check(s.heavy_known.is_empty(), "and what a heavy blow found out about a kind is not kept (%s)" % str(s.heavy_known.keys()))
+	# The whole save, not a list of names: every key the run carries reads as it did on walking in, bar the few the room keeps, so a
+	# field left out of `ROOM_PARTY` fails here however the save carries it (`heavyKnown` is set in this very fight).
+	var after: Dictionary = s.to_dict()
+	var leaked := []
+	for key in walk_in:
+		if not kept.has(_party_field(str(key))) and after.get(key) != walk_in[key]:
+			leaked.append(str(key))
+	for key in after:
+		if not kept.has(_party_field(str(key))) and not walk_in.has(str(key)):
+			leaked.append(str(key))
+	_check(leaked.is_empty(), "and the save reads as it did on walking in, bar what the room keeps (%s)" % str(leaked))
 	_check(s.reputation.is_empty() and s.deeds.is_empty() and s.tally.slain == 0, "no clan remembers it, and it is on no tally")
 	_check(s.lines.any(func(l): return l.text == str(words.reset)), "the log says the room is as it was")
 	_check(s.banner == null, "and no banner says a clan took it badly (%s)" % [s.banner.title if s.banner != null else ""])
@@ -2078,6 +2134,14 @@ func _hostility() -> void:
 func _check_quietly(ok: bool, what: String) -> void:
 	if not ok:
 		_check(false, what)
+
+
+## The state's field for a key of its save: `lordsMet` is `lords_met`, `maxHp` is `max_hp`, `hp` is `hp`.
+static func _party_field(key: String) -> String:
+	var out := ""
+	for c in key:
+		out += ("_" + c.to_lower()) if c != c.to_lower() else c
+	return out
 
 
 func side_species(clan: String) -> String:
