@@ -92,8 +92,8 @@ static func make(rng: Rng):
 		lord.kind = "fetch" # the room can pay no other favour (see above)
 		f.quester = {"cell": asker_at}
 		if Requests.fill_lord(Rng.new(f.seed_value), f, lord, {"items": true}):
-			var lying_at := f.start - Vector2i(2, 0) # the aisle on the other side of the start, where it can be walked to
-			if str(f.quester.want) != "" and f.is_open(lying_at) and f.pickup_at(lying_at) == "":
+			var lying_at := f.start - Vector2i(2, 0) # the aisle on the other side of the start, where it can be walked to; nothing else lies in the room
+			if str(f.quester.want) != "" and f.is_open(lying_at):
 				f.pickups.append({"cell": lying_at, "item": str(f.quester.want)})
 			else:
 				f.quester = {} # nowhere for the thing to lie: a favour that could not be paid is no favour to show
