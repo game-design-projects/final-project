@@ -20,7 +20,7 @@ const KNOWN := {
 	"meet": "meet=<species or kind>: start in a fight with that monster (a kind from another floor is tried on one of this floor's; with `test-room`, the one standing in the room)",
 	"nofx": "no post-processing shader",
 	"pacifist": "for tools/autoplay.gd: never strike, only ACT and SPARE",
-	"fight-only": "for tools/autoplay.gd: the fight menu's ACT and SPARE are never taken, only the strike bar (HEAVY when it is on offer) and one FLEE from a monster at a quarter of the health",
+	"fight-only": "for tools/autoplay.gd: the fight menu's ACT and SPARE are never taken, only the strike bar (HEAVY when it is on offer) and one FLEE from a monster at a quarter of the health, once per game",
 	"practice": "for tools/autoplay.gd: start each game on the practice floor, as a first run does",
 	"pad": "show the touch pad (arrows, INFO, BACK, OK) without a touch screen",
 	"nosound": "no sound effects and no music",
