@@ -8,8 +8,8 @@ preset, or a build that says another version, fails CI instead of a release.
 
     python3 tools/pack_version_test.py [build/donjon-<version>-macos.zip]
 
-With no argument it reads `build/donjon-<config/version>-macos.zip`, which `tools/build.sh macos` writes.
-Exits 1 when the zip's name or the bundle's version is not the game's.
+With no argument it reads the zip `tools/build.sh macos` writes beside this script, `build/donjon-<config/version>-macos.zip`,
+wherever it is run from. Exits 1 when the zip's name or the bundle's version is not the game's.
 """
 import os
 import plistlib
@@ -45,7 +45,7 @@ def bundle(path: str) -> dict:
 def main() -> int:
     want = game_version()
     name = "donjon-%s-macos.zip" % want
-    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join("build", name)
+    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build", name)
     if not os.path.isfile(path):
         raise SystemExit("pack_version_test: no build to read at %s (tools/build.sh macos writes it)" % path)
     got = bundle(path)
