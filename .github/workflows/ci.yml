@@ -46,6 +46,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/changelog_test.py
+      # The development doc names every script at the top of tools/, one line each, and both of its script tables hold only
+      # .gd suites run with -s. It had lost favours_test.sh, pack_version_test.py and intro_refs.py and nothing failed, for
+      # the same reason as the changelog: markdown is never compiled. Like that one, this needs no Godot.
+      - name: Check the development doc names every tool
+        run: |
+          set -euo pipefail
+          python3 tools/doc_tools_test.py
       # Whole games from the start to the stairs with an autopilot, on the local rules and on the seeded mind. The tool exits
       # with 1 when a game stalls, never reaches the stairs, or runs into a script error in any part of the game.
       # Every tool below goes through tools/check.sh: Godot exits with 0 for a script that doesn't load, so the exit code

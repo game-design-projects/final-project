@@ -18,6 +18,8 @@ Each script prints one line per check and exits 1 if any failed. Your own saves 
 godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 ```
 
+Every script at the top of `tools/` is named in this doc, one line each, and both tables below name only `.gd` suites, run as above; `python3 tools/doc_tools_test.py` fails when a tool is left out or a row names nothing in `tools/`.
+
 | Script | Checks |
 | --- | --- |
 | `social_test` | Contextual monster offers, personality outcomes, combat/resources, safe popup, custom text, saves/retry and the game without it |
@@ -34,9 +36,8 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, a save without any of them, and every script's `.uid` beside it and in the commit |
 | `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game |
 | `features_test` | Each feature with its flag on and off (it switches them itself), and the champion holding the stairs over 1,000 seeds (the issue #26 measurement) |
-| `favours_test.sh` | Four seeded games played by the pilot until a favour goes all the way — asked, taken, done and paid — with a rid or a spare paid on the walk back, a spare finished alive, and a lord's second favour paid for (the pact); run by `run_tests.sh` and CI |
 
-`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`. A suite that makes faults on purpose says where: `network_test` prints `errors expected below` before the checks that provoke them and `errors expected above` after, and the runner only fails a suite for a `SCRIPT ERROR` outside such a block.
+`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`. It also runs `tools/favours_test.sh`, a shell script rather than a suite: four seeded games played by the pilot until a favour goes all the way — asked, taken, done and paid — with a rid or a spare paid on the walk back to the asker, a spare finished alive, and a lord's second favour paid for (the pact); CI runs it too, and it prints one line at the end rather than one per check. A suite that makes faults on purpose says where: `network_test` prints `errors expected below` before the checks that provoke them and `errors expected above` after, and the runner only fails a suite for a `SCRIPT ERROR` outside such a block.
 
 Tests can't judge how it looks. These draw the real thing and print numbers, with pictures if given `out=<dir>`. They need a window, which may stay hidden:
 
