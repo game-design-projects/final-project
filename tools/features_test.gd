@@ -194,6 +194,27 @@ func _test_room() -> void:
 	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and the line fits a narrow log")
 	_check(not flow.autosave_allowed() and flow.close_run(true) == 0 and not flow.coach.active(), "nothing is saved from it, it leaves no embers and it gives no tips")
 	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))) != null, "its state reads back, which is how it is put back")
+	# Every field the run saves is either put back by the room or one of the few it leaves as the fight left it (where you stand,
+	# the floor, the map of it and the log). One in neither colours the next fight, and nothing said so: `heavyKnown` and the two
+	# lists of lords the room cannot set yet were left out of `ROOM_PARTY` while this check was not here to name them.
+	var kept := ["depth", "run_seed", "palette", "practice", "floor", "cell", "facing", "visited", "seen", "charted", "chat"]
+	var saved = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	for field in ["skills", "keepsakes", "questers_met", "lords_met", "lords_sworn", "lords_warren"]: # the save keeps these only when they are not empty, so a new one goes here too
+		saved.set(field, ["x"])
+	saved.practice = true
+	saved.charted = {Vector2i(1, 1): true}
+	var unplaced := []
+	for key in saved.to_dict():
+		if not Flow.ROOM_PARTY.has(_party_field(str(key))) and not kept.has(_party_field(str(key))):
+			unplaced.append(str(key))
+	_check(unplaced.is_empty(), "every field of the party the run saves is put back by the room or kept as it was (%s)" % str(unplaced))
+	# `state.set()` says nothing about a name that isn't a field, so a typo in the room's list would put nothing back unread.
+	var fields := []
+	for p in saved.get_property_list():
+		if p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			fields.append(str(p.name))
+	var nameless := Flow.ROOM_PARTY.filter(func(f): return not fields.has(str(f)))
+	_check(nameless.is_empty(), "and every field it puts back is one the state has (%s)" % str(nameless))
 	_check(Floors.toughness_pct(s) == 0 and not Chart.open(s), "the header boasts of no toughness, and no map is drawn for you")
 	# the walk
 	_check(f.is_open(s.cell + FloorMap.DIRS[s.facing]), "you start facing down an aisle")
@@ -247,10 +268,12 @@ func _test_room() -> void:
 	s.items = ["salve"]
 	s.allies = []
 	s.banner = null
+	s.heavy_known[deep.species] = true # as the first heavy blow to land on one leaves it (stages/fightbar.gd)
 	await flow.encounter.defeat(deep, "slain")
 	var back = f.monster_at(deep_at)
 	_check(s.stage == "explore" and back != null and back != deep and back.name == deep.name and back.hp == back.max_hp and f.monsters_left() == TestRoom.count(), "after it, whoever you slew stands in its place again")
 	_check(s.hp == s.max_hp and s.gold == int(words.gold) and s.items.is_empty() and s.has_ally("witch") and s.depth == 1, "and the party is as it walked in")
+	_check(s.heavy_known.is_empty(), "and what a heavy blow found out about a kind is not kept (%s)" % str(s.heavy_known.keys()))
 	_check(s.reputation.is_empty() and s.deeds.is_empty() and s.tally.slain == 0, "no clan remembers it, and it is on no tally")
 	_check(s.lines.any(func(l): return l.text == str(words.reset)), "the log says the room is as it was")
 	_check(s.banner == null, "and no banner says a clan took it badly (%s)" % [s.banner.title if s.banner != null else ""])
@@ -2062,6 +2085,14 @@ func _hostility() -> void:
 func _check_quietly(ok: bool, what: String) -> void:
 	if not ok:
 		_check(false, what)
+
+
+## The state's field for a key of its save: `lordsMet` is `lords_met`, `maxHp` is `max_hp`, `hp` is `hp`.
+static func _party_field(key: String) -> String:
+	var out := ""
+	for c in key:
+		out += ("_" + c.to_lower()) if c != c.to_lower() else c
+	return out
 
 
 func side_species(clan: String) -> String:
