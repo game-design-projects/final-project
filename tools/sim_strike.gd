@@ -47,12 +47,15 @@ func _initialize() -> void:
 	print("per hit, both stopped the same ms from the middle (0 = the middle; a miss is 0):")
 	print("  %6s %6s | %s" % ["off", "FIGHT", _names(species)])
 	for error in SAME_HAND_MS:
-		var cells := species.map(func(id): return "%6d" % _at(id, boss, fire, error, true, heavy_bar))
-		print("  %4.0f ms %6d | %s" % [error, _at("", boss, fire, error, false, bar), " ".join(cells)])
+		var cells := species.map(func(id): return "%6d" % _heavy_hit(id, boss, fire, error, heavy_bar))
+		print("  %4.0f ms %6d | %s" % [error, _plain_hit(boss, fire, error, bar), " ".join(cells)])
 	print("per swing, a hand that misses the middle by this much on average (%d swings a row, seed %d):" % [swings, SWING_SEED])
 	print("  %6s %6s | %s | %s" % ["off", "FIGHT", _names(species), "HEAVY pays against"])
+	# One stream across the three hands, in this order, so these are the very numbers tools/features_test.gd prints and checks.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = SWING_SEED
 	for noise in NOISE_MS:
-		var mean: Dictionary = _per_swing(species, boss, fire, noise, swings, bar, heavy_bar)
+		var mean: Dictionary = _per_swing(species, boss, fire, noise, swings, rng, bar, heavy_bar)
 		var pays: Array = species.filter(func(id): return float(mean[id]) > float(mean.quick))
 		print("  %4.0f ms %6.1f | %s | %s" % [noise, mean.quick,
 			" ".join(species.map(func(id): return "%6.1f" % float(mean[id]))),
@@ -68,20 +71,21 @@ func _names(species: Array) -> String:
 	return " ".join(species.map(func(id): return "%6s" % id))
 
 
-## What a strike of either kind does when the line is stopped `error_ms` away from the middle. The same hand for both: the error is
-## in ms, and each command's own bar turns it into its own `off` (off = 2 * error / bar), which is why the heavy line reads worse
-## and worse as the error grows. `id` is the species a heavy blow is taken by, and is not read by the plain one.
-func _at(id: String, boss: bool, fire: bool, error_ms: float, heavy: bool, bar: float) -> int:
-	var x := clampf(0.5 + error_ms / bar, 0.0, 1.0)
-	var hit: Dictionary = Combat.heavy_strike(x, boss, id, fire) if heavy else Combat.strike(x, boss, fire)
-	return int(hit.get("damage", 0))
+## What a plain strike does when the line is stopped `error_ms` away from the middle. The hand is the same for both commands: the
+## error is in ms, and each command's own bar turns it into its own `off` (off = 2 * error / bar), which is why the heavy line
+## reads worse and worse as the error grows.
+func _plain_hit(boss: bool, fire: bool, error_ms: float, bar: float) -> int:
+	return int(Combat.strike(clampf(0.5 + error_ms / bar, 0.0, 1.0), boss, fire).get("damage", 0))
+
+
+## The same, for a heavy blow taken by `id`, on the heavy bar's own width.
+func _heavy_hit(id: String, boss: bool, fire: bool, error_ms: float, heavy_bar: float) -> int:
+	return int(Combat.heavy_strike(clampf(0.5 + error_ms / heavy_bar, 0.0, 1.0), boss, id, fire).get("damage", 0))
 
 
 ## What a swing of each command is worth to a hand with this much error in it, misses counted: the mean over `swings` draws of the
-## same seeded bell tools/features_test.gd reads the trade with.
-func _per_swing(species: Array, boss: bool, fire: bool, noise_ms: float, swings: int, bar: float, heavy_bar: float) -> Dictionary:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = SWING_SEED
+## seeded bell tools/features_test.gd reads the trade with, from the same stream it reads it from.
+func _per_swing(species: Array, boss: bool, fire: bool, noise_ms: float, swings: int, rng: RandomNumberGenerator, bar: float, heavy_bar: float) -> Dictionary:
 	var out := {"quick": 0.0}
 	for id in species:
 		out[id] = 0.0
