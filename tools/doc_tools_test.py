@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Every script at the top of tools/ is named in docs/DEVELOPMENT.md, and every script that doc names is still there.
+"""Every script at the top of tools/ is named in docs/DEVELOPMENT.md, and every row of its two script tables names a .gd in tools/.
 
 The doc is where someone looks for the tool that checks a thing, and a tool nobody's told about is one only its author runs.
 It lost three anyway (`favours_test.sh`, `pack_version_test.py`, `intro_refs.py`) without anything failing, and got them
@@ -10,9 +10,10 @@ the same reason on the changelog's links.
 
 The checks: every regular file at the top of tools/ ending in .gd, .sh or .py is named in the doc — a .gd by its stem, the
 way the tables name it (`favours_test.gd` is `favours_test`), the others by their whole name, since `tools/build.sh` is
-named that way in the Commands block; and every row of the doc's two tables (`| Script | ... |`) names a .gd that is in
-tools/, because both tables are run as `godot --headless --path . -s res://tools/<name>.gd` and a shell script in one of
-them would be a command that cannot run. A directory under tools/ is not a tool here: `tools/voices/`, `tools/music/`,
+named that way in the Commands block; and every row of the doc's two tables (`| Script | ... |`) names, in backticks, a
+.gd that is in tools/, because every row of both is a `godot ... -s res://tools/<name>.gd` run — headless for the suites,
+with a window for the tools that draw — and a shell script in one of them would be a command that cannot run. A directory
+under tools/ is not a tool here: `tools/voices/`, `tools/music/`,
 `tools/art/` and `tools/godot-mcp/` carry their own README, and CI calls what they hold by path.
 """
 import os
@@ -71,14 +72,23 @@ def main():
     gd = {f[: -len(".gd")] for f in here if f.endswith(".gd")}
     sheets = tables(text)
     stale = []
+    nameless = []
     rows = 0
     for cells in sheets:
         for cell in cells:
-            for name in re.findall(r"`([^`]+)`", cell):
-                rows += 1
+            rows += 1
+            names = re.findall(r"`([^`]+)`", cell)
+            if not names:
+                nameless.append(cell.strip() or "an empty cell")
+            for name in names:
                 if name not in gd:
                     stale.append(name)
     check(len(sheets) == 2, "the doc has the two script tables (%d found)" % len(sheets))
+    check(
+        not nameless,
+        "every row of those tables names a script, in backticks (%d rows%s)" % (
+            rows, (", and these name none: " + ", ".join(nameless)) if nameless else ""),
+    )
     check(
         not stale,
         "every row of those tables names a script in tools/ (%d rows%s)" % (
