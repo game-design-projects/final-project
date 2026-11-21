@@ -1,23 +1,28 @@
 """The mac app a release ships says the game's version.
 
-Godot writes the bundle's Info.plist from the macOS export preset, and the preset's two version fields are filled by
-tools/build.sh from `config/version` (they were a literal "1.0" until 0.9.5 shipped with it, #229). This reads the version
-back out of the built zip and compares it with project.godot, so a preset that loses its version, or a build that stops
-filling it, fails CI instead of a release.
+Godot writes the bundle's Info.plist from the macOS export preset. `tools/build.sh` leaves that preset's two version
+fields empty, and the macOS exporter then writes `config/version` from project.godot into both -- the value the menu
+shows -- where it wrote a literal "1.0" until 0.9.5 shipped with one (#229). This reads the built zip back: its name,
+that it holds one app bundle, `Donjon.app` at the zip's root, and both of the bundle's versions against project.godot,
+so a literal put back in the preset, or a build that says another version, fails CI instead of a release.
 
-    python3 tools/pack_version_test.py [build/donjon-0.9.5-macos.zip]
+    python3 tools/pack_version_test.py [build/donjon-<version>-macos.zip]
 
-With no argument it finds the macos zip in build/. Exits 1 when the bundle's version is not the game's.
+With no argument it reads `build/donjon-<config/version>-macos.zip` beside `tools/`, the zip `tools/build.sh macos` writes,
+wherever it is run from; a path given is taken as given. Exits 1 when the zip is not named for the game's version, holds
+no single `Donjon.app` at its root, or that bundle's two versions are not the game's.
 """
-import glob
+import os
 import plistlib
 import re
 import sys
 import zipfile
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def game_version() -> str:
-    with open("project.godot", encoding="utf-8") as f:
+    with open(os.path.join(ROOT, "project.godot"), encoding="utf-8") as f:
         for line in f:
             m = re.match(r'^config/version="(.*)"', line.strip())
             if m:
@@ -25,31 +30,43 @@ def game_version() -> str:
     raise SystemExit("pack_version_test: project.godot has no config/version")
 
 
-def bundle_versions(path: str) -> dict:
+def bundle(path: str) -> dict:
     with zipfile.ZipFile(path) as z:
         info = [n for n in z.namelist() if n.endswith(".app/Contents/Info.plist")]
-        if not info:
-            raise SystemExit("pack_version_test: %s has no .app/Contents/Info.plist" % path)
+        if len(info) != 1:
+            raise SystemExit("pack_version_test: %s holds %d app bundles, not one" % (path, len(info)))
         d = plistlib.loads(z.read(info[0]))
-        return {"short": str(d.get("CFBundleShortVersionString", "")), "version": str(d.get("CFBundleVersion", ""))}
+        return {
+            "app": info[0],
+            "short": str(d.get("CFBundleShortVersionString", "")),
+            "version": str(d.get("CFBundleVersion", "")),
+        }
 
 
 def main() -> int:
     want = game_version()
-    path = sys.argv[1] if len(sys.argv) > 1 else ""
-    if not path:
-        found = sorted(glob.glob("build/donjon-*-macos.zip"))
-        if not found:
-            raise SystemExit("pack_version_test: no build/donjon-*-macos.zip to check")
-        path = found[-1]
-    got = bundle_versions(path)
+    name = "donjon-%s-macos.zip" % want
+    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build", name)
+    if not os.path.isfile(path):
+        raise SystemExit("pack_version_test: no build to read at %s (tools/build.sh macos writes it)" % path)
+    got = bundle(path)
     print("pack_version_test: %s says %s (%s), the game is %s" % (path, got["short"], got["version"], want))
-    wrong = [k for k, v in got.items() if v != want]
-    if wrong:
-        field = "CFBundleShortVersionString" if "short" in wrong else "CFBundleVersion"
-        print("::error::%s: %s is %s, the game is %s" % (path, field, got[wrong[0]], want))
-        return 1
-    return 0
+    failed = 0
+    if os.path.basename(path) != name:
+        print("::error::%s: the zip is not named %s (tools/build.sh names it from config/version)" % (path, name))
+        failed += 1
+    # At the root, not merely ending in `Donjon.app`: `endswith` took `NotDonjon.app` for the app a release ships.
+    if got["app"] != "Donjon.app/Contents/Info.plist":
+        print("::error::%s: the bundle inside is not Donjon.app at the zip's root (%s)" % (path, got["app"]))
+        failed += 1
+    for key, field, what in (
+        ("short", "CFBundleShortVersionString", "Get Info's version"),
+        ("version", "CFBundleVersion", "the bundle's version"),
+    ):
+        if got[key] != want:
+            print("::error::%s: %s (%s) is %s, the game is %s" % (path, field, what, got[key], want))
+            failed += 1
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

@@ -180,8 +180,10 @@ jobs:
           set -euo pipefail
           godot --headless --main-pack build/web/index.pck --quit-after 120 2>&1 | tee "$RUNNER_TEMP/pack.log"
           grep -q 'menu: ready' "$RUNNER_TEMP/pack.log" || { echo '::error::the built data pack does not reach the main menu'; exit 1; }
-      # The app's own version, read back out of the artifact: the preset's two version fields are filled by tools/build.sh from
-      # config/version, and 0.9.5 shipped with a literal "1.0" in the bundle while the game inside said 0.9.5 (#229).
+      # The app's own version, read back out of the artifact: the macOS preset leaves the bundle's two version fields empty,
+      # and the exporter writes `config/version` from project.godot into both -- where 0.9.5 shipped with a literal "1.0" in
+      # the bundle while the game inside said 0.9.5 (#229, #230). The check also names the zip, so a build renamed on the way
+      # out fails too.
       - name: The mac app says the game's version
         if: matrix.platform == 'macos'
         run: python3 tools/pack_version_test.py

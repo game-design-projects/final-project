@@ -33,9 +33,7 @@ All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: 
 | crusade | G minor, 112 BPM | choir (strings, B♭ major) | full organ, chugging strings, kettle drums and tabor in march time |
 | gallop | E minor, 120 BPM | harpsichord (organ, G major) | galloping strings, kettle drums and tabor |
 
-None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and keeps it for the whole fight, because switching tunes mid-fight was jarring. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
-
-**The fight's theme** is picked from the four battle loops at random, never the one the last fight used — except a champion's fight, which always has `battle-crusade` (a champion's own theme; a dedicated track is #49's business). With the music set on, a champion's fight plays the set's boss theme instead.
+None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and keeps it for the whole fight, because switching tunes mid-fight was jarring; a champion's fight is the exception and always has `battle-crusade` (#167: the boss needs its own music; a dedicated track is #49's business). The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place. With the music set on, a champion's fight plays the set's boss theme instead.
 
 **Good news: one-shot cues** by the same band. `fanfare.ogg` (3.9 s) plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.ogg` (2.3 s) plays when a fight ends in mercy (a spare or a foe let go); a kill ends the fight with its own sound and no sting (#168: the fanfare is for the good act, not for the winning). Both quote the melody's opening in D major (D E F♯ G G G) and land on a IV6–V7–I cadence with bells.
 

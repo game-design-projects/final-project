@@ -1,7 +1,7 @@
 ## The music: a quiet loop while exploring that plays a stretch and then rests (it does not play nonstop), one of four
-## battle themes in a fight (a random one, never the last), and short stings: the victory when a foe is spared, the
-## fanfare at the stairs. A sting takes the loops out of its way, and the exploring music comes back after it has rung
-## out and a few seconds more. The tracks are in assets/audio/.
+## battle themes in a fight (a random one, never the last, or a champion's `battle-crusade`), and short stings: the victory
+## when a foe is spared, the fanfare at the stairs. A sting takes the loops out of its way, and the exploring music
+## comes back after it has rung out and a few seconds more. The tracks are in assets/audio/.
 ## With the feature `hum-theme` (`hum`), Abdulla's hum theme takes the loops' place: its exploring loop, and its combat loop in
 ## every fight. With the feature `music-set` (`music_set`) a fight plays the theme of who it is with instead, from his music set:
 ## a monster, a champion, or the last champion. The stings stay the same either way.
@@ -107,7 +107,8 @@ func fight_with(who: String) -> void:
 	_foe = who if SET_BATTLES.has(who) else "fight"
 
 
-## "explore", "battle" (a random theme, not the last one's) or "silence".
+## "explore", "battle" (a random theme, not the last one's, or a champion's `battle-crusade`; with the music set, the theme of
+## who the fight is with) or "silence".
 func set_mode(mode: String) -> void:
 	if not enabled or (mode == _mode and (mode != "battle" or _battle != null)):
 		return
@@ -227,7 +228,8 @@ func battles() -> Array:
 	return HUM_BATTLES if hum else BATTLES
 
 
-## A theme that is not the last one's, unless there is only the one.
+## A theme that is not the last one's, unless there is only the one; a champion's fight always has `battle-crusade`. With the
+## music set, the theme of who the fight is with.
 func pick_battle() -> String:
 	if music_set: # the music set: the theme of who the fight is with
 		return str(SET_BATTLES[_foe])
