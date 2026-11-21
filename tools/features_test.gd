@@ -235,7 +235,7 @@ func _test_room() -> void:
 	await flow.go("menu")
 	await flow.encounter.defeat(f.monsters[0], "slain")
 	_check(not f.quester.is_empty() and f.pickups.size() == 1 and Requests.status(f.quester, s) == "new", "after a fight, the lord asks again and the thing lies there again")
-	_check(s.gold == purse and s.items.is_empty() and s.reputation.is_empty() and s.questers_met.is_empty(), "and the party is as it walked in")
+	_check(s.gold == purse and s.items.is_empty() and s.reputation.is_empty() and s.questers_met.is_empty() and s.lords_met.is_empty(), "and the party is as it walked in, no lord met (%s)" % str(s.lords_met))
 	# a fight is its own
 	var deep = f.monsters.filter(func(m): return m.kind == "cobra")[0]
 	var deep_at: Vector2i = deep.cell
