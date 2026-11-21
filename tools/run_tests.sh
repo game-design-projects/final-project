@@ -115,24 +115,10 @@ if [ "$code" != 0 ]; then
 	failed=1
 	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
 fi
-# A favour is asked, taken and paid: the pilot walks up to whoever asks, accepts, does the thing and brings it back. Before this
+# A favour is asked, taken, done and paid: a fetch on the spot, a rid or a spare on the walk back to the asker. Before this
 # the pilot cancelled every request, so the paid path (a lord's gold, its clan's standing, the keepsake-less payoff) was only
-# ever asked and dropped, and nothing played it in a whole game.
-log="$OUT/on-favours.log"
-: >"$log"
-code=0
-for seed in 7 11 23 47; do
-	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=$?
-done
-reached=$(grep -cE '^autoplay: 1 of 1' "$log" || true)
-taken=$(grep -cE '^request: taken' "$log" || true)
-paid=$(grep -cE '^requests: .* is paid' "$log" || true)
-if [ "$reached" != 4 ] || [ "$taken" -lt 4 ] || [ "$paid" -lt 1 ]; then
-	code=1
-fi
-echo "on favours: exit $code, $reached of 4 games reached the stairs, $taken favours taken, $paid paid"
-if [ "$code" != 0 ]; then
+# ever asked and dropped, and nothing played it in a whole game. The check lives in a script of its own because CI runs it too.
+if ! GODOT="$GODOT" OUT="$OUT" tools/favours_test.sh; then
 	failed=1
-	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
 fi
 exit "$failed"
