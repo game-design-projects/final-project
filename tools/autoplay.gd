@@ -1,6 +1,7 @@
 ## Plays whole games with no window, to see that a run can be played from the start to the stairs without stalling.
-## A simple autopilot presses keys (walks to the monster it chose on the floor for the first two fights, keeping it until
-## it is gone, then the stairs; picks menu entries at random, dodges at random) while the clock runs in 16 ms frames.
+## A simple autopilot presses keys (takes the floor's favour and finishes it, walks to the monster it chose for the first two
+## fights, keeping it until it is gone, then the stairs; picks menu entries at random, dodges at random) while the clock runs
+## in 16 ms frames.
 ## Nothing is saved or shown; it prints one line per game.
 ##   godot --headless --path . -s res://tools/autoplay.gd                  seeds 1..5, the local mind
 ##   godot --headless --path . -s res://tools/autoplay.gd -- seed=7 mock    one seed, the seeded random mind
@@ -251,7 +252,9 @@ func _quest_goal(s) -> Vector2i:
 	if i < 0 or i >= s.floor_map.monsters.size():
 		return Vector2i(-1, -1)
 	var m = s.floor_map.monsters[i]
-	return m.cell if not m.is_gone() else Vector2i(-1, -1)
+	if m.is_gone():
+		return q.cell # the one it named is off the floor: the asker is who pays, not the empty cell
+	return m.cell
 
 
 ## The heading of the first step on the shortest way from `from` to `to`, or -1 if there is none.

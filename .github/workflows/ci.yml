@@ -65,6 +65,13 @@ jobs:
           for seed in 313 357 362 415 451 454; do
             tools/check.sh res://tools/autoplay.gd -- mock "seed=$seed"
           done
+      # A favour taken is not a favour paid: a fetch pays where it stands, a rid or a spare only after the walk back to the
+      # asker, and the pilot used to stop at the empty cell — 11 taken and 3 paid over these seeds, all three a fetch. The
+      # script is shared with tools/run_tests.sh, so the local suite and this job check the same four seeds.
+      - name: Play the favours through
+        run: |
+          set -euo pipefail
+          tools/favours_test.sh
       - name: Check initiated dialogue and dynamic moods
         run: |
           set -euo pipefail
