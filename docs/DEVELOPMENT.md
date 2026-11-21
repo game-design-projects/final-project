@@ -18,6 +18,8 @@ Each script prints one line per check and exits 1 if any failed. Your own saves 
 godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 ```
 
+Every script at the top of `tools/` is named in this doc, one line each, and both tables below name only `.gd` suites, run as above; `python3 tools/doc_tools_test.py` fails when a tool is left out or a row names nothing in `tools/`.
+
 | Script | Checks |
 | --- | --- |
 | `social_test` | Contextual monster offers, personality outcomes, combat/resources, safe popup, custom text, saves/retry and the game without it |
@@ -35,7 +37,7 @@ godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 | `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game |
 | `features_test` | Each feature with its flag on and off (it switches them itself), and the champion holding the stairs over 1,000 seeds (the issue #26 measurement) |
 
-`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`. A suite that makes faults on purpose says where: `network_test` prints `errors expected below` before the checks that provoke them and `errors expected above` after, and the runner only fails a suite for a `SCRIPT ERROR` outside such a block.
+`tools/run_tests.sh` runs them all and plays whole games: as the game ships, without a strike, from the practice floor and with `skill-combat`. It also runs `tools/favours_test.sh`, a shell script rather than a suite: four seeded games played by the pilot until a favour goes all the way — asked, taken, done and paid — with a rid or a spare paid on the walk back to the asker, a spare finished alive, and a lord's second favour paid for (the pact); CI runs it too, and it prints one line at the end rather than one per check. A suite that makes faults on purpose says where: `network_test` prints `errors expected below` before the checks that provoke them and `errors expected above` after, and the runner only fails a suite for a `SCRIPT ERROR` outside such a block.
 
 Tests can't judge how it looks. These draw the real thing and print numbers, with pictures if given `out=<dir>`. They need a window, which may stay hidden:
 
@@ -52,6 +54,8 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`, `boss=1` for a champion's attack: 6200 ms at a fifth more intensity, and its rows print the intensity the run got); it prints hits, how much of the box is lit, and moments with no way out |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
+
+Two checks read a *build* rather than the source: `tools/pack_version_test.py` opens the macOS zip and fails unless `Donjon.app`'s version is `config/version` (0.9.5 shipped with a literal 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints. `tools/intro_refs.py` is not a check: it cuts the reference frames out of the game's own atlases for the intro video's prompt (`uv run --with pillow python tools/intro_refs.py`).
 
 ## When a part fails: debug stops, an export carries on
 
