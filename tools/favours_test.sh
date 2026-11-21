@@ -3,7 +3,8 @@
 # spot, where the thing is handed over; a rid or a spare only after walking back to the asker once the monster it named is
 # off the floor. The pilot used to stop at the empty cell, so over these four seeds every rid and spare was taken and left
 # unpaid (11 taken, 3 paid, all three a fetch). Hence: all four games reach the stairs, at least four favours are taken, at
-# least one is paid, and at least one of the paid ones is a rid or a spare.
+# least one is paid, and at least one of the paid ones is a rid or a spare — and at least one of those is a spare, which the
+# pilot plays by taking SPARE whenever the kin it was asked for is the foe (killing it would fail the favour).
 #   tools/favours_test.sh
 # GODOT points at the Godot binary (default: godot on PATH); OUT is where the log goes (default: the run_tests.sh one).
 set -euo pipefail
@@ -39,18 +40,21 @@ nonfetch=$(awk '
 		sub(/.*asks: /, "", kind)
 		sub(/ .*/, "", kind)
 		if (kind == "rid" || kind == "spare") wanted[name] = 1
+		if (kind == "spare") sparer[name] = 1
 	}
 	/^requests: / && / is paid/ {
 		name = substr($0, 11)
 		sub(/ is paid.*/, "", name)
 		if (wanted[name]) paid++
+		if (sparer[name]) spared++
 	}
-	END { print paid + 0 }
+	END { print paid + 0, spared + 0 }
 ' "$log")
-if [ "$reached" != 4 ] || [ "$taken" -lt 4 ] || [ "$paid" -lt 1 ] || [ "$nonfetch" -lt 1 ]; then
+read -r nonfetch spare_paid <<<"$nonfetch"
+if [ "$reached" != 4 ] || [ "$taken" -lt 4 ] || [ "$paid" -lt 1 ] || [ "$nonfetch" -lt 1 ] || [ "$spare_paid" -lt 1 ]; then
 	code=1
 fi
-echo "on favours: exit $code, $reached of 4 games reached the stairs, $taken favours taken, $paid paid, $nonfetch of them a rid or a spare"
+echo "on favours: exit $code, $reached of 4 games reached the stairs, $taken favours taken, $paid paid, $nonfetch of them a rid or a spare, $spare_paid a spare"
 if [ "$code" != 0 ]; then
 	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
 fi
