@@ -176,7 +176,7 @@ A run that ends leaves embers, by what you did in it. On the main menu's Legacy 
 
 ## The test room
 
-TEST ROOM on the main menu is one hall with every monster in it: each floor's five kinds in a row, B1F nearest, then an elite of each clan, then the five champions. Walk into one to fight it as it is on its own floor. After every fight everyone is back in their place and you are as you walked in; nothing there is saved or counted. The stairs in the corner behind you lead out.
+TEST ROOM on the main menu is one hall with every monster in it: each floor's five kinds in a row, B1F nearest, then an elite of each clan, then the five champions. Walk into one to fight it as it is on its own floor. A clan's lord stands on the aisle beside you with a favour to ask — fetch the thing lying beside it, hand it over, and it pays. After every fight everyone is back in their place, the lord and what it wants with them, and you are as you walked in; nothing there is saved or counted. The stairs in the corner behind you lead out.
 
 ## Routes and saves
 

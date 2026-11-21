@@ -13,6 +13,8 @@ const FloorGen = preload("res://src/rules/floor_gen.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
+const Lords = preload("res://src/rules/lords.gd")
+const Requests = preload("res://src/rules/requests.gd")
 const Monster = preload("res://src/rules/monster.gd")
 const Rng = preload("res://src/utils/rng.gd")
 
@@ -80,6 +82,23 @@ static func make(rng: Rng):
 			if row[c].get("elite", false):
 				m.become_elite(float(Clans.elite().hp_scale))
 			f.monsters.append(m)
+	# a clan's lord asking its favour, on the aisle beside the start: the walk's other half, so a playtest can try a favour
+	# (and the request stage that carries it) without reaching the floor of a run that has one. The room puts every monster back
+	# after a fight, so a rid's target would be standing again before the favour could be reported and a spare's never leaves at
+	# all: a fetch is the one favour the room can pay, and the lord asks for the thing that lies beside it.
+	var lord: Dictionary = Lords.due("halls", f.seed_value, [], [], false, {})
+	var asker_at := f.start + Vector2i(2, 0)
+	if not lord.is_empty() and f.is_open(asker_at):
+		lord.kind = "fetch" # the room can pay no other favour (see above)
+		f.quester = {"cell": asker_at}
+		if Requests.fill_lord(Rng.new(f.seed_value), f, lord, {"items": true}):
+			var lying_at := f.start - Vector2i(2, 0) # the aisle on the other side of the start, where it can be walked to; nothing else lies in the room
+			if str(f.quester.want) != "" and f.is_open(lying_at):
+				f.pickups.append({"cell": lying_at, "item": str(f.quester.want)})
+			else:
+				f.quester = {} # nowhere for the thing to lie: a favour that could not be paid is no favour to show
+		else:
+			f.quester = {}
 	print("test room: %dx%d, %d monsters in %d rows, in %d ms" % [f.size, f.size, f.monsters.size(), all.size(), (Time.get_ticks_usec() - t0) / 1000])
 	return f
 

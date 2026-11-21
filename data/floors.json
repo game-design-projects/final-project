@@ -39,7 +39,7 @@
   "header": "TEST ROOM",
   "title": "THE TEST ROOM",
   "banner": "Every monster there is stands here. Walk into one to fight it. Nothing done here is kept.",
-  "line": "B1F's kinds stand in the first row and deeper floors behind it, then the elites, then the champions.",
+  "line": "B1F's kinds stand in the first row and deeper floors behind it, then the elites, then the champions; the lord on the aisle asks a favour.",
   "kind": "%s the %s, of B%dF: %s, %d HP.",
   "elite": "%s the ELITE %s, of B%dF: %s, %d HP.",
   "champion": "%s, the champion of B%dF: %d HP, and every attack of its floor.",

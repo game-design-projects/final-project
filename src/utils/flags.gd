@@ -62,7 +62,7 @@ const FEATURES := {
 	"follow-through": "with friends, a strike that lands doesn't stop the line: each friend has a mark further along the bar, and a press as the line crosses it is that friend's strike (a HEAVY blow is too quick for them)",
 	"nerve": "a dodge with no hit in it, and every close call (stepping off a square in its last moments before it lands), earns nerve: a strike that lands or a SPARE spends it for a harder hit or better odds, and a hit shakes one out of you",
 	"mood-attacks": "how a monster feels shows in its attack: a friendly one drops hearts to catch (each heals you and pleases it), a frightened one falters (one hazard in three never comes) and breaks off early",
-	"test-room": "TEST ROOM on the main menu: one hall with every kind of monster, an elite of each clan and every champion, each fight starting afresh and nothing kept (rules/test_room.gd); named outright (`test-room`), the game starts in it",
+	"test-room": "TEST ROOM on the main menu: one hall with every kind of monster, an elite of each clan, every champion and a lord asking a favour, each fight starting afresh and nothing kept (rules/test_room.gd); named outright (`test-room`), the game starts in it",
 	"gemini-voices": "off unless named: monsters speak in the voices of the Gemini TTS bank (assets/voices/gemini, rendered by tools/voices/render.py gemini), which has every line of every species whose words are fixed, and not the ones that name another monster; a line it lacks is said by the usual bank, and failing that by the made-up voice",
 	"skill-combat": "off unless named: SKILLS replaces FIGHT and HEAVY. Skills cost energy, which comes back every turn, some cool down, and none asks for timing (STRIKE, DEFEND, SLAM to start)",
 }

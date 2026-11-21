@@ -46,8 +46,14 @@ const BEFORE_KEEPSAKE_MS := 900.0 # and longer before a keepsake is chosen: a pr
 const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
 const PRACTICE_SEEN := "practice" # its id among the tips seen
-## What the test room puts back after a fight: the party's fields of the state, as State.to_dict keeps them.
-const ROOM_PARTY := ["hp", "max_hp", "gold", "allies", "tally", "reputation", "deeds", "items", "sharpened", "keepsakes", "skills", "hunger", "starved_steps", "butchered", "meals", "left_behind", "found_out", "recent_social", "questers_met"]
+## What the test room puts back after a fight: the party's fields of the state, as State.to_dict keeps them. Every field a save
+## keeps is one of these or one of the few the room leaves as the fight left it (where you stand, the floor, the map of it and
+## the log); tools/features_test.gd fails on one that is neither, so a new field cannot colour the next fight unwatched.
+const ROOM_PARTY := [
+	"hp", "max_hp", "gold", "allies", "tally", "reputation", "deeds", "items", "sharpened", "heavy_known",
+	"keepsakes", "skills", "hunger", "starved_steps", "butchered", "meals", "left_behind", "found_out",
+	"recent_social", "questers_met", "lords_met", "lords_sworn", "lords_warren",
+]
 
 const STAGES := {
 	"social": preload("res://src/game/stages/social.gd"),
@@ -185,7 +191,8 @@ func test_room() -> void:
 
 ## The test room's two rules, as the stage changes. A fight begins: it runs at the pace of the floor its monster is from. The
 ## walk resumes after one, however it ended: everyone is back in their place, whole and as they first were, and so is the party
-## (its health, gold, bag, friends and what the clans think of it). Where you stand, the map and the log stay.
+## (its health, gold, bag, friends, what the clans think of it, what a heavy blow has shown it and the lords it has met).
+## Whoever is asking, and the thing a favour wants, come back with them. Where you stand, the map and the log stay.
 func _in_test_room(from: String, to: String, args: Dictionary) -> void:
 	if to == "intro":
 		state.depth = TestRoom.depth_of(args.foe)
@@ -198,6 +205,8 @@ func _in_test_room(from: String, to: String, args: Dictionary) -> void:
 		for field in ROOM_PARTY:
 			state.set(field, fresh.get(field))
 		state.floor_map.monsters = fresh.floor_map.monsters
+		state.floor_map.quester = fresh.floor_map.quester
+		state.floor_map.pickups = fresh.floor_map.pickups
 		state.depth = 1
 		state.struggle = 0.0
 		state.nerve = 0
