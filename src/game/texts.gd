@@ -229,10 +229,10 @@ const HEAVY_MISS := "You put your weight behind it, miss, and stumble."
 static func heavy_tip(foe, known: bool) -> String:
 	var weak := Combat.heavy_weakness(foe.species)
 	if known and weak > Combat.HEAVY_PLAIN:
-		return "It takes these badly. Fast line, small mark"
+		return "It takes these badly. Fast line, small mark: the middle is the hit"
 	if known and weak < Combat.HEAVY_PLAIN:
-		return "It hardly feels these. Fast line, small mark"
-	return "Fast line, small mark, hard hit. A miss leaves you open"
+		return "It hardly feels these. Fast line, small mark: the middle is the hit"
+	return "Fast line, small mark: only the middle is the hard hit, and a miss leaves you open"
 
 
 ## What the first heavy blow to land shows you.
