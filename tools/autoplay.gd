@@ -33,7 +33,8 @@ var _met_floor := 1 # the floor the two fights are counted on
 var _goal_monster = null # the monster this floor's walk is committed to; null walks to the stairs
 var _met_before := 0 # how many it had met before that floor
 var _tried := {} # pacifist: ACT -> how far it moved the odds, for this foe
-var _fled := {} # fight-only: the monsters it has already fled from once, so it fights rather than fleeing for ever
+var _fled := {} # fight-only: this game's monsters it has already fled from once, so it fights rather than fleeing for ever
+var _attack_menus := 0 # fight-only: the fight menus this game took, printed so the roads test can see the road ran
 var _tried_foe = null
 var _last_try := -1
 var _mercy_before := 0.0
@@ -68,6 +69,8 @@ func _play(seed_value: int) -> bool:
 	_met_floor = 1
 	_met_before = 0
 	_goal_monster = null
+	_fled = {} # once per game: a name fled in one game says nothing about the next one's monsters
+	_attack_menus = 0
 	flow.happened.connect(func(name, _data): _event_counts[name] = _event_counts.get(name, 0) + 1)
 	await flow.new_run(Flags.on("practice"))
 	var t := 0.0
@@ -85,6 +88,8 @@ func _play(seed_value: int) -> bool:
 		seed_value, "reached the last stairs on B%dF" % flow.state.depth if done else "DID NOT FINISH (stage %s)" % flow.state.stage, t / 1000.0,
 		flow.state.tally.spared, flow.state.tally.slain, flow.state.tally.fled, flow.state.tally.recruited,
 		flow.state.hp, flow.state.max_hp, flow.state.level(), _retries])
+	if Flags.on("fight-only"):
+		print("autoplay: attack-only seed %d took the fight menu %d times" % [seed_value, _attack_menus])
 	print_verbose("autoplay: stages %s" % [_stage_counts])
 	print_verbose("autoplay: events %s" % [_event_counts])
 	return done
@@ -119,11 +124,13 @@ func _press_something(flow) -> void:
 			# the attack-only road (`fight-only`): the bar, HEAVY when it is on offer, and FLEE at a quarter of the health,
 			# which is what a player who never talks but wants to live would do. It says nothing and spares nobody (#163)
 			if Flags.on("fight-only") and s.stage == "menu":
+				_attack_menus += 1
+				var heavy_at := _menu_key(s, "HEAVY")
 				if float(s.hp) / float(s.max_hp) < 0.25 and not s.foe.boss and not _fled.has(s.foe.name):
 					_fled[s.foe.name] = true # once per monster: a hunter that follows step for step would be fled from for ever
 					await flow.press("4")
-				elif _menu_key(s, "HEAVY") > 0 and _autopilot.chance(0.25):
-					await flow.press(str(_menu_key(s, "HEAVY")))
+				elif heavy_at > 0 and _autopilot.chance(0.25):
+					await flow.press(str(heavy_at))
 				else:
 					await flow.press("1")
 				return
@@ -249,7 +256,6 @@ func _explore_key(s) -> String:
 	return "right" if (step - s.facing + 4) % 4 <= 2 else "left"
 
 
-## The menu number of SPARE when this foe is the kin a favour wants spared and SPARE can be taken, else 0.
 ## The key that picks a menu row by its label, or 0 when the menu does not have it (or has it greyed out).
 func _menu_key(s, label: String) -> int:
 	for n in s.menu.size():
@@ -258,6 +264,7 @@ func _menu_key(s, label: String) -> int:
 	return 0
 
 
+## The menu number of SPARE when this foe is the kin a favour wants spared and SPARE can be taken, else 0.
 func _spare_index(s) -> int:
 	var q: Dictionary = s.floor_map.quester
 	if q.is_empty() or not q.get("taken", false) or str(q.get("kind", "")) != "spare" or s.foe == null:

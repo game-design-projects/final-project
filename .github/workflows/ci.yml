@@ -143,12 +143,10 @@ jobs:
         run: |
           set -euo pipefail
           tools/check.sh res://tools/meta_test.gd -- nosave nosound
-      # A whole run with no strike in it, start to end.
-      - name: Check the peaceful way through
-        run: |
-          set -euo pipefail
-          godot --headless --path . -s res://tools/autoplay.gd -- nosave nosound pacifist | tee /tmp/pacifist.log | grep -E '^autoplay: 5 of 5'
-          ! grep -E '^autoplay: seed' /tmp/pacifist.log | grep -vE ' slain 0 '
+      # The two ways through, side by side: a whole run with no strike in it, and one that never takes ACT or SPARE from
+      # the fight menu. Both reach the stairs, and the attack-only games end with less health (#163).
+      - name: Check the two ways through
+        run: tools/roads_test.sh
 
   build:
     needs: check
