@@ -15,6 +15,7 @@ const Hud = preload("res://src/view/hud.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const State = preload("res://src/game/state.gd")
+const Texts = preload("res://src/game/texts.gd")
 
 
 func _name() -> String:
@@ -49,9 +50,11 @@ func _numbers() -> void:
 	_check(Experience.gain(1).values().all(func(v): return int(v) == 0), "the level every run starts at gives nothing")
 	_check(int(Experience.gain(2).max_hp) > 0 and int(Experience.gain(2).heal) > 0, "a level gives max HP and the health that comes with it (%s)" % [Experience.gain(2)])
 	var every := int(Experience.table().gain.edge_every)
+	var each := int(Experience.table().gain.edge)
 	var edge_levels := range(2, 2 + every * 3).filter(func(l): return Experience.edge_level(int(l)))
-	_check(edge_levels.size() == 3 and edge_levels.all(func(l): return int(Experience.gain(int(l)).edge) == int(Experience.table().gain.edge)), "every %d levels, counted from the second, a strike is harder (%s)" % [every, edge_levels])
-	_check(Experience.edge(1) == 0 and Experience.edge(int(edge_levels[0])) == int(Experience.table().gain.edge) and Experience.edge(int(edge_levels[2])) == int(Experience.table().gain.edge) * 3, "and the harder strikes add up (%d, %d, %d)" % [Experience.edge(1), Experience.edge(int(edge_levels[0])), Experience.edge(int(edge_levels[2]))])
+	_check(edge_levels == [2, 2 + every, 2 + every * 2], "the second level hardens every strike, and every %d levels after it (%s)" % [every, edge_levels])
+	_check(range(2, 2 + every * 3).all(func(l): return l in edge_levels or int(Experience.gain(int(l)).edge) == 0), "and the levels between give no edge (%s)" % [range(2, 2 + every * 3).map(func(l): return int(Experience.gain(int(l)).edge))])
+	_check(Experience.edge(1) == 0 and Experience.edge(2) == each and Experience.edge(int(edge_levels[2])) == each * 3, "and the harder strikes add up (%d, %d, %d)" % [Experience.edge(1), Experience.edge(2), Experience.edge(int(edge_levels[2]))])
 
 
 ## One fight on a real floor: what it taught, the level it made, what the level did, what the picture and the log said, the save,
@@ -80,6 +83,14 @@ func _a_fight() -> void:
 	_check(s.hp == mini(s.max_hp, 5 + int(Experience.gain(2).heal)), "with the health the level gives back (%d/%d)" % [s.hp, s.max_hp])
 	_check(s.banner != null and str(s.banner.title) == "LEVEL 2" and str(s.banner.text).contains("max HP"), "the picture says the level (%s: %s)" % [s.banner.title if s.banner != null else "", s.banner.text if s.banner != null else ""])
 	_check(s.lines.any(func(l): return str(l.text).begins_with("You reach LEVEL 2")), "and so does the log, which keeps it as the record")
+	# and in front of the verdict, so the last word on a fight is still how it ended
+	var said: Array = s.lines.map(func(l): return str(l.text))
+	var reached_at := -1
+	for i in said.size():
+		if said[i].begins_with("You reach LEVEL 2"):
+			reached_at = i
+	var verdict_at: int = said.find(Texts.VERDICT_SLAIN)
+	_check(reached_at >= 0 and verdict_at > reached_at, "in front of the verdict, which still has the last word (%s)" % [said])
 	await flow.go("camp")
 	_check(s.lines.any(func(l): return str(l.text).begins_with("LEVEL 2: ")), "and sitting down says the level and how far the next is (%s)" % str(s.lines.map(func(l): return l.text)))
 	await flow.tick(flow.clock + Flow.AFTER_FIGHT_MS + 1.0) # the keys are held off a moment after a fight
@@ -102,9 +113,12 @@ func _a_fight() -> void:
 	s.xp = Experience.next_at(s.level()) - 1 # one spare more than the next level takes
 	await flow.encounter.defeat(friend, "spared")
 	_check(s.stage == "ask" and s.lines.any(func(l): return str(l.text).begins_with("You reach LEVEL")), "a spare that asks to come along keeps the level it made in the log before the question (%s)" % s.stage)
-	# the harder strike the levels give is in the fight's help, where the party's aid is
-	s.xp = int(Experience.levels()[2]) # level 3: the first level that hardens every strike
-	_check(s.strike_edge() == int(Experience.gain(3).edge) and s.strike_edge() > 0, "a level that hardens every strike is worth %d to it" % s.strike_edge())
+	# the harder strike the levels give is in the fight's help, where the party's aid is. The second level is the first that
+	# hardens it: level 3 gives none of its own, and the second's is still on every strike.
+	s.xp = int(Experience.levels()[2]) # level 3
+	_check(s.level() == 3 and int(Experience.gain(3).edge) == 0 and s.strike_edge() == int(Experience.table().gain.edge), "the second level's edge is on every strike, and level 3 adds none (%d, level %d)" % [s.strike_edge(), s.level()])
+	s.xp = int(Experience.levels()[1]) # level 2: the first level that hardens every strike
+	_check(s.level() == 2 and s.strike_edge() == int(Experience.gain(2).edge) and s.strike_edge() > 0, "a level that hardens every strike is worth %d to it" % s.strike_edge())
 	var probe = s.floor_map.monsters.filter(func(x): return not x.boss and not x.is_gone()).front()
 	await _meet(flow, probe)
 	await flow.go("fightbar", {})
