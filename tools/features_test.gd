@@ -194,23 +194,15 @@ func _test_room() -> void:
 	_check(Hud.log_fits(s.lines, 760.0) == s.lines.size(), "and the line fits a narrow log")
 	_check(not flow.autosave_allowed() and flow.close_run(true) == 0 and not flow.coach.active(), "nothing is saved from it, it leaves no embers and it gives no tips")
 	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))) != null, "its state reads back, which is how it is put back")
-	# Every field the run saves is either put back by the room or one of the few it leaves as the fight left it (where you stand,
-	# the floor, the map of it and the log). One in neither colours the next fight, and nothing said so: `heavyKnown` and the two
-	# lists of lords the room cannot set yet were left out of `ROOM_PARTY` while this check was not here to name them.
+	# What the room puts back is read off the save, after a fight, against the one on walking in (see the fight below): a key the
+	# fight changed that the room does not put back shows there however the save carries it, one kept only when it is not empty
+	# included, so no list of the fields a save may carry has to be kept in step. The comparison leaves out the few the room leaves
+	# as walking left them: the run's seed and colours, the practice floor, where you stand, the floor, the map of it and the log.
 	var kept := ["depth", "run_seed", "palette", "practice", "floor", "cell", "facing", "visited", "seen", "charted", "chat"]
-	var saved = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
-	for field in ["skills", "keepsakes", "questers_met", "lords_met", "lords_sworn", "lords_warren"]: # the save keeps these only when they are not empty, so a new one goes here too
-		saved.set(field, ["x"])
-	saved.practice = true
-	saved.charted = {Vector2i(1, 1): true}
-	var unplaced := []
-	for key in saved.to_dict():
-		if not Flow.ROOM_PARTY.has(_party_field(str(key))) and not kept.has(_party_field(str(key))):
-			unplaced.append(str(key))
-	_check(unplaced.is_empty(), "every field of the party the run saves is put back by the room or kept as it was (%s)" % str(unplaced))
+	var walk_in: Dictionary = s.to_dict()
 	# `state.set()` says nothing about a name that isn't a field, so a typo in the room's list would put nothing back unread.
 	var fields := []
-	for p in saved.get_property_list():
+	for p in s.get_property_list():
 		if p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 			fields.append(str(p.name))
 	var nameless := Flow.ROOM_PARTY.filter(func(f): return not fields.has(str(f)))
@@ -274,6 +266,17 @@ func _test_room() -> void:
 	_check(s.stage == "explore" and back != null and back != deep and back.name == deep.name and back.hp == back.max_hp and f.monsters_left() == TestRoom.count(), "after it, whoever you slew stands in its place again")
 	_check(s.hp == s.max_hp and s.gold == int(words.gold) and s.items.is_empty() and s.has_ally("witch") and s.depth == 1, "and the party is as it walked in")
 	_check(s.heavy_known.is_empty(), "and what a heavy blow found out about a kind is not kept (%s)" % str(s.heavy_known.keys()))
+	# The whole save, not a list of names: every key the run carries reads as it did on walking in, bar the few the room keeps, so a
+	# field left out of `ROOM_PARTY` fails here however the save carries it (`heavyKnown` is set in this very fight).
+	var after: Dictionary = s.to_dict()
+	var leaked := []
+	for key in walk_in:
+		if not kept.has(_party_field(str(key))) and after.get(key) != walk_in[key]:
+			leaked.append(str(key))
+	for key in after:
+		if not kept.has(_party_field(str(key))) and not walk_in.has(str(key)):
+			leaked.append(str(key))
+	_check(leaked.is_empty(), "and the save reads as it did on walking in, bar what the room keeps (%s)" % str(leaked))
 	_check(s.reputation.is_empty() and s.deeds.is_empty() and s.tally.slain == 0, "no clan remembers it, and it is on no tally")
 	_check(s.lines.any(func(l): return l.text == str(words.reset)), "the log says the room is as it was")
 	_check(s.banner == null, "and no banner says a clan took it badly (%s)" % [s.banner.title if s.banner != null else ""])
