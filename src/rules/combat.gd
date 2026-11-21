@@ -26,6 +26,10 @@ const HEAVY_MISS_EDGE := 0.35
 const HEAVY_DAMAGE := 1.25
 const HEAVY_PLAIN := 1.0 # a species with no number of its own takes a heavy blow as any other
 const HEAVY_MISS_PRESSURE := 0.5 # a miss leaves you off balance: the next attack presses this much harder
+# A heavy blow falls off over its own mark, from the middle to this floor at the mark's far edge (#163): a blow landed wide does
+# the plain strike's own floor, so "hit it anywhere" is no longer worth it, and only the middle is the hard hit it is chosen for.
+const HEAVY_FLOOR := 4.0
+const HEAVY_CURVE := 1.2
 
 # What being hit does to a monster's mood
 const HIT_FRIENDLINESS := -8.0
@@ -82,7 +86,11 @@ static func heavy_strike(x: float, boss: bool, species: String, hoard_fire: bool
 	if off > HEAVY_MISS_EDGE:
 		return {"miss": true, "crit": false, "damage": 0}
 	var crit := off < CRIT_EDGE
-	var base := CRIT_DAMAGE if crit else 4.0 + 8.0 * pow(1.0 - off, 1.2)
+	# The falloff is measured over the heavy mark alone: `quality` is 1 in the middle and 0 at its far edge, where a heavy blow is
+	# worth the plain strike's floor. Measured against the plain curve instead, a blow landed at the edge paid 6 to 16 where the
+	# same hand's plain strike paid 9, so the faster line and the smaller mark bought no risk at all (#163).
+	var quality := clampf(1.0 - off / HEAVY_MISS_EDGE, 0.0, 1.0)
+	var base := CRIT_DAMAGE if crit else HEAVY_FLOOR + (CRIT_DAMAGE - HEAVY_FLOOR) * pow(quality, HEAVY_CURVE)
 	var scaled: float = base * HEAVY_DAMAGE * heavy_weakness(species) * (BOSS_DAMAGE_SCALE if boss else 1.0)
 	return {"miss": false, "crit": crit, "damage": roundi(scaled) + (HOARD_FIRE_BONUS if hoard_fire else 0) + aid}
 
