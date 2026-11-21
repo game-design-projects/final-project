@@ -20,7 +20,7 @@ All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: 
 
 **Exploring: `ambient.ogg`**, a passacaglia in D minor: 112.5 seconds, 3/4 at 64 BPM, five variations on an eight-bar ground bass (the lament D C B♭ A, then B♭ A D A). The melody lies over it note for note (Dm | C | B♭ | F/A | Gm/B♭ | A7 | Dm | A) and comes and goes. Variation I has no melody, only organ, low strings, harpsichord and a far bell. Then the melody passes to the music box, the strings, and the harpsichord over a swelling choir, and in the last variation a fragment on high strings while the texture thins back to the start. The ambient also comes and goes in time: about a minute and a half of music, then a minute or two of quiet before it drifts back. It fades in over two seconds, two seconds after a fight ends.
 
-**Fights: four toccata-style loops, picked at random** (`battle-*.ogg`). Each is 16 bars: the melody in the minor, again coming home with a string run, lifted into the relative major on a second lead, then everyone together.
+**Fights: four toccata-style loops, a random one for a usual fight** (`battle-*.ogg`). Each is 16 bars: the melody in the minor, again coming home with a string run, lifted into the relative major on a second lead, then everyone together.
 
 | Loop | Key, tempo | Lead (and the major lift) | Groove |
 | --- | --- | --- | --- |
