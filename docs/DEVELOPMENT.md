@@ -55,7 +55,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.
 
-Two checks read a *build* rather than the source: `tools/pack_version_test.py` opens the macOS zip `tools/build.sh macos` wrote and fails unless its name, the one `Donjon.app` inside it, and that bundle's two versions are `config/version` (0.9.5 shipped with a literal 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints. `tools/intro_refs.py` is not a check: it cuts the reference frames out of the game's own atlases for the intro video's prompt (`uv run --with pillow python tools/intro_refs.py`).
+Two checks read a *build* rather than the source: `tools/pack_version_test.py` opens the macOS zip `tools/build.sh macos` wrote and fails unless that zip is named `donjon-<config/version>-macos.zip`, holds exactly one `Donjon.app` at its root, and both of that bundle's versions are `config/version` (0.9.5 shipped with a literal 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints. `tools/intro_refs.py` is not a check: it cuts the reference frames out of the game's own atlases for the intro video's prompt (`uv run --with pillow python tools/intro_refs.py`).
 
 ## When a part fails: debug stops, an export carries on
 
