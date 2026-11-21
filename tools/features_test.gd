@@ -151,9 +151,11 @@ func _test_room() -> void:
 	_check(room.monsters.size() == TestRoom.count(), "that is everyone (%d)" % room.monsters.size())
 	# and a lord asking its favour, so the walk's other half can be tried without a run that has one
 	_check(not room.quester.is_empty() and str(room.quester.get("title", "")) != "", "a lord asks its favour in the test room (%s)" % str(room.quester.get("title", "")))
+	_check(str(room.quester.get("kind", "")) == "fetch", "and asks the one favour the room can pay (%s)" % str(room.quester.get("kind", "")))
 	_check(room.is_open(room.quester.cell) and not room.reserved().has(room.stairs), "standing on the aisle, not on the way out")
-	if str(room.quester.get("kind", "")) == "fetch":
-		_check(room.pickups.any(func(p): return str(p.item) == str(room.quester.want)), "and what it wants lies there (%s)" % str(room.quester.want))
+	_check(Items.known(str(room.quester.get("want", ""))), "for a thing the room knows (%s)" % str(room.quester.get("want", "")))
+	_check(room.pickups.any(func(p): return str(p.item) == str(room.quester.want)), "and what it wants lies there (%s)" % str(room.quester.want))
+	_check(room.pickups.all(func(p): return room.is_open(p.cell) and p.cell != room.stairs and p.cell != room.start and p.cell != room.quester.cell), "on an open cell of its own, off the way out (%s)" % str(room.pickups.map(func(p): return p.cell)))
 	var names := {}
 	var cells := {}
 	for m in room.monsters:
@@ -206,6 +208,34 @@ func _test_room() -> void:
 	await flow.press("right")
 	_check(s.lines[0].text == str(words.beside) % [Kinds.title(front), Kinds.title(f.monster_at(s.cell + FloorMap.DIRS[1]))], "between two, who is on each side: %s" % s.lines[0].text)
 	_check(f.monsters.all(func(m): return Hud.log_fits([State.sys_line(TestRoom.describe(m))], 760.0) == 1), "every such line fits a narrow log")
+	# its lord's favour is the walk's other half, and the room can pay it
+	var asker: Vector2i = f.quester.cell
+	var clan: String = str(f.quester.lord)
+	var thing: Vector2i = f.pickups[0].cell
+	var purse: int = s.gold
+	s.cell = asker + FloorMap.DIRS[3]
+	s.facing = 1
+	await flow.press("up")
+	_check(s.stage == "request" and s.menu.size() == 2 and str(s.menu[0].label) == str(Requests.table().kinds.fetch.yes), "walking into the lord opens its favour (%s)" % s.stage)
+	await flow.press("1")
+	_check(s.stage == "explore" and bool(f.quester.taken), "taking it leaves you on the walk")
+	s.cell = thing + FloorMap.DIRS[0]
+	s.facing = 2
+	await flow.press("up")
+	_check(s.cell == thing and s.items.has(str(f.quester.want)) and not f.pickups.any(func(p): return p.cell == thing), "what it wants is picked up where it lies (%s)" % str(f.quester.want))
+	s.cell = asker + FloorMap.DIRS[3]
+	s.facing = 1
+	await flow.press("up")
+	_check(s.stage == "request" and Requests.status(f.quester, s) == "ready" and str(s.menu[0].label) == str(Requests.table().kinds.fetch.give), "coming back with it, there is a thing to give")
+	await flow.press("1")
+	_check(s.stage == "explore" and f.quester.is_empty() and s.items.is_empty() and s.gold == purse + int(Lords.pays().gold), "paid: the gold comes and the thing goes")
+	_check(s.lords_met.has(clan) and float(s.reputation.get(clan, 0.0)) > 0.0, "and its clan has heard of you (%s)" % str(s.reputation))
+	# a fight puts the lord and the thing back with the room
+	await flow.go("intro", {"foe": f.monsters[0]})
+	await flow.go("menu")
+	await flow.encounter.defeat(f.monsters[0], "slain")
+	_check(not f.quester.is_empty() and f.pickups.size() == 1 and Requests.status(f.quester, s) == "new", "after a fight, the lord asks again and the thing lies there again")
+	_check(s.gold == purse and s.items.is_empty() and s.reputation.is_empty() and s.questers_met.is_empty(), "and the party is as it walked in")
 	# a fight is its own
 	var deep = f.monsters.filter(func(m): return m.kind == "cobra")[0]
 	var deep_at: Vector2i = deep.cell
