@@ -47,7 +47,7 @@ jobs:
           set -euo pipefail
           python3 tools/changelog_test.py
       # The development doc names every script at the top of tools/, one line each, and both of its script tables hold only
-      # .gd suites run with -s. It had lost favours_test.sh, pack_version_test.py and intro_refs.py and nothing failed, for
+      # .gd scripts run with -s. It had lost favours_test.sh, pack_version_test.py and intro_refs.py and nothing failed, for
       # the same reason as the changelog: markdown is never compiled. Like that one, this needs no Godot.
       - name: Check the development doc names every tool
         run: |
