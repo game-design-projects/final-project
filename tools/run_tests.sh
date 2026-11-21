@@ -115,4 +115,10 @@ if [ "$code" != 0 ]; then
 	failed=1
 	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
 fi
+# A favour is asked, taken, done and paid: a fetch on the spot, a rid or a spare on the walk back to the asker. Before this
+# the pilot cancelled every request, so the paid path (a lord's gold, its clan's standing, the keepsake-less payoff) was only
+# ever asked and dropped, and nothing played it in a whole game. The check lives in a script of its own because CI runs it too.
+if ! GODOT="$GODOT" OUT="$OUT" tools/favours_test.sh; then
+	failed=1
+fi
 exit "$failed"

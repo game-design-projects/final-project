@@ -1,6 +1,7 @@
 ## Plays whole games with no window, to see that a run can be played from the start to the stairs without stalling.
-## A simple autopilot presses keys (walks to the monster it chose on the floor for the first two fights, keeping it until
-## it is gone, then the stairs; picks menu entries at random, dodges at random) while the clock runs in 16 ms frames.
+## A simple autopilot presses keys (takes the floor's favour and finishes it, walks to the monster it chose for the first two
+## fights, keeping it until it is gone, then the stairs; picks menu entries at random, dodges at random) while the clock runs
+## in 16 ms frames.
 ## Nothing is saved or shown; it prints one line per game.
 ##   godot --headless --path . -s res://tools/autoplay.gd                  seeds 1..5, the local mind
 ##   godot --headless --path . -s res://tools/autoplay.gd -- seed=7 mock    one seed, the seeded random mind
@@ -105,8 +106,12 @@ func _press_something(flow) -> void:
 			# food is listed first, then the party (to feed or butcher), and LEAVE last: it eats what there is, then gets up. Taking "1" with no
 			# food left would ask to butcher a friend, answer NO, and ask again for as long as the game lasts.
 			await flow.press("1" if str(s.menu[0].label).begins_with("EAT") else "cancel")
-		"trade", "request", "envoy", "envoy_say":
+		"trade", "envoy", "envoy_say":
 			await flow.press("cancel")
+		"request":
+			# the first choice accepts the favour (or hands it over, or leaves when it has failed), so a whole game now asks,
+			# does and is paid: the request and the lords' favours were only ever asked and dropped before
+			await flow.press("1")
 		"keepsake":
 			await flow.press(str(_autopilot.int_range(1, s.menu.size())))
 		"menu", "act":
@@ -213,7 +218,9 @@ func _explore_key(s) -> String:
 				if d < best:
 					best = d
 					_goal_monster = m
-	var goal: Vector2i = s.floor_map.stairs if _goal_monster == null else _goal_monster.cell
+	# a favour it took: go and finish it (the thing it wants, or the monster it named), so the paid path is played too
+	var quest := _quest_goal(s)
+	var goal: Vector2i = quest if quest != Vector2i(-1, -1) else (s.floor_map.stairs if _goal_monster == null else _goal_monster.cell)
 	var step := _first_step(s.floor_map, s.cell, goal)
 	if step < 0 and _goal_monster != null: # walled off from it: the stairs are the floor's one sure way on
 		_goal_monster = null
@@ -223,6 +230,31 @@ func _explore_key(s) -> String:
 	if s.facing == step:
 		return "up"
 	return "right" if (step - s.facing + 4) % 4 <= 2 else "left"
+
+
+## Where to go for the favour it has taken, or (-1, -1) when there is none to do here.
+func _quest_goal(s) -> Vector2i:
+	var q: Dictionary = s.floor_map.quester
+	if q.is_empty():
+		return Vector2i(-1, -1)
+	if not q.get("taken", false):
+		# it has not been heard out yet: walk up to it, and the request stage accepts on the first key (it never saw a favour
+		# asked before this, let alone paid)
+		return q.cell if not s.questers_met.has(str(q.get("name", ""))) else Vector2i(-1, -1)
+	if str(q.kind) == "fetch":
+		if s.items.has(str(q.want)):
+			return q.cell # in the bag already: bring it back
+		for p in s.floor_map.pickups:
+			if str(p.item) == str(q.want):
+				return p.cell
+		return Vector2i(-1, -1)
+	var i := int(q.get("target", -1))
+	if i < 0 or i >= s.floor_map.monsters.size():
+		return Vector2i(-1, -1)
+	var m = s.floor_map.monsters[i]
+	if m.is_gone():
+		return q.cell # the one it named is off the floor: the asker is who pays, not the empty cell
+	return m.cell
 
 
 ## The heading of the first step on the shortest way from `from` to `to`, or -1 if there is none.
