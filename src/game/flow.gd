@@ -53,7 +53,7 @@ const PRACTICE_SEEN := "practice" # its id among the tips seen
 ## the save after a fight against the one on walking in, so one this list leaves out fails there however the save carries it, and
 ## a new field cannot colour the next fight unread.
 const ROOM_PARTY := [
-	"hp", "max_hp", "gold", "allies", "tally", "reputation", "deeds", "items", "sharpened", "heavy_known",
+	"hp", "max_hp", "gold", "allies", "tally", "reputation", "deeds", "items", "sharpened", "xp", "heavy_known",
 	"keepsakes", "skills", "hunger", "starved_steps", "butchered", "meals", "left_behind", "found_out",
 	"recent_social", "questers_met", "lords_met", "lords_sworn", "lords_warren",
 ]

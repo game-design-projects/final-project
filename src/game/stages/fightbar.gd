@@ -31,6 +31,8 @@ func enter(flow, args: Dictionary) -> void:
 	s.hint = "ENTER STRIKE INSIDE THE RED MARK" if heavy else "ENTER STRIKE WHEN THE LINE CROSSES THE MIDDLE"
 	if s.party_size() > 0:
 		s.hint += " · PARTY +%d" % Combat.party_aid(s.party_size())
+	if s.strike_edge() > 0:
+		s.hint += " · LEVEL +%d" % s.strike_edge()
 	if s.sharpened > 0:
 		s.hint += " · WHETTED +%d" % s.sharpened
 	if s.nerve > 0 and flow.feature("nerve"):
@@ -96,7 +98,7 @@ func _strike(flow, t: float) -> void:
 	var heavy: bool = s.bar.heavy
 	var how := "heavy" if heavy else "light"
 	m.strikes[how] = int(m.strikes.get(how, 0)) + 1 # a request may ask for a fight won with heavy strikes only (rules/envoys.gd)
-	var aid: int = Combat.party_aid(s.party_size())
+	var aid: int = Combat.party_aid(s.party_size()) + s.strike_edge()
 	var result: Dictionary
 	if heavy:
 		result = Combat.heavy_strike(x, m.boss, m.species, s.has_ally("dragon"), aid + s.sharpened)

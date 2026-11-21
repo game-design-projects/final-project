@@ -18,7 +18,7 @@ Each floor belongs to a biome with its own generator, colours and monsters, and 
 
 **Every floor has its own five kinds of monster**, 25 in all, and no kind lives on two floors (`data/kinds.json`). Each of the four clans has at least one kind on every floor, so a clan's mood, its acts and the charm it gives as a friend carry on all the way down, while how it looks, how it moves and how it attacks change from floor to floor. A floor has one of each of its kinds and more on a bigger floor (the biome says of which clans); a warren holds every kind of its clan met so far, the floor's own first. The name over a monster's head is its kind; the map's legend lists the floor's five with their attacks.
 
-Under the picture is the status row, always up, in a fight and in an intro's conversation too: **HP** and the health bar, **GOLD**, **PARTY** (the three monsters that can come along), and how you are eating — **FED**, **HUNGRY** or **STARVING**.
+Under the picture is the status row, always up, in a fight and in an intro's conversation too: **LVL** (the level the run has reached), **HP** and the health bar with a thin line under it filling toward the next level, **GOLD**, **PARTY** (the three monsters that can come along), and how you are eating — **FED**, **HUNGRY** or **STARVING**.
 
 The camera glides from cell to cell, and the automap in the corner learns what the camera sees. It is a window of 15 cells round you; **M**, or a click on it, puts the whole floor over the picture, and you can walk with it up. Late on a floor the rest of its layout, stairs included, goes onto the map: your instinct fills it in once you have seen 80% of the floor, and before that a monster you put out of the way, spared or slain, may have been carrying a map of it (5% with nothing seen, rising to 50%). A charted floor still hides who and what is on it: monsters, chests, pads and what lies behind a cracked wall show only when seen. A champion stands on the stairs of every floor, hidden from the map until seen, so there is no way down without facing it. Beaten or won over, it leaves you stronger: 4 more max HP and 6 health back.
 
@@ -35,6 +35,8 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 | OPEN HAND | Every monster is 15% likelier to take mercy |
 | LUCKY COIN | Half again as much gold from every purse and chest |
 | SECOND WIND | Once a fight, the hit that would fell you leaves you on 1 HP |
+
+**Fights teach.** Every monster you finish with teaches experience, and it does not matter how: slain, spared, won over or sent on its way are worth the same, and only backing out teaches nothing. Enough experience makes a level — 2 more max HP and 2 health back, and every second level every strike that lands hits 1 harder — announced when the fight ends, with the log keeping it and the status row's thin line filling toward the next. A run of the five floors reaches about level 6. The curve is in `data/experience.json`.
 
 Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and two of the clans' askers, who want a favour instead of a fight. Floors 2 and 4 have a trader.
 

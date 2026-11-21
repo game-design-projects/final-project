@@ -15,14 +15,15 @@ var _wants := -1.0 # how much it wants to come along; below 0 while the mind is 
 var _room := false
 
 
-func enter(flow, _args: Dictionary) -> void:
+## `args.lines` is what the fight said before this: a level the spare made, which the log keeps in front of the question.
+func enter(flow, args: Dictionary) -> void:
 	var s = flow.state
 	var m = s.foe
 	_room = s.party_size() < Combat.PARTY_MAX
 	_wants = -1.0
 	var charm: Dictionary = Content.table("encounter").charms[m.species]
 	var gift: Dictionary = Allies.gift(m.species)
-	var lines := []
+	var lines: Array = args.get("lines", []).duplicate()
 	var asks = flow.encounter.foe_line(m, "join_party")
 	if asks != null:
 		lines.append(asks)

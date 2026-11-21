@@ -10,6 +10,7 @@ const Envoy = preload("res://src/game/stages/envoy.gd")
 const Envoys = preload("res://src/rules/envoys.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Experience = preload("res://src/rules/experience.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
@@ -265,10 +266,11 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	var moved := Clans.record(s, m, how)
 	if m.boss:
 		_reward_for_champion(m)
+	var learned := _learn(m, how) # before the purse and the clan's news: a level is the bigger moment, and those go in the log
 	_open_purse(m)
 	var told := tell_hostility(moved)
 	if how == "spared" and allow_join:
-		await flow.go("ask")
+		await flow.go("ask", {"lines": learned})
 		return
 	var line = foe_line(m, "leave_peacefully") if how == "spared" else null
 	var verdict: String
@@ -276,7 +278,7 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 		verdict = settlement if settlement != "" else Texts.VERDICT_SPARED
 	else:
 		verdict = Texts.VERDICT_SLAIN
-	var lines := [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + felt_lines(m, how) + told + await _requests_done(m, how) + _take_notes()
+	var lines := learned + [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + felt_lines(m, how) + told + await _requests_done(m, how) + _take_notes()
 	s.mind_rows = pending_rows
 	pending_rows = []
 	await leave_fight(lines)
@@ -321,6 +323,33 @@ func tell_hostility(moved: Array) -> Array:
 		flow.announce(words.title, words.text)
 		return []
 	return [State.sys_line(words.line)]
+
+
+## What this fight taught: experience from rules/experience.gd, and the levels it made (#162). A level is more max HP, some
+## health back, and every second level a harder strike. The log always says it, in front of the verdict so the last word on a
+## fight is still how it ended, and the picture says it too when the moment is free: a champion's own news has the picture over
+## it, and then the log is where the level is said. Nothing is learned in the test room, where nothing is counted.
+func _learn(m, how: String) -> Array:
+	var s = flow.state
+	if s.testing:
+		return []
+	var gained := Experience.xp_for(how, m.boss)
+	if gained <= 0:
+		return []
+	var before: int = s.level()
+	s.xp += gained
+	var now: int = s.level()
+	var lines := []
+	for level in range(before + 1, now + 1):
+		var gain: Dictionary = Experience.gain(level)
+		s.max_hp += int(gain.max_hp)
+		var healed := _heal(int(gain.heal))
+		lines.append(State.sys_line(Texts.level_reached(level, gain, healed)))
+		if not flow.banner_up():
+			flow.announce(Texts.level_title(level), Texts.level_gain(gain, healed))
+		flow.event("level", {"level": level})
+		print("encounter: %s taught %d experience: LEVEL %d, +%d max HP, +%d HP, edge %d" % [m.name, gained, level, int(gain.max_hp), healed, s.strike_edge()])
+	return lines
 
 
 ## Whatever it was carrying is yours, however it ended.

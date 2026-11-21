@@ -33,6 +33,7 @@ Every script at the top of `tools/` is named in this doc, one line each, and bot
 | `view_test` | Models, sight, camera, automap, palettes |
 | `audio_test` | Every sound name has a recipe, music, voices, mix (run it without `nosound`) |
 | `map_test` | The floor generators, biomes and chunks, what sight costs on a big floor, charting the rest of a floor and the full map |
+| `experience_test` | What a finished fight teaches (a kill and a spare the same, a champion more, a flight nothing), the levels that makes, what a level gives (max HP, health back, and every second level a harder strike), the run's save and an older one without it, and the status row's level and fill (`data/experience.json`, #162) |
 | `meta_test` | Achievements, Legacy, hunger, camp, butchering, a save without any of them, and every script's `.uid` beside it and in the commit |
 | `art_test` | The atlases, how a figure moves, warmth, moods, what hangs on the walls, Wick from her first hop to a saved game |
 | `features_test` | Each feature with its flag on and off (it switches them itself), and the champion holding the stairs over 1,000 seeds (the issue #26 measurement) |
