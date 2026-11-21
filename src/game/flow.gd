@@ -45,8 +45,10 @@ const DIALOGUE_BUFFER_MS := 300.0
 const STORY_BANNER_MS := 6000.0
 const PRACTICE_SEEN := "practice" # its id among the tips seen
 ## What the test room puts back after a fight: the party's fields of the state, as State.to_dict keeps them. Every field a save
-## keeps is one of these or one of the few the room leaves as the fight left it (where you stand, the floor, the map of it and
-## the log); tools/features_test.gd fails on one that is neither, so a new field cannot colour the next fight unwatched.
+## keeps is one of these or one of the few the room leaves as walking left them (the run's seed and colours, the practice floor,
+## where you stand, the floor, the map of it and the log; the floor's monsters, pickups and asker come back with them);
+## tools/features_test.gd reads the save after a fight against the one on walking in, so one this list leaves out fails there
+## however the save carries it, and a new field cannot colour the next fight unread.
 const ROOM_PARTY := [
 	"hp", "max_hp", "gold", "allies", "tally", "reputation", "deeds", "items", "sharpened", "heavy_known",
 	"keepsakes", "skills", "hunger", "starved_steps", "butchered", "meals", "left_behind", "found_out",
