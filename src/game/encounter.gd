@@ -400,24 +400,51 @@ func leave_fight(lines: Array) -> void:
 	await flow.go("explore", {"lines": lines})
 
 
-## Backing out of a fight the party is standing in the foe's cell for: a pad set it down on the foe (#175). The other end of the
-## pad — the cell the party stepped on, free because a fight gives the monsters no turn — takes it back, so the walk never has two
-## of them in one cell and the flee's "it stays where it is" is true. Returns the pad's line for the log, or "" when the party is in
-## a cell of its own.
+## Backing out of a fight gives ground (#261): the party steps one cell away from the foe, so the hold that follows is distance
+## rather than a pause, and a hunter that follows step for step cannot walk it back into the same fight on your next one.
+##
+## A pad is the other case: it can have set the party down on the foe (#175). The other end of the pad — the cell the party stepped
+## on, free because a fight gives the monsters no turn — takes it back, so the walk never has two of them in one cell and the
+## flee's "it stays where it is" is true. Returns the pad's line for the log; a step of its own says nothing more there.
 func back_off(m) -> String:
 	var s = flow.state
 	var f = s.floor_map
-	if f == null or f.monster_at(s.cell) != m:
+	if f == null:
 		return ""
-	var there: Variant = f.pad_partner(s.cell)
-	if there == null:
+	if f.monster_at(s.cell) == m: # a pad set it down on the foe
+		var there: Variant = f.pad_partner(s.cell)
+		if there == null:
+			return ""
+		s.cell = there
+		s.visited[there] = true
+		s.look()
+		flow.event("pad", {})
+		print("encounter: backing off %s on the pad at %s to %s" % [m.name, m.cell, there])
+		return Floors.secret_line("pad")
+	var gap: Vector2i = s.cell - m.cell
+	if absi(gap.x) + absi(gap.y) != 1: # it is not beside you: there is no behind to give
 		return ""
+	var there: Vector2i = s.cell + gap
+	if not _plain_step(f, there):
+		return ""
+	var from: Vector2i = s.cell
 	s.cell = there
 	s.visited[there] = true
 	s.look()
-	flow.event("pad", {})
-	print("encounter: backing off %s on the pad at %s to %s" % [m.name, m.cell, there])
-	return Floors.secret_line("pad")
+	flow.event("step")
+	print("encounter: backed a step from %s, %s -> %s" % [m.name, from, there])
+	return ""
+
+
+## Whether the party can give ground into this cell: floor with no monster in it, and nothing that takes it somewhere else or
+## that a walk would find (a pad, a trader, someone asking, writing on the wall, a chest or a thing lying about), so backing away
+## moves the party and changes nothing else. The stairs are the floor's end, not ground to give.
+func _plain_step(f, c: Vector2i) -> bool:
+	if not f.is_open(c) or c == f.stairs or f.monster_at(c) != null:
+		return false
+	if f.in_the_way(c) or f.lore_at(c) or f.pickup_at(c) != "":
+		return false
+	return not f.treasure.any(func(t): return t.cell == c)
 
 
 ## The foe that is now out of the way may have been carrying a map of the floor (rules/chart.gd): the rest of the layout goes onto

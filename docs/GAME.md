@@ -58,7 +58,7 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 - **ACT** has CHECK (free, one clue at a time), three acts for that species, and SAY SOMETHING: type a line and ask about the stairs, the champion or another monster, or just try to win it over. What a monster likes and hates is found by trying it, and it answers in its own words: pleased, stung, hurt, scared or puzzled. Bandits and snakes can take a 6-gold cut to stand down; you start with 8.
 - **ITEM** heals, sharpens your next strike, slips you out of the fight, or gives a gift a monster may love.
 - **SPARE** rolls against the monster's mercy, shown as a gauge by its health with how far each deed moved it. Its name turns gold when the odds are at least even. It then asks to come along, and you answer.
-- **FLEE** works except against a champion, and costs 2 gold. The monster keeps its wounds and holds a grudge.
+- **FLEE** works except against a champion, and costs 2 gold. You give a step of ground (into plain floor, when there is one behind you) and the monster keeps its wounds and holds a grudge; it holds still for a few of your steps, so the step is a head start.
 
 Then the monster attacks, unless what you did calmed it. Monsters belong to clans that hear what you did: later ones say so and start in a different mood.
 
@@ -76,7 +76,7 @@ How long winning a monster over takes, from `tools/sim_recruit.gd` over 1000 see
 | Rock | 1% | 2 | 87% | 3 |
 | Dragon | 0% | 4 | 79% | 7 |
 
-A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way. So does one that never takes ACT or SPARE from the fight menu (`-- fight-only`), and the two roads do not cost the same. Over the same five seeds the attack-only games end with 150 health left of 266 between them, in four fights started over, and take 1975 s of game time; the peaceful ones end with 247 of their 268, in 1876 s, and start nothing over. Talking is the safer and the quicker road as the game stands, which is what #163 asks about: what a kill should be worth that a mercy is not.
+A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way. So does one that never takes ACT or SPARE from the fight menu (`-- fight-only`), and the two roads do not cost the same. Over the same five seeds the attack-only games end with 108 health left of 266 between them, in three fights started over, and take 1963 s of game time; the peaceful ones end with 247 of their 268, in 1876 s, and start nothing over. Talking is the safer and the quicker road as the game stands, which is what #163 asks about: what a kill should be worth that a mercy is not.
 
 ## The box: lit squares hurt
 
