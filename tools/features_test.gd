@@ -2812,8 +2812,9 @@ func _heavy_strike() -> void:
 
 
 ## The trade is real: over the same timing, FIGHT and HEAVY compared by the damage you can expect. Timing error is normally spread,
-## in ms, since a faster line gives the same hand less room. Steady hands should want it against a rock and never against a slime,
-## a bandit should be about even, and an unsteady hand should stay with FIGHT.
+## in ms, since a faster line gives the same hand less room. Steady hands should want it against a rock and a dragon and never
+## against a slime or a snake, a bandit should be about even, and an unsteady hand should stay with FIGHT. The mark is a gamble, not
+## a rung (#163): a heavy blow landed wide does no more than the plain strike that hand would have landed at that same moment.
 func _heavy_trade() -> void:
 	# Every species carries its own number for a heavy blow (`data/species.json`, "heavy"); one that didn't would be fought
 	# against the plain default without a word.
@@ -2823,6 +2824,19 @@ func _heavy_trade() -> void:
 		_check(own is float and float(own) > 0.0, "%s says how it takes a heavy blow (%s)" % [species, str(own)])
 	var weighed: Array = Combat.heavy_species()
 	_check(weighed.size() == cast.size(), "every species takes it on a number of its own (%d of %d)" % [weighed.size(), cast.size()])
+	# The same hand near the far edge of the heavy mark: what it gets for a heavy blow there, against the plain strike it would
+	# have landed at that same moment of the swing. Above the plain one, HEAVY would be a free upgrade for a hand that never lands
+	# the middle, which is what a playtester noticed (#163: "HEAVY may be too easy"). The edge is read from the bar the game draws,
+	# not written in ms: this check named 105 and 110 ms, which a window tightened to the issue's own lever 2 (0.22) would turn into
+	# misses, so it would pass without a blow landing. The first is the last blow that lands, 1 ms inside the edge; nearer the middle
+	# a rock and a dragon are still ahead, which is the trade this command is for.
+	var heavy_bar: float = Combat.bar_ms(false) * Combat.HEAVY_BAR_SCALE
+	var heavy_edge: float = heavy_bar * Combat.HEAVY_MISS_EDGE / 2.0
+	for error_ms in [heavy_edge - 1.0, heavy_edge - 6.0]:
+		var plain_late: int = Combat.strike(0.5 + error_ms / Combat.bar_ms(false), false, false).damage
+		for species in weighed:
+			var wide: int = Combat.heavy_strike(0.5 + error_ms / heavy_bar, false, species, false).damage
+			_check(wide > 0 and wide <= plain_late, "landed near the far edge of its mark (%.1f ms off the middle, the edge at %.1f), HEAVY lands and is no better than FIGHT at the same moment (%s: %d against %d)" % [error_ms, heavy_edge, species, wide, plain_late])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 35
 	var half: float = Combat.bar_ms(false) / 2.0
@@ -2840,7 +2854,12 @@ func _heavy_trade() -> void:
 		mean[error_ms] = row
 		print("heavy-strike: timing error %.0f ms, damage per swing: FIGHT %.1f, HEAVY %s" % [error_ms, row.quick, ", ".join(weighed.map(func(k): return "%s %.1f" % [k, row[k]]))])
 	_check(mean[50.0].rock > mean[50.0].quick * 1.3, "steady hands want it against a rock (%.1f against %.1f)" % [mean[50.0].rock, mean[50.0].quick])
-	_check(absf(mean[80.0].bandit - mean[80.0].quick) < mean[80.0].quick * 0.15, "against a bandit it is about even (%.1f against %.1f)" % [mean[80.0].bandit, mean[80.0].quick])
+	for tough in ["rock", "dragon"]:
+		_check(mean[50.0][tough] > mean[50.0].quick * 1.1, "and against a %s, which takes it badly (%.1f against %.1f)" % [tough, mean[50.0][tough], mean[50.0].quick])
+	for soft in ["slime", "snake"]:
+		_check(mean[50.0][soft] < mean[50.0].quick, "a steady hand still does better with FIGHT against a %s (%.1f against %.1f)" % [soft, mean[50.0][soft], mean[50.0].quick])
+	_check(absf(mean[50.0].bandit - mean[50.0].quick) < mean[50.0].quick * 0.15, "against a bandit it is about even (%.1f against %.1f)" % [mean[50.0].bandit, mean[50.0].quick])
+	_check(absf(mean[80.0].bandit - mean[80.0].quick) < mean[80.0].quick * 0.15, "and still about even from an ordinary hand (%.1f against %.1f)" % [mean[80.0].bandit, mean[80.0].quick])
 	for error_ms in mean:
 		_check(mean[error_ms].slime < mean[error_ms].quick, "against a slime FIGHT is always better (%.0f ms: %.1f against %.1f)" % [error_ms, mean[error_ms].slime, mean[error_ms].quick])
 	for species in weighed:

@@ -70,7 +70,7 @@ What is typed is judged by the mind: Jev when the game can reach it, and otherwi
 ## Fights
 
 - **FIGHT** is a timing bar: strike when the line crosses the middle. A hit sours the monster's mood.
-- **HEAVY** is a faster line and a smaller mark for a harder hit, which some monsters take worse than others.
+- **HEAVY** is a faster line and a smaller mark for a harder hit, which some monsters take worse than others. Only the middle is that hard hit: the further along the mark you stop it, the softer it falls, down to a plain strike's floor at the mark's far edge, so a blow landed wide is worth less than the FIGHT the same hand would have had — and a miss leaves you open.
 - **Friends follow through.** With monsters in your party, a FIGHT that lands doesn't stop the line: each friend has a mark further along the bar in its own colour, and each press after yours is the next friend's. On its mark that friend strikes for 3; off it, that friend's moment is gone, so hammering the key gets nothing. Not pressing costs nothing, and a HEAVY blow is too quick for them.
 - **ACT** has CHECK (free, one clue at a time), three acts for that species, and SAY SOMETHING: type a line and ask about the stairs, the champion or another monster, or just try to win it over. What a monster likes and hates is found by trying it, and it answers in its own words: pleased, stung, hurt, scared or puzzled. Bandits and snakes can take a 6-gold cut to stand down; you start with 8.
 - **ITEM** heals, sharpens your next strike, slips you out of the fight, or gives a gift a monster may love.
@@ -103,7 +103,7 @@ How long winning a monster over takes, from `tools/sim_recruit.gd` over 1000 see
 | Rock | 1% | 2 | 87% | 3 |
 | Dragon | 0% | 4 | 79% | 7 |
 
-A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way.
+A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way. So does one that never takes ACT or SPARE from the fight menu (`-- fight-only`), and the two roads do not cost the same. Over the same five seeds the attack-only games end with 115 health left of 266 between them, in three fights started over, and take 1964 s of game time; the peaceful ones end with 247 of their 268, in 1876 s, and start nothing over. Talking is the safer and the quicker road as the game stands, which is what #163 asks about: what a kill should be worth that a mercy is not.
 
 ## The box: lit squares hurt
 

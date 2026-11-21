@@ -20,12 +20,17 @@ const BOSS_DAMAGE_SCALE := 0.8
 const HOARD_FIRE_BONUS := 4 # the dragon's charm
 
 # The heavy strike: the line runs faster and the mark is smaller, for a harder hit that some monsters take worse than others.
-# tools/features_test.gd keeps the trade honest: at steady timing it pays against a rock and never against a slime.
+# tools/features_test.gd keeps the trade honest: at steady timing it pays against a rock or a dragon and never against a slime or
+# a snake.
 const HEAVY_BAR_SCALE := 0.6
 const HEAVY_MISS_EDGE := 0.35
 const HEAVY_DAMAGE := 1.25
 const HEAVY_PLAIN := 1.0 # a species with no number of its own takes a heavy blow as any other
 const HEAVY_MISS_PRESSURE := 0.5 # a miss leaves you off balance: the next attack presses this much harder
+# A heavy blow falls off over its own mark, from the middle to this floor at the mark's far edge (#163): a blow landed wide does
+# the plain strike's own floor, so "hit it anywhere" is no longer worth it, and only the middle is the hard hit it is chosen for.
+const HEAVY_FLOOR := 4.0
+const HEAVY_CURVE := 1.2
 
 # What being hit does to a monster's mood
 const HIT_FRIENDLINESS := -8.0
@@ -76,13 +81,18 @@ static func strike(x: float, boss: bool, hoard_fire: bool, aid := 0) -> Dictiona
 	return {"miss": false, "crit": crit, "damage": damage}
 
 
-## How a heavy strike landed: as `strike`, but it misses sooner and hits harder, by how `species` takes such a blow.
+## How a heavy strike landed: as `strike`, but it misses sooner and is hardest in the middle, falling to `HEAVY_FLOOR` at the far
+## edge of its own mark, by how `species` takes such a blow.
 static func heavy_strike(x: float, boss: bool, species: String, hoard_fire: bool, aid := 0) -> Dictionary:
 	var off := absf(x - 0.5) * 2.0
 	if off > HEAVY_MISS_EDGE:
 		return {"miss": true, "crit": false, "damage": 0}
 	var crit := off < CRIT_EDGE
-	var base := CRIT_DAMAGE if crit else 4.0 + 8.0 * pow(1.0 - off, 1.2)
+	# The falloff is measured over the heavy mark alone: `quality` is 1 in the middle and 0 at its far edge, where a heavy blow is
+	# worth the plain strike's floor. Measured against the plain curve instead, a blow landed at the edge paid 6 to 16 where the
+	# same hand's plain strike paid 9, so the faster line and the smaller mark bought no risk at all (#163).
+	var quality := clampf(1.0 - off / HEAVY_MISS_EDGE, 0.0, 1.0)
+	var base := CRIT_DAMAGE if crit else HEAVY_FLOOR + (CRIT_DAMAGE - HEAVY_FLOOR) * pow(quality, HEAVY_CURVE)
 	var scaled: float = base * HEAVY_DAMAGE * heavy_weakness(species) * (BOSS_DAMAGE_SCALE if boss else 1.0)
 	return {"miss": false, "crit": crit, "damage": roundi(scaled) + (HOARD_FIRE_BONUS if hoard_fire else 0) + aid}
 

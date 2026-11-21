@@ -51,7 +51,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 | `sim_chart` | How much of a floor is seen when the stairs first show, and the steps instinct saves on the way to them, per biome and depth (`seeds=N`); for tuning `chart` in `data/floors.json` |
-| `sim_strike` | What the fight bar's plain and heavy strikes are worth, per species: the window in ms, and the damage at a perfect, a middling and an edge hit (`boss=1`, `charms=rock|dragon`); for tuning `combat.gd`'s `HEAVY_*` and the species' `heavy` numbers (#163) |
+| `sim_strike` | What the fight bar's two commands are worth to the same hand, per species: the damage of each when both are stopped the same ms from the middle (so the faster line isn't read against its own narrower mark), and what a swing is worth to a steady, an ordinary and a shaky hand, misses counted (`boss=1`, `charms=rock|dragon`, `swings=N`); for tuning `combat.gd`'s `HEAVY_*` and the species' `heavy` numbers (#163) |
 | `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`, `boss=1` for a champion's attack: 6200 ms at a fifth more intensity, and its rows print the intensity the run got); it prints hits, how much of the box is lit, and moments with no way out |
 
 The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms.

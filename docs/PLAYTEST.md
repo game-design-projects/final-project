@@ -43,9 +43,9 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **Mystery against guidance.** The map now charts the rest of a floor once 80% is seen, and a monster may carry a map of it.
   Does that read as a reward, or as the dungeon being given away?
 - **The spare and recruit loop.** Is SPARE ever the obvious move, and is the moment it becomes likely said before the choice?
-- **The commands beside FIGHT.** #163: a plain strike lands almost anywhere on its bar and a heavy one hits harder on four of
-  the five species even played badly. Does any tester reach for HEAVY, ACT, ITEM or FLEE without being told, and does a heavy
-  hit that lands *badly* feel like the risk it is meant to be?
+- **The commands beside FIGHT.** #163: HEAVY is the hard hit only near the middle of its mark now, and a blow landed wide pays
+  no more than the FIGHT that hand would have had. Does any tester reach for HEAVY, ACT, ITEM or FLEE without being told, does a
+  heavy hit that lands *badly* feel like the risk it is meant to be, and can they find the middle by eye or by the line's note?
 - **Names over heads.** A monster's name, an ally's, a trader's, the one asking a favour. Is anything ever named that is not
   on the screen?
 - **The row under the picture.** LVL, HP with the thin level fill under it, GOLD, PARTY, FED (or HUNGRY/STARVING) at 11 px,

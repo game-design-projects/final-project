@@ -20,6 +20,7 @@ const KNOWN := {
 	"meet": "meet=<species or kind>: start in a fight with that monster (a kind from another floor is tried on one of this floor's; with `test-room`, the one standing in the room)",
 	"nofx": "no post-processing shader",
 	"pacifist": "for tools/autoplay.gd: never strike, only ACT and SPARE",
+	"fight-only": "for tools/autoplay.gd: the fight menu's ACT and SPARE are never taken, only the strike bar (HEAVY when it is on offer) and one FLEE from a monster at a quarter of the health",
 	"practice": "for tools/autoplay.gd: start each game on the practice floor, as a first run does",
 	"pad": "show the touch pad (arrows, INFO, BACK, OK) without a touch screen",
 	"nosound": "no sound effects and no music",
@@ -37,6 +38,7 @@ const KNOWN := {
 	"csv": "csv=1: for tools/sim_dodge.gd, print CSV lines",
 	"boss": "boss=1: for tools/sim_dodge.gd, play each attack as a champion's (its 6200 ms fight, a fifth denser than a usual monster's); for tools/sim_strike.gd, a strike's champion's damage scale",
 	"charms": "charms=none|rock|dragon: for tools/sim_strike.gd, the party's charm: the rock's slower bar, or the dragon's fire on every strike",
+	"swings": "swings=N: for tools/sim_strike.gd, how many swings its per-swing table draws for each hand",
 }
 
 ## name -> what it does. On by default: `no-<name>` or `<name>=off` turns it off. Add a line here for each new feature.

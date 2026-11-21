@@ -33,6 +33,7 @@ var _met_floor := 1 # the floor the two fights are counted on
 var _goal_monster = null # the monster this floor's walk is committed to; null walks to the stairs
 var _met_before := 0 # how many it had met before that floor
 var _tried := {} # pacifist: ACT -> how far it moved the odds, for this foe
+var _fled := {} # fight-only: the monsters it has already fled from once, so it fights rather than fleeing for ever
 var _tried_foe = null
 var _last_try := -1
 var _mercy_before := 0.0
@@ -115,6 +116,17 @@ func _press_something(flow) -> void:
 		"keepsake":
 			await flow.press(str(_autopilot.int_range(1, s.menu.size())))
 		"menu", "act":
+			# the attack-only road (`fight-only`): the bar, HEAVY when it is on offer, and FLEE at a quarter of the health,
+			# which is what a player who never talks but wants to live would do. It says nothing and spares nobody (#163)
+			if Flags.on("fight-only") and s.stage == "menu":
+				if float(s.hp) / float(s.max_hp) < 0.25 and not s.foe.boss and not _fled.has(s.foe.name):
+					_fled[s.foe.name] = true # once per monster: a hunter that follows step for step would be fled from for ever
+					await flow.press("4")
+				elif _menu_key(s, "HEAVY") > 0 and _autopilot.chance(0.25):
+					await flow.press(str(_menu_key(s, "HEAVY")))
+				else:
+					await flow.press("1")
+				return
 			# a monster a favour named to be spared is worth more alive: take SPARE whenever it is on offer, so that favour is
 			# finished the way it asks (the pilot used to kill it and fail the request)
 			var spare_at := _spare_index(s) if s.stage == "menu" else 0
@@ -238,6 +250,14 @@ func _explore_key(s) -> String:
 
 
 ## The menu number of SPARE when this foe is the kin a favour wants spared and SPARE can be taken, else 0.
+## The key that picks a menu row by its label, or 0 when the menu does not have it (or has it greyed out).
+func _menu_key(s, label: String) -> int:
+	for n in s.menu.size():
+		if str(s.menu[n].label) == label and not s.menu[n].get("disabled", false):
+			return n + 1
+	return 0
+
+
 func _spare_index(s) -> int:
 	var q: Dictionary = s.floor_map.quester
 	if q.is_empty() or not q.get("taken", false) or str(q.get("kind", "")) != "spare" or s.foe == null:
