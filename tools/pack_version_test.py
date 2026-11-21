@@ -3,13 +3,14 @@
 Godot writes the bundle's Info.plist from the macOS export preset. `tools/build.sh` leaves that preset's two version
 fields empty, and the macOS exporter then writes `config/version` from project.godot into both -- the value the menu
 shows -- where it wrote a literal "1.0" until 0.9.5 shipped with one (#229). This reads the built zip back: its name,
-that it holds one app bundle, and both of the bundle's versions against project.godot, so a literal put back in the
-preset, or a build that says another version, fails CI instead of a release.
+that it holds one app bundle, `Donjon.app` at the zip's root, and both of the bundle's versions against project.godot,
+so a literal put back in the preset, or a build that says another version, fails CI instead of a release.
 
     python3 tools/pack_version_test.py [build/donjon-<version>-macos.zip]
 
-With no argument it reads the zip `tools/build.sh macos` writes beside this script, `build/donjon-<config/version>-macos.zip`,
-wherever it is run from. Exits 1 when the zip's name or the bundle's version is not the game's.
+With no argument it reads `build/donjon-<config/version>-macos.zip` beside `tools/`, the zip `tools/build.sh macos` writes,
+wherever it is run from; a path given is taken as given. Exits 1 when the zip is not named for the game's version, holds
+no single `Donjon.app` at its root, or that bundle's two versions are not the game's.
 """
 import os
 import plistlib
@@ -54,8 +55,9 @@ def main() -> int:
     if os.path.basename(path) != name:
         print("::error::%s: the zip is not named %s (tools/build.sh names it from config/version)" % (path, name))
         failed += 1
-    if not got["app"].endswith("Donjon.app/Contents/Info.plist"):
-        print("::error::%s: the bundle inside is not Donjon.app (%s)" % (path, got["app"]))
+    # At the root, not merely ending in `Donjon.app`: `endswith` took `NotDonjon.app` for the app a release ships.
+    if got["app"] != "Donjon.app/Contents/Info.plist":
+        print("::error::%s: the bundle inside is not Donjon.app at the zip's root (%s)" % (path, got["app"]))
         failed += 1
     for key, field, what in (
         ("short", "CFBundleShortVersionString", "Get Info's version"),
