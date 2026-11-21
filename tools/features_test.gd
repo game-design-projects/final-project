@@ -135,6 +135,8 @@ func _test_room() -> void:
 	var room = TestRoom.make(Rng.new(5))
 	var plain: Array = room.monsters.filter(func(m): return not m.boss and not m.elite)
 	var kinds: Array = plain.map(func(m): return m.kind)
+	_check(Overlay.banner_fits(str(words.banner)), "its banner says how to use it, and fits (%s)" % words.banner)
+	_check(str(words.line).contains("favour"), "and its line names the lord on the aisle (%s)" % words.line)
 	_check(kinds.size() == Kinds.all().size() and Kinds.all().keys().all(func(id): return kinds.count(id) == 1), "the test room holds one of every kind (%d)" % kinds.size())
 	_check(plain.all(func(m): return m.max_hp == roundi(float(Kinds.info(m.kind).hp) * float(Floors.plan(int(Kinds.info(m.kind).depth)).hp_scale))), "each as tough as on its own floor")
 	var elites: Array = room.monsters.filter(func(m): return m.elite)
@@ -147,6 +149,11 @@ func _test_room() -> void:
 	var named: Array = Content.table("floors").champions
 	_check(champions.size() == Floors.run_floors() and range(champions.size()).all(func(i): return champions[i].name == str(named[i].name) and champions[i].max_hp == int(named[i].hp) and champions[i].genres == Kinds.genres_at(i + 1) and TestRoom.depth_of(champions[i]) == i + 1), "and every champion, with its floor's attacks")
 	_check(room.monsters.size() == TestRoom.count(), "that is everyone (%d)" % room.monsters.size())
+	# and a lord asking its favour, so the walk's other half can be tried without a run that has one
+	_check(not room.quester.is_empty() and str(room.quester.get("title", "")) != "", "a lord asks its favour in the test room (%s)" % str(room.quester.get("title", "")))
+	_check(room.is_open(room.quester.cell) and not room.reserved().has(room.stairs), "standing on the aisle, not on the way out")
+	if str(room.quester.get("kind", "")) == "fetch":
+		_check(room.pickups.any(func(p): return str(p.item) == str(room.quester.want)), "and what it wants lies there (%s)" % str(room.quester.want))
 	var names := {}
 	var cells := {}
 	for m in room.monsters:
