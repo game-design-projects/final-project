@@ -3672,8 +3672,11 @@ func _roaming() -> void:
 		if ws.hint == "ANY KEY CONTINUE":
 			await walk.press("confirm")
 		await walk.tick(walk.clock + 500.0)
+	var fought_at: Vector2i = ws.cell
 	await walk.press("4")
 	_check(ws.stage == "explore" and foe.hold == int(t.flee_hold), "backing out of the fight (%s), it holds still (%d)" % [ws.stage, foe.hold])
+	var behind: Vector2i = fought_at + (fought_at - foe.cell)
+	_check(ws.cell == behind and absi(fought_at.x - foe.cell.x) + absi(fought_at.y - foe.cell.y) == 1, "and the party gives a step of ground, from %s to %s, with %s left where it is" % [str(fought_at), str(ws.cell), foe.name])
 	var stood_at: Vector2i = foe.cell
 	var free_steps := 0
 	for _i in int(t.flee_hold):
@@ -3687,6 +3690,32 @@ func _roaming() -> void:
 		if ws.stage == "explore" and foe.cell == stood_at:
 			free_steps += 1
 	_check(free_steps == int(t.flee_hold), "and doesn't start the same fight for %d steps (%d)" % [int(t.flee_hold), free_steps])
+	# no ground to give: the cell behind is a wall, so the party keeps its cell and the foe still holds still
+	var stuck = _flow(861)
+	await stuck.new_run()
+	var ss = stuck.state
+	var sm = FloorMap.new()
+	sm.size = 4
+	sm.grid = [[0, 1, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 0, 1]]
+	sm.start = Vector2i(1, 1)
+	sm.stairs = Vector2i(3, 3)
+	sm.monsters = [foe]
+	foe.cell = Vector2i(1, 0)
+	foe.lurking = false
+	foe.hunting = false
+	foe.hold = 0
+	ss.floor_map = sm
+	ss.cell = Vector2i(1, 1)
+	ss.visited = {Vector2i(1, 1): true}
+	await stuck.go("intro", {"foe": foe})
+	var waited := 0
+	while ss.stage != "menu" and waited < 20:
+		if ss.hint == "ANY KEY CONTINUE":
+			await stuck.press("confirm")
+		await stuck.tick(stuck.clock + 500.0)
+		waited += 1
+	await stuck.press("4")
+	_check(ss.stage == "explore" and ss.cell == Vector2i(1, 1) and foe.hold == int(t.flee_hold), "with a wall behind, backing away leaves the party where it stood (stage %s, %s), and it holds still (%d)" % [ss.stage, str(ss.cell), foe.hold])
 	# the stairs are checked before anybody's turn
 	var last = _flow(862)
 	await last.new_run()
