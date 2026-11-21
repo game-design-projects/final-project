@@ -1,7 +1,7 @@
 ## Plays whole games with no window, to see that a run can be played from the start to the stairs without stalling.
 ## A simple autopilot presses keys (takes the floor's favour and finishes it, walks to the monster it chose for the first two
-## fights, keeping it until it is gone, then the stairs; picks menu entries at random, dodges at random) while the clock runs
-## in 16 ms frames.
+## fights, keeping it until it is gone, then the stairs; takes SPARE for the kin a spare favour names and picks the rest of the
+## menu at random, dodges at random) while the clock runs in 16 ms frames.
 ## Nothing is saved or shown; it prints one line per game.
 ##   godot --headless --path . -s res://tools/autoplay.gd                  seeds 1..5, the local mind
 ##   godot --headless --path . -s res://tools/autoplay.gd -- seed=7 mock    one seed, the seeded random mind

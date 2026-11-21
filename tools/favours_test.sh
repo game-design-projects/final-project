@@ -24,7 +24,11 @@ paid=$(grep -cE '^requests: .* is paid' "$log" || true)
 # Which askers wanted a rid or a spare, paired by name with the paid lines (a fetch pays without the walk back, so it can
 # not tell this path from a broken one).
 nonfetch=$(awk '
-	/^autoplay: seed [0-9]+ / { split("", wanted) } # a new game has its own names: another seed may reuse one for another kind
+	# a new game has its own names: another seed may reuse one for another kind, so neither map carries over
+	/^autoplay: seed [0-9]+ / {
+		split("", wanted)
+		split("", sparer)
+	}
 	/asks: / {
 		line = $0
 		if (line ~ /^lords: /) {
