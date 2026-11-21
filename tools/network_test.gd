@@ -343,6 +343,10 @@ func _a_mind_gone_wrong_cannot_stop_a_fight() -> void:
 	_check(SafeMind.DEADLINE_S > Network.TIMEOUT_S * (Network.RETRIES + 1) + Network.BACKOFF_S * 3.0, "export: the wait is longer than every try of one request, so a slow network is never cut short (%.0f s)" % SafeMind.DEADLINE_S)
 	var silent := SafeMind.new(Silent.new())
 	silent.deadline_s = 0.2
+	# the wait is counted in frames, and a frame is charged what the one before it took: started in the long frame the faults
+	# above were reported in, 0.2 s of it was over in 138 ms by the clock (CI), so the clock starts on a frame of its own
+	await process_frame
+	await process_frame
 	var began := Time.get_ticks_msec()
 	var odds: float = await silent.mercy(m)
 	var took := Time.get_ticks_msec() - began

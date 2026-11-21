@@ -41,9 +41,18 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **Mystery against guidance.** The map now charts the rest of a floor once 80% is seen, and a monster may carry a map of it.
   Does that read as a reward, or as the dungeon being given away?
 - **The spare and recruit loop.** Is SPARE ever the obvious move, and is the moment it becomes likely said before the choice?
+- **The commands beside FIGHT.** #163: a plain strike lands almost anywhere on its bar and a heavy one hits harder on four of
+  the five species even played badly. Does any tester reach for HEAVY, ACT, ITEM or FLEE without being told, and does a heavy
+  hit that lands *badly* feel like the risk it is meant to be?
 - **Names over heads.** A monster's name, an ally's, a trader's, the one asking a favour. Is anything ever named that is not
   on the screen?
+- **The row under the picture.** HP, GOLD, PARTY, FED (or HUNGRY/STARVING) at 11 px, and nerve beside the box while a fight is
+  on. Can a tester find gold and the party without being pointed at them (#164)?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
+- **A favour, all the way.** Someone asks for something on some floors; a lord of a clan asks more, asks again where its biome
+  comes back, and swears its clan when paid. Does a tester finish one, and can they say what they got?
+- **A chase that ends.** A hunter that cannot see you for five steps gives up for ten, and a pad carries a chaser across the
+  floor. Does a tester notice a chase end, or only that the monster left (#169)?
 - **Voices.** SETTINGS, SOUND, MONSTER VOICES. Whether a monster's voice helps it read as a character, or gets in the way.
 
 ## What to write down

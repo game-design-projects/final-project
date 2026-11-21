@@ -18,7 +18,7 @@ Each script prints one line per check and exits 1 if any failed. Your own saves 
 godot --headless --path . -s res://tools/<name>.gd -- nosave nosound
 ```
 
-Every script at the top of `tools/` is named in this doc, one line each, and both tables below name only `.gd` scripts in `tools/`, each row starting with its name in backticks; `python3 tools/doc_tools_test.py` fails when a tool is left out or a row does not name a `.gd` there.
+Every script at the top of `tools/` is named in this doc, one line each, and both tables below name only `.gd` scripts in `tools/`, each row starting with its name in backticks; `python3 tools/doc_tools_test.py` fails when a tool is left out or a row breaks either rule.
 
 | Script | Checks |
 | --- | --- |
