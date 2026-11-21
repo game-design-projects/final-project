@@ -1,0 +1,6 @@
+{
+ "_doc": "Experience and levels inside one run (rules/experience.gd, #162). Every fight you finish gives experience, and the way it ended does not matter: slain, spared, won over or sent on its way all teach the same. Backing out of a fight teaches nothing, so a monster can't be farmed by walking away and back. A champion gives its bonus on top. `levels` is how much experience each level takes, level 1 first, so a run can reach no more levels than it lists. `gain` is what a level adds: `max_hp` and the `heal` that comes with it, and `edge` to every strike that lands at every `edge_every` levels (2, 4, 6 ...).",
+ "xp": {"slain": 3, "spared": 3, "champion": 5},
+ "levels": [0, 8, 20, 36, 56, 80, 108, 140, 176, 216],
+ "gain": {"max_hp": 2, "heal": 2, "edge": 1, "edge_every": 2}
+}

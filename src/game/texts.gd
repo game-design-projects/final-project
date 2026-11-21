@@ -101,6 +101,42 @@ static func stronger(max_hp: int, healed: int) -> String:
 	return "You feel stronger: +%d max HP, +%d HP." % [max_hp, healed]
 
 
+# ---- levels (#162)
+
+## The banner's title when a level is reached: "LEVEL 3".
+static func level_title(level: int) -> String:
+	return "LEVEL %d" % level
+
+
+## What a level gave, as the picture says it: "2 more max HP, 2 health back, and every strike hits 1 harder."
+static func level_gain(gain: Dictionary, healed: int) -> String:
+	return "%s." % level_parts(gain, healed)
+
+
+## And as the log says it, in front of the verdict: what the fight taught stays the record of it.
+static func level_reached(level: int, gain: Dictionary, healed: int) -> String:
+	return "You reach LEVEL %d: %s." % [level, level_parts(gain, healed)]
+
+
+## Where the run stands, for the camp: "LEVEL 3: 12 of 20 toward the next.", or the top level's own words.
+static func level_held(level: int, at: Dictionary) -> String:
+	if int(at.need) <= 0:
+		return "LEVEL %d: every level there is." % level
+	return "LEVEL %d: %d of %d toward the next." % [level, int(at.into), int(at.need)]
+
+
+## What a level gave, in the words both of those share.
+static func level_parts(gain: Dictionary, healed: int) -> String:
+	var parts := []
+	if int(gain.get("max_hp", 0)) > 0:
+		parts.append("%d more max HP" % int(gain.max_hp))
+	if healed > 0:
+		parts.append("%d health back" % healed)
+	if int(gain.get("edge", 0)) > 0:
+		parts.append("every strike hits %d harder" % int(gain.edge))
+	return ", ".join(parts) if not parts.is_empty() else "a little stronger"
+
+
 ## What backing away cost.
 static func flee_cost(foe, gold: int) -> String:
 	return "You back away%s. %s won't forget it." % [", dropping %d gold" % gold if gold > 0 else "", foe.name]

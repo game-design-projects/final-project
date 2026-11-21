@@ -23,7 +23,8 @@ The order matters less than the coverage; the numbers are ten-minute blocks.
 2. **A walk.** Arrows or WASD, ENTER to camp, **M** for the whole floor's map, **I** for what is around, **K** for
    achievements. Turn round, walk into a monster, and try the fight.
 3. **A fight.** FIGHT at the right moment, HEAVY, ACT, SPARE, FLEE. The dodge box is the part to watch: does a glowing
-   square, its colour and the marks on it read as "this will land here, now", and can a tester step off in time?
+   square, its colour and the marks on it read as "this will land here, now", and can a tester step off in time? After two or
+   three fights, ask what the level they reached said and what it gave them (#162).
 4. **The things a floor hides.** A cracked wall (walk into it), the chest behind it, a pad, the writing on a wall, the stairs,
    and a trader (floors 2 and 4, or below a market stair). Press **M** once 80% of a floor is seen: does the rest of the
    layout appearing help, or steal the mystery?
@@ -47,8 +48,11 @@ These are the open questions, not the fixed ones. A note is most useful when it 
   hit that lands *badly* feel like the risk it is meant to be?
 - **Names over heads.** A monster's name, an ally's, a trader's, the one asking a favour. Is anything ever named that is not
   on the screen?
-- **The row under the picture.** HP, GOLD, PARTY, FED (or HUNGRY/STARVING) at 11 px, and nerve beside the box while a fight is
-  on. Can a tester find gold and the party without being pointed at them (#164)?
+- **The row under the picture.** LVL, HP with the thin level fill under it, GOLD, PARTY, FED (or HUNGRY/STARVING) at 11 px,
+  and nerve beside the box while a fight is on. Can a tester find gold and the party without being pointed at them (#164)?
+- **A level.** #162: every fight teaches experience, however it ended, and enough makes a level (2 more max HP and the health
+  with it, and every second level a harder strike). Does a tester notice the banner and the row's fill, and can they say what
+  the level gave them?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
 - **A favour, all the way.** Someone asks for something on some floors; a lord of a clan asks more, asks again where its biome
   comes back, and swears its clan when paid. Does a tester finish one, and can they say what they got?

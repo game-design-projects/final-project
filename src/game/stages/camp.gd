@@ -2,9 +2,11 @@
 ## turn, and no monster moves while you sit. Butchering asks once more, with NO picked first.
 extends "res://src/game/stages/list_stage.gd"
 
+const Experience = preload("res://src/rules/experience.gd")
 const Items = preload("res://src/rules/items.gd")
 const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const State = preload("res://src/game/state.gd")
+const Texts = preload("res://src/game/texts.gd")
 const Survival = preload("res://src/rules/survival.gd")
 
 var _acts: Array = [] # what each line of the menu does: [what, on what]
@@ -15,6 +17,8 @@ func enter(flow, _args: Dictionary) -> void:
 	_asking = null
 	flow.state.vignette = "camp"
 	var lines := [State.sys_line(Survival.line("camp"))]
+	if flow.state.level() > 1: # sitting down is where the run says what it has become (#162)
+		lines.append(State.sys_line(Texts.level_held(flow.state.level(), Experience.within(flow.state.xp))))
 	if not flow.state.keepsakes.is_empty(): # a look at what the champions left
 		lines.append(State.sys_line(str(Keepsakes.table().held) % Keepsakes.held_words(flow.state)))
 	flow.state.say(lines)
