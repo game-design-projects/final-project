@@ -12,6 +12,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dance = preload("res://src/rules/minigames/dance.gd")
 const Encounter = preload("res://src/game/encounter.gd")
+const Experience = preload("res://src/rules/experience.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
@@ -1798,11 +1799,18 @@ func _gate() -> void:
 	map.free()
 
 	var hp: int = s.max_hp
+	var level_before: int = s.level()
 	s.hp = 5
 	await flow.tick(flow.clock + 1000.0)
 	await flow.press("confirm")
 	await flow.encounter.defeat(boss, "slain")
-	_check(s.max_hp == hp + Floors.boss_reward().max_hp and s.hp == 5 + Floors.boss_reward().heal, "beating a champion leaves you stronger (%d/%d)" % [s.hp, s.max_hp])
+	# the champion's reward, and the level its experience taught on top of it (#162)
+	var level_hp := 0
+	var level_heal := 0
+	for level in range(level_before + 1, s.level() + 1):
+		level_hp += int(Experience.gain(level).max_hp)
+		level_heal += int(Experience.gain(level).heal)
+	_check(s.max_hp == hp + Floors.boss_reward().max_hp + level_hp and s.hp == mini(s.max_hp, 5 + Floors.boss_reward().heal + level_heal), "beating a champion leaves you stronger, and the level it taught adds to it (%d/%d, LVL %d)" % [s.hp, s.max_hp, s.level()])
 	_check(s.banner != null and s.banner.text.contains("stronger"), "and says so")
 	await flow.tick(flow.clock + 1000.0)
 	if s.stage == "keepsake": # it left keepsakes (the feature keepsakes has checks of its own)

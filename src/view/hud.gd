@@ -7,6 +7,7 @@ extends Control
 const Badges = preload("res://src/view/badges.gd")
 const Fonts = preload("res://src/view/fonts.gd")
 const Content = preload("res://src/rules/content.gd")
+const Experience = preload("res://src/rules/experience.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const ChoicePopup = preload("res://src/view/choice_popup.gd")
 const Overlay = preload("res://src/view/overlay.gd")
@@ -352,13 +353,15 @@ static func toughness_tag(s) -> String:
 # ---------------------------------------------------------------- the status row
 
 ## What the status row says, in the order it draws it: every piece that matters is always there and labelled (#164: the
-## playtest could not find gold, and never learned hunger or the party were things to watch).
+## playtest could not find gold, and never learned hunger or the party were things to watch), and the level a run has reached
+## (#162), whose fill toward the next is the thin line under the health bar.
 func status_pieces() -> Array:
 	if state == null:
 		return []
 	var fed := hunger_word()
 	var out := [
-		["HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU],
+		["LVL ", Palette.DIM], ["%d" % state.level(), Palette.INK],
+		["  HP ", Palette.DIM], ["%d/%d" % [maxi(0, state.hp), state.max_hp], Palette.YOU],
 		["  GOLD ", Palette.DIM], ["%d" % state.gold, Palette.MERCY],
 		["  PARTY ", Palette.DIM], ["%d" % state.party_size(), Palette.MERCY],
 	]
@@ -405,6 +408,15 @@ func _status() -> void:
 	var moving := trend()
 	if moving != 0:
 		_trend_arrow(Vector2(bar.position.x + bar.size.x * frac, bar.get_center().y), moving)
+	# the level's fill, under the health bar and as wide: what the run has learned toward the next level (#162)
+	var fill := Rect2(bar.position.x, bar.position.y + bar.size.y + 2.0, bar.size.x, 2.0)
+	draw_rect(fill, Palette.FAINT)
+	draw_rect(Rect2(fill.position, Vector2(fill.size.x * level_frac(), fill.size.y)), Palette.MERCY if level_frac() >= 1.0 else Palette.INK)
+
+
+## How far between the level reached and the next, 0..1: full at the top level.
+func level_frac() -> float:
+	return Experience.frac(state.xp) if state != null else 0.0
 
 
 ## Which way your health is moving: -1, 0 or 1, for a moment after it changed. Like the arrow on a flight display's speed tape.

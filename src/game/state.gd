@@ -8,6 +8,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Clans = preload("res://src/rules/clans.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
+const Experience = preload("res://src/rules/experience.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Items = preload("res://src/rules/items.gd")
 const Keepsakes = preload("res://src/rules/keepsakes.gd")
@@ -60,6 +61,7 @@ var reputation := {} # clan -> how it thinks of you, -100..100 (rules/clans.gd)
 var deeds: Array = [] # {clan, species, who, deed}: what you did to whom, oldest first
 var questers_met: Array = [] # the names of the ones who asked a favour and were heard: kept after their floor, as deeds keep the ones fought
 var items: Array = [] # item ids in the bag (rules/items.gd)
+var xp := 0 # experience learned this run: what level it makes is rules/experience.gd (#162)
 var sharpened := 0 # what a whetstone adds to your next strike that lands
 var heavy_known := {} # species -> true, once a heavy strike has shown you how it takes one
 var vignette := "" # what the walk has stopped at, for the picture to show (view/vignette.gd): set by the stage, "" on the walk; never saved
@@ -96,6 +98,16 @@ var menu: Array = [] # [{label, sub, gold}]
 var selected := 0
 var hint := "" # the key hints for this stage
 var mind_rows: Array = [] # what the mind answered last, [{id, label, answer}], for the debug panel and tooltips
+
+
+## The level the run has reached from the experience it has learned (rules/experience.gd).
+func level() -> int:
+	return Experience.level_at(xp)
+
+
+## What the levels reached add to every strike that lands, on top of the party's aid and a whetstone.
+func strike_edge() -> int:
+	return Experience.edge(level())
 
 
 ## How many of the party count against its limit: a friend who isn't a monster takes nobody's place.
@@ -190,7 +202,7 @@ func spot() -> void:
 
 ## "spared 1 · slain 0 · 8 gold", for the log when you come back to a save.
 func summary() -> String:
-	return "HP %d/%d · gold %d · spared %d · slain %d" % [hp, max_hp, gold, tally.spared, tally.slain]
+	return "LVL %d · HP %d/%d · gold %d · spared %d · slain %d" % [level(), hp, max_hp, gold, tally.spared, tally.slain]
 
 
 ## The names of the monsters met this run as far as it remembers them (upper case -> true): the floor you are on (or leaving),
@@ -236,6 +248,8 @@ func to_dict() -> Dictionary:
 		out.practice = true # only then, so a save from any other floor reads as it always did
 	if not skills.is_empty(): # a save made without skill-combat stays as it was
 		out.skills = skills.duplicate()
+	if xp > 0: # a run that has learned nothing saves as it always did
+		out.xp = xp
 	if not keepsakes.is_empty(): # and so does one with no keepsake taken
 		out.keepsakes = keepsakes.duplicate()
 	if not questers_met.is_empty(): # and one whose run has heard nobody asking
@@ -306,6 +320,7 @@ static func from_dict(d: Dictionary):
 		if Items.known(str(id)):
 			Items.carry(s, str(id))
 	s.sharpened = maxi(0, SaveCheck.to_int(d.sharpened)) if SaveCheck.is_num(d.get("sharpened")) else 0
+	s.xp = maxi(0, SaveCheck.to_int(d.xp)) if SaveCheck.is_num(d.get("xp")) else 0 # a save from before experience is level 1
 	for id in d.get("skills", []) if d.get("skills") is Array else []:
 		Skills.learn(s.skills, str(id))
 	for id in d.get("keepsakes", []) if d.get("keepsakes") is Array else []:

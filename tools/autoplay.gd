@@ -80,10 +80,10 @@ func _play(seed_value: int) -> bool:
 		await _press_something(flow)
 		_stage_counts[flow.state.stage] = _stage_counts.get(flow.state.stage, 0) + 1
 	var done: bool = flow.state.stage == "end" and flow.state.run_over
-	print("autoplay: seed %d %s after %.0f s of game time · spared %d slain %d fled %d recruited %d · HP %d/%d · retries %d" % [
+	print("autoplay: seed %d %s after %.0f s of game time · spared %d slain %d fled %d recruited %d · HP %d/%d · LVL %d · retries %d" % [
 		seed_value, "reached the last stairs on B%dF" % flow.state.depth if done else "DID NOT FINISH (stage %s)" % flow.state.stage, t / 1000.0,
 		flow.state.tally.spared, flow.state.tally.slain, flow.state.tally.fled, flow.state.tally.recruited,
-		flow.state.hp, flow.state.max_hp, _retries])
+		flow.state.hp, flow.state.max_hp, flow.state.level(), _retries])
 	print_verbose("autoplay: stages %s" % [_stage_counts])
 	print_verbose("autoplay: events %s" % [_event_counts])
 	return done

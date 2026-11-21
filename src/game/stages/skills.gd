@@ -45,7 +45,7 @@ func pick(flow, index: int) -> void:
 	var attacks: bool = Skills.damage(f, id, m.boss) > 0
 	var bonus := 0
 	if attacks:
-		bonus = Social.strike_bonus(m) + Combat.party_aid(s.party_size()) + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
+		bonus = Social.strike_bonus(m) + Combat.party_aid(s.party_size()) + s.strike_edge() + s.sharpened + (Combat.HOARD_FIRE_BONUS if s.has_ally("dragon") else 0)
 		bonus += Combat.nerve_damage(flow.encounter.spend_nerve()) + (Keepsakes.TOOTH_DAMAGE if Keepsakes.has(s, "sharp_tooth") else 0)
 	var did: Dictionary = Skills.use(f, id, m.boss, bonus)
 	print("skills: %s on %s: %s, %d energy left" % [id, m.name, did, f.energy])

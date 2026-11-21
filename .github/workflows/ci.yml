@@ -132,6 +132,12 @@ jobs:
         run: |
           set -euo pipefail
           tools/check.sh res://tools/features_test.gd -- nosave nosound
+      # What a finished fight teaches: the experience, the levels it makes and what each gives, a kill and a spare the same,
+      # the champion's news taking the picture over it, the save (an older one reading as level 1), and the status row's own.
+      - name: Check the experience and levels
+        run: |
+          set -euo pipefail
+          tools/check.sh res://tools/experience_test.gd -- nosave nosound
       # What outlasts a run: achievements, Legacy, hunger, camp and butchering, and a save without any of them.
       - name: Check what outlasts a run
         run: |
