@@ -42,6 +42,6 @@ data/  assets/  proxy/  tools/  docs/
 
 图集由 `tools/art/process.py` 从 Codex 出的表切成，`data/sprites.json` 记录每一帧的位置，`view/sprites.gd` 读它。怪物在走路和战斗里用同一套图：`figure_anim.gd` 决定此刻显示哪个动作的哪一帧，`figure.gd` 把它放进 3D，`battle_art.gd` 把它画进战斗层。
 
-测试房间（`rules/test_room.gd`，功能开关 `test-room`）不是一局游戏：`flow.test_room()` 把 `State.testing` 置真，按 `data/kinds.json` 现场摆出一层楼（每层的种类一排、每族一个精英、五个首领）；`flow.go()` 在战斗开始时把 `depth` 设成这只怪所在的楼层，回到行走时用进门那一刻的 `State.to_dict()` 把怪和队伍（`ROOM_PARTY` 列出的字段）还原。存档、成就、余烬、饥饿、巡逻、提示都看 `testing` 跳过。
+测试房间（`rules/test_room.gd`，功能开关 `test-room`）不是一局游戏：`flow.test_room()` 把 `State.testing` 置真，按 `data/kinds.json` 现场摆出一层楼（每层的种类一排、每族一个精英、五个首领），起点旁的过道上站着某族的领主，问一件它要的东西（试炼房只付得起 fetch）；`flow.go()` 在战斗开始时把 `depth` 设成这只怪所在的楼层，回到行走时用进门那一刻的 `State.to_dict()` 把怪、委托人、它要的东西和队伍（`ROOM_PARTY` 列出的字段）还原。存档、成就、余烬、饥饿、巡逻、提示都看 `testing` 跳过。
 
 世界“温度”（`rules/warmth.gd`）不存盘，从 tally、butchered、left_behind、meals 推导，所以旧存档自动有温度，重试战斗也会回退。`stage` 每帧读它，改墙缝强度，等级变化时重建墙饰；`rules/moods.gd` 决定每张脸显示什么。设计见 [ART.md](ART.md)。

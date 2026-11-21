@@ -181,7 +181,8 @@ func test_room() -> void:
 
 ## The test room's two rules, as the stage changes. A fight begins: it runs at the pace of the floor its monster is from. The
 ## walk resumes after one, however it ended: everyone is back in their place, whole and as they first were, and so is the party
-## (its health, gold, bag, friends and what the clans think of it). Where you stand, the map and the log stay.
+## (its health, gold, bag, friends and what the clans think of it). Whoever is asking, and the thing a favour wants, come back
+## with them. Where you stand, the map and the log stay.
 func _in_test_room(from: String, to: String, args: Dictionary) -> void:
 	if to == "intro":
 		state.depth = TestRoom.depth_of(args.foe)
@@ -194,6 +195,8 @@ func _in_test_room(from: String, to: String, args: Dictionary) -> void:
 		for field in ROOM_PARTY:
 			state.set(field, fresh.get(field))
 		state.floor_map.monsters = fresh.floor_map.monsters
+		state.floor_map.quester = fresh.floor_map.quester
+		state.floor_map.pickups = fresh.floor_map.pickups
 		state.depth = 1
 		state.struggle = 0.0
 		state.nerve = 0
