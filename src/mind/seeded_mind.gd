@@ -7,6 +7,7 @@ const Content = preload("res://src/rules/content.gd")
 const Feelings = preload("res://src/rules/feelings.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const Rng = preload("res://src/utils/rng.gd")
+const Words = preload("res://src/mind/words.gd")
 
 var _rng: Rng
 
@@ -22,6 +23,11 @@ func label() -> String:
 func read_words(_text: String) -> Dictionary:
 	var ids: Array = Content.table("words").cues.keys() + ["other", "gibberish"]
 	return _random_odds(ids)
+
+
+## Not at random: whether a typed line passes is the player's doing, so the rules judge it and a seeded game stays the same.
+func sounds_like(text: String, what: String) -> float:
+	return Words.sounds_like(text, what)
 
 
 func feeling_when_hit(_m) -> Dictionary:

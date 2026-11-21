@@ -46,6 +46,10 @@ func read_words(text: String) -> Dictionary:
 	return await _guard("read_words", func(): return await _inner.read_words(text), is_odds, func(): return await _spare.read_words(text), LAST_WORDS)
 
 
+func sounds_like(text: String, what: String) -> float:
+	return await _guard("sounds_like", func(): return await _inner.sounds_like(text, what), is_chance, func(): return await _spare.sounds_like(text, what), 0.0)
+
+
 func feeling_when_hit(m) -> Dictionary:
 	return await _guard("feeling_when_hit", func(): return await _inner.feeling_when_hit(m), is_odds, func(): return await _spare.feeling_when_hit(m), LAST_FEELING)
 

@@ -6,34 +6,34 @@
   {
    "name": "EMBERLING",
    "hp": 28,
-   "lore": "The youngest of the Hoard, Vexalith's brood. Nobody has ever talked back to it."
+   "lore": "The youngest of the Hoard, Vexalith's brood. The Burrow has drawn it on every wall."
   },
   {
    "name": "CINDERA",
    "hp": 36,
-   "lore": "The walls here are scratched with tally marks: everyone the Hoard threw down before you."
+   "lore": "It cuts a mark for every thief the gold lures down. The Crew's marks fill a wall."
   },
   {
    "name": "ASHKA",
    "hp": 44,
-   "lore": "The Crew and the Coil pay it to look away. The Burrow and the Old Stone just hide."
+   "lore": "It burns thieves on sight. The Coil tells it where the Crew hides, and calls that even."
   },
   {
    "name": "SCORIA",
    "hp": 50,
-   "lore": "You can hear the Last Door now, breathing somewhere under the floor."
+   "lore": "The Old Stone goes quiet this deep. Under the floor, the Last Door is breathing."
   },
   {
    "name": "VEXALITH",
    "hp": 56,
-   "lore": "It has waited at the Last Door a long time for someone who wasn't alone."
+   "lore": "It built all this to catch the greedy, and waits at the Last Door for one who isn't alone."
   }
  ],
  "premise": {
   "title": "THE LAST DOOR",
   "banner": "Five floors down, and the only way out.",
   "door": "It only opens for someone who is not alone.",
-  "line": "You robbed the Hoard. It threw you down here, five floors above the Last Door."
+  "line": "You reached for the Hoard's gold. It was bait. The Last Door is five floors down."
  },
  "test_room": {
   "header": "TEST ROOM",

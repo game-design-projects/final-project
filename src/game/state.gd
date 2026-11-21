@@ -6,6 +6,7 @@ const Ally = preload("res://src/game/ally.gd")
 const Chart = preload("res://src/rules/chart.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Clans = preload("res://src/rules/clans.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Content = preload("res://src/rules/content.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -43,7 +44,10 @@ var quarter_turns := 0 # every quarter turn made, right +1 and left -1, adding u
 var visited := {} # Vector2i -> true: cells you stood in
 var in_sight := {} # Vector2i -> true: the cells the camera sees right now; worked out again by `look`
 var seen := {} # Vector2i -> true: cells you saw from where you stood (rules/vision.gd), for the automap
-var lords_met: Array = [] # the clans whose lord was paid a favour this run (rules/lords.gd)
+var lords_met: Array = [] # the clans whose lord was paid a favour this run (rules/lords.gd), or heard out in its hall (rules/envoys.gd)
+var errands := {} # the clans' requests this run: id -> {taken, done, n} (rules/envoys.gd)
+var gates: Array = [] # the clans whose teleporter is open: two requests done, and its hall not visited yet
+var visiting := "" # the clan whose hall you are in, off the run's count of floors (rules/clan_hall.gd); "" on a floor of the run
 var lords_sworn: Array = [] # and those sworn to you by its second favour
 var lords_warren: Array = [] # a sworn lord that had no place in the party opens its clan's warren on the next stairs
 var charted := {} # Vector2i -> true: cells not seen yet whose layout a map or your instinct told you (rules/chart.gd)
@@ -244,6 +248,12 @@ func to_dict() -> Dictionary:
 		out.charted = charted.keys().map(func(c): return [c.x, c.y])
 	if not lords_met.is_empty():
 		out.lordsMet = lords_met.duplicate()
+	if not errands.is_empty():
+		out.errands = errands.duplicate(true)
+	if not gates.is_empty():
+		out.gates = gates.duplicate()
+	if visiting != "":
+		out.visiting = visiting
 	if not lords_sworn.is_empty():
 		out.lordsSworn = lords_sworn.duplicate()
 	if not lords_warren.is_empty():
@@ -277,6 +287,12 @@ static func from_dict(d: Dictionary):
 	for clan in d.get("lordsMet", []) if d.get("lordsMet") is Array else []:
 		if Clans.is_clan(str(clan)) and not s.lords_met.has(str(clan)):
 			s.lords_met.append(str(clan))
+	s.errands = Envoys.from_saved(d.get("errands"))
+	for clan in d.get("gates", []) if d.get("gates") is Array else []:
+		if Envoys.is_clan(str(clan)) and not s.gates.has(str(clan)):
+			s.gates.append(str(clan))
+	if d.get("visiting") is String and Envoys.is_clan(str(d.visiting)):
+		s.visiting = str(d.visiting)
 	for clan in d.get("lordsSworn", []) if d.get("lordsSworn") is Array else []:
 		if Clans.is_clan(str(clan)) and not s.lords_sworn.has(str(clan)):
 			s.lords_sworn.append(str(clan))

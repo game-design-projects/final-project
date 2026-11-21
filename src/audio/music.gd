@@ -3,7 +3,8 @@
 ## fanfare at the stairs. A sting takes the loops out of its way, and the exploring music comes back after it has rung
 ## out and a few seconds more. The tracks are in assets/audio/.
 ## With the feature `hum-theme` (`hum`), Abdulla's hum theme takes the loops' place: its exploring loop, and its combat loop in
-## every fight. The stings stay the same either way.
+## every fight. With the feature `music-set` (`music_set`) a fight plays the theme of who it is with instead, from his music set:
+## a monster, a champion, or the last champion. The stings stay the same either way.
 ## A loop's fade belongs to the player it fades, and a new fade cancels the old one on the same player, so an old fade
 ## can never stop what a newer one has started. A battle theme gets a player of its own for each fight.
 extends Node
@@ -19,6 +20,12 @@ const STINGS := ["victory", "fanfare"]
 ## The hum theme (tools/music/hum-theme/): one exploring loop of 174.55 s (88 BPM) and one combat loop of 65.45 s (176 BPM).
 const HUM_EXPLORE := "res://assets/audio/hum-explore.ogg"
 const HUM_BATTLES := ["hum-combat"]
+## The music set (tools/music/music-set/): a fight's loop by who the fight is with. The piano battle and the boss theme are 41.86 s,
+## the final-boss theme 45.33 s.
+const SET_BATTLES := {"fight": "set-fight", "boss": "set-boss", "final": "set-final"}
+## Its tracks measure 0.9 dB over the hum theme's combat loop (-16.2 against -17.1 dBFS mean), so they play 2 dB under VOLUME where
+## that loop plays 1 under: a fight is as loud as it was.
+const SET_TRIM_DB := -2.0
 ## It is mastered 1 dB hotter than the old music (-18 and -16 dBFS RMS), so it plays 1 dB under the same VOLUME.
 const HUM_TRIM_DB := -1.0
 ## The tracks are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings). These levels put a fight
@@ -46,6 +53,8 @@ const TRIAL := {"play": [25.0, 35.0], "rest": [4.0, 8.0], "volume": 0.58}
 var enabled := true
 ## True with the feature `hum-theme`: the hum theme's loops instead of the old ones. Set before the node enters the tree.
 var hum := false
+## True with the feature `music-set`: a fight's theme is the music set's, by who the fight is with. Set before the node enters the tree.
+var music_set := false
 ## The motifs on trial, as streams in their order: none (as a shipped game has) leaves the music as it always was.
 var motifs: Array = []
 ## () -> float in [0, 1), for the pacing and the choice of theme (tests drive it).
@@ -55,6 +64,7 @@ var _explore: AudioStreamPlayer
 var _battle: AudioStreamPlayer # this fight's theme, or null
 var _battle_name := ""
 var _last_battle := ""
+var _foe := "fight" # who the next fight is with: "fight" (a monster), "boss" (a champion) or "final" (the last one)
 var champion := false # the fight is a champion's: its theme is fixed rather than picked
 var _sting: AudioStreamPlayer
 var _mode := ""
@@ -76,7 +86,7 @@ var _motif_turn := true # whose turn the next stretch is
 func _ready() -> void:
 	if not enabled:
 		return
-	print("music: %s" % ("the hum theme" if hum else "the passacaglia and four battle themes"))
+	print("music: %s%s" % ["the hum theme" if hum else "the passacaglia and four battle themes", ", and the music set's fights" if music_set else ""])
 	_explore = _player(Mix.MUSIC_IN)
 	_explore.stream = _stream(explore_path())
 	_explore.volume_db = SILENT_DB
@@ -89,6 +99,12 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	advance(dt)
+
+
+## Who the next fight is with, said before `set_mode("battle")`: "fight" (a monster), "boss" (a champion) or "final" (the last
+## champion). The music set has a theme for each; without it, it changes nothing.
+func fight_with(who: String) -> void:
+	_foe = who if SET_BATTLES.has(who) else "fight"
 
 
 ## "explore", "battle" (a random theme, not the last one's) or "silence".
@@ -204,13 +220,17 @@ func explore_path() -> String:
 	return HUM_EXPLORE if hum else EXPLORE
 
 
-## The fights' themes: the hum theme's one, or the four old ones.
+## The fights' themes: the music set's three, or the hum theme's one, or the four old ones.
 func battles() -> Array:
+	if music_set:
+		return SET_BATTLES.values()
 	return HUM_BATTLES if hum else BATTLES
 
 
 ## A theme that is not the last one's, unless there is only the one.
 func pick_battle() -> String:
+	if music_set: # the music set: the theme of who the fight is with
+		return str(SET_BATTLES[_foe])
 	var all := battles()
 	if champion and all.has(CHAMPION_THEME):
 		return CHAMPION_THEME
@@ -229,7 +249,7 @@ func _start_battle() -> void:
 	_battle.stream = stream
 	_battle.volume_db = SILENT_DB
 	_battle.play()
-	_fade(_battle, _level("battle"), FADES.battle["in"])
+	_fade(_battle, linear_to_db(VOLUME.battle) + SET_TRIM_DB if music_set else _level("battle"), FADES.battle["in"])
 	print_verbose("music: battle theme %s" % _battle_name)
 
 

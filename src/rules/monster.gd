@@ -34,6 +34,7 @@ var social := {} # bounded structured social memory, persisted with this individ
 var mood := {} # temporary state; empty in old saves
 var last_intent := ""
 var spoke := false # it only hears one line per fight
+var strikes := {} # {"light": n, "heavy": n}: the strikes you tried on it this fight (rules/envoys.gd asks whether it was won heavy); not saved
 var threshold := 0.0 # how friendly it must be before it will join
 var turn := 0
 var gone := "" # "", "spared" or "slain"

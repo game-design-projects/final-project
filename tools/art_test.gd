@@ -10,6 +10,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Decor = preload("res://src/view/decor.gd")
 const DungeonMesh = preload("res://src/view/dungeon_mesh.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Figure = preload("res://src/view/figure.gd")
 const Palette = preload("res://src/view/palette.gd")
 const FigureAnim = preload("res://src/view/figure_anim.gd")
@@ -25,6 +26,7 @@ const Opening = preload("res://src/view/opening.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Sprites = preload("res://src/view/sprites.gd")
+const Vignette = preload("res://src/view/vignette.gd")
 const State = preload("res://src/game/state.gd")
 const WallArt = preload("res://src/view/wall_art.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
@@ -40,6 +42,8 @@ func _name() -> String:
 
 func _run() -> void:
 	_the_atlases_are_whole()
+	_the_lords_have_their_own_drawings()
+	_what_the_walk_stops_at_is_drawn()
 	_a_figure_moves_without_jumps()
 	_warmth_is_read_off_the_deeds()
 	_no_plain_wall_carries_a_crack()
@@ -100,6 +104,54 @@ func _the_atlases_are_whole() -> void:
 	for drawing in WallArt.SIZE:
 		_check(Sprites.sheet("decor").frames.has(drawing) and WallArt.DOWN.has(drawing), "the wall has a %s to hang" % drawing)
 	_check(Sprites.texture("keyart") != null, "the title has its picture")
+
+
+## A clan's lord is drawn from its own sheet, made from one drawing: it breathes and blinks, and stands taller than its kind.
+func _the_lords_have_their_own_drawings() -> void:
+	for clan in Envoys.clans():
+		var species := str(Envoys.entry(clan).species)
+		var look := Sprites.lord_look(species)
+		_check(look == "lord_%s" % species and Sprites.has(look), "the lord of %s has a drawing of its own (%s)" % [clan, look])
+		var sheet := Sprites.sheet(look)
+		var imported := ConfigFile.new()
+		imported.load(str(sheet.file) + ".import")
+		_check(imported.get_value("params", "mipmaps/generate", false), "%s's atlas has mipmaps" % look)
+		_check(Sprites.has_action(look, "idle") and int(Sprites.action(look, "idle").count) == 6, "%s breathes and blinks: an idle of six frames" % look)
+		_check(Rect2(Vector2.ZERO, Sprites.texture(look).get_size()).encloses(Sprites.frame_rect(look, "idle", 5)), "%s's last frame is on its atlas" % look)
+		_check(float(sheet.world_h) > float(Sprites.sheet(species).world_h), "%s stands taller than a %s (%.2f against %.2f)" % [look, species, float(sheet.world_h), float(Sprites.sheet(species).world_h)])
+		var body = Figure.make(look, Palette.MERCY, 3)
+		_check(body.top() >= float(sheet.world_h), "its name floats over its head, not across it (%.2f)" % body.top())
+		var anim = FigureAnim.new(look, 3)
+		var seen := {}
+		for at in _watch(anim, 0.0, 12.0):
+			seen[int(at.frame)] = true
+		_check(seen.has(0) and seen.has(2) and seen.has(5), "over twelve seconds it breathes in and blinks (frames %s)" % str(seen.keys()))
+		anim.hurt(1.0) # it has no drawing of a hit or a hop: neither may reach for one
+		anim.hop(1.0)
+		_check(str(anim.tick(1.05).act) == "idle", "a hit and a hop keep the one drawing it has")
+		body.free()
+	_check(Sprites.lord_look("dragon") == "dragon", "a species with no lord's drawing keeps its own")
+
+
+## Every picture a stage may stop at (view/vignette.gd) is a drawing of the events sheet, and so is each part that moves.
+func _what_the_walk_stops_at_is_drawn() -> void:
+	var sheet := Sprites.sheet(Vignette.SHEET)
+	var imported := ConfigFile.new()
+	imported.load(str(sheet.file) + ".import")
+	_check(imported.get_value("params", "mipmaps/generate", false), "the events atlas has mipmaps: its pictures are drawn small")
+	var bounds := Rect2(Vector2.ZERO, Sprites.texture(Vignette.SHEET).get_size())
+	for id in Vignette.KNOWN + ["gate_bars", "gate_chain"]:
+		_check(sheet.frames.has(id) and bounds.encloses(Sprites.drawing_rect(Vignette.SHEET, id)), "the events sheet has a drawing of the %s" % id)
+	var box := Rect2(40.0, 20.0, 200.0, 100.0)
+	for id in Vignette.KNOWN:
+		var to := Vignette.fit(id, box)
+		_check(box.grow(0.01).encloses(to) and (is_equal_approx(to.size.x, box.size.x) or is_equal_approx(to.size.y, box.size.y)), "the %s fills its box and stays inside it (%s)" % [id, to])
+	for part in Vignette.KEEPSAKES + Vignette.DOOR_HANDLES + Vignette.RAYS + [Vignette.FLAME_FOOT, Vignette.GATE_BARS, Vignette.GATE_CHAIN, Vignette.DOORWAY]:
+		_check(Rect2(0, 0, 1, 1).grow(0.001).encloses(part), "a part of a drawing lies inside it (%s)" % part)
+	var gate := Vignette.fit("gate", box)
+	_check((Vignette.GATE_BARS.end.y + Vignette.GATE_DROP) * gate.size.y < gate.size.y, "the bars stop short of the floor when they are all the way down")
+	for step in Vignette.STEPS_DOWN + Vignette.STEPS_UP:
+		_check(step.x > 0.0 and step.x < 1.0 and step.y >= 0.0 and step.y < 1.0, "a tread is on its stairs (%s)" % step)
 
 
 ## A figure's frames at 60 steps a second: which it shows, and that the frame moves by at most one at a time within an action.

@@ -33,7 +33,7 @@ const RENDERED_KINDS := [
 	"join_party", "leave_peacefully", "attack_monster",
 ]
 ## The kinds written since, which the synthesised voice says until tools/voices renders them; then they move to the list above.
-const AWAITING_RENDER := ["pleased", "stung", "hurt", "scared", "puzzled", "kin_spared", "kin_slain", "side_spared", "side_slain"]
+const AWAITING_RENDER := ["pleased", "stung", "hurt", "scared", "puzzled", "kin_spared", "kin_slain", "friend_spared", "friend_slain", "rival_slain", "rival_kept"]
 
 
 ## Stands in for the effects: remembers what it was asked to play.
@@ -61,6 +61,11 @@ class FakeMusic:
 	extends RefCounted
 	var calls: Array = []
 	var champion := false # set by an encounter's boss flag (#167)
+
+	var foes: Array = [] # who each fight was said to be with
+
+	func fight_with(who: String) -> void:
+		foes.append(who)
 
 	func set_mode(mode: String) -> void:
 		calls.append("mode:" + mode)
@@ -97,6 +102,7 @@ func _run() -> void:
 	await _music_fades()
 	await _motifs()
 	await _hum_theme()
+	await _music_set()
 	_finish()
 
 
@@ -627,6 +633,51 @@ func _motifs() -> void:
 	_check(one == [2], "motif=N keeps that one")
 	_check(Music.pick_motifs([1, 2, 3], "") == [1, 2, 3], "without it, all of them")
 	_check(Music.pick_motifs([1, 2, 3], "9") == [1, 2, 3], "and a number that isn't one is ignored")
+
+
+## The music set: with it a fight plays the theme of who it is with (a monster, a champion, the last champion), each looping
+## whole, over the hum theme's exploring loop; without it every fight plays the hum theme's combat loop.
+func _music_set() -> void:
+	var m = _music(true)
+	m.music_set = true
+	await process_frame
+	m.set_mode("explore")
+	_check(m.loop_player("explore").stream.resource_path == Music.HUM_EXPLORE, "the music set leaves the exploring loop as it was")
+	var lengths := {"fight": 41.86, "boss": 41.86, "final": 45.33}
+	for who in ["fight", "boss", "final"]:
+		m.fight_with(who)
+		m.set_mode("battle")
+		var b: AudioStreamPlayer = m.loop_player("battle")
+		_check(m.battle_name() == Music.SET_BATTLES[who] and b != null and b.stream.loop and absf(b.stream.get_length() - lengths[who]) < 0.05, "a fight with a %s plays %s, looping whole (%.2f s)" % [who, m.battle_name(), b.stream.get_length() if b != null else 0.0])
+		m.set_mode("explore")
+	_check(Music.SET_BATTLES.values().size() == 3 and Music.SET_BATTLES.fight != Music.SET_BATTLES.boss and Music.SET_BATTLES.boss != Music.SET_BATTLES.final, "a monster, a champion and the last champion each have a theme of their own")
+	# the set's boss theme is the champion's own music here: the old music's fixed champion theme (#167) is for the game without it
+	m.champion = true
+	m.fight_with("boss")
+	_check(m.pick_battle() == Music.SET_BATTLES.boss, "a champion's fight plays the set's boss theme, not the old music's (%s)" % m.pick_battle())
+	m.champion = false
+	m.fight_with("nobody")
+	m.set_mode("battle")
+	_check(m.battle_name() == Music.SET_BATTLES.fight, "a fight with anyone else is a fight")
+	m.sting("victory")
+	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a won fight still plays the victory sting over it")
+	m.free()
+	m = _music(true)
+	await process_frame
+	m.fight_with("final")
+	m.set_mode("battle")
+	_check(m.battle_name() == Music.HUM_BATTLES[0], "without it, the hum theme's combat loop, whoever the fight is with")
+	m.free()
+	var audio = _fresh_audio()
+	await process_frame
+	var fake: FakeMusic = _fake(audio)[1]
+	audio._on_event("encounter", {"boss": false, "final": false})
+	audio._on_event("encounter", {"boss": true, "final": false})
+	audio._on_event("encounter", {"boss": true, "final": true})
+	_check(fake.foes == ["fight", "boss", "final"] and fake.calls == ["mode:battle", "mode:battle", "mode:battle"], "the game says who each fight is with before its music starts (%s)" % [fake.foes])
+	audio.queue_free()
+	var credits := FileAccess.get_file_as_string("res://assets/CREDITS.txt")
+	_check(credits.contains("set-fight.ogg") and credits.contains("set-boss.ogg") and credits.contains("set-final.ogg"), "the credits name the music set's three tracks")
 
 
 ## The hum theme (#49): its exploring loop and, in every fight, its combat loop, both looping whole; the stings as ever.

@@ -46,8 +46,10 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 		if kin.is_empty():
 			return false
 		q.target = int(rng.pick(kin))
-	else:
-		q.target = int(rng.pick(targets))
+	else: # the ones its grudge names first (`hunts`), or anyone when none of them is on the floor
+		var hunts: Array = lord.get("hunts", [])
+		var hunted := targets.filter(func(i): return hunts.has(f.monsters[i].species))
+		q.target = int(rng.pick(targets if hunted.is_empty() else hunted))
 	q.taken = false
 	q.want = want_for(f, q.species) if kind == "fetch" else ""
 	print("lords: %s, %s, asks: %s %s" % [q.name, q.title, kind, q.want if kind == "fetch" else f.monsters[q.target].name])
@@ -139,11 +141,30 @@ static func status(q: Dictionary, s) -> String:
 ## What it says, for this status.
 static func speak(q: Dictionary, s) -> String:
 	var kind: Dictionary = table().kinds[q.kind]
+	var now := status(q, s)
 	var said: Dictionary = kind
 	if q.get("redeem", false): # a lord of a clan you angered speaks for the clan, not for itself, and names nothing (rules/lords.gd)
 		said = Lords.redemption()
-	var words: String = {"new": said.ask, "waiting": said.wait, "ready": said.ready, "failed": kind.get("failed", "")}[status(q, s)]
+	var words: String = {"new": said.ask, "waiting": said.wait, "ready": said.ready, "failed": kind.get("failed", "")}[now]
+	if not q.get("redeem", false): # a lord asking its own favour asks in its own words
+		var own_key: String = {"new": "ask", "waiting": "wait", "ready": "ready", "failed": "failed"}[now]
+		words = str(_own_words(q, s.floor_map).get(own_key, words))
 	return words % subject(q, s.floor_map) if words.contains("%s") else words # a line that names nothing is not formatted
+
+
+## What it says once paid.
+static func thanks(q: Dictionary, f) -> String:
+	if q.get("redeem", false): # a way back is the clan's business, and thanked as any favour is
+		return str(table().kinds[q.kind].thanks)
+	return str(_own_words(q, f).get("thanks", table().kinds[q.kind].thanks))
+
+
+## A lord's own words for this favour (Lords.says), or {} for a stray asker.
+static func _own_words(q: Dictionary, f) -> Dictionary:
+	var lord := str(q.get("lord", ""))
+	if lord == "":
+		return {}
+	return Lords.says(lord, str(q.kind), "" if q.kind == "fetch" else str(f.monsters[q.target].species))
 
 
 ## Paid: what was asked for leaves the bag, the gold and health come, and its clan hears. Returns {gold, healed, joined}:

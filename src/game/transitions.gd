@@ -16,7 +16,7 @@ extends RefCounted
 
 const ALLOWED := {
 	"": ["explore"], # a new run or a loaded one
-	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
+	"explore": ["intro", "end", "explore", "trade", "request", "envoy", "camp"],
 	"camp": ["explore"],
 	"intro": ["menu", "wait", "dodge"], # a monster that caught you strikes first
 	"social": ["menu", "wait", "explore", "intro", "keepsake"],
@@ -25,6 +25,8 @@ const ALLOWED := {
 	"skills": ["menu", "wait", "explore", "intro", "keepsake"], # skill-combat: back, its attack, or the fight is over
 	"trade": ["explore"],
 	"request": ["explore"],
+	"envoy": ["explore", "envoy", "envoy_say"], # a clan's asker: back to the walk, its lines again, or something typed to it
+	"envoy_say": ["envoy", "explore"],
 	"ask": ["explore", "intro", "keepsake"],
 	"act": ["menu", "talk", "wait", "explore", "intro", "keepsake"],
 	"talk": ["act", "menu", "wait", "explore", "intro", "keepsake"],
@@ -41,7 +43,9 @@ const ALLOWED := {
 ## In a fight: a foe stands before you and the battle screen covers the halls.
 const FIGHT := ["social", "intro", "menu", "ask", "act", "items", "skills", "talk", "fightbar", "wait", "dodge", "dead"]
 ## On the floor, out of a fight: the automap shows, and the map's card may open.
-const WALK := ["explore", "end", "trade", "request", "camp", "keepsake"]
+const WALK := ["explore", "end", "trade", "request", "envoy", "envoy_say", "camp", "keepsake"]
+## The stages that take a typed line: the dock shows its text box, and the keys go to it.
+const TYPING := ["talk", "envoy_say"]
 ## The fight is waiting for the player to pick something: the foe's card and the chat card may open, and a spareable foe shows
 ## its bubble.
 const PICKING := ["intro", "menu", "act", "items", "skills", "talk"]

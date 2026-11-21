@@ -2181,5 +2181,189 @@
     "loop": false
    }
   }
+ },
+ "lord_slime": {
+  "file": "res://assets/art/lord_slime.png",
+  "size": [
+   1884,
+   234
+  ],
+  "cell": [
+   300,
+   210
+  ],
+  "pad": 12,
+  "feet": [
+   150.0,
+   208.55
+  ],
+  "body_h": 200.2,
+  "world_h": 1.15,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   }
+  }
+ },
+ "lord_bandit": {
+  "file": "res://assets/art/lord_bandit.png",
+  "size": [
+   1884,
+   262
+  ],
+  "cell": [
+   300,
+   238
+  ],
+  "pad": 12,
+  "feet": [
+   150.0,
+   235.99
+  ],
+  "body_h": 229.5,
+  "world_h": 1.4,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   }
+  }
+ },
+ "lord_rock": {
+  "file": "res://assets/art/lord_rock.png",
+  "size": [
+   1884,
+   235
+  ],
+  "cell": [
+   300,
+   211
+  ],
+  "pad": 12,
+  "feet": [
+   150.0,
+   209.32
+  ],
+  "body_h": 205.0,
+  "world_h": 1.2,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   }
+  }
+ },
+ "lord_snake": {
+  "file": "res://assets/art/lord_snake.png",
+  "size": [
+   1806,
+   324
+  ],
+  "cell": [
+   287,
+   300
+  ],
+  "pad": 12,
+  "feet": [
+   143.44,
+   298.12
+  ],
+  "body_h": 290.0,
+  "world_h": 1.4,
+  "anims": {
+   "idle": {
+    "row": 0,
+    "count": 6,
+    "fps": 5,
+    "loop": true
+   }
+  }
+ },
+ "events": {
+  "file": "res://assets/art/events.png",
+  "size": [
+   804,
+   772
+  ],
+  "cols": 2,
+  "rows": 4,
+  "cell": [
+   384,
+   178
+  ],
+  "pad": 12,
+  "feet": [
+   235.70731707317077,
+   99.90243902439025
+  ],
+  "body_h": 86.9,
+  "world_h": 1.0,
+  "frames": [
+   "keepsakes",
+   "camp",
+   "gate",
+   "stairs",
+   "door",
+   "ending",
+   "gate_bars",
+   "gate_chain"
+  ],
+  "bounds": {
+   "keepsakes": [
+    1.6,
+    56.7,
+    275.3,
+    119.7
+   ],
+   "camp": [
+    116.6,
+    13.0,
+    224.3,
+    128.5
+   ],
+   "gate": [
+    98.9,
+    30.2,
+    274.2,
+    139.4
+   ],
+   "stairs": [
+    89.0,
+    41.1,
+    293.5,
+    118.1
+   ],
+   "door": [
+    97.8,
+    25.0,
+    275.8,
+    149.3
+   ],
+   "ending": [
+    92.1,
+    1.6,
+    287.2,
+    172.2
+   ],
+   "gate_bars": [
+    163.9,
+    60.9,
+    142.6,
+    78.6
+   ],
+   "gate_chain": [
+    221.1,
+    58.3,
+    29.1,
+    83.3
+   ]
+  }
  }
 }

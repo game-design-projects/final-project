@@ -14,6 +14,10 @@ Abdulla's hum theme plays by default: two loops on one hummed melody, "Cantiga t
 
 The loops are mastered 1 dB hotter than the old music (−18 and −16 dBFS RMS), so `HUM_TRIM_DB` plays them 1 dB under the same volumes. `no-hum-theme` brings back the old music below.
 
+### The music set's fights (the default, feature `music-set`)
+
+A fight plays the theme of who it is with, from Abdulla's music set (`tools/music/music-set/`): `set-fight.ogg` (the piano battle, 41.86 s) for a monster, `set-boss.ogg` (41.86 s) for a champion, and `set-final.ogg` (45.33 s) for the last champion, at the Last Door. Each is one whole loop. The game says who the fight is with as it begins (the event `encounter`, `boss` and `final`), and `Music.fight_with` picks the track. They are 0.9 dB hotter than the hum theme's combat loop, so `SET_TRIM_DB` plays them 2 dB under the battle volume. `no-music-set` plays the hum theme's combat loop in every fight.
+
 ### The old music (`no-hum-theme`)
 
 All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: one small band of real samples (harpsichord, church organ, strings, choir, music box and tubular bells, from the MusyngKite soundfont) plus synthesised kettle drums and a tabor, all in the same stone hall. Every piece is built on the game's own melody, **A B C D D D E D E D C C C D D D**, with its repeated notes short-short-long. The pieces are rendered offline and ship as Ogg Vorbis files in `assets/audio/` (about 5 MB in all).
@@ -31,7 +35,7 @@ All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: 
 
 None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and keeps it for the whole fight, because switching tunes mid-fight was jarring. The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place.
 
-**The fight's theme** is picked from the four battle loops at random, never the one the last fight used — except a champion's fight, which always has `battle-crusade` (a champion's own theme; a dedicated track is #49's business).
+**The fight's theme** is picked from the four battle loops at random, never the one the last fight used — except a champion's fight, which always has `battle-crusade` (a champion's own theme; a dedicated track is #49's business). With the music set on, a champion's fight plays the set's boss theme instead.
 
 **Good news: one-shot cues** by the same band. `fanfare.ogg` (3.9 s) plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.ogg` (2.3 s) plays when a fight ends in mercy (a spare or a foe let go); a kill ends the fight with its own sound and no sting (#168: the fanfare is for the good act, not for the winning). Both quote the melody's opening in D major (D E F♯ G G G) and land on a IV6–V7–I cadence with bells.
 

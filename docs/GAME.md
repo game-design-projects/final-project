@@ -2,7 +2,7 @@
 
 ![The foe's card in a fight](shots/foe-card.png)
 
-NEW GAME opens with a 15-second film (any key skips it): you look into a chest, fall through halls that reshuffle themselves, and a very small witch waves at the end of a corridor. Then the first run begins, on a practice floor if it is your first. The main menu has Continue, New Game, Load Game, the save manager, Legacy, Achievements, Settings, Credits and Quit. You robbed the Hoard, and it threw you down here: a run is five floors down to the Last Door, the only way out.
+NEW GAME opens with a 15-second film (any key skips it): you look into a chest, fall through halls that reshuffle themselves, and a very small witch waves at the end of a corridor. Then the first run begins, on a practice floor if it is your first. The main menu has Continue, New Game, Load Game, the save manager, Legacy, Achievements, Settings, Credits and Quit. You reached for the Hoard's gold, and it was bait: a run is five floors down to the Last Door, the only way out.
 
 This page describes the game as it ships. A few features can be turned off one at a time with a flag ([Development](DEVELOPMENT.md#features)).
 
@@ -36,7 +36,24 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 | LUCKY COIN | Half again as much gold from every purse and chest |
 | SECOND WIND | Once a fight, the hit that would fell you leaves you on 1 HP |
 
-Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and on some floors someone who asks for a favour instead of a fight. Floors 2 and 4 have a trader.
+Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and two of the clans' askers, who want a favour instead of a fight. Floors 2 and 4 have a trader.
+
+**The clans' askers.** Each clan has one named asker with two requests of its own, and two askers of different clans stand on every floor, so each clan's is met on two of the first four floors (`data/envoys.json`, the feature `clan-requests`). Walk into one to hear it. A request you take is kept for the run. Each one done pays 6 gold and 4 health and pleases its clan.
+
+| Clan | Asker | Request | How it is done |
+| --- | --- | --- | --- |
+| The Burrow | DOLLOP | ASK A DRAGON | In a fight with a dragon, ACT and SAY SOMETHING: ask whether it likes slimes. It answers |
+| The Burrow | DOLLOP | BRING A SLIME | Come back with a slime that chose to follow you. DOLLOP takes it home |
+| The Old Stone | SLATE | WIN HEAVY | Fell a foe with HEAVY strikes only: one light strike in that fight and it doesn't count |
+| The Old Stone | SLATE | SPEAK LIKE A ROCK | Type something to it as flat and monotone as you can |
+| The Crew | MAGPIE | BAG FIVE SNAKES | Kill 5 snakes, on any floors, counted from when you said you would |
+| The Crew | MAGPIE | HAND OVER 50 GOLD | Come back with 50 gold and give it up |
+| The Coil | SISSEL | BRING A BANDIT | Come back with a bandit that chose to follow you. It is lectured, and storms off |
+| The Coil | SISSEL | HISS AT IT | Type a hiss, and a long one: "hiss" is an insult, "hisssssss" will do |
+
+What is typed is judged by the mind: Jev when the game can reach it, and otherwise a rule (the longest run of s; no capitals, question or exclamation; a question about liking that names slimes). Some requests cost you with another clan, as any deed does: five dead snakes enrage the Coil.
+
+**A clan's teleporter.** The second request done for a clan opens its teleporter, which the next stairs offer beside the ways down. It leads to the clan's hall, a room off the run's count of floors: every kind of the clan stands either side of an aisle, nobody there fights, and its lord waits at the far end. Heard out, the lord tells its part of what happened down here, pays 8 gold and 6 health and moves its clan well towards you. The hall's stairs go on down to the next floor. Going through shows on the picture: the warp of a pad on the floor, and with it the picture floods with light and its colours tear apart and settle.
 
 **Monsters move when you move**, and turning is free. Slimes drift, bandits patrol, snakes follow for a while, and rocks and dragons stay put, and some kinds have their own ways: a gumdrop or a tide never stops moving, an adder, a pickpocket or a hypnocoil follows you, a boulder patrols, and spitters, lookouts, gazers, cobras, sappers, crushers, brood mothers and golems hold their ground; an angry monster, or one whose clan you have wronged, comes after you. One that has seen you is tagged HUNTING with an alert sound, one in sight makes a soft step as it moves, and an arrow at its feet shows the way it went. A hunter that has not had you in sight for five steps loses your track and goes back to its own way about the floor for ten, so a wall, a corner or a pad ends a chase; and a monster that chases you onto a pad is carried to the other one, away from you. A monster that catches you starts the fight and strikes first.
 
@@ -46,7 +63,7 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 
 **The halls answer what you do.** Spare monsters and the corridor warms: torches grow eyes, turn to you and lean in as you pass, skulls nod, and a cracked wall that gives is a guilty smile. Kill and they look away, then shut their eyes; faces go blank one monster at a time, champions last, and at the bottom the set is cold wire. Eating or abandoning a friend costs more than a kill. Nothing here changes a number: it is how the place feels about you. See [ART.md](ART.md).
 
-**Writing on the walls.** Every floor has one piece of writing, a banner in the accent colour on the closed end of a quiet corridor, marked in gold on the map once seen (grey once read). Step up to it to read it. What it says depends on the floor and on how the halls feel about you as you read: warm (kind or beloved), wary, or cold (shut or cold). So a kind run, a mixed one and a cruel one each read their own five of the fifteen, which tell why the halls fold up and drop the thief back on B1F, who scratched the tally on B2F, and why the Last Door wants two. What has been read is kept across runs, the log counts it ("Writing 4 of 15 found"), and reading all of it is an achievement. The words are in `data/lore.json`.
+**Writing on the walls.** Every floor has one piece of writing, a banner in the accent colour on the closed end of a quiet corridor, marked in gold on the map once seen (grey once read). Step up to it to read it. What it says depends on the floor and on how the halls feel about you as you read: warm (kind or beloved), wary, or cold (shut or cold). So a kind run, a mixed one and a cruel one each read their own five of the fifteen, which tell why the walls watch (they are the thieves who came down alone, folded into the stone), who lights them (Wick, who is in the wall too), what the clans hold against each other, and who built the place and why its Last Door wants two. What has been read is kept across runs, the log counts it ("Writing 4 of 15 found"), and reading all of it is an achievement. The words are in `data/lore.json`.
 
 ## Fights
 
@@ -60,7 +77,17 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 
 Then the monster attacks, unless what you did calmed it. Monsters belong to clans that hear what you did: later ones say so and start in a different mood.
 
-**Clans keep count.** A kill angers the monster's clan, half as much the clans on its side, and a quarter the Hoard; a champion counts one and a half. One kill of its own makes a clan ANGRY (its own start out angrier). Two, with nothing made up for them, make it FURIOUS: every floor reached after that has its kind as elites, tagged ELITE over their heads and in the header, with a quarter more health, faster attacks and a point more per hit (never the champion). Four make it ENRAGED: none of its own takes mercy, a cut or an offer, and SPARE greys out, even for a champion of the Hoard. Sparing one on its side, or doing one of its kind a favour, cools it back down. A banner says so whenever a clan moves.
+**Clans keep count, and have feelings about each other.** A kill angers the monster's clan; a champion counts one and a half. The other clans take it by how they feel about that clan (`data/clans.json` `feels`):
+
+| Clan | Likes | Dislikes | Why |
+| --- | --- | --- | --- |
+| The Burrow (slimes) | The Hoard, the Coil | Nobody | The dragons once saved it from a fire and never noticed; it shares the Wet Caves with the snakes |
+| The Old Stone (rocks) | Nobody | The Burrow | Slimes are too soft |
+| The Crew (bandits) | Nobody | The Coil, the Old Stone | It hunts snakes for sport, and rocks keep falling on it (the rocks have no idea) |
+| The Coil (snakes) | The Burrow | The Crew | It is hunted, and wants that paid back |
+| The Hoard (dragons) | Nobody | The Crew | Bandits are thieves. It has never noticed the slimes, and hears a quarter of what is done to the rocks and snakes |
+
+A clan that likes the victim's takes your deed as its own, by half: sore at a killing, glad of a sparing. A clan that dislikes it is glad of a killing (half a kill's worth, the other way), doesn't mind a sparing, and is sore when you take one in as a friend. After a fight the log says each of these in a line: "The Old Stone likes that you killed a slime: slimes are too soft." A monster that has heard says so in its own words when you meet it. One kill of its own makes a clan ANGRY (its own start out angrier). Two, with nothing made up for them, make it FURIOUS: every floor reached after that has its kind as elites, tagged ELITE over their heads and in the header, with a quarter more health, faster attacks and a point more per hit (never the champion). Four make it ENRAGED: none of its own takes mercy, a cut or an offer, and SPARE greys out, even for a champion of the Hoard. Sparing one of its own or of a clan it likes, or doing one of its kind a favour, cools it back down. A banner says so whenever a clan moves.
 
 **What makes it harder** is on the screen: the header tags how much tougher this floor's monsters are (FOES +12% HP for each floor below B1F, a quarter more down the steep stair), the map's legend (the info key on the walk) gives every clan's mood and what its levels mean, and an elite's or an enraged clan's fight opens with a banner saying which.
 

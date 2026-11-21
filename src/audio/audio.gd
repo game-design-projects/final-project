@@ -38,6 +38,7 @@ func _ready() -> void:
 	_music = Music.new()
 	_music.enabled = not Flags.on("nomusic")
 	_music.hum = Flags.enabled("hum-theme")
+	_music.music_set = Flags.enabled("music-set")
 	if Flags.enabled("motifs"):
 		_music.motifs = Music.pick_motifs(Music.local_motifs(), Flags.value("motif"))
 	add_child(_music)
@@ -74,6 +75,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 				_music.set_mode("explore")
 		"encounter":
 			_sfx.play("boss" if data.boss else "encounter")
+			_music.fight_with("final" if data.get("final", false) else ("boss" if data.boss else "fight"))
 			_music.champion = bool(data.boss) # a champion's fight keeps its own theme (#167)
 			_music.set_mode("battle")
 		"strike":

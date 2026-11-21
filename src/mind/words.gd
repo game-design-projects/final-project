@@ -23,6 +23,11 @@ static var _triple := RegEx.create_from_string("(.)\\1\\1")
 static var _mash := RegEx.create_from_string("asdf|qwer|zxcv|jkl|hjk")
 
 
+const HISS_SHORT := 2 # a run of s this long is no hiss at all ("hiss")
+const HISS_LONG := 8 # and one this long is all a hiss can be
+const MONOTONE_WORDS := 3
+const LIKING := ["like", "love", "fond", "care", "adore", "think of", "feel about"]
+
 static func _cue_patterns() -> Dictionary:
 	if _cues.is_empty():
 		var cues: Dictionary = Content.table("words").cues
@@ -82,6 +87,55 @@ static func read(text: String) -> Dictionary:
 		probs[k] = soft[k] * (1.0 - gibberish)
 	probs["gibberish"] = gibberish
 	return probs
+
+
+## How much the text sounds like `what`, 0..1, by rule (the local mind's answer; Jev judges it when it is asked):
+## "hiss": the longest run of s is what counts, and it has to be long ("hisssssss", not "hiss");
+## "monotone": flat words: no shouting, no question, no capitals, nothing excited, and enough words to hear it;
+## "likes_slimes": a question about liking that names slimes.
+static func sounds_like(text: String, what: String) -> float:
+	var t := text.strip_edges()
+	var low := t.to_lower()
+	match what:
+		"hiss":
+			var longest := 0
+			var run := 0
+			for ch in low:
+				run = run + 1 if ch == "s" else 0
+				longest = maxi(longest, run)
+			return clampf((longest - HISS_SHORT) / float(HISS_LONG - HISS_SHORT), 0.0, 1.0)
+		"monotone":
+			var words := low.split(" ", false)
+			if words.size() < MONOTONE_WORDS:
+				return 0.0
+			var score := 0.7
+			if t.contains("!"):
+				score -= 0.5
+			if t.contains("?"):
+				score -= 0.3
+			var capitals := 0
+			for ch in t:
+				if ch != ch.to_lower():
+					capitals += 1
+			if capitals > 1:
+				score -= 0.3
+			if t.contains("...") or t.ends_with("."):
+				score += 0.15
+			var unique := {}
+			for w in words:
+				unique[w] = true
+			if unique.size() < words.size():
+				score += 0.15 # a rock repeats itself
+			return clampf(score, 0.0, 1.0)
+		"likes_slimes":
+			if not low.contains("slime"):
+				return 0.0
+			for cue in LIKING:
+				if low.contains(cue):
+					return 0.9
+			return 0.5 if low.contains("?") else 0.2
+	push_error("words: nothing to listen for called '%s'" % what)
+	return 0.0
 
 
 ## Does the text name money outright? "deal" or "offer" read as gold, but only these words make a typed line a paid truce.

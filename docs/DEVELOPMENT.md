@@ -47,7 +47,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `far_check` | Every species at every distance down the longest line of each floor, and across floors: is it seen, and is a name ever over nothing |
 | `hold_check` | Each arrow held in the real game scene: cells, turns, bumps, whether the camera turned back, the slowest frame |
 | `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
-| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
+| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 | `sim_chart` | How much of a floor is seen when the stairs first show, and the steps instinct saves on the way to them, per biome and depth (`seeds=N`); for tuning `chart` in `data/floors.json` |
 | `sim_strike` | What the fight bar's plain and heavy strikes are worth, per species: the window in ms, and the damage at a perfect, a middling and an edge hit (`boss=1`, `charms=rock|dragon`); for tuning `combat.gd`'s `HEAVY_*` and the species' `heavy` numbers (#163) |
@@ -111,6 +111,11 @@ godot --headless --path . --import                  # a new PNG needs importing;
 ```
 
 `process.py` prints how much each frame moves from the one before it and marks a jump: read that before looking at the GIF. A figure's silhouette (the alpha of its atlas) is worked out by flood fill, so a drawing with an open outline shows through; the script warns.
+
+Two sheets were drawn outside that pipeline (ChatGPT's image tool, from the prompt and the reference sheets a playtester was given) and touched up by hand before they went into `tools/art/source/`: `lords.png`, the four clan lords, and `events.png`, the pictures the choice screens show.
+
+- **A lord is a still**: a figure made from one drawing. Its entry in `sheets.json` names the sheet and the cell (`"still"`), and `process.py` bends that drawing into the six frames of an `idle`: the body rises off its feet with a breath, `moves` shift a part with it (`bob`, `sway`, `lean`, `pump`, `grow`), `eyes` are squashed flat for a blink and `brows` lifted for a face with no eyes to shut. `fill` dims the inside of a filled-in shape (a beard, a pale belly), which the figure shader would otherwise light like a lamp. The rects are in the source cell's pixels. A still has no other action, so the game hops and flinches it in code, as it does for a blank face.
+- **`events.png`** has a drawing for each name in `Vignette.KNOWN`, and the gate's bars and chain as drawings of their own so they can move. `src/view/vignette.gd` holds where the moving and coloured parts are, as shares of each drawing's ink: a redrawn picture needs them measured again (`art_test` checks they still lie inside it).
 
 ### The opening film
 

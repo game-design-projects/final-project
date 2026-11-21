@@ -7,6 +7,7 @@ const Content = preload("res://src/rules/content.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Grid = preload("res://src/rules/maps/grid.gd")
 const Items = preload("res://src/rules/items.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Lords = preload("res://src/rules/lords.gd")
 const Kinds = preload("res://src/rules/kinds.gd")
 const Monster = preload("res://src/rules/monster.gd")
@@ -78,10 +79,14 @@ static func generate(rng: Rng, plan := {}):
 	_add_lurkers(rng, f, stirs.keys(), plan)
 	if not lord.is_empty(): # after the monsters stand: on a floor that already had someone asking, the lord is that one
 		_place_lord(f, walk, hall, lord)
+	if plan.has("envoys"): # the clans' askers stand here instead of a stray one: its place was drawn and kept clear, so the floor is laid out as its seed always made it, and nobody takes it
+		f.quester = {}
 	if not f.quester.is_empty():
 		_finish_request(rng, f, walk, hall, plan, stirs)
 	if plan.get("lore", false):
 		_write_on_a_wall(f, walk, hall)
+	if not plan.get("envoys", []).is_empty():
+		_place_envoys(f, walk, hall, plan.envoys)
 	print("floor: seed %d, %s %dx%d, stairs at %s, %d monsters, %d chests, %d pads, %d items%s%s%s, in %d ms" % [rng.seed_value, f.biome if f.biome != "" else "classic", f.size, f.size, f.stairs, f.monsters.size(), f.treasure.size(), f.teleports.size() * 2, f.pickups.size(), ", a trader" if not f.merchant.is_empty() else "", ", someone asking" if not f.quester.is_empty() else "", ", writing at %s" % f.lore.cell if not f.lore.is_empty() else "", (Time.get_ticks_usec() - t0) / 1000])
 	return f
 
@@ -99,6 +104,22 @@ static func _place_lord(f, walk: Dictionary, hall: Vector2i, lord: Dictionary) -
 			return
 		f.quester = {"cell": cell}
 	f.quester["lord"] = lord # the asker is the lord; `_finish_request` fills it with the lord's own favour
+
+
+## The clans' askers (rules/envoys.gd), each at a place of its own drawn from the askers' generator once everything else is
+## down, so the floor's own draws, and so its layout, are what its seed always made.
+static func _place_envoys(f, walk: Dictionary, hall: Vector2i, clans: Array) -> void:
+	var erng := Rng.new(Rng.offset(int(f.seed_value), Envoys.SEED))
+	var stood := {}
+	for m in f.monsters: # they are here already, and `reserved()` does not know them
+		stood[m.cell] = true
+	for clan in clans:
+		var cell: Variant = Secrets.place_trader(erng, f, walk, hall, stood)
+		if cell == null:
+			print("floor: no place for the asker of %s" % clan)
+			continue
+		f.envoys.append(Envoys.figure(str(clan), cell))
+		stood[cell] = true
 
 
 ## The writing (rules/lore.gd), on a wall nobody stands in front of. Which piece it is is decided when it is read.

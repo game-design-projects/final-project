@@ -41,7 +41,21 @@ static func _entry(clan: String, second: bool, standing: Dictionary = {}) -> Dic
 	var species: String = str(Content.table("clans").clans[clan].species[0])
 	# a clan that is angry or worse at home here: its lord offers a way back (#166)
 	var redeem := Clans.hostility(float(standing.get(clan, 0.0))) != ""
-	return {"clan": clan, "species": species, "name": str(entry.name), "title": str(entry.title), "kind": str(entry.kind), "second": second, "redeem": redeem}
+	return {"clan": clan, "species": species, "name": str(entry.name), "title": str(entry.title), "kind": str(entry.kind), "hunts": entry.get("hunts", []), "second": second, "redeem": redeem}
+
+
+## A lord's own words for its favour ({ask, wait, ready, failed, thanks}, `data/lords.json` `says`), or {} where it speaks as any
+## asker does: when it asks another kind of favour than its own (a fetch with nothing lying about), or about a monster its grudge
+## doesn't name (`hunts`, the kinds a lord wants rid of: the Crew's hunts snakes and has rocks fall on it, the Coil's wants the
+## Crew's hunters gone).
+static func says(clan: String, kind: String, target_species := "") -> Dictionary:
+	var entry: Dictionary = table().lords.get(clan, {})
+	if entry.is_empty() or str(entry.kind) != kind:
+		return {}
+	var hunts: Array = entry.get("hunts", [])
+	if not hunts.is_empty() and not hunts.has(target_species):
+		return {}
+	return entry.get("says", {})
 
 
 ## What a lord pays: more than a stray asker does (`data/lords.json` `pays`).
