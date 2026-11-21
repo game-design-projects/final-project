@@ -3,7 +3,7 @@
 ##   per hit   — both commands stopped the same number of ms from the middle, so the faster line is not flattered by being read
 ##               against its own narrower edge;
 ##   per swing — what a whole fight is worth to a hand that misses the middle by that much on average, misses counted, which is
-##               the other half of the trade: the heavy mark is 231 ms wide against the plain one's 1012.
+##               the other half of the trade: on the usual 1100 ms bar the heavy mark is 231 ms wide against the plain one's 1012.
 ## The rows are the species in `data/species.json`, each on its own `heavy` number, so a species added there is in the tables
 ## without this tool being touched.
 ##   godot --headless --path . -s res://tools/sim_strike.gd -- nosave [boss=1] [charms=none|rock|dragon] [swings=4000]
@@ -14,7 +14,6 @@ const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 
 const CHARMS := ["none", "rock", "dragon"]
-const SAME_HAND_MS := [0.0, 50.0, 115.0, 230.0, 506.0] # 0 is the middle; 115 the heavy mark's edge, 506 the plain one's
 const NOISE_MS := [50.0, 80.0, 200.0] # how far a steady, an ordinary and a shaky hand miss by, on average
 const SWING_SEED := 35 # the seed tools/features_test.gd reads the same trade with
 
@@ -46,9 +45,13 @@ func _initialize() -> void:
 	print("  how each species takes a heavy blow: %s" % ", ".join(species.map(func(id): return "%s x%.2f" % [id, Combat.heavy_weakness(id)])))
 	print("per hit, both stopped the same ms from the middle (0 = the middle; a miss is 0):")
 	print("  %6s %6s | %s" % ["off", "FIGHT", _names(species)])
-	for error in SAME_HAND_MS:
+	# The rows: the middle, a steady hand's average miss, and each command's own far edge one ms inside, the way `features_test`
+	# reads the last blow that lands. Read from the bars rather than written in ms, so `charms=rock` (a 1500 ms bar) shows that
+	# bar's edges instead of the usual bar's 115.5 and 506 ms.
+	var same_hand_ms := [0.0, 50.0, heavy_bar * Combat.HEAVY_MISS_EDGE / 2.0 - 1.0, bar * Combat.MISS_EDGE / 2.0 - 1.0]
+	for error in same_hand_ms:
 		var cells := species.map(func(id): return "%6d" % _heavy_hit(id, boss, fire, error, heavy_bar))
-		print("  %4.0f ms %6d | %s" % [error, _plain_hit(boss, fire, error, bar), " ".join(cells)])
+		print("  %5.1f ms %6d | %s" % [error, _plain_hit(boss, fire, error, bar), " ".join(cells)])
 	print("per swing, a hand that misses the middle by this much on average (%d swings a row, seed %d):" % [swings, SWING_SEED])
 	print("  %6s %6s | %s | %s" % ["off", "FIGHT", _names(species), "HEAVY pays against"])
 	# One stream across the three hands, in this order, so these are the very numbers tools/features_test.gd prints and checks.

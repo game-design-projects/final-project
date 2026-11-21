@@ -2780,15 +2780,17 @@ func _heavy_trade() -> void:
 	_check(weighed.size() == cast.size(), "every species takes it on a number of its own (%d of %d)" % [weighed.size(), cast.size()])
 	# The same hand near the far edge of the heavy mark: what it gets for a heavy blow there, against the plain strike it would
 	# have landed at that same moment of the swing. Above the plain one, HEAVY would be a free upgrade for a hand that never lands
-	# the middle, which is what a playtester noticed (#163: "HEAVY may be too easy"). The mark's edge is 115 ms off the middle (a
-	# step past it is a miss), so the two steps inside it are where a blow that only just lands sits; nearer the middle a rock and a
-	# dragon are still ahead, which is the trade this command is for.
+	# the middle, which is what a playtester noticed (#163: "HEAVY may be too easy"). The edge is read from the bar the game draws,
+	# not written in ms: this check named 105 and 110 ms, which a window tightened to the issue's own lever 2 (0.22) would turn into
+	# misses, so it would pass without a blow landing. The first is the last blow that lands, 1 ms inside the edge; nearer the middle
+	# a rock and a dragon are still ahead, which is the trade this command is for.
 	var heavy_bar: float = Combat.bar_ms(false) * Combat.HEAVY_BAR_SCALE
-	for error_ms in [105.0, 110.0]:
+	var heavy_edge: float = heavy_bar * Combat.HEAVY_MISS_EDGE / 2.0
+	for error_ms in [heavy_edge - 1.0, heavy_edge - 6.0]:
 		var plain_late: int = Combat.strike(0.5 + error_ms / Combat.bar_ms(false), false, false).damage
 		for species in weighed:
 			var wide: int = Combat.heavy_strike(0.5 + error_ms / heavy_bar, false, species, false).damage
-			_check(wide <= plain_late, "landed near the far edge of its mark (%.0f ms off the middle), HEAVY is no better than FIGHT at the same moment (%s: %d against %d)" % [error_ms, species, wide, plain_late])
+			_check(wide > 0 and wide <= plain_late, "landed near the far edge of its mark (%.1f ms off the middle, the edge at %.1f), HEAVY lands and is no better than FIGHT at the same moment (%s: %d against %d)" % [error_ms, heavy_edge, species, wide, plain_late])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 35
 	var half: float = Combat.bar_ms(false) / 2.0

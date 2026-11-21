@@ -20,7 +20,8 @@ const BOSS_DAMAGE_SCALE := 0.8
 const HOARD_FIRE_BONUS := 4 # the dragon's charm
 
 # The heavy strike: the line runs faster and the mark is smaller, for a harder hit that some monsters take worse than others.
-# tools/features_test.gd keeps the trade honest: at steady timing it pays against a rock and never against a slime.
+# tools/features_test.gd keeps the trade honest: at steady timing it pays against a rock or a dragon and never against a slime or
+# a snake.
 const HEAVY_BAR_SCALE := 0.6
 const HEAVY_MISS_EDGE := 0.35
 const HEAVY_DAMAGE := 1.25
@@ -80,7 +81,8 @@ static func strike(x: float, boss: bool, hoard_fire: bool, aid := 0) -> Dictiona
 	return {"miss": false, "crit": crit, "damage": damage}
 
 
-## How a heavy strike landed: as `strike`, but it misses sooner and hits harder, by how `species` takes such a blow.
+## How a heavy strike landed: as `strike`, but it misses sooner and is hardest in the middle, falling to `HEAVY_FLOOR` at the far
+## edge of its own mark, by how `species` takes such a blow.
 static func heavy_strike(x: float, boss: bool, species: String, hoard_fire: bool, aid := 0) -> Dictionary:
 	var off := absf(x - 0.5) * 2.0
 	if off > HEAVY_MISS_EDGE:
