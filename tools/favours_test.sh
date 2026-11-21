@@ -4,7 +4,9 @@
 # off the floor. The pilot used to stop at the empty cell, so over these four seeds every rid and spare was taken and left
 # unpaid (11 taken, 3 paid, all three a fetch). Hence: all four games reach the stairs, at least four favours are taken, at
 # least one is paid, and at least one of the paid ones is a rid or a spare — and at least one of those is a spare, which the
-# pilot plays by taking SPARE whenever the kin it was asked for is the foe (killing it would fail the favour).
+# pilot plays by taking SPARE whenever the kin it was asked for is the foe (killing it would fail the favour). A lord met on
+# the first floor of a biome asks a second favour where that biome comes back; paying it swears the clan (and its lord joins),
+# so at least one of those is checked too: the pilot used to skip a name it already knew, which left the pact unplayed.
 # These are the stray asker's and the floor lord's favours, so the games are played with `no-clan-requests`: with the clans'
 # askers on (the default) those two stand on no floor, and the pilot steps past a clan's asker without taking its request
 # (`tools/features_test.gd` plays those, a request at a time).
@@ -57,11 +59,12 @@ nonfetch=$(awk '
 	}
 	END { print paid + 0, spared + 0 }
 ' "$log")
+pacts=$(grep -cE 'swears its clan to you' "$log" || true)
 read -r nonfetch spare_paid <<<"$nonfetch"
-if [ "$reached" != 4 ] || [ "$taken" -lt 4 ] || [ "$paid" -lt 1 ] || [ "$nonfetch" -lt 1 ] || [ "$spare_paid" -lt 1 ]; then
+if [ "$reached" != 4 ] || [ "$taken" -lt 4 ] || [ "$paid" -lt 1 ] || [ "$nonfetch" -lt 1 ] || [ "$spare_paid" -lt 1 ] || [ "$pacts" -lt 1 ]; then
 	code=1
 fi
-echo "on favours: exit $code, $reached of 4 games reached the stairs, $taken favours taken, $paid paid, $nonfetch of them a rid or a spare, $spare_paid a spare"
+echo "on favours: exit $code, $reached of 4 games reached the stairs, $taken favours taken, $paid paid, $nonfetch of them a rid or a spare, $spare_paid a spare, $pacts pacts"
 if [ "$code" != 0 ]; then
 	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
 fi

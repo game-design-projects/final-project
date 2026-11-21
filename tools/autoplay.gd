@@ -257,9 +257,10 @@ func _quest_goal(s) -> Vector2i:
 	if q.is_empty():
 		return Vector2i(-1, -1)
 	if not q.get("taken", false):
-		# it has not been heard out yet: walk up to it, and the request stage accepts on the first key (it never saw a favour
-		# asked before this, let alone paid)
-		return q.cell if not s.questers_met.has(str(q.get("name", ""))) else Vector2i(-1, -1)
+		# it has not been asked on this floor yet: walk up to it, and the request stage accepts on the first key. The name being
+		# known from an earlier floor does not count — a lord met on B1 asks its second favour when its biome comes back, and the
+		# pilot used to skip it there, so the pact was never reached in a played game
+		return q.cell
 	if str(q.kind) == "fetch":
 		if s.items.has(str(q.want)):
 			return q.cell # in the bag already: bring it back
