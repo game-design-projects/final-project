@@ -71,6 +71,25 @@ echo "on pacifist: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo '
 if [ "$code" != 0 ]; then
 	failed=1
 fi
+# The other road: no word said and no mercy asked, only the strike bar (HEAVY when it is on offer) and FLEE once from a
+# monster when it is down to a quarter of its health. It has to reach the end too — and it has to cost what the peaceful way
+# costs nothing: over the same five seeds the attack-only games must end with less health than the peaceful ones, because that
+# trade is what makes the commands a choice rather than the same fight written twice (#163). Both roads are deterministic
+# (`nosave nosound`, the same seeds), so the two logs can be compared.
+log="$OUT/on-fight-only.log"
+code=0
+timeout 200 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound fight-only >"$log" 2>&1 || code=$?
+# the summary line each game ends on, not the keepsakes' and floors' own lines, which carry a health figure too
+fight_hp=$(grep -E '^autoplay: seed' "$log" | sed -E 's/.* HP ([0-9]+)\/[0-9]+ .*/\1/' | awk '{s += $1} END {print s + 0}')
+peace_hp=$(grep -E '^autoplay: seed' "$OUT/on-pacifist.log" 2>/dev/null | sed -E 's/.* HP ([0-9]+)\/[0-9]+ .*/\1/' | awk '{s += $1} END {print s + 0}')
+if ! grep -qE '^autoplay: 5 of 5' "$log" || [ "$fight_hp" -ge "$peace_hp" ]; then
+	code=1
+fi
+echo "on fight-only: exit $code, $(grep -E '^autoplay: [0-9]+ of' "$log" || echo 'no verdict'), $fight_hp health left against the peaceful road's $peace_hp"
+if [ "$code" != 0 ]; then
+	failed=1
+	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
+fi
 # A first run, which starts on the practice floor and has to get from it to the end like any other.
 log="$OUT/on-practice.log"
 code=0

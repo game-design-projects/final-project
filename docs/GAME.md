@@ -76,7 +76,7 @@ How long winning a monster over takes, from `tools/sim_recruit.gd` over 1000 see
 | Rock | 1% | 2 | 87% | 3 |
 | Dragon | 0% | 4 | 79% | 7 |
 
-A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way.
+A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way. So does one that never takes ACT or SPARE from the fight menu (`-- fight-only`), and the two roads do not cost the same. Over the same five seeds the attack-only games end with 115 health left of 266 between them, in three fights started over, and take 1964 s of game time; the peaceful ones end with 247 of their 268, in 1876 s, and start nothing over. Talking is the safer and the quicker road as the game stands, which is what #163 asks about: what a kill should be worth that a mercy is not.
 
 ## The box: lit squares hurt
 
