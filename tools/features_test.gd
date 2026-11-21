@@ -197,8 +197,10 @@ func _test_room() -> void:
 	# What the room puts back is read off the save, after a fight, against the one on walking in (see the fight below): a key the
 	# fight changed that the room does not put back shows there however the save carries it, one kept only when it is not empty
 	# included, so no list of the fields a save may carry has to be kept in step. The comparison leaves out the few the room leaves
-	# as walking left them: the run's seed and colours, the practice floor, where you stand, the floor, the map of it and the log.
-	var kept := ["depth", "run_seed", "palette", "practice", "floor", "cell", "facing", "visited", "seen", "charted", "chat"]
+	# as walking left them: the run's seed and colours, the practice floor, where you stand, the cells you have walked and seen, the
+	# floor and the map of it, and the log. The floor the fight ran on is not one of them: the room sets it back to its own, so a
+	# fight that raised it reads here like any other key.
+	var kept := ["run_seed", "palette", "practice", "cell", "facing", "visited", "seen", "floor", "charted", "chat"]
 	var walk_in: Dictionary = s.to_dict()
 	# `state.set()` says nothing about a name that isn't a field, so a typo in the room's list would put nothing back unread.
 	var fields := []
