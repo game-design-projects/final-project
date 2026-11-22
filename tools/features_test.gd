@@ -3785,6 +3785,18 @@ func _allies() -> void:
 	var goes: Dictionary = Allies.judge(b, "slay_begging", worst)
 	_check(goes.score == 0 and b.loyalty < Allies.LEAVE_BELOW and goes.leaves, "below the line the same deed can drive it off (%d)" % int(b.loyalty))
 	worst.unpin()
+	# #289: a deed that moves a friend's loyalty says so in the log, with the number the party chip shows
+	var seen = _flow(9)
+	await seen.new_run()
+	var wick = Ally.make("witch", "WICK", 75.0)
+	seen.state.allies = [wick]
+	seen.dice.pin(0.0) # the lowest score: she hates the kill
+	seen.encounter.judge("slay")
+	seen.dice.unpin()
+	var notes: Array = seen.encounter._take_notes()
+	var said: Array = notes.filter(func(l): return l.kind == "sys" and str(l.text).begins_with("WICK thinks less of you: loyalty %d" % roundi(wick.loyalty)))
+	_check(wick.loyalty < 75.0 and said.size() == 1, "a kill Wick hates costs loyalty, and the log says by how much (%s)" % str(notes.map(func(l): return str(l.text))))
+	_check(Texts.loyalty_moved("WICK", 50.0, 40.0, "CONTENT", "UNEASY").contains("now UNEASY") and Texts.loyalty_moved("WICK", 50.0, 50.2, "CONTENT", "CONTENT") == "", "a new mood is said outright, and a move too small to see isn't said at all")
 
 
 func _npcs() -> void:

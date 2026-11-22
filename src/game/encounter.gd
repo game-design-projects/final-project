@@ -223,7 +223,7 @@ func _reaction(decision: Dictionary):
 func _take_notes() -> Array:
 	var out := []
 	for n in pending_notes:
-		out.append(State.speech(n.who, n.text))
+		out.append(State.speech(n.who, n.text) if str(n.who) != "" else State.sys_line(n.text))
 	pending_notes = []
 	return out
 
@@ -237,6 +237,7 @@ func judge(deed: String) -> bool:
 	for a in s.allies.duplicate():
 		if deed == "" or not Allies.has_opinion(a.species, deed):
 			continue
+		var before: float = a.loyalty
 		var verdict := Allies.judge(a, deed, flow.dice)
 		if int(verdict.score) > Allies.NEUTRAL:
 			approved = true
@@ -244,6 +245,10 @@ func judge(deed: String) -> bool:
 		var reactions: Dictionary = Content.species(a.species).reactions
 		if verdict.reaction != "":
 			pending_notes.append({"who": a.name, "text": Content.fill(flow.rng.pick(reactions[verdict.reaction]), {"name": a.name, "target": "you"})})
+		var moved := Texts.loyalty_moved(a.name, before, a.loyalty, Allies.mood(before), Allies.mood(a.loyalty))
+		if moved != "" and not verdict.leaves: # what it thinks of you now, in the log, where the deed is (#289)
+			pending_notes.append({"who": "", "text": moved})
+			print("encounter: %s's loyalty %.0f -> %.0f after '%s'" % [a.name, before, a.loyalty, deed])
 		if verdict.leaves:
 			s.allies.erase(a)
 			s.tally.left += 1

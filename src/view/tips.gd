@@ -445,7 +445,7 @@ func _anchor_for(key: String, k: float) -> Vector2:
 
 ## One chip for each ally, bottom left, the dark box with its colour dot and its charm's name; red when about to leave.
 func _update_chips() -> void:
-	var signature := ",".join(state.allies.map(func(a): return "%s:%s:%s" % [a.species, a.charm().name, a.loyalty < Allies.LEAVE_BELOW])) if state.floor_map != null else ""
+	var signature := ",".join(state.allies.map(func(a): return "%s:%s:%d" % [a.species, a.charm().name, roundi(a.loyalty)])) if state.floor_map != null else ""
 	if signature != _chip_signature:
 		_chip_signature = signature
 		for c in _chips:
@@ -488,7 +488,7 @@ class Chip:
 
 	func setup(a) -> void:
 		dot = Color(Content.species(a.species).color)
-		label = a.charm().name
+		label = "%s %d" % [a.charm().name, roundi(a.loyalty)] # its loyalty on the chip, so a deed's cost is seen where the party is (#289)
 		warn = a.loyalty < Allies.LEAVE_BELOW
 		face = a.species if Sprites.has(a.species) else ""
 		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if face != "" else CanvasItem.TEXTURE_FILTER_PARENT_NODE
