@@ -10,15 +10,19 @@ need it to change the music. What plays where is in [docs/AUDIO.md](../../docs/A
 | Script | Writes | What |
 | --- | --- | --- |
 | `build-themes.py` | `assets/audio/music/*.ogg` (and a WAV of each in `--wav-dir`) | every tune: the families, their head motifs and bands are tables at its top, and each tune's phrases are written from its own seed |
-| `sampler.py` | | the offline sampler it plays through: decodes the soundfont samples, renders into a circular timeline, hall reverb, mastering |
+| `orchestra.py` | | the instruments: plays a note on the VSCO-2 CE recordings (CC0), by dynamic and round robin, in tune with each instrument's measured octave |
+| `fetch.sh` | `build/vsco2/` | downloads the parts of VSCO-2 CE the tunes play (about 2 GB, never committed, never exported) |
+| `sampler.py` | | the score, the circular timeline, the hall reverb and the mastering the tunes go through |
 | `to_ogg.sh` | `*.ogg` | WAV (or any audio file) to Ogg Vorbis; for a loop it cuts exactly one loop |
 | `cut_motifs.sh` | `build/motifs/*.ogg` | Abdulla's motif audition, cut for the `motifs` trial (never shipped) |
 
 ## Rebuild
 
-Needs numpy and scipy for the renders, and ffmpeg (with libvorbis) for the encode. From the repository root:
+Needs numpy and scipy for the renders, ffmpeg (with libvorbis) for the encode, and the orchestra's recordings, once
+(`fetch.sh`). From the repository root:
 
 ```bash
+tools/music/fetch.sh                                                                           # once: build/vsco2
 uv run --no-project --with numpy --with scipy python -I tools/music/build-themes.py            # all 45, in parallel, about a minute
 uv run --no-project --with numpy --with scipy python -I tools/music/build-themes.py --list     # their names
 uv run --no-project --with numpy --with scipy python -I tools/music/build-themes.py --only fight-gazer,hall-coil
@@ -36,7 +40,7 @@ which lead opens, which ostinato, and a seed. Its four phrases are: the head and
 a B phrase on the bridge's chords with the head's rhythm, and the head and another close. The bars after the head are
 written note by note: a note of the chord on the strong units, steps and thirds between, drawn toward a rising and
 falling contour, never three of the same note, a leap turned back. Fights play them as the tune, the B phrase with the
-first lead an octave under, a break with the head on bells, and the tune again on another lead with an echo; places as
+first lead an octave under, a break with the head on the glockenspiel, and the tune again on another lead with an echo; places as
 the tune, the B phrase, and the tune again.
 
 Two tunes are written out whole instead: the Wet Caves' "Drip Lullaby" and Vexalith's "The Champion Stirs". Their
@@ -57,6 +61,7 @@ length. The tunes are encoded at Vorbis quality 4 (`OGG_QUALITY`); `to_ogg.sh` d
 The renders are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings) by `sampler.py`; `VOLUME`
 in `src/audio/music.gd` (0.7 and 0.75) puts a fight about 2.6 dB above the exploring music. Each build logs every
 part's loudness per section against the mix, so the lead can be read against the band without ears, and the share of
-the spectrum under 120 Hz (the kettle drums are held between E2 and D#3 so it stays under about 20%). Check an encode
+the spectrum under 120 Hz (the kettle drums are held between E2 and D#3 so it stays under about 20%). A gentle lift
+above 2.5 kHz (`air`) keeps the close-miked sections from coming out dull. Check an encode
 with `ffmpeg -i assets/audio/music/fight-slime.ogg -af astats -f null - 2>&1 | grep -E "Overall|RMS level|Peak level"`;
 it should read about -17 dB RMS.

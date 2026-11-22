@@ -11,10 +11,9 @@ OPENING FILM (assets/video/intro.ogv)
 - Generated with ByteDance's Seedance video model through Dreamina, from reference crops of the game's own drawings and a text prompt (docs/intro/seedance-prompt.md), then re-encoded to Ogg Theora.
 
 MUSIC: every place and every foe (assets/audio/music/*.ogg)
-- Original music made for this game: a tune for each biome, each clan's hall, the trader, the practice floor and the test room, for every kind of monster and every champion, and the victory and stairs stings. Written and rendered offline by tools/music/build-themes.py (the sampler is tools/music/sampler.py) and encoded to Ogg Vorbis by tools/music/to_ogg.sh.
-- Its instruments are samples from the MusyngKite soundfont, as rendered by gleitz/midi-js-soundfonts (https://github.com/gleitz/midi-js-soundfonts), which released them under Creative Commons Attribution-ShareAlike 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).
-- These files are rendered from those samples, so each is a derivative work of them: the audio files are licensed Creative Commons Attribution-ShareAlike 3.0 as well, credited to "MusyngKite soundfont, via gleitz/midi-js-soundfonts". Its full text is assets/LICENSES/CC-BY-SA-3.0.txt.
-- Kettle drums and tabor: synthesised in tools/music/sampler.py, no samples.
+- Original music made for this game: a tune for each biome, each clan's hall, the trader, the practice floor and the test room, for every kind of monster and every champion, and the victory and stairs stings. Written and rendered offline by tools/music/build-themes.py (the player is tools/music/orchestra.py, the mixing and the hall tools/music/sampler.py) and encoded to Ogg Vorbis by tools/music/to_ogg.sh.
+- Its instruments are recordings from the Versilian Studios Chamber Orchestra 2, Community Edition (VSCO-2 CE, https://github.com/sgossner/VSCO-2-CE), released under Creative Commons CC0 1.0 (public domain dedication): strings, brass, woodwinds, harp, glockenspiel, marimba, kettle drums, snare, tambourine, triangle and cymbals by Versilian Studios, and the organ sampled by Simon Dalzell of Ivy Audio. CC0 asks for nothing; both are credited because they ask it as a courtesy.
+- The audio files are the project's own recordings of that music, shipped under the game's own terms.
 
 MUSIC: the hum theme, at the camp (assets/audio/hum-explore.ogg)
 - Written for this game by Abdulla Alfalasi: an exploring loop on his hummed melody. His MIDI, source and render script were contributed to this repository (tools/music/hum-theme/, with a README beside them), and the loop is the project's own recording: it ships under the game's own terms, and no separate licence is granted for reusing it elsewhere.
@@ -48,4 +47,4 @@ FONTS (assets/fonts/)
 - assets/fonts/VT323-Regular.ttf: VT323, copyright 2011 The VT323 Project Authors (peter.hull@oikoi.com). Licence: SIL Open Font License 1.1. Its full text travels with the font, as assets/fonts/OFL-VT323.txt.
 - Both are unmodified and drawn at the sizes the text tables name (src/view/fonts.gd).
 
-THE LICENCE TEXTS THE GAME SHIPS WITH: assets/LICENSES/CC-BY-SA-3.0.txt, assets/LICENSES/CC-BY-4.0.txt, assets/fonts/OFL-PressStart2P.txt, assets/fonts/OFL-VT323.txt. An asset missing from this list, or one of these texts missing, fails tools/credits_test.py.
+THE LICENCE TEXTS THE GAME SHIPS WITH: assets/LICENSES/CC-BY-4.0.txt, assets/fonts/OFL-PressStart2P.txt, assets/fonts/OFL-VT323.txt. An asset missing from this list, or one of these texts missing, fails tools/credits_test.py.

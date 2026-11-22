@@ -43,6 +43,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import sampler as S  # noqa: E402
+import orchestra as O  # noqa: E402
+
+O.use()  # the notes are played by the recorded orchestra (VSCO-2 CE), not the old soundfont
 
 log = logging.getLogger("themes")
 OUT_DIR = os.path.join(ROOT, "assets", "audio", "music")
@@ -106,77 +109,77 @@ BURROW = Family(
     head=((4, 1), (2, 1), (4, 1), (7, 3), (6, 2), (4, 1), (3, 2), (4, 1)), head_chords=(0, 4),
     cells=((2, 1, 2, 1), (1, 1, 1, 3), (3, 2, 1), (2, 1, 3), (1, 2, 1, 2)), ends=((3, 3), (2, 1, 3), (6,)),
     opens=((1, 4), (5, 4), (2, 1)), closes=((4, 0), (1, 0), (5, 0)), bridges=((5, 1, 4, 4), (1, 5, 1, 4), (5, 2, 1, 4), (2, 5, 1, 1)),
-    style="oompah", leads=("music_box", "harpsichord", "bells", "strings"))
+    style="oompah", leads=("flute", "clarinet", "glock", "oboe"))
 
 CREW = Family(
     "crew", "harmonic", 8, (0, 4), 320, 69,
     head=((0, 1), (0, 1), (4, 3), (3, 1), (2, 1), (1, 1), (2, 2), (-1, 1), (0, 1), (4, 4)), head_chords=(0, 0),
     cells=((1, 1, 2, 1, 1, 2), (3, 1, 2, 2), (2, 1, 1, 2, 2), (1, 1, 1, 1, 2, 2), (3, 3, 2)), ends=((2, 6), (3, 5), (1, 1, 6)),
     opens=((3, 4), (5, 4)), closes=((4, 0), (3, 0)), bridges=((5, 3, 0, 4), (3, 0, 5, 4), (5, 5, 3, 4), (3, 3, 5, 4)),
-    style="gallop", leads=("harpsichord", "strings", "organ", "marcato"))
+    style="gallop", leads=("solo_violin", "oboe", "trumpet", "clarinet"))
 
 OLD_STONE = Family(
     "old_stone", "dorian", 8, (0, 4), 192, 62,
     head=((0, 4), (2, 2), (3, 2), (4, 6), (3, 1), (2, 1)), head_chords=(0, 4),
     cells=((4, 2, 2), (2, 2, 4), (3, 1, 2, 2), (6, 2), (2, 2, 2, 2)), ends=((8,), (4, 4), (6, 2)),
     opens=((3, 4), (6, 4), (2, 3)), closes=((3, 0), (6, 0), (4, 0)), bridges=((3, 6, 3, 4), (2, 3, 6, 4), (6, 3, 2, 4), (2, 6, 3, 3)),
-    style="stomp", leads=("organ", "choir", "strings", "bells"))
+    style="stomp", leads=("horn", "cellos", "trombone", "organ"))
 
 COIL = Family(
     "coil", "hungarian", 7, (0, 4), 300, 67,
     head=((4, 2), (3, 1), (2, 1), (3, 3), (4, 1), (5, 1), (4, 1), (3, 1), (2, 1), (1, 1), (0, 1)), head_chords=(0, 0),
     cells=((2, 2, 3), (1, 1, 2, 3), (2, 1, 1, 3), (2, 2, 1, 1, 1), (4, 3)), ends=((4, 3), (2, 5), (7,)),
     opens=((5, 4), (6, 4)), closes=((4, 0), (5, 0)), bridges=((5, 6, 5, 4), (6, 5, 4, 4), (5, 5, 6, 4), (6, 6, 5, 4)),
-    style="asym", leads=("strings", "bells", "organ", "music_box"))
+    style="asym", leads=("oboe", "flute", "solo_violin", "clarinet"))
 
 HOARD = Family(
     "hoard", "phrygian_dom", 8, (0, 4), 276, 67,
     head=((0, 3), (4, 3), (3, 2), (5, 2), (4, 1), (3, 1), (2, 4)), head_chords=(0, 3),
     cells=((3, 3, 2), (2, 1, 1, 4), (2, 2, 2, 2), (3, 1, 2, 2), (4, 2, 2)), ends=((4, 4), (8,), (3, 5)),
     opens=((3, 1), (6, 1)), closes=((1, 0), (6, 0), (3, 0)), bridges=((1, 1, 0, 0), (6, 1, 3, 1), (3, 6, 1, 1), (1, 6, 3, 0)),
-    style="dragon", leads=("organ", "strings", "choir", "bells"))
+    style="dragon", leads=("trumpet", "horn", "violins", "oboe"))
 
 HALLS = Family(
     "halls", "mixolydian", 6, (0,), 184, 62,
     head=((0, 2), (4, 2), (3, 1), (2, 1), (1, 2), (2, 1), (3, 1), (4, 2)), head_chords=(0, 6),
     cells=((2, 2, 2), (2, 1, 1, 2), (3, 1, 2), (4, 2), (1, 1, 2, 2)), ends=((6,), (4, 2), (2, 4)),
     opens=((3, 4), (6, 4), (1, 4)), closes=((6, 0), (3, 0)), bridges=((3, 6, 1, 4), (4, 3, 6, 6), (1, 3, 6, 4), (6, 3, 4, 4)),
-    style="minuet", leads=("harpsichord", "strings", "organ", "music_box"), kind="explore")
+    style="minuet", leads=("violins", "flute", "oboe", "clarinet"), kind="explore")
 
 UNDERCROFT = Family(
     "undercroft", "aeolian", 8, (0, 4), 140, 64,
     head=((0, 3), (1, 1), (2, 2), (4, 2), (3, 4), (2, 2), (1, 2)), head_chords=(0, 3),
     cells=((4, 2, 2), (3, 1, 4), (2, 2, 4), (6, 2), (2, 2, 2, 2)), ends=((8,), (4, 4), (6, 2)),
     opens=((5, 4), (3, 4), (5, 6)), closes=((6, 0), (3, 0), (4, 0)), bridges=((5, 2, 6, 4), (2, 6, 3, 4), (5, 6, 2, 4), (3, 5, 6, 4)),
-    style="chorale", leads=("organ", "choir", "strings", "bells"), kind="explore")
+    style="chorale", leads=("organ", "horn", "cellos", "flute"), kind="explore")
 
 CAVES = Family(
     "caves", "dorian", 6, (0, 3), 168, 64,
     head=((0, 3), (4, 2), (3, 1), (4, 2), (5, 1), (6, 3)), head_chords=(0, 6),
     cells=((3, 2, 1), (2, 1, 2, 1), (3, 3), (2, 1, 3), (1, 1, 1, 3)), ends=((6,), (3, 3), (2, 1, 3)),
     opens=((3, 4), (2, 6), (3, 6)), closes=((6, 0), (3, 0)), bridges=((2, 6, 3, 4), (3, 2, 6, 4), (6, 3, 2, 4)),
-    style="rocking", leads=("music_box", "strings", "bells", "harpsichord"), kind="explore")
+    style="rocking", leads=("flute", "clarinet", "glock", "violins"), kind="explore")
 
 TRADE = Family(
     "trade", "ionian", 8, (0, 4), 224, 65,
     head=((2, 1), (3, 1), (4, 2), (4, 2), (5, 1), (4, 1), (3, 2), (1, 2), (2, 4)), head_chords=(0, 4),
     cells=((1, 1, 2, 2, 2), (2, 2, 1, 1, 2), (3, 1, 2, 2), (2, 2, 4), (1, 1, 1, 1, 4)), ends=((4, 4), (2, 6), (8,)),
     opens=((3, 4), (1, 4)), closes=((4, 0), (3, 0)), bridges=((5, 1, 4, 4), (3, 0, 1, 4), (5, 3, 1, 4)),
-    style="gavotte", leads=("harpsichord", "music_box", "strings"), kind="explore")
+    style="gavotte", leads=("oboe", "clarinet", "flute"), kind="explore")
 
 PRACTICE = Family(
     "practice", "ionian", 8, (0, 4), 152, 60,
     head=((0, 2), (2, 2), (4, 4), (5, 2), (4, 2), (2, 4)), head_chords=(0, 5),
     cells=((2, 2, 4), (4, 4), (2, 2, 2, 2), (3, 1, 4)), ends=((8,), (4, 4)),
     opens=((3, 4), (1, 4)), closes=((4, 0), (3, 0)), bridges=((3, 0, 1, 4), (5, 3, 1, 4)),
-    style="gentle", leads=("bells", "strings", "music_box"), kind="explore")
+    style="gentle", leads=("flute", "harp", "clarinet"), kind="explore")
 
 TEST_ROOM = Family(
     "test_room", "ionian", 8, (0, 4), 240, 67,
     head=((0, 1), (4, 1), (2, 1), (4, 1), (0, 1), (4, 1), (3, 1), (4, 1), (5, 2), (4, 2), (3, 2), (2, 2)), head_chords=(0, 1),
     cells=((1, 1, 1, 1, 2, 2), (2, 2, 2, 2), (1, 1, 2, 1, 1, 2), (2, 1, 1, 4)), ends=((4, 4), (2, 2, 4), (8,)),
     opens=((3, 4), (5, 4)), closes=((4, 0), (3, 0)), bridges=((5, 1, 4, 4), (3, 5, 1, 4)),
-    style="toccata", leads=("music_box", "harpsichord", "strings"), kind="explore")
+    style="toccata", leads=("marimba", "clarinet", "flute"), kind="explore")
 
 CLANS = {"slime": BURROW, "bandit": CREW, "rock": OLD_STONE, "snake": COIL}
 CLAN_OF = {"slime": "burrow", "bandit": "crew", "rock": "old_stone", "snake": "coil"}
@@ -338,8 +341,8 @@ def plan(t: Tune, bars_wanted: int) -> Plan:
 
 # ---------------------------------------------------------------- playing it
 
-LEGATO = {"strings": 1.0, "organ": 1.0, "choir": 1.0}
-OCTAVE = {"bells": -12, "choir": -12}  # tubular bells and the choir sit an octave under the written line
+# Held instruments join their notes (a hair of overlap, as a bow or a breath does); struck and plucked ones are let go.
+LEGATO = {k: 1.03 for k in ("strings", "violins", "violas", "cellos", "organ", "horn", "flute", "oboe", "clarinet", "trumpet", "solo_violin", "trombone", "bassoon")}
 
 
 @dataclass
@@ -357,7 +360,7 @@ class Ctx:
 
     def lead(self, k: int) -> str:
         inst = self.fam.leads[(self.t.lead + k) % len(self.fam.leads)]
-        return "strings" if self.t.calm and inst == "marcato" else inst  # a hall at rest has no short bows
+        return inst
 
     def bass(self, d: int) -> int:
         pc = deg_midi(self.fam, self.tonic, d) % 12
@@ -367,18 +370,34 @@ class Ctx:
         return S.voice(chord_pcs(self.fam, self.tonic, d), prev, lo, lo + 14, 3)
 
 
-def play(c: Ctx, stem: str, inst: str, notes: list, bar0: int, vel: float, pan: float = 0.0, octave: int = 0, late: float = 0.0) -> None:
+def play(c: Ctx, stem: str, inst: str, notes: list, bar0: int, vel: float, pan: float = 0.0, octave: int = 0, late: float = 0.0, swell: bool = True) -> None:
+    """A line on one instrument, fitted whole into its range, each phrase swelling to its middle and easing at its end
+    (a player breathes with the line; the recorded dynamics change colour as it does)."""
     t = bar0 * c.bar_s + late
     pos = 0
-    oct_shift = OCTAVE.get(inst, 0) + octave
-    if inst == "music_box" and c.tonic < 66:
-        oct_shift += 12
+    pitched = [deg_midi(c.fam, c.tonic, d) + octave for d, _ in notes if d is not None]
+    shift = octave + O.fit_octave(inst, pitched)
+    phrase_len = 4 * c.fam.meter
     for d, dur in notes:
         if d is not None:
             accent = 0.08 if pos % c.fam.meter in c.fam.strong else 0.0
-            c.sc.note(stem, inst, deg_midi(c.fam, c.tonic, d) + oct_shift, t, dur * c.unit * LEGATO.get(inst, 0.95), vel + accent, pan)
+            x = (pos % phrase_len) / phrase_len
+            arc = (0.82 + 0.3 * np.sin(np.pi * min(1.0, x * 1.15))) if swell else 1.0
+            c.sc.note(stem, inst, deg_midi(c.fam, c.tonic, d) + shift, t, dur * c.unit * LEGATO.get(inst, 0.95), min(1.0, (vel + accent) * arc), pan)
         t += dur * c.unit
         pos += dur
+
+
+DRUM = {"burrow": "tamb", "crew": "snare", "old_stone": "snare", "coil": "tamb", "hoard": "snare", "trade": "triangle", "test_room": "snare_soft"}
+
+
+def drum(c: "Ctx", vel: float) -> np.ndarray:
+    """The family's small drum: a tambourine for the slimes and snakes, a snare for the rest, a triangle at the trader."""
+    return O.hit(DRUM.get(c.fam.name, "snare_soft"), vel)
+
+
+def timp(m: int, vel: float) -> np.ndarray:
+    return O.hit("timpani", vel, m)
 
 
 def kettle(r: int) -> int:
@@ -415,96 +434,96 @@ def accompany(c: Ctx, p: Plan) -> None:
                 c.sc.note("pad", pad_inst, m, t, c.bar_s * 0.98, 0.2, pan=0.3)
             c.sc.note("bass", "strings", r, t, c.bar_s * 0.98, 0.26)
             if c.fam.name == "burrow" and c.rng.random() < 0.5:
-                c.sc.note("sparkle", "music_box", int(c.rng.choice([84, 86, 88, 91])), t + u * int(c.rng.integers(1, c.fam.meter)), u, 0.2, pan=float(c.rng.uniform(-0.7, 0.7)))
+                c.sc.note("sparkle", "glock", int(c.rng.choice([84, 86, 88, 91])), t + u * int(c.rng.integers(1, c.fam.meter)), u, 0.2, pan=float(c.rng.uniform(-0.7, 0.7)))
             elif c.fam.name == "crew":
                 for j, m in enumerate([r + 12, r + 12 + q1, r + 12 + q2, r + 24]):
-                    c.sc.note("chords", "harpsichord", m, t + j * 2 * u, u * 1.8, 0.22, pan=-0.3)
+                    c.sc.note("chords", "harp", m, t + j * 2 * u, u * 1.8, 0.22, pan=-0.3)
             elif c.fam.name == "old_stone" and k % 4 == 0:
-                c.sc.note("bell", "bells", deg_midi(c.fam, c.tonic, d) - 12, t, 3.0, 0.28)
+                c.sc.note("bell", "glock", deg_midi(c.fam, c.tonic, d) - 12, t, 3.0, 0.28)
             elif c.fam.name == "coil":
                 c.sc.note("drone", "strings", c.bass(0) + 7, t, c.bar_s * 0.98, 0.16, pan=-0.4)
                 if k % 2 == 1:
-                    c.sc.note("bell", "bells", deg_midi(c.fam, c.tonic, d + 4) - 12, t + u * 4, 2.0, 0.2, pan=0.4)
+                    c.sc.note("bell", "glock", deg_midi(c.fam, c.tonic, d + 4) - 12, t + u * 4, 2.0, 0.2, pan=0.4)
             continue
         if style == "oompah":  # 6/8: the bass, then the chord twice; the second half a fifth up
             hits = ((1, 2, 4, 5), (2, 5), (1, 2, 3, 4, 5))[c.t.osti % 3]
-            c.sc.note("bass", "marcato", r, t, u * 1.5, 0.55)
-            c.sc.note("bass", "marcato", r + 7, t + 3 * u, u * 1.5, 0.45)
+            c.sc.note("bass", "spic", r, t, u * 1.5, 0.55)
+            c.sc.note("bass", "spic", r + 7, t + 3 * u, u * 1.5, 0.45)
             for h in hits:
                 for m in tri[:2] if h % 3 else tri:
-                    c.sc.note("chords", "harpsichord", m, t + h * u, u * 0.9, 0.24, pan=-0.25)
+                    c.sc.note("chords", "harp", m, t + h * u, u * 0.9, 0.24, pan=-0.25)
             if fight and not brk:
-                c.sc.add("tabor", S.tabor(0.4), t, pan=0.3)
-                c.sc.add("tabor", S.tabor(0.3), t + 3 * u, pan=0.3)
+                c.sc.add("tabor", drum(c, 0.4), t, pan=0.3)
+                c.sc.add("tabor", drum(c, 0.3), t + 3 * u, pan=0.3)
                 if k % 2 == 0:
-                    c.sc.add("drums", S.timpani(kettle(r), 0.45), t)
+                    c.sc.add("drums", timp(kettle(r), 0.45), t)
             if brk and c.rng.random() < 0.7:
-                c.sc.note("sparkle", "music_box", tri[-1] + 24, t + u * int(c.rng.integers(0, 6)), u, 0.25, pan=float(c.rng.uniform(-0.7, 0.7)))
+                c.sc.note("sparkle", "glock", tri[-1] + 24, t + u * int(c.rng.integers(0, 6)), u, 0.25, pan=float(c.rng.uniform(-0.7, 0.7)))
         elif style == "gallop":  # every eighth on marcato strings, the drums behind
             steps = ((0, 0, 12, 0, 7, 0, 12, 7), (0, 7, 12, 7, 0, 7, 12, 7), (0, 0, 0, 12, 0, 0, 7, 12))[c.t.osti % 3]
             accents = ((0, 3, 6), (0, 4), (0, 3, 6))[c.t.osti % 3]
-            inst = "harpsichord" if brk else "marcato"
+            inst = "harp" if brk else "spic"
             base = r + 12 if r < 42 else r  # a gallop down at C2 is mud: it runs from D2 up
             for j, s in enumerate(steps):
                 c.sc.note("osti", inst, base + s, t + j * u, u * 0.8, 0.6 if j in accents else 0.42, pan=-0.25)
             if not brk:
-                c.sc.add("drums", S.timpani(kettle(r), 0.7), t)
-                c.sc.add("drums", S.timpani(fifth_under(kettle(r)), 0.5), t + 4 * u)
+                c.sc.add("drums", timp(kettle(r), 0.7), t)
+                c.sc.add("drums", timp(fifth_under(kettle(r)), 0.5), t + 4 * u)
                 for j, v in ((2, 0.55), (6, 0.55), (7, 0.3)):
-                    c.sc.add("tabor", S.tabor(v), t + j * u, pan=0.3)
+                    c.sc.add("tabor", drum(c, v), t + j * u, pan=0.3)
                 if label != "A":
                     for m in tri:
-                        c.sc.note("chords", "harpsichord", m + 12, t + 3 * u, u * 0.7, 0.3, pan=0.35)
+                        c.sc.note("chords", "harp", m + 12, t + 3 * u, u * 0.7, 0.3, pan=0.35)
         elif style == "stomp":  # slow and heavy: kettles on one and three, low strings chugging, the organ holding
             chug = ((0, 3, 4, 6), (0, 1, 2, 4, 5, 6), (0, 2, 3, 4, 6, 7))[c.t.osti % 3]
             for j in chug:
-                c.sc.note("osti", "marcato", r + 12, t + j * u, u * 0.85, 0.55 if j in (0, 4) else 0.4, pan=-0.2)
+                c.sc.note("osti", "spic", r + 12, t + j * u, u * 0.85, 0.55 if j in (0, 4) else 0.4, pan=-0.2)
             if not brk:
                 low = kettle(r)
-                c.sc.add("drums", S.timpani(low, 0.85), t)
-                c.sc.add("drums", S.timpani(low, 0.6), t + 4 * u)
+                c.sc.add("drums", timp(low, 0.85), t)
+                c.sc.add("drums", timp(low, 0.6), t + 4 * u)
                 if c.t.osti % 3 == 1:
-                    c.sc.add("drums", S.timpani(fifth_under(low), 0.35), t + 7 * u)
-                c.sc.add("tabor", S.tabor(0.45), t + 2 * u, pan=0.25)
-                c.sc.add("tabor", S.tabor(0.45), t + 6 * u, pan=0.25)
+                    c.sc.add("drums", timp(fifth_under(low), 0.35), t + 7 * u)
+                c.sc.add("tabor", drum(c, 0.45), t + 2 * u, pan=0.25)
+                c.sc.add("tabor", drum(c, 0.45), t + 6 * u, pan=0.25)
             for m in tri:
                 c.sc.note("pad", "organ", m - 12 if m > 60 else m, t, c.bar_s * 0.98, 0.22)
             if label != "A":
                 for m in tri:
-                    c.sc.note("choir", "choir", m, t, c.bar_s * 0.98, 0.28, pan=0.2)
+                    c.sc.note("choir", "horn", m, t, c.bar_s * 0.98, 0.28, pan=0.2)
         elif style == "asym":  # 7/8 in 2+2+3: the strings on each group, the harpsichord winding round the fifth
             wind = ((0, 7, 8, 7, 0, 7, 3), (7, 8, 7, 6, 7, 3, 2), (0, 3, 7, 8, 11, 8, 7))[c.t.osti % 3]
             for j, g in enumerate((0, 2, 4)):
-                c.sc.note("bass", "marcato", r + (7 if j == 1 else 0), t + g * u, u * 1.6, 0.6 if j == 0 else 0.45)
+                c.sc.note("bass", "spic", r + (7 if j == 1 else 0), t + g * u, u * 1.6, 0.6 if j == 0 else 0.45)
             for j, s in enumerate(wind):
-                c.sc.note("osti", "harpsichord", c.bass(0) + 24 + s, t + j * u, u * 0.85, 0.34 if j in (0, 2, 4) else 0.26, pan=-0.3)
+                c.sc.note("osti", "harp", c.bass(0) + 24 + s, t + j * u, u * 0.85, 0.34 if j in (0, 2, 4) else 0.26, pan=-0.3)
             if not brk:
                 for g, v in ((0, 0.5), (2, 0.32), (4, 0.42), (6, 0.25)):
-                    c.sc.add("tabor", S.tabor(v), t + g * u, pan=0.3)
+                    c.sc.add("tabor", drum(c, v), t + g * u, pan=0.3)
                 if k % 2 == 0:
-                    c.sc.add("drums", S.timpani(kettle(r), 0.55), t)
+                    c.sc.add("drums", timp(kettle(r), 0.55), t)
             if label != "A":
                 for m in tri:
                     c.sc.note("pad", "strings", m, t, c.bar_s * 0.98, 0.18, pan=0.35)
         elif style == "dragon":  # the champion's drive: an ostinato on the root, kettles, the choir over it
             steps = ((0, 0, 12, 0, 1, 0, 7, 1), (0, 12, 0, 7, 0, 12, 1, 0), (0, 0, 7, 0, 0, 12, 0, 1))[c.t.osti % 3] if d == 0 else (0, 0, 12, 0, 0, 7, 0, 12)
             for j, s in enumerate(steps):
-                c.sc.note("osti", "harpsichord" if brk else "marcato", r + s, t + j * u, u * 0.8, 0.62 if j in (0, 3, 6) else 0.45, pan=-0.25)
+                c.sc.note("osti", "harp" if brk else "spic", r + s, t + j * u, u * 0.8, 0.62 if j in (0, 3, 6) else 0.45, pan=-0.25)
             if not brk:
                 low = kettle(r)
-                c.sc.add("drums", S.timpani(low, 0.8), t)
-                c.sc.add("drums", S.timpani(fifth_under(low), 0.55), t + 4 * u)
+                c.sc.add("drums", timp(low, 0.8), t)
+                c.sc.add("drums", timp(fifth_under(low), 0.55), t + 4 * u)
                 for j, v in ((2, 0.55), (6, 0.55), (7, 0.35)):
-                    c.sc.add("tabor", S.tabor(v), t + j * u, pan=0.3)
+                    c.sc.add("tabor", drum(c, v), t + j * u, pan=0.3)
             if label == "A":
                 for m in tri:
                     c.sc.note("pad", "organ", m, t, c.bar_s * 0.98, 0.24)
             elif not brk:
                 for m in tri:
-                    c.sc.note("choir", "choir", m + 12 if m < 60 else m, t, c.bar_s * 0.98, 0.3, pan=0.2)
+                    c.sc.note("choir", "horn", m + 12 if m < 60 else m, t, c.bar_s * 0.98, 0.3, pan=0.2)
         elif style == "minuet":  # 3/4: the bass held, the chord on two and three
             c.sc.note("bass", "strings", r, t, c.bar_s * 0.98, 0.3)
-            chord_inst = "organ" if c.t.deep else "harpsichord"
+            chord_inst = "organ" if c.t.deep else "harp"
             for h in ((2, 4), (2, 3, 4, 5), (1, 2, 4))[c.t.osti % 3]:
                 for m in tri:
                     c.sc.note("chords", chord_inst, m, t + h * u, u * (1.6 if chord_inst == "organ" else 0.9), 0.22 if chord_inst == "organ" else 0.28, pan=-0.25)
@@ -518,47 +537,47 @@ def accompany(c: Ctx, p: Plan) -> None:
             c.sc.note("bass", "strings", r, t, c.bar_s * 0.98, 0.3)
             if c.t.osti % 2 == 1:
                 for j, m in enumerate((r + 12, r + 12 + q2, r + 24, r + 12 + q2)):
-                    c.sc.note("chords", "harpsichord", m, t + j * 2 * u, u * 1.9, 0.18, pan=-0.3)
+                    c.sc.note("chords", "harp", m, t + j * 2 * u, u * 1.9, 0.18, pan=-0.3)
             if k % 4 == 0:
-                c.sc.note("bell", "bells", deg_midi(c.fam, c.tonic, d) - 12, t, 3.5, 0.3, pan=0.3)
+                c.sc.note("bell", "glock", deg_midi(c.fam, c.tonic, d) - 12, t, 3.5, 0.3, pan=0.3)
             if label != "A":
                 pad_v = c.triad(d, 60, pad_v)
                 for m in pad_v:
-                    c.sc.note("choir", "choir", m, t, c.bar_s * 0.98, 0.22, pan=0.2)
+                    c.sc.note("choir", "horn", m, t, c.bar_s * 0.98, 0.22, pan=0.2)
         elif style == "rocking":  # 6/8: a broken chord rocking up and back, drips high in the cave
             for j, m in enumerate((r, r + 12 + q1, r + 12 + q2, r + 24, r + 12 + q2, r + 12 + q1)):
-                c.sc.note("chords", "harpsichord", m, t + j * u, u * 1.6, 0.4 if j == 0 else 0.28, pan=-0.3 + 0.12 * j)
+                c.sc.note("chords", "harp", m, t + j * u, u * 1.6, 0.4 if j == 0 else 0.28, pan=-0.3 + 0.12 * j)
             c.sc.note("bass", "strings", r, t, c.bar_s * 0.98, 0.33)
             if label != "A":
                 pad_v = c.triad(d, 62, pad_v)
                 for m in pad_v[1:]:
                     c.sc.note("pad", "strings", m, t, c.bar_s * 0.98, 0.2, pan=0.35)
             if c.rng.random() < 0.45:
-                c.sc.note("sparkle", "music_box", int(c.rng.choice([81, 83, 86, 88, 90])) + c.t.shift, t + u * int(c.rng.integers(1, 6)), u, 0.22, pan=float(c.rng.uniform(-0.8, 0.8)))
+                c.sc.note("sparkle", "glock", int(c.rng.choice([81, 83, 86, 88, 90])) + c.t.shift, t + u * int(c.rng.integers(1, 6)), u, 0.22, pan=float(c.rng.uniform(-0.8, 0.8)))
         elif style == "gavotte":  # the bass on one and three, the chord between
             for j in (0, 4):
-                c.sc.note("bass", "harpsichord", r + 12, t + j * u, u * 1.8, 0.42)
+                c.sc.note("bass", "harp", r + 12, t + j * u, u * 1.8, 0.42)
             for j in (2, 6) if c.t.osti % 2 == 0 else (2, 3, 6, 7):
                 for m in tri:
-                    c.sc.note("chords", "harpsichord", m, t + j * u, u * 0.9, 0.26, pan=-0.3)
-            c.sc.note("bass", "marcato", r, t, u * 1.2, 0.3)
-            c.sc.note("bass", "marcato", r + 7, t + 4 * u, u * 1.2, 0.26)
+                    c.sc.note("chords", "harp", m, t + j * u, u * 0.9, 0.26, pan=-0.3)
+            c.sc.note("bass", "spic", r, t, u * 1.2, 0.3)
+            c.sc.note("bass", "spic", r + 7, t + 4 * u, u * 1.2, 0.26)
             if label != "A":
-                c.sc.add("tabor", S.tabor(0.25), t + 2 * u, pan=0.3)
-                c.sc.add("tabor", S.tabor(0.25), t + 6 * u, pan=0.3)
+                c.sc.add("tabor", drum(c, 0.25), t + 2 * u, pan=0.3)
+                c.sc.add("tabor", drum(c, 0.25), t + 6 * u, pan=0.3)
         elif style == "gentle":  # a slow broken chord, the strings holding, a bell every four bars
             pad_v = c.triad(d, 57, pad_v)
             for m in pad_v:
                 c.sc.note("pad", "strings", m, t, c.bar_s * 0.98, 0.18, pan=0.3)
             for j, m in enumerate((r + 12, r + 12 + q1, r + 12 + q2, r + 12 + q1)):
-                c.sc.note("chords", "harpsichord", m, t + j * 2 * u, u * 1.9, 0.24, pan=-0.3)
+                c.sc.note("chords", "harp", m, t + j * 2 * u, u * 1.9, 0.24, pan=-0.3)
             c.sc.note("bass", "strings", r, t, c.bar_s * 0.98, 0.28)
         elif style == "toccata":  # eighths running round the chord, a light drum
             for j, s in enumerate((0, q1, q2, 12, q2, q1, 0, q1)):
-                c.sc.note("osti", "harpsichord", r + 12 + s, t + j * u, u * 0.85, 0.34 if j % 4 == 0 else 0.26, pan=-0.3)
+                c.sc.note("osti", "marimba", r + 12 + s, t + j * u, u * 0.85, 0.34 if j % 4 == 0 else 0.26, pan=-0.3)
             c.sc.note("bass", "strings", r, t, c.bar_s * 0.98, 0.28)
-            c.sc.add("tabor", S.tabor(0.28), t, pan=0.3)
-            c.sc.add("tabor", S.tabor(0.2), t + 4 * u, pan=0.3)
+            c.sc.add("tabor", drum(c, 0.28), t, pan=0.3)
+            c.sc.add("tabor", drum(c, 0.2), t + 4 * u, pan=0.3)
             if label != "A":
                 for m in tri:
                     c.sc.note("pad", "strings", m + 12, t, c.bar_s * 0.98, 0.15, pan=0.35)
@@ -584,19 +603,19 @@ def melody(c: Ctx, p: Plan) -> None:
                     break
                 first_bar.append((d, dur))
                 acc += dur
-            play(c, "bell", "bells", first_bar, bar0, 0.5, pan=0.2)
-            play(c, "lead2", c.lead(1), first_bar, bar0 + 2, 0.45, pan=-0.2, octave=12 if c.lead(1) not in ("music_box", "bells") else 0)
+            play(c, "bell", "glock", first_bar, bar0, 0.5, pan=0.2)
+            play(c, "lead2", c.lead(1), first_bar, bar0 + 2, 0.45, pan=-0.2, octave=12)
             play(c, "lead", c.lead(2), p.phrases["p4"], bar0 + 4, 0.72, pan=0.05)
         elif label == "A2":
             inst = c.lead(1)
             play(c, "lead", inst, p.phrases["p1"] + p.phrases["p2"], bar0, 0.8, pan=0.05)
             echo = c.lead(2) if c.lead(2) != inst else c.lead(3)
             delay = c.unit * (3 if c.fam.meter in (6, 7) else 4)
-            play(c, "echo", echo, p.phrases["p1"] + p.phrases["p2"], bar0, 0.34, pan=0.5, octave=12 if echo in ("strings", "organ", "marcato") else 0, late=delay)
+            play(c, "echo", echo, p.phrases["p1"] + p.phrases["p2"], bar0, 0.34, pan=0.5, octave=12, late=delay)
 
 
-LEVELS = {"lead": -7, "lead2": -10, "echo": -11, "bass": 0, "chords": 0, "pad": -2, "osti": -2, "drums": -11, "tabor": 7,
-          "bell": -8, "sparkle": -6, "choir": -4, "drone": -3}
+LEVELS = {"lead": -2, "lead2": -7, "echo": -9, "bass": -2, "chords": -2, "pad": -6, "osti": -3, "drums": -4, "tabor": -4,
+          "bell": -6, "sparkle": -6, "choir": -7, "drone": -6}
 SENDS = {"lead": 0.4, "lead2": 0.35, "echo": 0.6, "bass": 0.3, "chords": 0.35, "pad": 0.5, "osti": 0.2, "drums": 0.3,
          "tabor": 0.2, "bell": 0.65, "sparkle": 0.8, "choir": 0.5, "drone": 0.5}
 
@@ -627,6 +646,7 @@ def render_tune(t: Tune) -> tuple[np.ndarray, float, str]:
 
 
 def melody_named(sc: S.Score, stem: str, inst: str, notes: list, t0: float, unit: float, vel: float, pan: float = 0.0, shift: int = 0) -> None:
+    shift += O.fit_octave(inst, [S.midi(n) + shift for n, _ in notes if n != "r"])
     t = t0
     for n, d in notes:
         if n != "r":
@@ -661,19 +681,19 @@ def caves_first() -> tuple[np.ndarray, float, str]:
         r, q = named_chord(ch)
         t = i * bar
         for k, m in enumerate([r - 12, r + q[1], r + q[2], r + 12, r + q[2], r + q[1]]):
-            sc.note("chords", "harpsichord", m, t + k * unit, unit * 1.6, 0.42 if k == 0 else 0.3, pan=-0.3 + 0.12 * k)
+            sc.note("chords", "harp", m, t + k * unit, unit * 1.6, 0.42 if k == 0 else 0.3, pan=-0.3 + 0.12 * k)
         sc.note("bass", "strings", r - 12, t, bar * 0.98, 0.35)
         if i >= 8:
             for m in (r + q[1] + 12, r + q[2] + 12):
                 sc.note("pad", "strings", m, t, bar * 0.98, 0.22, pan=0.35)
         if rng.random() < 0.45:
-            sc.note("sparkle", "music_box", int(rng.choice([88, 83, 86, 81, 90])), t + unit * int(rng.integers(1, 6)), unit, 0.22, pan=float(rng.uniform(-0.8, 0.8)))
-    melody_named(sc, "lead", "music_box", a, 0, unit, 0.75, pan=0.1)
-    melody_named(sc, "lead", "music_box", b, 8 * bar, unit, 0.75, pan=0.1)
-    melody_named(sc, "lead2", "strings", a, 16 * bar, unit, 0.55, pan=-0.1, shift=-12)
-    melody_named(sc, "echo", "music_box", a, 16 * bar + unit * 3, unit, 0.3, pan=0.5, shift=12)
-    sc.note("bell", "bells", "E5", 0, 4, 0.35)
-    sc.note("bell", "bells", "B4", 16 * bar, 4, 0.3)
+            sc.note("sparkle", "glock", int(rng.choice([88, 83, 86, 81, 90])), t + unit * int(rng.integers(1, 6)), unit, 0.22, pan=float(rng.uniform(-0.8, 0.8)))
+    melody_named(sc, "lead", "flute", a, 0, unit, 0.75, pan=0.1)
+    melody_named(sc, "lead", "clarinet", b, 8 * bar, unit, 0.75, pan=0.1)
+    melody_named(sc, "lead2", "cellos", a, 16 * bar, unit, 0.55, pan=-0.1, shift=-12)
+    melody_named(sc, "echo", "glock", a, 16 * bar + unit * 3, unit, 0.3, pan=0.5, shift=12)
+    sc.note("bell", "glock", "E5", 0, 4, 0.35)
+    sc.note("bell", "glock", "B4", 16 * bar, 4, 0.3)
     secs = [("A", 0, 8 * bar), ("B", 8 * bar, 16 * bar), ("A2", 16 * bar, 24 * bar)]
     x = S.mix(sc, {"chords": -6, "bass": -9, "pad": -8, "lead": 0, "lead2": -1, "sparkle": -10, "bell": -8, "echo": -6},
               {"chords": 0.35, "bass": 0.3, "pad": 0.5, "lead": 0.55, "lead2": 0.5, "sparkle": 0.8, "bell": 0.7, "echo": 0.6}, sections=secs, wet=1.1)
@@ -700,26 +720,26 @@ def vexalith() -> tuple[np.ndarray, float, str]:
         breakdown = 16 <= i < 22
         steps = [0, 0, 12, 0, 1, 0, 7, 1] if ch.startswith("G2") else [0, 0, 12, 0, 0, 7, 0, 12]
         for k, s in enumerate(steps):
-            sc.note("osti", "harpsichord" if breakdown else "marcato", r + s, t + k * unit, unit * 0.8, 0.62 if k in (0, 3, 6) else 0.45, pan=-0.25)
+            sc.note("osti", "harp" if breakdown else "spic", r + s, t + k * unit, unit * 0.8, 0.62 if k in (0, 3, 6) else 0.45, pan=-0.25)
         if not breakdown or i >= 20:
             low = r if r < 45 else r - 12
-            sc.add("drums", S.timpani(low, 0.8), t)
-            sc.add("drums", S.timpani(low - 5, 0.55), t + 4 * unit)
+            sc.add("drums", timp(low, 0.8), t)
+            sc.add("drums", timp(low - 5, 0.55), t + 4 * unit)
             for k in (2, 6):
-                sc.add("tabor", S.tabor(0.55), t + k * unit, pan=0.3)
-            sc.add("tabor", S.tabor(0.35), t + 7 * unit, pan=0.3)
+                sc.add("tabor", O.hit("snare", 0.55), t + k * unit, pan=0.3)
+            sc.add("tabor", O.hit("snare_soft", 0.35), t + 7 * unit, pan=0.3)
         if i >= 8 and not breakdown:
             for m in (r + 12, r + q[1] + 12, r + q[2] + 12):
-                sc.note("choir", "choir", m, t, bar * 0.98, 0.32, pan=0.2)
+                sc.note("choir", "horn", m, t, bar * 0.98, 0.32, pan=0.2)
         if i < 8:
             for m in (r + 12, r + q[1] + 12, r + q[2] + 12):
                 sc.note("pad", "organ", m, t, bar * 0.98, 0.25)
-    melody_named(sc, "lead", "organ", a, 0, unit, 0.8, pan=0.05)
-    melody_named(sc, "lead", "strings", a, 8 * bar, unit, 0.85, pan=0.05)
-    melody_named(sc, "lead2", "strings", a, 8 * bar, unit, 0.45, pan=-0.3, shift=-12)
-    melody_named(sc, "bell", "bells", frag, 16 * bar, unit, 0.45, pan=0.2, shift=-12)
-    melody_named(sc, "bell", "bells", frag[:3], 20 * bar, unit, 0.5, pan=-0.2, shift=-12)
-    sc.note("bell", "bells", "G3", 0, 3, 0.5)
+    melody_named(sc, "lead", "horn", a, 0, unit, 0.8, pan=0.05, shift=-12)
+    melody_named(sc, "lead", "trumpet", a, 8 * bar, unit, 0.85, pan=0.05)
+    melody_named(sc, "lead2", "violins", a, 8 * bar, unit, 0.5, pan=-0.3)
+    melody_named(sc, "bell", "glock", frag, 16 * bar, unit, 0.45, pan=0.2, shift=-12)
+    melody_named(sc, "bell", "glock", frag[:3], 20 * bar, unit, 0.5, pan=-0.2, shift=-12)
+    sc.note("bell", "glock", "G3", 0, 3, 0.5)
     secs = [("organ", 0, 8 * bar), ("strings", 8 * bar, 16 * bar), ("break", 16 * bar, 24 * bar)]
     x = S.mix(sc, {"osti": -4, "drums": -8, "tabor": -10, "choir": -9, "pad": -10, "lead": 0, "lead2": -6, "bell": -5},
               {"osti": 0.2, "drums": 0.3, "tabor": 0.2, "choir": 0.5, "pad": 0.4, "lead": 0.35, "lead2": 0.35, "bell": 0.6}, sections=secs, wet=0.8)
@@ -735,11 +755,12 @@ def sting(kind: str) -> tuple[np.ndarray, float, str]:
         step, length, fade = 60 / 132 / 4, 2.6, 0.8
         line = [("F4", 1), ("Bb4", 1), ("D5", 1), ("F5", 1), ("Eb5", 2), ("G5", 2), ("F5", 2), ("Bb5", 8)]
         sc = S.Score(length, loop=False)
-        melody_named(sc, "lead", "harpsichord", line, 0, step, 0.75)
-        melody_named(sc, "lead2", "bells", line[-2:], 8 * step, step, 0.5, shift=-12)
+        melody_named(sc, "lead", "harp", line, 0, step, 0.75)
+        melody_named(sc, "lead", "flute", line, 0, step, 0.6)
+        melody_named(sc, "lead2", "glock", line[-2:], 8 * step, step, 0.5)
         land = 10 * step
         for m in ("Bb3", "D4", "F4", "Bb4"):
-            sc.note("choir", "choir", m, land, 1.6, 0.4, pan=0.2)
+            sc.note("choir", "strings", m, land, 1.6, 0.4, pan=0.2)
         for m, t in (("Bb2", 0), ("Eb3", 4 * step), ("F3", 6 * step), ("Bb2", land)):
             sc.note("bass", "strings", m, t, 0.5 if t < land else 1.6, 0.42)
         x = S.mix(sc, {"lead": 0, "lead2": -4, "choir": -7, "bass": -8}, {"lead": 0.4, "lead2": 0.7, "choir": 0.6, "bass": 0.3}, wet=0.9)
@@ -747,16 +768,17 @@ def sting(kind: str) -> tuple[np.ndarray, float, str]:
         step, length, fade = 60 / 132 / 2, 4.8, 1.2
         line = [("Bb4", 1), ("Eb5", 1), ("G5", 2), ("F5", 1), ("Eb5", 1), ("Bb5", 2), ("Ab5", 1), ("G5", 1), ("F5", 1), ("D5", 1), ("Eb5", 6)]
         sc = S.Score(length, loop=False)
-        melody_named(sc, "lead", "organ", line, 0, step, 0.75)
-        melody_named(sc, "lead2", "strings", line, 0, step, 0.6, shift=-12)
+        melody_named(sc, "lead", "trumpet", line, 0, step, 0.8)
+        melody_named(sc, "lead2", "horn", line, 0, step, 0.7, shift=-12)
         land = 12 * step
         for k in range(8):
-            sc.add("drums", S.timpani(S.midi("Bb2"), 0.3 + 0.05 * k), land - (8 - k) * step / 2)
-        sc.add("drums", S.timpani(S.midi("Eb2") + 12, 0.85), land)
+            sc.add("drums", O.hit("snare_soft", 0.3 + 0.07 * k), land - (8 - k) * step / 2)
+        sc.add("drums", timp(S.midi("Eb2") + 12, 0.85), land)
+        sc.add("drums", O.hit("crash", 0.6), land)
         for m in ("Eb4", "G4", "Bb4", "Eb5"):
             sc.note("pad", "strings", m, land, 2.2, 0.38, pan=0.3)
-        sc.note("bell", "bells", "Eb5", land, 3.0, 0.45)
-        sc.note("bell", "bells", "Bb4", land + step, 3.0, 0.3)
+        sc.note("bell", "glock", "Eb5", land, 3.0, 0.45)
+        sc.note("bell", "glock", "Bb4", land + step, 3.0, 0.3)
         for m, t in (("Eb3", 0), ("Ab2", 4 * step), ("Bb2", 8 * step), ("Eb2", land)):
             sc.note("bass", "strings", m, t, 2.0 if t < land else 2.2, 0.45)
         x = S.mix(sc, {"lead": 0, "lead2": -5, "drums": -6, "pad": -6, "bell": -4, "bass": -7},
@@ -767,6 +789,13 @@ def sting(kind: str) -> tuple[np.ndarray, float, str]:
 
 
 # ---------------------------------------------------------------- build
+
+
+def air(x: np.ndarray) -> np.ndarray:
+    """A gentle lift above 2.5 kHz (about +4 dB by 8 kHz): close-miked sections in a generated hall come out dull, and a
+    dull orchestra reads as a synthesised one. Zero-phase and circular, so a loop stays seamless."""
+    return S.spectrum_filter(x, lambda f: 1.0 + 0.6 * np.clip((f - 2500.0) / 5500.0, 0.0, 1.0))
+
 
 
 def build(name: str, wav_dir: str) -> tuple[str, float, float]:
@@ -782,6 +811,7 @@ def build(name: str, wav_dir: str) -> tuple[str, float, float]:
         x, seconds, how = sting(name.removeprefix("sting-"))
     else:
         x, seconds, how = render_tune(tunes()[name])
+    x = air(x)
     wav = os.path.join(wav_dir, name + ".wav")
     S.write(wav, x, loop=how == "loop")
     out = os.path.join(OUT_DIR, name + ".ogg")

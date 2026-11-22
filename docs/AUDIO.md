@@ -12,14 +12,14 @@ Every place and every foe has a tune of its own, and no two are the same file. O
 
 | Place | Tune | Family |
 | --- | --- | --- |
-| THE OLD HALLS | `explore-halls`, and `explore-halls-deep` the second time round | a minuet, D Mixolydian, 3/4: harpsichord over held strings |
-| THE UNDERCROFT | `explore-undercroft`, `explore-undercroft-deep` | a chorale, A Aeolian, slow 4/4: organ and choir, bells, an echo a half bar behind |
-| THE WET CAVES | `explore-caves` ("Drip Lullaby", written out whole), `explore-caves-deep` | a lullaby, E Dorian, 6/8: music box over a rocking harpsichord, drips |
+| THE OLD HALLS | `explore-halls`, and `explore-halls-deep` the second time round | a minuet, D Mixolydian, 3/4: violins, flute and oboe over harp chords and held strings |
+| THE UNDERCROFT | `explore-undercroft`, `explore-undercroft-deep` | a chorale, A Aeolian, slow 4/4: organ, horn and cellos, glockenspiel, an echo a half bar behind |
+| THE WET CAVES | `explore-caves` ("Drip Lullaby", written out whole), `explore-caves-deep` | a lullaby, E Dorian, 6/8: flute and clarinet over a rocking harp, glockenspiel drips |
 | a clan's hall | `hall-burrow`, `hall-crew`, `hall-old_stone`, `hall-coil` | the clan's own family, at rest: slower, no drums, a pad |
 | the camp | `assets/audio/hum-explore.ogg`, Abdulla's hum theme | "Cantiga take C", 174.55 s |
-| the trader | `trade` | a gavotte, F major |
-| the practice floor | `practice` | bells and strings, C major |
-| the test room | `test-room` | a toccata, G major |
+| the trader | `trade` | a gavotte, F major: oboe and clarinet over harp and pizzicato |
+| the practice floor | `practice` | flute and harp over strings, C major |
+| the test room | `test-room` | a toccata, G major: marimba |
 
 A biome comes round again on a deeper floor (three biomes, five floors), and plays its `-deep` tune then: the same family, lower, slower, with the band turned round. A floor plays a stretch of 80 to 110 s, then rests 60 to 120 s and picks up where it left off; the camp and the trader play for as long as you are there (`STAY`). The game says where you are with the events it already has: `stage` (to the camp, the trader, back to exploring) and `state_replaced` (a new floor, a hall, the test room).
 
@@ -31,21 +31,21 @@ Each clan is a family: every tune of the clan opens its phrases with the clan's 
 
 | Clan | Kinds | Family |
 | --- | --- | --- |
-| burrow (slime) | slime, gumdrop, spitter, ooze, splitter, brood, tide | 6/8, Lydian: music box, harpsichord and bells over an oom-pah of strings |
-| crew (bandit) | bandit, pickpocket, lookout, duelist, sapper, captain | 4/4 gallop, harmonic minor: harpsichord and strings over marcato eighths, kettles and tabor |
-| old_stone (rock) | rock, pebble, boulder, quake, crusher, golem | slow 4/4 stomp, Dorian: organ and choir over kettles on one and three |
-| coil (snake) | snake, adder, gazer, cobra, twinhead, hypno | 7/8 in 2+2+3, Hungarian minor: strings and bells over a harpsichord winding round the fifth |
-| the Hoard (champions) | EMBERLING, CINDERA, ASHKA, SCORIA, and VEXALITH | 4/4, Phrygian dominant: organ, strings and choir over a driving ostinato; Vexalith's is "The Champion Stirs", the family's theme written out whole |
+| burrow (slime) | slime, gumdrop, spitter, ooze, splitter, brood, tide | 6/8, Lydian: flute, clarinet, glockenspiel and oboe over harp and an oom-pah of spiccato strings, tambourine |
+| crew (bandit) | bandit, pickpocket, lookout, duelist, sapper, captain | 4/4 gallop, harmonic minor: solo violin, oboe, trumpet and clarinet over spiccato eighths, kettles and snare |
+| old_stone (rock) | rock, pebble, boulder, quake, crusher, golem | slow 4/4 stomp, Dorian: horn, cellos, trombone and organ over low strings and kettles on one and three |
+| coil (snake) | snake, adder, gazer, cobra, twinhead, hypno | 7/8 in 2+2+3, Hungarian minor: oboe, flute, solo violin and clarinet over a harp winding round the fifth, tambourine |
+| the Hoard (champions) | EMBERLING, CINDERA, ASHKA, SCORIA, and VEXALITH | 4/4, Phrygian dominant: trumpet, horns and violins over a spiccato ostinato, kettles, snare, brass and organ; Vexalith's is "The Champion Stirs", the family's theme written out whole |
 
-A fight is three or four sections of eight bars (36 to 46 s): the tune, the B phrase with the first lead an octave under, a break with the head on bells, and the tune again on the next lead with an echo.
+A fight is three or four sections of eight bars (36 to 46 s): the tune, the B phrase with the first lead an octave under, a break with the head on the glockenspiel, and the tune again on the next lead with an echo.
 
 ### Good news: the stings
 
-`sting-fanfare.ogg` (4.8 s, E♭ major, organ and strings in octaves into a kettle roll and bells) plays when you go down the stairs, and the exploring music returns a few seconds after it. `sting-victory.ogg` (2.6 s, B♭ major, a harpsichord climb into a held choir chord) plays when a fight ends in mercy; a kill ends the fight with its own sound and no sting (#168).
+`sting-fanfare.ogg` (4.8 s, E♭ major, trumpet and horn into a snare roll, a kettle, a cymbal and the glockenspiel) plays when you go down the stairs, and the exploring music returns a few seconds after it. `sting-victory.ogg` (2.6 s, B♭ major, harp and flute climbing into a held string chord) plays when a fight ends in mercy; a kill ends the fight with its own sound and no sting (#168).
 
 ### Levels and how it's made
 
-The renders are mastered to −19 dBFS RMS (exploring) and −17 dBFS RMS (fights and stings); `VOLUME` (0.7, 0.75) puts a fight about 2.6 dB above the exploring music, and `TRIM_DB` plays the hum theme 1 dB down (it is mastered at −18). `tools/music/build-themes.py` writes every tune: the families are tables at its top (mode, metre, tempo, head motif, rhythm cells, chord progressions, band), and each tune's phrases after the head are written from its own seed, so a build is repeatable. It renders through `tools/music/sampler.py`, an offline sampler of the MusyngKite harpsichord, church organ, strings, choir, music box and tubular bells (synthesised kettle drums and tabor), all in one stone hall, and logs each tune's loudness per part and section, spectrum and loop seam. `tools/music/to_ogg.sh` cuts exactly one loop and encodes it, so Godot's gapless Ogg loop wraps inside the music. Rebuilding is in [tools/music/README.md](../tools/music/README.md). The soundfonts stay out of the exports; credits are in `assets/CREDITS.txt`.
+The renders are mastered to −19 dBFS RMS (exploring) and −17 dBFS RMS (fights and stings); `VOLUME` (0.7, 0.75) puts a fight about 2.6 dB above the exploring music, and `TRIM_DB` plays the hum theme 1 dB down (it is mastered at −18). `tools/music/build-themes.py` writes every tune: the families are tables at its top (mode, metre, tempo, head motif, rhythm cells, chord progressions, band), and each tune's phrases after the head are written from its own seed, so a build is repeatable. It plays them on a recorded orchestra, the Versilian Studios Chamber Orchestra 2, Community Edition (CC0; `tools/music/orchestra.py`): string sections bowed, spiccato and pizzicato, solo violin, harp, flute, oboe, clarinet, horn, trumpet, trombone, organ, glockenspiel, marimba, real kettle drums, snare, tambourine, triangle and cymbals. A note takes the recorded dynamic nearest its velocity and alternates the round robins, each phrase swells to its middle and eases at its end, and held instruments join their notes. `tools/music/sampler.py` mixes it in one generated hall and logs each tune's loudness per part and section, spectrum and loop seam. Rebuilding is in [tools/music/README.md](../tools/music/README.md). The orchestra's recordings live in `build/vsco2` (`tools/music/fetch.sh`), out of git and the exports; credits are in `assets/CREDITS.txt`.
 
 ### On trial: Abdulla's motifs (issue #49)
 
