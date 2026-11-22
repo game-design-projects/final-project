@@ -29,6 +29,7 @@ signal trophies_pressed ## the header's count of achievements was clicked
 
 # the dock's fixed heights, so the picture above never changes size
 const LOG_H := 66.0
+const LOG_SLACK := 4.0 # the box lets a line run this far past its bottom, so one whose baseline sits on the edge still counts as in
 const SLOT_H := 74.0
 const KEYS_H := 26.0
 const LOG_PX := 20
@@ -495,7 +496,7 @@ static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 	var y := 0.0
 	for i in lines.size():
 		var h := _log_line_h(lines[i], width, px)
-		if y + h > LOG_H + 4.0:
+		if y + h > LOG_H + LOG_SLACK:
 			return i
 		y += h
 	return lines.size()
@@ -508,7 +509,7 @@ static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 static func log_rows(lines: Array, width: float, px := LOG_PX) -> Array:
 	if lines.is_empty():
 		return []
-	var room := LOG_H + 4.0
+	var room := LOG_H + LOG_SLACK
 	var first := lines.size() - 1 # the newest line is drawn however tall it is, so the last thing said is never dropped
 	var y := _log_line_h(lines[first], width, px)
 	while first > 0:
@@ -543,19 +544,17 @@ func _log_lines() -> Array:
 	return state.lines.filter(func(l): return not (l.kind == "say" and l.who == state.foe.name))
 
 
-## The log: the lines the game last said, newest kept, a speaker's name in gold.
+## The log: the rows `log_rows` picks from the lines the game last said, newest kept, a speaker's name in gold. They are drawn as
+## they come, the newest one even when it runs past the box's bottom.
 func _log(area: Rect2) -> void:
 	var y := area.position.y
 	var shown := _log_lines()
 	var px := log_px(shown, area.size.x)
 	var baseline := float(px) - 3.0
 	var rows: Array = log_rows(shown, area.size.x, px)
-	for i in rows.size():
-		var l: Dictionary = rows[i]
+	for l in rows:
 		var head := _log_head(l)
 		var rich_h := _log_line_h(l, area.size.x, px)
-		if y + rich_h > area.end.y + 4.0 and i < rows.size() - 1:
-			break # only the newest line may run past the box, and it is drawn rather than dropped
 		if head != "":
 			_text(_body, head, Vector2(0, y + baseline), px, Palette.MERCY)
 		var indent := _body.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
