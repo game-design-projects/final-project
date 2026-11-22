@@ -39,9 +39,13 @@ const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
 ## The foe's bar while it is small over the dodge box: the same line and height as the one over its head, so the card ends
 ## above CARD_BOTTOM whichever size it is drawn at.
 const SMALL_BAR := Rect2(12.0, HEAD_BAR.position.y, 120.0, HEAD_BAR.size.y)
-## Nothing of the foe's card is drawn below this: a fight's banner starts under it, so news is read beside the odds, not over
-## them (the tip that says ACT first once covered the odds it was teaching, #164 read back).
+## Where a fight's banner starts while a strike bar or the dodge box is up: every piece of the foe's card ends above this line,
+## but for the feeling word when the card is drawn small -- it stands under the card, in the left margin the banner's box leaves
+## free (BANNER_LEFT), so the news of the moment is read beside the card and never over it (the tip that says ACT first once
+## covered the odds it was teaching, #164 read back).
 const CARD_BOTTOM := HEAD_BAR.position.y + HEAD_BAR.size.y + 7.0
+## The line the feeling word takes when the card is drawn small: under the card's bottom, in the left margin, clear of a banner.
+const MOOD_IN_MARGIN := CARD_BOTTOM + 15.0
 const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
 const COMET_MS := 320.0
 const SOUL_GLIDE := 28.0 # how fast your soul catches up with its square: the share left after a second is e to minus this
@@ -57,6 +61,8 @@ const EMOTE_MS := 1100.0
 const BANNER_FADE_MS := 220.0
 const BANNER_W := 264.0
 const BANNER_H := 44.0
+## Where the banner's box starts: the picture's left margin is wider than the banner, and the card's feeling word stands there.
+const BANNER_LEFT := (W - BANNER_W) / 2.0
 const BANNER_PX := 13
 const MERCY_AT := 0.5 # how likely mercy must be before the monster's name says so
 const MOOD_WORDS := {"angry": ["ANGRY", Palette.WARN], "afraid": ["AFRAID", Palette.YOU], "friendly": ["FRIENDLY", Palette.MERCY], "wary": ["WARY", Palette.DIM]}
@@ -346,7 +352,7 @@ func banner_rect() -> Rect2:
 		y = SPEECH.position.y - BANNER_H - 4.0
 	if state != null and (state.dodge != null or state.bar != null):
 		y = CARD_BOTTOM + 1.0
-	return Rect2((W - BANNER_W) / 2.0, y, BANNER_W, BANNER_H)
+	return Rect2(BANNER_LEFT, y, BANNER_W, BANNER_H)
 
 
 ## Whether `text` fits the banner: two lines at most.
@@ -423,30 +429,49 @@ func foe_bar() -> Rect2:
 
 
 ## Where the foe's card draws, piece by piece: the bar and the gauge under it, the health numbers with the mercy odds after them
-## on the same line, the name, the feeling word, and the attack's name. Every piece ends above CARD_BOTTOM, where a fight's banner
-## starts, so the news of the moment is read beside the odds and never over them (#164 read back: the tip that says ACT first
-## covered the MERCY line it was teaching). What a check reads it by; `_name_and_health` draws from it.
+## on the same line, the name, the feeling word, and the attack's name. Every piece of it ends above CARD_BOTTOM, but for the
+## feeling word when the card is drawn small, which stands left of BANNER_LEFT instead: no piece of the card falls in the band a
+## fight's banner takes, so the news of the moment is read beside the card and never over it (#164 read back: the tip that says
+## ACT first covered the MERCY line it was teaching). A text piece is {text, at (its baseline), px, align, width}; what a check
+## reads the card by, and what `_name_and_health` draws it from.
 func foe_card(m) -> Dictionary:
 	var bar := foe_bar()
 	var small: bool = bar != HEAD_BAR
+	var mercy := mercy_gauge()
 	var numbers := "%d/%d" % [maxi(0, m.hp), m.max_hp]
 	var numbers_at := bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0)
-	var odds := ""
-	var odds_at := numbers_at
-	var mercy := mercy_gauge()
-	if mercy >= 0.0:
-		odds = "· MERCY %d%%" % roundi(mercy * 100.0)
-		odds_at += Vector2(_title.get_string_size(numbers, HORIZONTAL_ALIGNMENT_LEFT, -1, 6).x + 4.0, 0.0)
-	var at := Vector2(12.0, bar.position.y - 4.0) if small else Vector2(0.0, bar.position.y - 4.0)
+	var odds_at := numbers_at + Vector2(_title.get_string_size(numbers, HORIZONTAL_ALIGNMENT_LEFT, -1, 6).x + 4.0, 0.0)
+	var genre: String = state.dodge.genre if state.dodge != null else state.genre_of(m)
+	var label: String = Content.table("encounter").genres[genre].name
+	if m.boss:
+		label = "TURN %d · %s" % [m.turn + 1, label]
 	return {
 		"bar": bar,
-		"name_at": at,
-		"name_width": W - 12.0 if small else W,
-		"numbers": numbers, "numbers_at": numbers_at,
-		"odds": odds, "odds_at": odds_at,
 		"gauge": Rect2(bar.position + Vector2(0.0, bar.size.y + 4.0), Vector2(bar.size.x, 3.0)),
-		"mood_at": Vector2(12.0, bar.position.y if not small else CARD_BOTTOM + 15.0),
+		"mercy": mercy,
+		"name": {"text": m.name, "at": Vector2(12.0 if small else 0.0, bar.position.y - 4.0), "px": 8,
+			"align": HORIZONTAL_ALIGNMENT_LEFT if small else HORIZONTAL_ALIGNMENT_CENTER, "width": W - 12.0 if small else W},
+		"numbers": {"text": numbers, "at": numbers_at, "px": 6, "align": HORIZONTAL_ALIGNMENT_LEFT, "width": -1.0},
+		"odds": {"text": "· MERCY %d%%" % roundi(mercy * 100.0) if mercy >= 0.0 else "", "at": odds_at, "px": 6,
+			"align": HORIZONTAL_ALIGNMENT_LEFT, "width": -1.0},
+		"mood": {"text": mood_word(m)[0], "at": Vector2(12.0, bar.position.y if not small else MOOD_IN_MARGIN), "px": 7,
+			"align": HORIZONTAL_ALIGNMENT_LEFT, "width": -1.0},
+		"label": {"text": label, "at": Vector2(0.0, bar.position.y), "px": 8,
+			"align": HORIZONTAL_ALIGNMENT_RIGHT, "width": W - 12.0},
 	}
+
+
+## The box a text piece of the card draws in, from its baseline: as wide as the font makes its text at the size and alignment it
+## is written in. What a check reads the pieces by, to see that none of them falls in the band a fight's banner takes.
+static func card_box(piece: Dictionary) -> Rect2:
+	var font: Font = Fonts.title()
+	var span: Vector2 = font.get_string_size(str(piece.text), piece.align, piece.width, piece.px)
+	var x: float = piece.at.x
+	if piece.align == HORIZONTAL_ALIGNMENT_CENTER:
+		x += (piece.width - span.x) / 2.0
+	elif piece.align == HORIZONTAL_ALIGNMENT_RIGHT:
+		x += piece.width - span.x
+	return Rect2(Vector2(x, piece.at.y - font.get_ascent(piece.px)), span)
 
 
 ## A word for how the foe feels now, and its colour. Read off its meters, so it changes as they do.
@@ -463,30 +488,32 @@ func _name_and_health(m) -> void:
 	var spare := can_spare()
 	var card := foe_card(m)
 	var bar: Rect2 = card.bar
-	var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT if bar != HEAD_BAR else HORIZONTAL_ALIGNMENT_CENTER
-	_text(_title, m.name, card.name_at, 8, Palette.MERCY if spare else Palette.INK, align, card.name_width)
+	_card_text(card.name, Palette.MERCY if spare else Palette.INK)
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
 	if _ghost > frac:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _ghost, bar.size.y)), Palette.INK)
 	var struck: bool = clock_ms < hurt_until
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if struck else (Palette.WARN if frac < 0.4 else HEALTH_OK))
-	_text(_title, card.numbers, card.numbers_at, 6, Palette.INK)
+	_card_text(card.numbers, Palette.INK)
 	if not m.is_gone():
-		var mood := mood_word(m)
-		_text(_title, mood[0], card.mood_at, 7, mood[1])
-	var mercy := mercy_gauge()
-	if card.odds != "":
+		_card_text(card.mood, mood_word(m)[1])
+	var mercy: float = card.mercy
+	if mercy >= 0.0:
 		var gauge: Rect2 = card.gauge
-		_text(_title, card.odds, card.odds_at, 6, Palette.MERCY)
+		_card_text(card.odds, Palette.MERCY)
 		draw_rect(gauge, Palette.FAINT)
 		draw_rect(Rect2(gauge.position, Vector2(gauge.size.x * mercy, gauge.size.y)), Palette.MERCY)
 		draw_line(gauge.position + Vector2(gauge.size.x * MERCY_AT, -1.0), gauge.position + Vector2(gauge.size.x * MERCY_AT, gauge.size.y + 1.0), Palette.INK)
-	var genre: String = state.dodge.genre if state.dodge != null else state.genre_of(m)
-	var label: String = Content.table("encounter").genres[genre].name
-	if m.boss:
-		label = "TURN %d · %s" % [m.turn + 1, label]
-	_text(_title, label, Vector2(0, 21), 8, Palette.DIM, HORIZONTAL_ALIGNMENT_RIGHT, W - 12.0)
+	_card_text(card.label, Palette.DIM)
+
+
+## One text piece of the foe's card, drawn where `card_box` puts it (an empty piece draws nothing).
+func _card_text(piece: Dictionary, color: Color) -> void:
+	if str(piece.text).is_empty():
+		return
+	var box := card_box(piece)
+	_text(_title, piece.text, Vector2(box.position.x, piece.at.y), piece.px, color, HORIZONTAL_ALIGNMENT_LEFT, -1.0)
 
 
 func _speech_box() -> void:

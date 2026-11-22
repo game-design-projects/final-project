@@ -748,15 +748,20 @@ func _strike_bar_stands_clear(s, m) -> void:
 	s.mind_rows = [{"id": "mercy", "label": "", "answer": 0.42}]
 	_check(not overlay.speech().is_empty() and not overlay.strike_bar_rect().intersects(Overlay.SPEECH), "the bar stands above the foe's words")
 	_check(not overlay.strike_bar_rect().intersects(overlay.banner_rect()), "and a banner stands above the bar")
+	_card_stands_clear(overlay, m, "over the foe's head")
 	var card: Dictionary = overlay.foe_card(m)
-	_check(card.odds != "" and overlay.banner_rect().position.y > card.odds_at.y, "a banner stands under the odds, not over them")
-	_check(overlay.banner_rect().position.y > card.gauge.end.y, "and under the gauge they sit on")
+	_check(card.odds.text != "", "its odds are on the card (%s)" % card.odds.text)
+	_check(card.odds.at.y < card.gauge.position.y and card.odds.at.y < Overlay.CARD_BOTTOM, "and they sit on the health line, above the gauge rather than under it")
+	_check(card.mood.at.y <= Overlay.CARD_BOTTOM, "the feeling word stands above the banner's line too")
+	_check(card.label.text != "" and Overlay.card_box(card.label).end.y <= Overlay.CARD_BOTTOM, "and so does the attack's name (%s)" % card.label.text)
 	# the same card is drawn small over the dodge box, and a banner takes the same line there
 	s.bar = null
-	s.dodge = {"soul": Vector2i(1, 1)}
+	s.dodge = {"soul": Vector2i(1, 1), "genre": "chess"}
+	_card_stands_clear(overlay, m, "small over the dodge box")
 	var small: Dictionary = overlay.foe_card(m)
-	_check(small.gauge.end.y <= Overlay.CARD_BOTTOM and small.odds_at.y < Overlay.CARD_BOTTOM, "the small card ends above the room a banner takes too")
-	_check(overlay.banner_rect().position.y > small.gauge.end.y, "so no banner stands over it there either")
+	_check(small.gauge.end.y <= Overlay.CARD_BOTTOM and small.odds.at.y < Overlay.CARD_BOTTOM, "the small card ends above the room a banner takes too")
+	# one piece of the small card stands under the card, in the left margin: the feeling word, which a banner never reaches
+	_check(small.mood.at.y > Overlay.CARD_BOTTOM and Overlay.card_box(small.mood).end.x <= Overlay.BANNER_LEFT, "and its feeling word stands left of the banner, in the margin the card leaves")
 	overlay.free()
 	s.stage = stage_was
 	s.foe = foe_was
@@ -765,6 +770,22 @@ func _strike_bar_stands_clear(s, m) -> void:
 	s.dodge = null
 	s.mind_rows = rows_was
 	s.lines = lines_was
+
+
+## Every piece of the foe's card stands clear of a fight's banner, in either size: the bar, the gauge and each line of text end
+## above the banner's line (or, the feeling word the small card keeps under it, left of the banner's box), and none of them
+## lands in the banner's box -- the box a tip, a clan's word or a level-up draws, whose top edge once cut the odds through.
+func _card_stands_clear(overlay, m, where: String) -> void:
+	var card: Dictionary = overlay.foe_card(m)
+	var banner: Rect2 = overlay.banner_rect()
+	var pieces := {"bar": card.bar, "gauge": card.gauge}
+	for key in ["name", "numbers", "odds", "mood", "label"]:
+		pieces[key] = Overlay.card_box(card[key])
+	for key in pieces:
+		var box: Rect2 = pieces[key]
+		_check(box.has_area(), "the card's %s draws (%s, %s)" % [key, where, box])
+		_check(box.end.y <= Overlay.CARD_BOTTOM or box.end.x <= Overlay.BANNER_LEFT, "the card's %s ends above the banner's line, or left of its box (%s, %s)" % [key, where, box])
+		_check(not box.intersects(banner), "no banner covers the card's %s (%s, %s)" % [key, where, box])
 
 
 func _fight_eases(s, m) -> void:
