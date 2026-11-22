@@ -15,9 +15,12 @@ const SAFE_TRIES := 40
 const MIN_FROM_START := 3
 
 
-## Closes off chests. `walk` is FloorGen's walk of the floor as it was.
+## Closes off chests. `walk` is FloorGen's walk of the floor as it was. `params.vault` makes the first of them the Hoard's vault:
+## a keepsake lies in it rather than a purse (#161, rules/keepsakes.gd). The draws are the floor's own either way, so a floor
+## hides its chests where that seed always did.
 static func hide_chests(rng, f, walk: Dictionary, hall: Vector2i, params: Dictionary) -> void:
 	var gold: Array = params.get("gold", [5, 9])
+	var vault: bool = bool(params.get("vault", false))
 	for _i in int(params.get("cracks", 0)):
 		var spots := _dead_ends(f, walk, hall)
 		if spots.is_empty():
@@ -30,7 +33,11 @@ static func hide_chests(rng, f, walk: Dictionary, hall: Vector2i, params: Dictio
 		var spot: Dictionary = rng.pick(spots)
 		f.grid[spot.door.y][spot.door.x] = FloorMap.CRACKED
 		f.grid[spot.room.y][spot.room.x] = 1
-		f.treasure.append({"cell": spot.room, "gold": rng.int_range(int(gold[0]), int(gold[1]))})
+		var chest := {"cell": spot.room, "gold": rng.int_range(int(gold[0]), int(gold[1]))}
+		if vault: # the floor's first crack holds the run's vault; any other holds a purse
+			chest.vault = true
+			vault = false
+		f.treasure.append(chest)
 
 
 ## A corridor's dead end, whose last step becomes the wall: nobody would know the corridor went on.

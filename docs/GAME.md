@@ -24,6 +24,8 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 
 **A champion leaves keepsakes.** On every floor but the last, the champion out of your way leaves three keepsakes and you take one, yours for the rest of the run. The same run offers the same three on the same floor, and never one you already hold, so four champions make four choices out of nine. What you carry is listed beside the dodge box, and sitting down (Enter on the walk) says it too.
 
+**One floor of a run holds a vault** (#161). The run's seed picks one of the floors between the first and the last, and arriving there says so: something of the Hoard's is walled up on it, behind a cracked wall. A save left on that floor says it again when it is loaded, and stops once the vault is emptied. Break in and the wall gives into the vault, which offers three keepsakes of its own, drawn apart from that floor's champion and never one you already hold — five choices out of nine in a run that looks for it. A game with keepsakes off has no vault, and its floors hide purses as they always did.
+
 | Keepsake | What it does |
 | --- | --- |
 | EMBER HEART | 6 more max HP, and all your health back |
@@ -38,7 +40,7 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 
 **Fights teach.** Every monster you finish with teaches experience, and it does not matter how: slain, spared, won over or sent on its way are worth the same, and only backing out teaches nothing. Enough experience makes a level — 2 more max HP and 2 health back, and every second level every strike that lands hits 1 harder — announced when the fight ends, with the log keeping it and the status row's thin line filling toward the next. A run of the five floors reaches about level 6. The curve is in `data/experience.json`.
 
-Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and on some floors someone who asks for a favour instead of a fight. Floors 2 and 4 have a trader.
+Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and on some floors someone who asks for a favour instead of a fight. Floors 2 and 4 have a trader, and one floor of every run hides the Hoard's vault behind a crack, with the keepsakes above in it.
 
 **Monsters move when you move**, and turning is free. Slimes drift, bandits patrol, snakes follow for a while, and rocks and dragons stay put, and some kinds have their own ways: a gumdrop or a tide never stops moving, an adder, a pickpocket or a hypnocoil follows you, a boulder patrols, and spitters, lookouts, gazers, cobras, sappers, crushers, brood mothers and golems hold their ground; an angry monster, or one whose clan you have wronged, comes after you. One that has seen you is tagged HUNTING with an alert sound, one in sight makes a soft step as it moves, and an arrow at its feet shows the way it went. A hunter that has not had you in sight for five steps loses your track and goes back to its own way about the floor for ten, so a wall, a corner or a pad ends a chase; and a monster that chases you onto a pad is carried to the other one, away from you. A monster that catches you starts the fight and strikes first.
 

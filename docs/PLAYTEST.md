@@ -26,8 +26,9 @@ The order matters less than the coverage; the numbers are ten-minute blocks.
    square, its colour and the marks on it read as "this will land here, now", and can a tester step off in time? After two or
    three fights, ask what the level they reached said and what it gave them (#162).
 4. **The things a floor hides.** A cracked wall (walk into it), the chest behind it, a pad, the writing on a wall, the stairs,
-   and a trader (floors 2 and 4, or below a market stair). Press **M** once 80% of a floor is seen: does the rest of the
-   layout appearing help, or steal the mystery?
+   and a trader (floors 2 and 4, or below a market stair). One floor of the run has a vault behind a crack: arriving there says
+   so in the log, and breaking in offers three keepsakes (#161) — does the tester look for it, and does the relic make the walk
+   worth it? Press **M** once 80% of a floor is seen: does the rest of the layout appearing help, or steal the mystery?
 5. **The gate on the third stairs.** Someone has to hold it. Ask what the choice felt like, and whether the cost was clear.
 6. **A champion.** The keepsake choice after it: three cards, one kept. Can a tester say what each does and why they picked it?
 7. **The end.** The Last Door wants company. Ask what the ending screen said, and whether embers meant anything to them.
@@ -65,6 +66,9 @@ These are the open questions, not the fixed ones. A note is most useful when it 
   can cool a clan that hates you. Does a tester notice a rival clan's monsters starting friendlier, does a kill start to read as
   taking a side, and does the praise ever make killing feel cheaper than it should?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
+- **The vault.** #161: one floor of the run says something of the Hoard's is walled up on it, behind a cracked wall, and the
+  vault holds a keepsake. Does a tester go looking for the crack once the log says so, is the vault found without being shown
+  where, and does walking a floor now have a reason beyond the stairs?
 - **A favour, all the way.** Someone asks for something on some floors; a lord of a clan asks more, asks again where its biome
   comes back, and swears its clan when paid. Does a tester finish one, and can they say what they got?
 - **A chase that ends.** A hunter that cannot see you for five steps gives up for ten, and a pad carries a chaser across the

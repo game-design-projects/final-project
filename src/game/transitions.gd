@@ -12,11 +12,12 @@
 ##   A fight that ends (spared, slain, a cut paid, fled) goes from menu, act, talk or fightbar straight back to explore,
 ##   or, with fights queued (social-demo), on to the next intro.
 ##   A champion out of the way leaves keepsakes (the feature keepsakes): the fight ends in keepsake, and goes on from there as above.
+##   The Hoard's vault on one floor of a run opens out of the walk (explore to keepsake, #161), and the choice goes back to explore.
 extends RefCounted
 
 const ALLOWED := {
 	"": ["explore"], # a new run or a loaded one
-	"explore": ["intro", "end", "explore", "trade", "request", "camp"],
+	"explore": ["intro", "end", "explore", "trade", "request", "camp", "keepsake"], # keepsake: the Hoard's vault, out of the walk (#161)
 	"camp": ["explore"],
 	"intro": ["menu", "wait", "dodge"], # a monster that caught you strikes first
 	"social": ["menu", "wait", "explore", "intro", "keepsake"],
