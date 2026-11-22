@@ -48,14 +48,16 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 | --- | --- | --- | --- |
 | The Burrow | DOLLOP | ASK A DRAGON | In a fight with a dragon, ACT and SAY SOMETHING: ask whether it likes slimes. It answers |
 | The Burrow | DOLLOP | BRING A SLIME | Come back with a slime that chose to follow you. DOLLOP takes it home |
-| The Old Stone | SLATE | WIN HEAVY | Fell a foe with HEAVY strikes only: one light strike in that fight and it doesn't count |
+| The Old Stone | SLATE | WIN HEAVY | End a fight with no light strike in it: fell the foe with HEAVY strikes only, or spare it or win it over without striking at all |
 | The Old Stone | SLATE | SPEAK LIKE A ROCK | Type something to it as flat and monotone as you can |
 | The Crew | MAGPIE | BAG FIVE SNAKES | Kill 5 snakes, on any floors, counted from when you said you would |
 | The Crew | MAGPIE | HAND OVER 50 GOLD | Come back with 50 gold and give it up |
 | The Coil | SISSEL | BRING A BANDIT | Come back with a bandit that chose to follow you. It is lectured, and storms off |
 | The Coil | SISSEL | HISS AT IT | Type a hiss, and a long one: "hiss" is an insult, "hisssssss" will do |
 
-A request the fight menu cannot do is not asked at all: WIN HEAVY wants HEAVY in the menu, which the feature `heavy-strike` gives it, so with `no-heavy-strike` or the `skill-combat` experiment — whose menu has SKILLS where FIGHT and HEAVY were — SLATE asks only to be spoken to flat.
+Every request can be done by any fight menu and on the peaceful road: where the menu has no HEAVY (`no-heavy-strike`, or the `skill-combat` experiment, whose menu has SKILLS where FIGHT and HEAVY were), WIN HEAVY asks only for a fight ended without a strike.
+
+Asking the dragon is not the fight's one line until it is asked: while the Burrow's request is taken, the fight menu's SAY SOMETHING says what to ask, and a line that misses it is said to miss it and leaves SAY open, so a champion that can't be fled can still be asked.
 
 What is typed is judged by the mind: Jev when the game can reach it, and otherwise a rule (the longest run of s; no capitals, question or exclamation; a question about liking that names slimes). Some requests cost you with another clan, as any deed does: five dead snakes enrage the Coil.
 
@@ -67,7 +69,7 @@ What is typed is judged by the mind: Jev when the game can reach it, and otherwi
 
 **The stairs** offer two ways down to compare, chosen from the seed: a steep stair (tougher monsters, more gold), a quiet one (fewer monsters, a longer rest), a market stair (a trader below) or a warren (every monster below is one kind). On the third stairs a gate drops unless someone holds its chain and stays: hold it yourself for 10 HP, or leave a friend behind, which the others see. The last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending.
 
-**The halls answer what you do.** Spare monsters and the corridor warms: torches grow eyes, turn to you and lean in as you pass, skulls nod, and a cracked wall that gives is a guilty smile. Kill and they look away, then shut their eyes; faces go blank one monster at a time, champions last, and at the bottom the set is cold wire. Eating or abandoning a friend costs more than a kill. Nothing here changes a number: it is how the place feels about you. See [ART.md](ART.md).
+**The halls answer what you do.** Spare monsters and the corridor warms: torches grow eyes, turn to you and lean in as you pass, skulls nod, and a cracked wall that gives is a guilty smile. Kill and they look away, then shut their eyes; faces go blank one monster at a time, champions last, and at the bottom the set is cold wire. Eating or abandoning a friend costs more than a kill. And the colder they are, the harder they fight (`data/warmth.json` `harder`): wary, the attacks come a little faster and mercy is a little harder to find; shut, they hit a point harder, and mercy and a monster's wish to come along fall by a third; cold, faster still, and both under half. The log says what each turn means beside the torches' line, and sparing warms them back. See [ART.md](ART.md).
 
 **Writing on the walls.** Every floor has one piece of writing, a banner in the accent colour on the closed end of a quiet corridor, marked in gold on the map once seen (grey once read). Step up to it to read it. What it says depends on the floor and on how the halls feel about you as you read: warm (kind or beloved), wary, or cold (shut or cold). So a kind run, a mixed one and a cruel one each read their own five of the fifteen, which tell why the walls watch (they are the thieves who came down alone, folded into the stone), who lights them (Wick, who is in the wall too), what the clans hold against each other, and who built the place and why its Last Door wants two. What has been read is kept across runs, the log counts it ("Writing 4 of 15 found"), and reading all of it is an achievement. The words are in `data/lore.json`.
 
@@ -94,6 +96,8 @@ Then the monster attacks, unless what you did calmed it. Monsters belong to clan
 | The Hoard (dragons) | Nobody | The Crew | Bandits are thieves. It has never noticed the slimes, and hears a quarter of what is done to the rocks and snakes |
 
 A clan that likes the victim's takes your deed as its own, by half: sore at a killing, glad of a sparing. A clan that dislikes it is glad of a killing (half a kill's worth, the other way), doesn't mind a sparing, and is sore when you take one in as a friend. After a fight the log says each of these in a line: "The Old Stone likes that you killed a slime: slimes are too soft." A monster that has heard says so in its own words when you meet it. One kill of its own makes a clan ANGRY (its own start out angrier). Two, with nothing made up for them, make it FURIOUS: every floor reached after that has its kind as elites, tagged ELITE over their heads and in the header, with a quarter more health, faster attacks and a point more per hit (never the champion). Four make it ENRAGED: none of its own takes mercy, a cut or an offer, and SPARE greys out, even for a champion of the Hoard. Sparing one of its own or of a clan it likes, or doing one of its kind a favour, cools it back down. A banner says so whenever a clan moves.
+
+The other way up, a clan that likes you does something for you (`data/clans.json` `favour`). FRIENDLY (one sparing does it): its own never hunt you on the floor. TRUSTED (standing 40, a few kindnesses): the first of its own you meet on a floor draws you the floor, which goes onto your map. DEVOTED (70): its own take mercy at least three times in four (never a champion), and the first strike at one breaks the clan's faith, back to calm. Each level reached or lost is said on a banner like hostility, and the foe's card says when its clan is devoted.
 
 **What makes it harder** is on the screen: the header tags how much tougher this floor's monsters are (FOES +12% HP for each floor below B1F, a quarter more down the steep stair), the map's legend (the info key on the walk) gives every clan's mood and what its levels mean, and an elite's or an enraged clan's fight opens with a banner saying which.
 
@@ -174,7 +178,7 @@ Up to three spared monsters travel with you, and each gives a passive charm. Eac
 | Rock | STEADY | The strike bar moves slower |
 | Dragon | HOARD-FIRE | +4 damage on every strike |
 
-Allies have values and judge what you do. Upset one enough and it walks out. Hover its chip or press **I** to see its mood, loyalty and what it cares about.
+Allies have values and judge what you do. Upset one enough and it walks out. Every deed that moves an ally's loyalty says so in the log ("WICK thinks less of you: loyalty 55 (CONTENT)."), and its chip carries the number. Hover the chip or press **I** to see its mood and what it cares about.
 
 At camp a friend can also become two roasts: to eat, to sell to a trader who won't ask, or to feed to the others, who like you for it, until one works it out, walks out and tells. The ending remembers.
 
