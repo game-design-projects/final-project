@@ -33,6 +33,7 @@ const SLOT_H := 74.0
 const KEYS_H := 26.0
 const LOG_PX := 20
 const LOG_SIZES_LARGE := [26, 24, 22]
+const LOG_GAP := "…" # the log's first row when the lines above what it shows were left out (Hud.log_rows)
 static var large_text := false # the TEXT SIZE setting (the scene keeps this up to date)
 const SUB_LINE_H := 20.0 # one more line of a command's help, when it wraps
 const SUB_STAGES := ["menu", "act", "skills", "trade", "items"] # where the line under the key hints says what the picked command does (the trader and the bag too)
@@ -488,7 +489,8 @@ static func _log_line_h(l: Dictionary, width: float, px := LOG_PX) -> float:
 	return Fonts.body().get_multiline_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, width - indent, px).y
 
 
-## How many of the first lines fit the log box, which cuts off at the first one that would run past its bottom.
+## How many of the first lines fit the log box. It picks the text size, so a larger setting never costs a line; what the
+## box draws is `log_rows`, which keeps the newest lines rather than the first ones.
 static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 	var y := 0.0
 	for i in lines.size():
@@ -497,6 +499,39 @@ static func log_fits(lines: Array, width: float, px := LOG_PX) -> int:
 			return i
 		y += h
 	return lines.size()
+
+
+## The rows the log box draws, top to bottom: the newest lines that fit, so what was just said is never the line cut off.
+## When older lines are left out the first row is `LOG_GAP` (a "…"), rather than the box going quiet about them; and the
+## newest line is drawn even when it alone is taller than the box, so the last thing said is never dropped. All of them
+## fitting: the lines themselves, with no mark.
+static func log_rows(lines: Array, width: float, px := LOG_PX) -> Array:
+	if lines.is_empty():
+		return []
+	var room := LOG_H + 4.0
+	var first := lines.size() - 1 # the newest line is drawn however tall it is, so the last thing said is never dropped
+	var y := _log_line_h(lines[first], width, px)
+	while first > 0:
+		var h := _log_line_h(lines[first - 1], width, px)
+		if y + h > room:
+			break
+		y += h
+		first -= 1
+	if first == 0:
+		return lines.duplicate()
+	var gap := _log_gap()
+	var gap_h := _log_line_h(gap, width, px)
+	while first < lines.size() - 1 and y + gap_h > room: # the mark takes the top row: give back the oldest line for it
+		y -= _log_line_h(lines[first], width, px)
+		first += 1
+	if y + gap_h > room:
+		return lines.slice(first) # no room for the mark above the newest line: it shows alone
+	return [gap] + lines.slice(first)
+
+
+## The row that stands for the lines the box left out.
+static func _log_gap() -> Dictionary:
+	return {"kind": "", "who": "", "text": LOG_GAP}
 
 
 ## What the log shows: what the foe says has a box of its own on the picture while the fight waits on it.
@@ -508,17 +543,19 @@ func _log_lines() -> Array:
 	return state.lines.filter(func(l): return not (l.kind == "say" and l.who == state.foe.name))
 
 
-## The log: the lines the game last said, top down, a speaker's name in gold.
+## The log: the lines the game last said, newest kept, a speaker's name in gold.
 func _log(area: Rect2) -> void:
 	var y := area.position.y
 	var shown := _log_lines()
 	var px := log_px(shown, area.size.x)
 	var baseline := float(px) - 3.0
-	for l in shown:
+	var rows: Array = log_rows(shown, area.size.x, px)
+	for i in rows.size():
+		var l: Dictionary = rows[i]
 		var head := _log_head(l)
 		var rich_h := _log_line_h(l, area.size.x, px)
-		if y + rich_h > area.end.y + 4.0:
-			break
+		if y + rich_h > area.end.y + 4.0 and i < rows.size() - 1:
+			break # only the newest line may run past the box, and it is drawn rather than dropped
 		if head != "":
 			_text(_body, head, Vector2(0, y + baseline), px, Palette.MERCY)
 		var indent := _body.get_string_size(head, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x

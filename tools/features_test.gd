@@ -75,6 +75,7 @@ func _run() -> void:
 	await _gate()
 	await _branching()
 	await _late_decisions()
+	await _log_keeps_the_newest()
 	await _clans()
 	await _hostility()
 	await _map_gen()
@@ -1739,6 +1740,32 @@ func _late_decisions() -> void:
 	Hud.large_text = false
 	var settings = load("res://src/menu/settings.gd")
 	_check(settings.valid("text_size", "large") and not settings.valid("text_size", "huge"), "the setting has two sizes")
+	_use()
+
+
+## The log keeps the newest lines: after a kill five lines are said and the box fits three, so the two the box can't show
+## are the oldest, and a "…" says they were cut instead of the last line — what the clans and the kill just said — being
+## the one dropped. The newest line is drawn even alone taller than the box.
+func _log_keeps_the_newest() -> void:
+	Hud.large_text = false
+	var five := []
+	for line in ["The foe falls.", "Its clan sees it.", "GLOP approves.", "The Crew is angry.", "A clan is angry with you."]:
+		five.append(State.sys_line(line))
+	_check(Hud.log_fits(five, 1100.0) < five.size(), "five lines don't all fit the log (%d of 5)" % Hud.log_fits(five, 1100.0))
+	var rows: Array = Hud.log_rows(five, 1100.0)
+	_check(rows.back().text == five.back().text, "a five-line log shows its last line (%s)" % str(rows.back().text))
+	_check(rows[0].text == Hud.LOG_GAP, "and marks the oldest lines cut with a %s, rather than dropping the end" % Hud.LOG_GAP)
+	_check(rows.size() >= 2 and rows[1].text == five[3].text, "the line before the last is kept too (%s)" % str(rows[1].text))
+	# a log that fits is drawn whole, with no mark
+	var small := [State.sys_line("One line."), State.sys_line("Two.")]
+	var kept: Array = Hud.log_rows(small, 1100.0)
+	_check(kept.size() == small.size() and kept[0].text == small[0].text and kept.back().text == small.back().text, "a log that fits is drawn whole")
+	# the newest line taller than the box: it is drawn (and cut by the box), never replaced by the lines above it
+	var tall: Dictionary = State.sys_line("word ".repeat(400))
+	var alone: Array = Hud.log_rows([State.sys_line("Older."), tall], 760.0)
+	_check(alone.size() == 1 and alone.back().text == tall.text, "a newest line taller than the box still shows")
+	# what the box draws is what it says it can: a row per line it fits, and the mark when it does not fit them all
+	_check(Hud.log_rows(five, 760.0).size() <= Hud.log_fits(five, 760.0) + 1, "the rows never outnumber the room the box has")
 	_use()
 
 
