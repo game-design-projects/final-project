@@ -4,42 +4,48 @@
 
 The music follows the moment (`src/audio/music.gd`). `nomusic` turns it off, and the Settings sound page sets the level.
 
-### The hum theme (the default, feature `hum-theme`)
+Every place and every foe has a tune of its own, and no two are the same file. Of the music before, one theme is left: Abdulla's hum theme, at the camp. The passacaglia, the four battle loops, the hum theme's combat loop, the music set and the old stings are gone from the game (their sources stay in git history and in `tools/music/hum-theme/` and `tools/music/music-set/`).
 
-Abdulla's hum theme plays by default: two loops on one hummed melody, "Cantiga take C", an 8-bar tune in modal C minor. Their source, MIDI and render script are in `tools/music/hum-theme/` (see its README), rendered with the GeneralUser GS soundfont.
+### Where you are: the exploring music
 
-- **Exploring: `hum-explore.ogg`**, 64 bars of 4/4 at 88 BPM, 174.55 s, one exact loop. A slow a-cappella "ooh" voice with echoes sings the theme a phrase at a time over a soft drum, bowed bass, pad, a faint choir, piano tolls and tremolo strings. It keeps the same pacing as before: a stretch of music, then a rest, then it picks up where it left off.
-- **Fights: `hum-combat.ogg`**, 48 bars at 176 BPM, 65.45 s, one exact loop, in every fight. The same melody and chords on driving low strings, horns and violins, with choir, taiko, timpani and toms, and a breakdown with the echoing voice.
-- **Stings:** the `victory` and `fanfare` stings below are kept.
+`Music.scene_of(state)` picks the place, and `Music.set_scene` crosses over to it in a second. Each place keeps its own player while you are on its floor, so the camp gives the floor's music back where it left off.
 
-The loops are mastered 1 dB hotter than the old music (−18 and −16 dBFS RMS), so `HUM_TRIM_DB` plays them 1 dB under the same volumes. `no-hum-theme` brings back the old music below.
+| Place | Tune | Family |
+| --- | --- | --- |
+| THE OLD HALLS | `explore-halls`, and `explore-halls-deep` the second time round | a minuet, D Mixolydian, 3/4: harpsichord over held strings |
+| THE UNDERCROFT | `explore-undercroft`, `explore-undercroft-deep` | a chorale, A Aeolian, slow 4/4: organ and choir, bells, an echo a half bar behind |
+| THE WET CAVES | `explore-caves` ("Drip Lullaby", written out whole), `explore-caves-deep` | a lullaby, E Dorian, 6/8: music box over a rocking harpsichord, drips |
+| a clan's hall | `hall-burrow`, `hall-crew`, `hall-old_stone`, `hall-coil` | the clan's own family, at rest: slower, no drums, a pad |
+| the camp | `assets/audio/hum-explore.ogg`, Abdulla's hum theme | "Cantiga take C", 174.55 s |
+| the trader | `trade` | a gavotte, F major |
+| the practice floor | `practice` | bells and strings, C major |
+| the test room | `test-room` | a toccata, G major |
 
-### The music set's fights (the default, feature `music-set`)
+A biome comes round again on a deeper floor (three biomes, five floors), and plays its `-deep` tune then: the same family, lower, slower, with the band turned round. A floor plays a stretch of 80 to 110 s, then rests 60 to 120 s and picks up where it left off; the camp and the trader play for as long as you are there (`STAY`). The game says where you are with the events it already has: `stage` (to the camp, the trader, back to exploring) and `state_replaced` (a new floor, a hall, the test room).
 
-A fight plays the theme of who it is with, from Abdulla's music set (`tools/music/music-set/`): `set-fight.ogg` (the piano battle, 41.86 s) for a monster, `set-boss.ogg` (41.86 s) for a champion, and `set-final.ogg` (45.33 s) for the last champion, at the Last Door. Each is one whole loop. The game says who the fight is with as it begins (the event `encounter`, `boss` and `final`), and `Music.fight_with` picks the track. They are 0.9 dB hotter than the hum theme's combat loop, so `SET_TRIM_DB` plays them 2 dB under the battle volume. `no-music-set` plays the hum theme's combat loop in every fight.
+### Who you fight
 
-### The old music (`no-hum-theme`)
+`Music.fight_of(foe)` picks the tune: a monster its kind's, `fight-<kind>` for each of the 25 kinds in `data/kinds.json`, and a champion its own, `champion-<name>` for each in `data/floors.json`. When a floor is made, its foes' tunes load in the background (`Music.prepare`). The loop cuts in within a third of a second, and the exploring music fades out under it, keeping its place.
 
-All of it is baroque dungeon music, in the spirit of Wizardry and Dragon Quest: one small band of real samples (harpsichord, church organ, strings, choir, music box and tubular bells, from the MusyngKite soundfont) plus synthesised kettle drums and a tabor, all in the same stone hall. Every piece is built on the game's own melody, **A B C D D D E D E D C C C D D D**, with its repeated notes short-short-long. The pieces are rendered offline and ship as Ogg Vorbis files in `assets/audio/` (about 5 MB in all).
+Each clan is a family: every tune of the clan opens its phrases with the clan's two-bar head motif, in the clan's mode, metre and band, and differs in key, tempo, lead instruments, ostinato, harmony and everything after the head. A kind's place in its clan (shallow to deep) moves its key round a circle (0, +3, −2, +5, −4, +2, −5) and its tempo up the deeper it lives.
 
-**Exploring: `ambient.ogg`**, a passacaglia in D minor: 112.5 seconds, 3/4 at 64 BPM, five variations on an eight-bar ground bass (the lament D C B♭ A, then B♭ A D A). The melody lies over it note for note (Dm | C | B♭ | F/A | Gm/B♭ | A7 | Dm | A) and comes and goes. Variation I has no melody, only organ, low strings, harpsichord and a far bell. Then the melody passes to the music box, the strings, and the harpsichord over a swelling choir, and in the last variation a fragment on high strings while the texture thins back to the start. The ambient also comes and goes in time: about a minute and a half of music, then a minute or two of quiet before it drifts back. It fades in over two seconds, two seconds after a fight ends.
+| Clan | Kinds | Family |
+| --- | --- | --- |
+| burrow (slime) | slime, gumdrop, spitter, ooze, splitter, brood, tide | 6/8, Lydian: music box, harpsichord and bells over an oom-pah of strings |
+| crew (bandit) | bandit, pickpocket, lookout, duelist, sapper, captain | 4/4 gallop, harmonic minor: harpsichord and strings over marcato eighths, kettles and tabor |
+| old_stone (rock) | rock, pebble, boulder, quake, crusher, golem | slow 4/4 stomp, Dorian: organ and choir over kettles on one and three |
+| coil (snake) | snake, adder, gazer, cobra, twinhead, hypno | 7/8 in 2+2+3, Hungarian minor: strings and bells over a harpsichord winding round the fifth |
+| the Hoard (champions) | EMBERLING, CINDERA, ASHKA, SCORIA, and VEXALITH | 4/4, Phrygian dominant: organ, strings and choir over a driving ostinato; Vexalith's is "The Champion Stirs", the family's theme written out whole |
 
-**Fights: four toccata-style loops, a random one for a usual fight** (`battle-*.ogg`). Each is 16 bars: the melody in the minor, again coming home with a string run, lifted into the relative major on a second lead, then everyone together.
+A fight is three or four sections of eight bars (36 to 46 s): the tune, the B phrase with the first lead an octave under, a break with the head on bells, and the tune again on the next lead with an echo.
 
-| Loop | Key, tempo | Lead (and the major lift) | Groove |
-| --- | --- | --- | --- |
-| toccata | D minor, 132 BPM | organ (strings, F major) | harpsichord 16ths against a pedal note, pumping bass, strings marcato |
-| charge | A minor, 126 BPM | strings (choir, C major) | harpsichord arpeggios, organ chords, driving kettle drums |
-| crusade | G minor, 112 BPM | choir (strings, B♭ major) | full organ, chugging strings, kettle drums and tabor in march time |
-| gallop | E minor, 120 BPM | harpsichord (organ, G major) | galloping strings, kettle drums and tabor |
+### Good news: the stings
 
-None goes faster than 132 BPM. Each fight picks one at random, never the one you heard last, and keeps it for the whole fight, because switching tunes mid-fight was jarring; a champion's fight is the exception and always has `battle-crusade` (#167: the boss needs its own music; a dedicated track is #49's business). The loop cuts in within a third of a second when a fight starts, and the ambient fades out underneath, keeping its place. With the music set on, a champion's fight plays the set's boss theme instead.
+`sting-fanfare.ogg` (4.8 s, E♭ major, organ and strings in octaves into a kettle roll and bells) plays when you go down the stairs, and the exploring music returns a few seconds after it. `sting-victory.ogg` (2.6 s, B♭ major, a harpsichord climb into a held choir chord) plays when a fight ends in mercy; a kill ends the fight with its own sound and no sting (#168).
 
-**Good news: one-shot cues** by the same band. `fanfare.ogg` (3.9 s) plays when you go down the stairs, and the ambient returns a few seconds after it. `victory.ogg` (2.3 s) plays when a fight ends in mercy (a spare or a foe let go); a kill ends the fight with its own sound and no sting (#168: the fanfare is for the good act, not for the winning). Both quote the melody's opening in D major (D E F♯ G G G) and land on a IV6–V7–I cadence with bells.
+### Levels and how it's made
 
-**Levels.** The renders are mastered to −19 dBFS RMS (explore) and −17 dBFS RMS (fights and stings). The volumes in `TRACKS`/`STINGS` (0.7 and 0.75) put a fight about 2.6 dB above the exploring music.
-
-**How it's made.** `tools/music/sampler.py` is an offline sampler. It decodes each soundfont key once, fixes the samples' tuning where two pitch estimators agree (the harpsichord runs up to 14 cents sharp), loops long organ, string and choir notes, and renders into a circular timeline so the loop points are seamless. The notes, chords and mix levels are tables at the top of each build script, and each build prints its bar-by-bar chord and melody table, a check of the outer voices for parallel fifths and octaves, the loudness of every part per section, and the peak, RMS, spectrum and loop seam. `tools/music/to_ogg.sh` cuts exactly one loop out of a render and encodes it, so Godot's gapless Ogg loop wraps inside the music. Rebuilding (numpy, scipy and ffmpeg with libvorbis) is in [tools/music/README.md](../tools/music/README.md); if you change a loop's tempo or length, update its `loopSeconds` in `TRACKS` (`src/audio/ambient.gd`), which `tests/audio/test_ambient.gd` checks. The soundfonts live in `tools/music/soundfonts/` and stay out of the exports; only the rendered `.ogg` files ship. Credits are in `assets/CREDITS.txt`.
+The renders are mastered to −19 dBFS RMS (exploring) and −17 dBFS RMS (fights and stings); `VOLUME` (0.7, 0.75) puts a fight about 2.6 dB above the exploring music, and `TRIM_DB` plays the hum theme 1 dB down (it is mastered at −18). `tools/music/build-themes.py` writes every tune: the families are tables at its top (mode, metre, tempo, head motif, rhythm cells, chord progressions, band), and each tune's phrases after the head are written from its own seed, so a build is repeatable. It renders through `tools/music/sampler.py`, an offline sampler of the MusyngKite harpsichord, church organ, strings, choir, music box and tubular bells (synthesised kettle drums and tabor), all in one stone hall, and logs each tune's loudness per part and section, spectrum and loop seam. `tools/music/to_ogg.sh` cuts exactly one loop and encodes it, so Godot's gapless Ogg loop wraps inside the music. Rebuilding is in [tools/music/README.md](../tools/music/README.md). The soundfonts stay out of the exports; credits are in `assets/CREDITS.txt`.
 
 ### On trial: Abdulla's motifs (issue #49)
 
@@ -52,7 +58,7 @@ godot --path . -- motif=3                         # one of them
 godot --path . -- no-motifs                       # without them
 ```
 
-The feature `motifs` is on by default and does nothing unless those files are there: `build/` is ignored by git and left out of every export. Each motif plays once, then a rest of 4 to 8 seconds, then 25 to 35 seconds of `ambient.ogg`, and the log prints `music: motif N of 5` as each one starts. A fight or a sting takes it off. Still open for the team: which sections to keep, where they fit, and from Abdulla the source, the soundfont and its license. Update: two finished loops on a hummed theme, an exploring loop (88 BPM) and a combat loop (176 BPM), are in [tools/music/hum-theme/](../tools/music/hum-theme/README.md) with their source and soundfont license (GeneralUser GS, free for commercial use); they are not wired into the game yet. Whatever stays goes through `tools/music/`, `assets/CREDITS.txt` and `tools/audio_test.gd`, and this section goes away.
+The feature `motifs` is on by default and does nothing unless those files are there: `build/` is ignored by git and left out of every export. Each motif plays once, then a rest of 4 to 8 seconds, then 25 to 35 seconds of the place's tune, and the log prints `music: motif N of 5` as each one starts. A fight or a sting takes it off. Still open for the team: which sections to keep, where they fit, and from Abdulla the source, the soundfont and its license. Whatever stays goes through `tools/music/`, `assets/CREDITS.txt` and `tools/audio_test.gd`, and this section goes away.
 
 ## Sound effects
 

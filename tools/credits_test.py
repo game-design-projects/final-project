@@ -10,10 +10,10 @@ needs no Godot:
 
     python3 tools/credits_test.py
 
-The checks: every file in assets/audio, assets/art, assets/fonts and assets/video, and every bank in assets/voices, is named
-in the credits (an exact name, or a line like `assets/audio/battle-*.ogg` that covers it); every path to a `.txt` the credits
+The checks: every file in assets/audio (and assets/audio/music), assets/art, assets/fonts and assets/video, and every bank in assets/voices, is named
+in the credits (an exact name, or a line like `assets/audio/music/*.ogg` that covers it); every path to a `.txt` the credits
 name exists; each font has its SIL font-license file beside it, and that file is the OFL 1.1 with the font's own copyright
-line; the two Creative Commons texts are the ones the credits claim they are; the old music is stated to be CC BY-SA 3.0 and
+line; the two Creative Commons texts are the ones the credits claim they are; the sampled music is stated to be CC BY-SA 3.0 and
 the hum theme to be Abdulla's, rendered with GeneralUser GS; and every export preset in `tools/build.sh` carries the licence
 texts into the build.
 """
@@ -28,9 +28,8 @@ CREDITS = os.path.join(ASSETS, "CREDITS.txt")
 BUILD = os.path.join(ROOT, "tools", "build.sh")
 LICENCES = os.path.join(ASSETS, "LICENSES")
 FONTS = os.path.join(ASSETS, "fonts")
-MUSIC = ["ambient.ogg", "battle-charge.ogg", "battle-crusade.ogg", "battle-gallop.ogg",
-         "battle-toccata.ogg", "fanfare.ogg", "victory.ogg"]
-HUM = ["hum-explore.ogg", "hum-combat.ogg"]
+MUSIC = ["assets/audio/music/*.ogg"]  # every place's and every foe's tune, rendered from the MusyngKite samples
+HUM = ["hum-explore.ogg"]
 
 failed = 0
 
@@ -62,14 +61,14 @@ def main():
 
     # 1. every shipped asset is named
     missing = []
-    for folder in ("audio", "art", "fonts", "video"):
+    for folder in ("audio", os.path.join("audio", "music"), "art", "fonts", "video"):
         for name in sorted(os.listdir(os.path.join(ASSETS, folder))):
             path = os.path.join(ASSETS, folder, name)
             if not os.path.isfile(path) or name.endswith((".import", ".uid")):
                 continue
             if not named(credits, path):
                 missing.append(os.path.relpath(path, ROOT))
-    check(not missing, "every file in assets/audio, art, fonts and video is named in the credits%s" % (
+    check(not missing, "every file in assets/audio (and audio/music), art, fonts and video is named in the credits%s" % (
         (", and these are not: " + ", ".join(missing)) if missing else ""))
 
     voices = os.path.join(ASSETS, "voices")
@@ -113,7 +112,7 @@ def main():
     # 5. the music's licences are stated, not only its sources
     old_music = all(name in credits for name in MUSIC)
     check(old_music and "Attribution-ShareAlike 3.0" in credits and "CC-BY-SA-3.0.txt" in credits,
-          "the old music names its samples' licence and where its text lives (%d of %d files)" % (
+          "the sampled music names its samples' licence and where its text lives (%d of %d entries)" % (
               sum(1 for name in MUSIC if name in credits), len(MUSIC)))
     check(all(name in credits for name in HUM) and "Abdulla Alfalasi" in credits and "GeneralUser GS" in credits,
           "the hum theme names its author and the soundfont it was rendered with (%d of %d files)" % (

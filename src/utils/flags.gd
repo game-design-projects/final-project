@@ -54,8 +54,6 @@ const FEATURES := {
 	"ambush-prompt": "wait for confirmation after enemy dialogue before continuing combat",
 	"motifs": "exploring takes turns with Abdulla's motifs (issue #49), if tools/music/cut_motifs.sh has put them in build/motifs/: nothing ships, so without those files nothing changes",
 	"clan-requests": "two of the clans' askers stand on every floor, each with two requests of its own (rules/envoys.gd), in place of the stray asker and the lord on its floor; two done for a clan open its teleporter at the stairs, to the hall where its lord is",
-	"music-set": "a fight plays the theme of who it is with, from Abdulla's music set: the piano battle for a monster, the boss theme for a champion, the final-boss theme for the last one at the Last Door; without it every fight plays the hum theme's combat loop",
-	"hum-theme": "exploring plays Abdulla's hum theme and every fight its combat loop (issue #49), in place of the passacaglia and the four battle themes; the victory and stairs stings stay",
 	"achievements": "deeds worth keeping are earned with a toast and a badge of their own and stay earned across runs, with a panel on the main menu, the pause menu and K",
 	"legacy": "a run that ends leaves embers, which buy boons between runs that every later run starts with",
 	"toll": "the gate on the third stairs drops unless someone holds its chain and stays: you pay in health, or leave a friend, which the Last Door may make you regret",
