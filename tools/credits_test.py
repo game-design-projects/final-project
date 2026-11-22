@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Everything the game ships in assets/ is named in assets/CREDITS.txt with its licence, and every licence text it names is there.
 
-The credits are a legal record as much as a thank-you: the music is rendered from a soundfont released under CC BY-SA 3.0,
+The credits are a legal record as much as a thank-you: the music is played on a CC0 orchestra (VSCO-2 CE),
 the fonts under the SIL Open Font License (which requires the notice and the licence to travel with the font), the voices
 are cloned from CC BY 4.0 recordings, and the old credits named the licences of the art, the files and the build but not
 where their texts live — nor did `tools/build.sh` ship them, since Godot exports only resources unless an include
@@ -13,7 +13,7 @@ needs no Godot:
 The checks: every file in assets/audio (and assets/audio/music), assets/art, assets/fonts and assets/video, and every bank in assets/voices, is named
 in the credits (an exact name, or a line like `assets/audio/music/*.ogg` that covers it); every path to a `.txt` the credits
 name exists; each font has its SIL font-license file beside it, and that file is the OFL 1.1 with the font's own copyright
-line; the two Creative Commons texts are the ones the credits claim they are; the sampled music is stated to be CC BY-SA 3.0 and
+line; the Creative Commons text is the one the credits claim it is; the music names the CC0 orchestra it is played on and
 the hum theme to be Abdulla's, rendered with GeneralUser GS; and every export preset in `tools/build.sh` carries the licence
 texts into the build.
 """
@@ -28,7 +28,7 @@ CREDITS = os.path.join(ASSETS, "CREDITS.txt")
 BUILD = os.path.join(ROOT, "tools", "build.sh")
 LICENCES = os.path.join(ASSETS, "LICENSES")
 FONTS = os.path.join(ASSETS, "fonts")
-MUSIC = ["assets/audio/music/*.ogg"]  # every place's and every foe's tune, rendered from the MusyngKite samples
+MUSIC = ["assets/audio/music/*.ogg"]  # every place's and every foe's tune, played on the VSCO-2 CE orchestra
 HUM = ["hum-explore.ogg"]
 
 failed = 0
@@ -103,16 +103,14 @@ def main():
         len(fonts), (", and these do not: " + "; ".join(bad_fonts)) if bad_fonts else ""))
 
     # 4. the Creative Commons texts are the ones the credits claim
-    by_sa = os.path.join(LICENCES, "CC-BY-SA-3.0.txt")
     by = os.path.join(LICENCES, "CC-BY-4.0.txt")
-    ok_texts = os.path.isfile(by_sa) and "Attribution-ShareAlike 3.0 Unported" in read(by_sa)
-    ok_texts = ok_texts and os.path.isfile(by) and "Attribution 4.0 International" in read(by)
-    check(ok_texts, "the two Creative Commons texts are the versions the credits name (3.0, 4.0)")
+    ok_texts = os.path.isfile(by) and "Attribution 4.0 International" in read(by)
+    check(ok_texts, "the Creative Commons text is the version the credits name (CC BY 4.0, for the reference voices)")
 
     # 5. the music's licences are stated, not only its sources
-    old_music = all(name in credits for name in MUSIC)
-    check(old_music and "Attribution-ShareAlike 3.0" in credits and "CC-BY-SA-3.0.txt" in credits,
-          "the sampled music names its samples' licence and where its text lives (%d of %d entries)" % (
+    sampled = all(name in credits for name in MUSIC)
+    check(sampled and "VSCO-2 CE" in credits and "CC0" in credits and "Ivy Audio" in credits,
+          "the music names the orchestra it is played on, its licence (CC0) and the organ's sampler (%d of %d entries)" % (
               sum(1 for name in MUSIC if name in credits), len(MUSIC)))
     check(all(name in credits for name in HUM) and "Abdulla Alfalasi" in credits and "GeneralUser GS" in credits,
           "the hum theme names its author and the soundfont it was rendered with (%d of %d files)" % (
