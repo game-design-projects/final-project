@@ -13,7 +13,7 @@
  },
  "mood": {"friendliness": 0.5, "anger": -0.4},
  "friendly_at": 30,
- "_favour": "The other side of hostility (#290): a clan that likes you enough does something for you. friendly: its own never hunt you on the floor. trusted: the first of its own you meet on a floor draws you its map. devoted: its own take mercy at least `mercy` of the time, and the first strike at one of them breaks its faith: its standing falls back to `broken`. `at` is the standing each starts at; the first is `friendly_at`. Set high on purpose (a sparing is 14, a request done 10, a lord heard out 24): several clans can be devoted in one run, but each takes a run's worth of kindness to it.",
+ "_favour": "The other side of hostility (#290): a clan that likes you enough does something for you. friendly: its own never hunt you on the floor. trusted: the first of its own you meet on a floor draws you its map. devoted: its own take mercy at least `mercy` of the time, and the first strike that lands on one of them breaks its faith: its standing falls back to `broken`. `at` is the standing each starts at; the first is `friendly_at`. Set high on purpose (a sparing is 14, a request done 10, a lord heard out 24): several clans can be devoted in one run, but each takes a run's worth of kindness to it.",
  "favour": [
   {"id": "friendly", "at": 30, "title": "FRIENDLY", "effect": "Its own won't hunt you on the floor.", "line": "%s is friendly: its own won't hunt you."},
   {"id": "trusted", "at": 60, "title": "TRUSTED", "effect": "Meet one of its own and it shows you the floor.", "line": "%s trusts you: its own will show you the floor."},

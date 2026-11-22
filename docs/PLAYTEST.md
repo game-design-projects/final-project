@@ -66,6 +66,7 @@ These are the open questions, not the fixed ones. A note is most useful when it 
   dislikes it is glad of a kill and sore when you take one in, and after a fight the log says each of those in a line. Does a
   tester notice a clan's monsters starting friendlier, does a kill start to read as taking a side, and does the praise ever make
   killing feel cheaper than it should?
+- **Kindness and cruelty, coming back round.** #290, #291: a clan's standing now does more than soften mercy — FRIENDLY, its own stop hunting you; TRUSTED, one draws the floor onto your map; DEVOTED, its own take mercy readily until you strike one and its faith breaks — and the colder the halls, the faster and harder they hit, the less mercy and company they give, with the log saying what a turn means. Does a tester notice its own monsters leaving them alone, and can they say why; does the drawn floor read as a gift; and does a cold run read as what their kills did rather than as a spike that came from nowhere?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
 - **The vault.** #161: one floor of the run says something of the Hoard's is walled up on it, behind a cracked wall, and the
   vault holds a keepsake. Does a tester go looking for the crack once the log says so, is the vault found without being shown

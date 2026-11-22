@@ -4601,6 +4601,25 @@ func _favour() -> void:
 	s.reputation[Clans.of(boss.species)] = 90.0
 	_check(not Clans.devoted(s, boss), "a champion is never let off by it")
 
+	# #290 read back: a swing that went wide is no strike at one, where the skill-combat strike counted only a blow that landed
+	var fight = _flow(7, ["no-branching"])
+	var struck_foe = await _at_menu(fight, "slime")
+	fight.state.reputation[Clans.of(struck_foe.species)] = 95.0
+	struck_foe.max_hp = 200
+	struck_foe.hp = 200
+	fight.state.banner = null
+	var fs = fight.state
+	_check(Clans.devoted(fs, struck_foe), "a slime of a clan devoted to you starts out as one")
+	await fight.press("1")
+	await fight.tick(fs.bar.t0 + fs.bar.dur + 10.0) # the line runs out: the swing goes wide
+	_check(struck_foe.hp == 200 and Clans.devoted(fs, struck_foe) and Clans.standing_of(fs, struck_foe.species) >= 90.0, "a swing that went wide doesn't break its faith (%d hp, %.0f standing)" % [struck_foe.hp, Clans.standing_of(fs, struck_foe.species)])
+	await _through_dodge(fight)
+	await fight.go("menu")
+	await fight.press("1")
+	fight.clock = fs.bar.t0 + fs.bar.dur / 2.0
+	await fight.press("confirm")
+	_check(struck_foe.hp < 200 and not Clans.devoted(fs, struck_foe) and Clans.standing_of(fs, struck_foe.species) <= 0.0, "a blow that lands does (%d hp, %.0f standing)" % [struck_foe.hp, Clans.standing_of(fs, struck_foe.species)])
+
 
 ## #291: the colder the halls, the harder every fight, and the log says what the turn means.
 func _cold_halls() -> void:
@@ -4621,6 +4640,16 @@ func _cold_halls() -> void:
 	s.tally.slain = 6
 	await flow.go("explore")
 	_check(s.lines.any(func(l): return str(l.text) == Warmth.effect(Warmth.level(Warmth.of(s)))), "the log says what the colder halls do (%s)" % str(s.lines.map(func(l): return str(l.text))))
+	# #291 read back: the picture says the torches' line and the log the rule, since both in one box run past the banner's two lines
+	s.tally.slain = 0
+	var warm_level: int = Warmth.level(Warmth.of(s))
+	s.warmth_level = warm_level
+	s.tally.slain = 6
+	s.banner = null
+	flow._note_warmth()
+	var cold_level: int = Warmth.level(Warmth.of(s))
+	_check(cold_level != warm_level and s.banner != null and str(s.banner.text) == Warmth.line(warm_level, cold_level) and Overlay.banner_fits(str(s.banner.text)), "the picture says the torches' line, and fits (%s)" % str(s.banner.text if s.banner != null else "no banner"))
+	_check(s.lines.any(func(l): return str(l.text) == Warmth.effect(cold_level)), "and the log says what the level does (%s)" % Warmth.effect(cold_level))
 	var m = s.floor_map.monsters.filter(func(x): return not x.boss and not x.lurking).front()
 	await flow.go("intro", {"foe": m})
 	await flow.tick(flow.clock + 1000.0)
