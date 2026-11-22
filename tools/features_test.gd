@@ -1977,6 +1977,38 @@ func _clans() -> void:
 	_check(far_news.kind == "rival_slain" and far_news.tone == "good" and far_news.who == "OOZE", "the other side hears of the kill, and is glad of it (#165) (%s)" % str(far_news))
 	_check(far.meters.friendliness > far_mood and far.heard.get("clan", "") == rival, "so it starts friendlier (%.0f -> %.0f)" % [far_mood, far.meters.friendliness])
 	_check(str(far.heard.get("heard", [])).contains("OOZE"), "and remembers who died (%s)" % str(far.heard.get("heard", [])))
+	_check(str(far.heard.get("heard", [])).contains("the player killed OOZE"), "and says it in a verb a mind can read (%s)" % str(far.heard.get("heard", [])))
+
+	# the deed a clan names is the one that moved it, not a kill of its own side: two bandits please the Burrow, a rock of its own
+	# side takes half of that back, and the slime it meets still has the bandit to talk about (#165)
+	var mixed := State.new()
+	var mugger := Monster.new()
+	mugger.species = "bandit"
+	mugger.name = "MUGGER"
+	var brick := Monster.new()
+	brick.species = "rock"
+	brick.name = "BRICK"
+	Clans.record(mixed, mugger, "slain")
+	Clans.record(mixed, mugger, "slain")
+	Clans.record(mixed, brick, "slain")
+	_check(float(mixed.reputation[clan]) == 9.0, "two bandits leave the Burrow at 18, and a rock of its own side takes 9 of that back (%s)" % str(mixed.reputation))
+	var mixed_slime := Monster.new()
+	mixed_slime.species = "slime"
+	mixed_slime.name = "DRIP"
+	var mixed_news: Dictionary = Clans.hear(mixed_slime, mixed)
+	_check(mixed_news.kind == "rival_slain" and mixed_news.tone == "good" and mixed_news.who == "MUGGER", "so the news a slime hears is the bandit it is glad of, not the rock at its side (%s)" % str(mixed_news))
+	_check(Clans.news(mixed_news) == "The Burrow heard you killed MUGGER. It starts friendlier.", "and the banner agrees with the line it says (%s)" % Clans.news(mixed_news))
+
+	# a favour tells no tale: with nothing it heard that moved it up, the newest it heard of is still its news, so its mood moves
+	# and it remembers (#165)
+	var favour_only := State.new()
+	Clans.record(favour_only, brick, "slain")
+	Clans.favour(favour_only, "slime", 20.0)
+	var favour_slime := Monster.new()
+	favour_slime.species = "slime"
+	favour_slime.name = "DRIP"
+	var favour_news: Dictionary = Clans.hear(favour_slime, favour_only)
+	_check(not favour_news.is_empty() and favour_slime.meters.friendliness > 0.0, "a clan moved only by a favour still starts friendlier, and has a deed to tell (%s)" % str(favour_news))
 
 	# a mercy reaches nobody across the sides: only a kill is good news to a rival (#165)
 	var mercy := State.new()
@@ -2009,7 +2041,17 @@ func _clans() -> void:
 	var pleased_line: String = Clans.pleased() % [Clans.title(rival), doomed.name]
 	_check(won.lines.any(func(l): return l.text == pleased_line), "a kill pleases the Crew, and the log says it by clan and by name (%s)" % str(won.lines.map(func(l): return l.text)))
 	_check(won.lines.filter(func(l): return l.text.contains("is pleased:")).size() == 2, "both clans on the other side are named, and nobody else")
-	_check(victory.encounter._pleased({rival: 9.0}, doomed).is_empty(), "a clan already above nothing is not told twice in a run")
+	_check(victory.encounter._pleased({rival: 9.0}, doomed).is_empty(), "a clan already above nothing is not told again for that crossing")
+	# the line is said each time a clan is carried past nothing, not once a run: nothing is saved to remember it (#165)
+	var renewed = victory.state
+	Clans.record(renewed, thug, "slain")
+	Clans.record(renewed, thug, "slain")
+	_check(float(renewed.reputation[rival]) == -27.0, "two more of the Crew's own take it below nothing (%s)" % str(renewed.reputation))
+	for i in 3:
+		Clans.record(renewed, victim, "slain")
+	_check(float(renewed.reputation[rival]) == 0.0 and victory.encounter._pleased({rival: -9.0}, doomed).is_empty(), "level with you is not past it: nothing is said at 0 (%s)" % str(renewed.reputation))
+	Clans.record(renewed, victim, "slain")
+	_check(float(renewed.reputation[rival]) == 9.0 and victory.encounter._pleased({rival: 0.0}, doomed).size() == 1, "and carried past it again, it is told again (%s)" % str(renewed.reputation))
 	_check(victory.encounter._rivals_standing(doomed, "spared").is_empty(), "and a mercy reads no rival standing at all")
 
 	# every sentence fits the banner, and a hated monster can still be won over
