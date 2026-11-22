@@ -147,6 +147,10 @@
    "side_slain": [
     "*shrinks back* {kin} is gone. The floor told us.",
     "*trembles* You hurt {kin}. The whole floor felt it."
+   ],
+   "rival_slain": [
+    "*blorp!* {kin} was mean to us. Now {kin} is quiet.",
+    "*bounces in place* You got {kin}! We... we like that."
    ]
   },
   "reactions": {
@@ -319,6 +323,10 @@
    "side_slain": [
     "You did {kin} in, I hear. Bad for business. Very bad for yours.",
     "{kin} had a deal with us. You broke it."
+   ],
+   "rival_slain": [
+    "So {kin} is dead. Ha! Best thing I've heard all week.",
+    "{kin} had it coming, and then some. You're alright."
    ]
   },
   "reactions": {
@@ -492,6 +500,10 @@
    "side_slain": [
     "{kin} was usssseful to usss. Was.",
     "Word travelsss fassst. {kin} is dead, and here you are."
+   ],
+   "rival_slain": [
+    "{kin}'sss end is... convenient. Ssso. Thank you.",
+    "You sssoft things have your ussses. {kin} is gone. Good."
    ]
   },
   "reactions": {
@@ -664,6 +676,10 @@
    "side_slain": [
     "...{kin} is gone. The floor told me.",
     "...the small ones weep for {kin}. I hear them."
+   ],
+   "rival_slain": [
+    "...{kin} troubled the floor. No longer. ...good.",
+    "...the loud ones are fewer. {kin}. ...acceptable."
    ]
   },
   "reactions": {
