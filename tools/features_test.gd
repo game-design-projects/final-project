@@ -3227,15 +3227,18 @@ func _clan_requests() -> void:
 	var rock := Monster.new()
 	rock.species = "rock"
 	rock.strikes = {"heavy": 2}
-	_check(Envoys.felled(run, rock).is_empty(), "a heavy win before the request is taken doesn't count")
+	_check(Envoys.fight_ended(run, rock, "slain").is_empty(), "a heavy win before the request is taken doesn't count")
 	Envoys.take(run, "old_stone_heavy")
 	rock.strikes = {"heavy": 2, "light": 1}
-	_check(Envoys.felled(run, rock).is_empty(), "one light strike and the fight was not won heavy")
+	_check(Envoys.fight_ended(run, rock, "slain").is_empty() and Envoys.fight_ended(run, rock, "spared").is_empty(), "one light strike and the fight was not won heavy, killed or spared")
 	rock.strikes = {}
-	_check(Envoys.felled(run, rock).is_empty(), "nor is a fight with no strike at all")
+	_check(Envoys.fight_ended(run, rock, "slain").is_empty(), "nor is a kill with no strike of yours in it")
+	_check(Envoys.fight_ended(run, rock, "spared") == ["old_stone_heavy"], "#288: a fight ended in mercy with no strike at all is, so a pacifist can do it")
+	_check(Envoys.fight_ended(run, rock, "fled").is_empty(), "running away is not")
 	rock.strikes = {"heavy": 1}
-	_check(Envoys.felled(run, rock) == ["old_stone_heavy"], "heavy strikes only is")
-	_check(Envoys.can_do(Envoys.request("old_stone_heavy"), true) and not Envoys.can_do(Envoys.request("old_stone_heavy"), false), "a request that wants HEAVY strikes wants a fight menu with them")
+	_check(Envoys.fight_ended(run, rock, "slain") == ["old_stone_heavy"] and Envoys.fight_ended(run, rock, "spared") == ["old_stone_heavy"], "heavy strikes only is, killed or spared")
+	_check(Envoys.can_do(Envoys.request("old_stone_heavy"), true) and Envoys.can_do(Envoys.request("old_stone_heavy"), false), "a menu with no HEAVY can still do it, the peaceful way")
+	_check(Envoys.sub(Envoys.request("old_stone_heavy"), false).contains("without striking") and not Envoys.sub(Envoys.request("old_stone_heavy"), false).contains("HEAVY"), "and it says only that way there (%s)" % Envoys.sub(Envoys.request("old_stone_heavy"), false))
 	_check(Envoys.can_do(Envoys.request("coil_hiss"), false), "and a request that wants only words minds no menu")
 	Envoys.take(run, "burrow_bring")
 	_check(Envoys.status(run, Envoys.request("burrow_bring")) == "waiting" and Envoys.friend_for(run, Envoys.request("burrow_bring")) == null, "bring a slime: none with you yet")
@@ -3292,19 +3295,20 @@ func _clan_requests() -> void:
 	await flow.press("2")
 	_check(s.gold == 60 - 50 + int(t.pays.gold) and Envoys.is_done(s, "crew_gold") and s.lines.any(func(l): return str(l.text).contains("definitely stole it")), "the fifty is gone, the request pays, and the asker says where it thinks it came from (%d gold)" % s.gold)
 
-	# a request the fight menu cannot do is not offered: no HEAVY strikes, no asking for a fight won with them
+	# a fight menu with no HEAVY strikes still has the Old Stone's request, and asks it the way that menu can do (#288)
 	var slate := Envoys.figure("old_stone", f.envoys[0].cell)
 	var no_heavy = _flow(7, ["no-heavy-strike"])
 	await no_heavy.new_run()
 	await no_heavy.go("envoy", {"who": slate})
-	_check(no_heavy.state.menu.size() == 2 and not no_heavy.state.menu.any(func(row): return str(row.label).contains("WIN HEAVY")), "no-heavy-strike: the Old Stone asks nothing it cannot be paid (%s)" % str(no_heavy.state.menu.map(func(row): return str(row.label))))
+	var still_row = no_heavy.state.menu.filter(func(row): return str(row.label) == "WIN HEAVY")
+	_check(no_heavy.state.menu.size() == 3 and still_row.size() == 1 and str(still_row[0].sub).contains("without striking") and not str(still_row[0].sub).contains("HEAVY"), "no-heavy-strike: the Old Stone asks for a fight ended without a strike (%s)" % str(no_heavy.state.menu))
 	var skilled = _flow(7, ["skill-combat"])
 	await skilled.new_run()
 	await skilled.go("envoy", {"who": slate})
-	_check(not skilled.state.menu.any(func(row): return str(row.label).contains("WIN HEAVY")), "and neither in skill-combat, whose menu has no HEAVY (%s)" % str(skilled.state.menu.map(func(row): return str(row.label))))
+	_check(skilled.state.menu.any(func(row): return str(row.label) == "WIN HEAVY" and not str(row.sub).contains("HEAVY")), "and so in skill-combat, whose menu has no HEAVY (%s)" % str(skilled.state.menu.map(func(row): return str(row.sub))))
 	_use()
 	await flow.go("envoy", {"who": slate})
-	_check(s.menu.size() == 3 and s.menu[0].label == "WIN HEAVY", "where HEAVY is, it asks for it as before (%s)" % str(s.menu.map(func(row): return str(row.label))))
+	_check(s.menu.size() == 3 and s.menu[0].label == "WIN HEAVY" and str(s.menu[0].sub).contains("HEAVY strikes"), "where HEAVY is, it asks for both ways (%s)" % str(s.menu.map(func(row): return str(row.sub))))
 	await flow.press("cancel")
 
 	# away from the asker: a fight won heavy, and a dragon asked
@@ -3327,6 +3331,50 @@ func _clan_requests() -> void:
 	await flow.go("talk")
 	await flow.submit_text("do you like slimes?")
 	_check(Envoys.is_done(s, "burrow_ask") and s.lines.any(func(l): return str(l.text).contains("desperate for attention")), "a dragon asked whether it likes slimes answers, and the Burrow's request is done (%s)" % s.stage)
+
+	# #287: a champion can't be run from, so a line that misses the Burrow's question is not the fight's one line
+	var asking = _flow(7)
+	await asking.new_run()
+	var a_s = asking.state
+	Envoys.take(a_s, "burrow_ask")
+	var dragon_boss = a_s.floor_map.monsters.filter(func(x): return x.boss and x.species == "dragon").front() if a_s.floor_map.monsters.any(func(x): return x.boss and x.species == "dragon") else null
+	if dragon_boss == null:
+		dragon_boss = a_s.floor_map.monsters.filter(func(x): return x.boss).front()
+		dragon_boss.species = "dragon"
+	await asking.go("intro", {"foe": dragon_boss})
+	await asking.tick(asking.clock + 1000.0)
+	if a_s.stage == "intro":
+		await asking.press("confirm")
+	await asking.go("act")
+	_check(a_s.menu.back().label == "SAY SOMETHING" and str(a_s.menu.back().sub).contains("like slimes"), "the fight menu says what the Burrow sent you to ask (%s)" % str(a_s.menu.back()))
+	await asking.go("talk")
+	await asking.submit_text("hello there, big one")
+	_check(not Envoys.is_done(a_s, "burrow_ask") and not dragon_boss.spoke and a_s.lines.any(func(l): return str(l.text).contains("Burrow's question")), "a line without the question says so, and SAY is still open (%s)" % str(a_s.lines.slice(-4).map(func(l): return str(l.text))))
+	for i in 40: # the foe's turn after the first line plays out before the second
+		if a_s.stage == "menu":
+			break
+		await asking.tick(asking.clock + 500.0)
+		if a_s.stage in ["wait", "dodge", "defend"]:
+			await asking.press("confirm")
+	await asking.go("act")
+	await asking.go("talk")
+	await asking.submit_text("what do you think about slimes?")
+	_check(Envoys.is_done(a_s, "burrow_ask") and dragon_boss.spoke, "asked again in other words, it answers and the request is done (%s)" % a_s.stage)
+	_check(Words.sounds_like("Do dragons like slimes?", "likes_slimes") >= Envoys.table().pass_at and Words.sounds_like("slimes?", "likes_slimes") >= Envoys.table().pass_at and Words.sounds_like("I am a slime", "likes_slimes") < Envoys.table().pass_at and Words.sounds_like("nice weather?", "likes_slimes") == 0.0, "any question about slimes passes, a remark about one or a question about anything else doesn't")
+
+	# #288: a fight ended in mercy with no strike finishes the Old Stone's request, so a player who never strikes can do it
+	var still = _flow(7)
+	await still.new_run()
+	var st = still.state
+	Envoys.take(st, "old_stone_heavy")
+	var calm = st.floor_map.monsters.filter(func(x): return not x.boss and not x.lurking).front()
+	await still.go("intro", {"foe": calm})
+	await still.tick(still.clock + 1000.0)
+	if st.stage == "intro":
+		await still.press("confirm")
+	calm.strikes = {}
+	await still.encounter.defeat(calm, "spared")
+	_check(Envoys.is_done(st, "old_stone_heavy") and st.stage == "ask" and st.lines.any(func(l): return str(l.who) == "SLATE" and str(l.text).contains("brother of ours")), "a foe spared without a strike finishes it, and its asker says so before the foe asks to come (%s)" % st.stage)
 
 	# the teleporter at the stairs, the hall and its lord, and the way on down
 	var to_hall = _flow(7)

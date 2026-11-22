@@ -16,7 +16,7 @@ const ASKS := {"words": "WHAT DID YOUR WORDS MEAN?", "feeling": "HOW DOES IT FEE
 const SOUNDS := {
 	"hiss": "Is `player_said` a long, drawn-out snake hiss (like \"hissssssssss\"), rather than a short hiss or ordinary words?",
 	"monotone": "Is `player_said` written in a flat, dull, monotone way, the way a rock in a wall would talk, with no excitement or emphasis?",
-	"likes_slimes": "Is `player_said` asking whether dragons (or this dragon) like slimes?",
+	"likes_slimes": "Is `player_said` asking, in any wording (plainly, jokingly or rudely), what dragons (or this dragon) think of slimes or whether they like them?",
 }
 
 

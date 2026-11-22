@@ -26,7 +26,7 @@ static var _mash := RegEx.create_from_string("asdf|qwer|zxcv|jkl|hjk")
 const HISS_SHORT := 2 # a run of s this long is no hiss at all ("hiss")
 const HISS_LONG := 8 # and one this long is all a hiss can be
 const MONOTONE_WORDS := 3
-const LIKING := ["like", "love", "fond", "care", "adore", "think of", "feel about"]
+const LIKING := ["like", "love", "fond", "care", "adore", "think of", "think about", "feel about", "feelings", "opinion", "hate", "how about"]
 
 static func _cue_patterns() -> Dictionary:
 	if _cues.is_empty():
@@ -133,7 +133,7 @@ static func sounds_like(text: String, what: String) -> float:
 			for cue in LIKING:
 				if low.contains(cue):
 					return 0.9
-			return 0.5 if low.contains("?") else 0.2
+			return 0.7 if low.contains("?") else 0.2 # any question about slimes, asked by a player a request sent with it (#287)
 	push_error("words: nothing to listen for called '%s'" % what)
 	return 0.0
 

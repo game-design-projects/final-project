@@ -1,5 +1,5 @@
 {
- "_doc": "The clans' askers (rules/envoys.gd): one named monster of each clan, with two requests of its own. Two done for a clan open its teleporter at the next stairs, to the hall where its lord stands among its own. Each request has a `kind` the rules know: ask_dragon (say it to a dragon in a fight), bring (come back with a friend of `species`, who is taken off you), heavy_win (win a fight landing only heavy strikes), say (type it to the asker: `sounds` names what the mind listens for), slay (kill `count` of `species`, on any floors), gold (hand over `count` gold).",
+ "_doc": "The clans' askers (rules/envoys.gd): one named monster of each clan, with two requests of its own. Two done for a clan open its teleporter at the next stairs, to the hall where its lord stands among its own. Each request has a `kind` the rules know: ask_dragon (say it to a dragon in a fight), bring (come back with a friend of `species`, who is taken off you), heavy_win (win a fight landing only heavy strikes, or end one with no strike at all: `sub_still` is what a menu with no HEAVY says), say (type it to the asker: `sounds` names what the mind listens for), slay (kill `count` of `species`, on any floors), gold (hand over `count` gold).",
  "need": 2,
  "per_floor": 2,
  "tag": "A REQUEST",
@@ -23,7 +23,8 @@
   "pay_sub": "It pays %d gold, and heals %d",
   "taken_away": "%s goes with %s, and is out of your party.",
   "stormed_off": "%s has heard enough, and storms off.",
-  "listening": "LISTENING"
+  "listening": "LISTENING",
+  "missed": "That wasn't what you were sent to ask. SAY SOMETHING again."
  },
  "hall": {
   "tag": "THE LORD",
@@ -51,6 +52,8 @@
     {
      "id": "burrow_ask", "kind": "ask_dragon", "sounds": "likes_slimes",
      "label": "ASK A DRAGON", "sub": "In a fight with a dragon, ACT and SAY SOMETHING: ask it if it likes slimes",
+     "say_sub": "The Burrow's question: ask it if dragons like slimes",
+     "miss": "That wasn't the Burrow's question. SAY SOMETHING again and ask it plainly: do dragons like slimes?",
      "ask": "Go and ask a dragon if it likes us. Slimes. Ask nicely! *wobbles* We have to know.",
      "wait": "Did you ask? A dragon? About us? *holds very still*",
      "answer": "Why do slimes keep sending people to ask us?! They are desperate for attention...",
@@ -79,10 +82,10 @@
    "requests": [
     {
      "id": "old_stone_heavy", "kind": "heavy_win",
-     "label": "WIN HEAVY", "sub": "Win a fight landing only HEAVY strikes, and never a light one",
-     "ask": "...win a fight using only heavy strikes. ...then you are heavy. ...and a brother of ours.",
+     "label": "WIN HEAVY", "sub": "Win a fight with only HEAVY strikes, or end one without striking at all (spare it or win it over)", "sub_still": "End a fight without striking once: spare it, or win it over",
+     "ask": "...win a fight using only heavy strikes. ...or none. ...a rock does not flail. ...then you are heavy. ...and a brother of ours.",
      "wait": "...not yet. ...light hands. ...I can tell.",
-     "done": "...only heavy strikes. ...so you are heavy. ...and a brother of ours."
+     "done": "...no light hand. ...so you are heavy. ...and a brother of ours."
     },
     {
      "id": "old_stone_flat", "kind": "say", "sounds": "monotone",

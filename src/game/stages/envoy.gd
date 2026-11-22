@@ -33,15 +33,15 @@ func enter(flow, args: Dictionary) -> void:
 		said.append(State.speech(str(_who.name), words))
 		var now := Envoys.status(s, r)
 		if now == "new":
-			_add(s, str(r.label), str(r.sub), "take", r)
+			_add(s, str(r.label), Envoys.sub(r, heavy), "take", r)
 		elif now == "ready" and str(r.kind) in Envoys.SAID_AT:
-			_add(s, str(r.label), str(r.sub), "say", r)
+			_add(s, str(r.label), Envoys.sub(r, heavy), "say", r)
 		elif now == "ready":
 			var friend = Envoys.friend_for(s, r)
 			var label := str(r.give) % (friend.name if friend != null else int(r.count))
 			_add(s, label, str(t.lines.pay_sub) % [int(t.pays.gold), int(t.pays.heal)], "give", r)
 		else:
-			_add(s, str(r.label), str(r.sub), "leave", r)
+			_add(s, str(r.label), Envoys.sub(r, heavy), "leave", r)
 	if open.is_empty():
 		said.append(State.sys_line(str(t.lines.nothing_left) % str(_who.name)))
 		if s.gates.has(clan):

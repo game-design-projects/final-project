@@ -269,7 +269,7 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	_open_purse(m)
 	var told := tell_hostility(moved)
 	if how == "spared" and allow_join:
-		await flow.go("ask", {"lines": learned})
+		await flow.go("ask", {"lines": learned + told + await _requests_done(m, how)})
 		return
 	var line = foe_line(m, "leave_peacefully") if how == "spared" else null
 	var verdict: String
@@ -283,14 +283,15 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	await leave_fight(lines)
 
 
-## The requests a foe's fall finishes (rules/envoys.gd): a count reached, or a fight won with heavy strikes only. Their asker's
-## words and what they paid, for the log.
+## The requests a fight's end finishes (rules/envoys.gd): a count reached, or a fight won with heavy strikes only or ended
+## with no strike at all. Their asker's words and what they paid, for the log.
 func _requests_done(m, how: String) -> Array:
 	var s = flow.state
 	var lines := []
-	if how != "slain" or s.testing or s.practice or not flow.feature("clan-requests"):
+	if how not in ["slain", "spared"] or s.testing or s.practice or not flow.feature("clan-requests"):
 		return lines
-	for id in Envoys.slain(s, m) + Envoys.felled(s, m):
+	var ids: Array = Envoys.slain(s, m) if how == "slain" else []
+	for id in ids + Envoys.fight_ended(s, m, how):
 		var r := Envoys.request(id)
 		lines.append(State.speech(str(Envoys.entry(r.clan).name), str(r.done)))
 		lines = await Envoy.finished(flow, r, lines, false)
