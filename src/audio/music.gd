@@ -1,39 +1,36 @@
-## The music: a quiet loop while exploring that plays a stretch and then rests (it does not play nonstop), one of four
-## battle themes in a fight (a random one, never the last, or a champion's `battle-crusade`), and short stings: the victory
-## when a foe is spared, the fanfare at the stairs. A sting takes the loops out of its way, and the exploring music
-## comes back after it has rung out and a few seconds more. The tracks are in assets/audio/.
-## With the feature `hum-theme` (`hum`), Abdulla's hum theme takes the loops' place: its exploring loop, and its combat loop in
-## every fight. With the feature `music-set` (`music_set`) a fight plays the theme of who it is with instead, from his music set:
-## a monster, a champion, or the last champion. The stings stay the same either way.
+## The music: every place and every foe has its own (tools/music/build-themes.py). Where you are picks the exploring loop
+## (`set_scene`): each biome, and the same biome again deeper; each clan's hall; the camp, the trader, the practice floor and the
+## test room. It plays a stretch and then rests, except at the camp and the trader, which play while you are there. Who a fight
+## is with picks its loop (`fight_with`): every kind of monster its own, and each champion. A clan's tunes share one melody
+## and differ in key, tempo, band and the rest of the tune; the clans, the champions and the places each have melodies of their
+## own. Short stings go over it all: the victory when a foe is spared, the fanfare at the stairs. A sting takes the loops out of
+## its way, and the exploring music comes back after it has rung out and a few seconds more.
+## Of the music before, the camp keeps one theme: Abdulla's hum theme. The tracks are in assets/audio/music/.
 ## A loop's fade belongs to the player it fades, and a new fade cancels the old one on the same player, so an old fade
-## can never stop what a newer one has started. A battle theme gets a player of its own for each fight.
+## can never stop what a newer one has started. A fight's loop gets a player of its own for each fight; each place keeps its
+## own player while you are on its floor, so the camp hands the floor's music back where it left off.
 extends Node
 
 const Mix = preload("res://src/audio/mix.gd")
 
-const EXPLORE := "res://assets/audio/ambient.ogg"
-const BATTLES := ["battle-toccata", "battle-charge", "battle-crusade", "battle-gallop"]
-## A champion's fight always has this one of them (#167: "boss needs its own music"). A dedicated track is #49's business; until
-## one exists, the one theme a champion always has is what makes its fight sound like no other.
-const CHAMPION_THEME := "battle-crusade"
+const DIR := "res://assets/audio/music/"
+## The one old theme still played: Abdulla's hum theme (tools/music/hum-theme/), a loop of 174.55 s, at the camp.
+const CAMP := "res://assets/audio/hum-explore.ogg"
+## Places that play for as long as you are in them, without the exploring music's rests.
+const STAY := ["camp", "trade"]
+## Where there is no biome (the classic floor), and the fight of a foe whose tune is missing.
+const DEFAULT_SCENE := "explore-halls"
+const DEFAULT_FIGHT := "fight-slime"
 const STINGS := ["victory", "fanfare"]
-## The hum theme (tools/music/hum-theme/): one exploring loop of 174.55 s (88 BPM) and one combat loop of 65.45 s (176 BPM).
-const HUM_EXPLORE := "res://assets/audio/hum-explore.ogg"
-const HUM_BATTLES := ["hum-combat"]
-## The music set (tools/music/music-set/): a fight's loop by who the fight is with. The piano battle and the boss theme are 41.86 s,
-## the final-boss theme 45.33 s.
-const SET_BATTLES := {"fight": "set-fight", "boss": "set-boss", "final": "set-final"}
-## Its tracks measure 0.9 dB over the hum theme's combat loop (-16.2 against -17.1 dBFS mean), so they play 2 dB under VOLUME where
-## that loop plays 1 under: a fight is as loud as it was.
-const SET_TRIM_DB := -2.0
-## It is mastered 1 dB hotter than the old music (-18 and -16 dBFS RMS), so it plays 1 dB under the same VOLUME.
-const HUM_TRIM_DB := -1.0
+## Level trims by track, dB: the hum theme is mastered 1 dB hotter than the rest (-18 against -19 dBFS RMS).
+const TRIM_DB := {"camp": -1.0}
 ## The tracks are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings). These levels put a fight
 ## about as loud against the effects as the old music, and the exploring music about 2.6 dB under it.
 const VOLUME := {"explore": 0.7, "battle": 0.75, "sting": 0.75}
 ## Seconds to fade a track in or out. A fight cuts in fast and the exploring music gets out of its way just as fast
-## (under_fight), so the two never play together; between stretches of exploring it fades out slowly.
-const FADES := {"battle": {"in": 0.35, "out": 1.2}, "explore": {"in": 2.0, "out": 5.0, "under_fight": 0.4}, "sting": 0.4}
+## (under_fight), so the two never play together; between stretches of exploring it fades out slowly, and from one place to
+## the next (the floor to the camp and back) it crosses over (`scene`).
+const FADES := {"battle": {"in": 0.35, "out": 1.2}, "explore": {"in": 2.0, "out": 5.0, "under_fight": 0.4, "scene": 1.0}, "sting": 0.4}
 ## The exploring music's rhythm, in seconds: play a while, rest a while.
 const PACE := {
 	"play": [80.0, 110.0],
@@ -51,21 +48,17 @@ const TRIAL := {"play": [25.0, 35.0], "rest": [4.0, 8.0], "volume": 0.58}
 
 ## False with the `nomusic` flag: no player is made and nothing plays.
 var enabled := true
-## True with the feature `hum-theme`: the hum theme's loops instead of the old ones. Set before the node enters the tree.
-var hum := false
-## True with the feature `music-set`: a fight's theme is the music set's, by who the fight is with. Set before the node enters the tree.
-var music_set := false
 ## The motifs on trial, as streams in their order: none (as a shipped game has) leaves the music as it always was.
 var motifs: Array = []
-## () -> float in [0, 1), for the pacing and the choice of theme (tests drive it).
+## () -> float in [0, 1), for the pacing (tests drive it).
 var random: Callable = func(): return randf()
 
-var _explore: AudioStreamPlayer
-var _battle: AudioStreamPlayer # this fight's theme, or null
+var _explore: AudioStreamPlayer # the player of the place you are in, or null before the first
+var _scene := ""
+var _scenes := {} # place -> its player, which keeps its place while another plays
+var _battle: AudioStreamPlayer # this fight's loop, or null
 var _battle_name := ""
-var _last_battle := ""
-var _foe := "fight" # who the next fight is with: "fight" (a monster), "boss" (a champion) or "final" (the last one)
-var champion := false # the fight is a champion's: its theme is fixed rather than picked
+var _fight := DEFAULT_FIGHT # the tune of the next fight
 var _sting: AudioStreamPlayer
 var _mode := ""
 var _resting := false # the exploring music is between stretches
@@ -86,13 +79,8 @@ var _motif_turn := true # whose turn the next stretch is
 func _ready() -> void:
 	if not enabled:
 		return
-	print("music: %s%s" % ["the hum theme" if hum else "the passacaglia and four battle themes", ", and the music set's fights" if music_set else ""])
-	_explore = _player(Mix.MUSIC_IN)
-	_explore.stream = _stream(explore_path())
-	_explore.volume_db = SILENT_DB
+	print("music: a tune for every place and every foe (%s)" % DIR)
 	_sting = _player(Mix.SFX)
-	for n in battles():
-		ResourceLoader.load_threaded_request(_battle_path(n))
 	for n in STINGS:
 		ResourceLoader.load_threaded_request(_sting_path(n))
 
@@ -101,14 +89,89 @@ func _process(dt: float) -> void:
 	advance(dt)
 
 
-## Who the next fight is with, said before `set_mode("battle")`: "fight" (a monster), "boss" (a champion) or "final" (the last
-## champion). The music set has a theme for each; without it, it changes nothing.
-func fight_with(who: String) -> void:
-	_foe = who if SET_BATTLES.has(who) else "fight"
+## The exploring music for a place (`scene_of`, "camp", "trade"): crosses over to it now if you are exploring, or when you next are.
+func set_scene(name: String) -> void:
+	if not enabled or name == _scene:
+		return
+	var path := track_path(name)
+	if not ResourceLoader.exists(path):
+		push_warning("music: no tune for %s (%s); %s instead" % [name, path, DEFAULT_SCENE])
+		name = DEFAULT_SCENE
+		if name == _scene:
+			return
+	var was := _scene
+	var old := _explore
+	_scene = name
+	print("music: the place's tune %s -> %s" % [was if was != "" else "none", name])
+	if old != null and not (was in STAY or name in STAY):
+		_scenes.erase(was) # a floor left for another: its music goes with it
+		_fade(old, SILENT_DB, FADES.explore.scene, _release.bind(old))
+	elif old != null and old.playing and not old.stream_paused:
+		_fade(old, SILENT_DB, FADES.explore.scene, func(): old.stream_paused = true)
+	if not _scenes.has(name):
+		var p := _player(Mix.MUSIC_IN)
+		p.stream = _stream(track_path(name))
+		p.volume_db = SILENT_DB
+		_scenes[name] = p
+	_explore = _scenes[name]
+	if _mode == "explore" and not _resting:
+		_explore_in(FADES.explore.scene)
+	elif _mode == "explore" and name in STAY:
+		_cancel_next()
+		_explore_in(FADES.explore.scene)
 
 
-## "explore", "battle" (a random theme, not the last one's, or a champion's `battle-crusade`; with the music set, the theme of
-## who the fight is with) or "silence".
+## The tune of who the next fight is with (`fight_of`), said before `set_mode("battle")`.
+func fight_with(name: String) -> void:
+	if ResourceLoader.exists(track_path(name)):
+		_fight = name
+	else:
+		push_warning("music: no tune for %s; %s instead" % [name, DEFAULT_FIGHT])
+		_fight = DEFAULT_FIGHT
+
+
+## Load these tunes in the background now (the fights a floor may bring), so a fight's music is ready when it starts.
+func prepare(names: Array) -> void:
+	if not enabled:
+		return
+	for n in names:
+		var path := track_path(str(n))
+		if not _streams.has(path) and ResourceLoader.exists(path) and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(path)
+
+
+## The exploring loop's place for a game state: the test room, the practice floor, a clan's hall, or the floor's biome, with
+## its -deep tune once the biomes have all come round and it comes again.
+static func scene_of(state) -> String:
+	if state == null:
+		return DEFAULT_SCENE
+	if bool(state.testing):
+		return "test-room"
+	if bool(state.practice):
+		return "practice"
+	if str(state.visiting) != "":
+		return "hall-" + str(state.visiting)
+	var biome := str(state.floor_map.biome) if state.floor_map != null else ""
+	if biome == "":
+		return DEFAULT_SCENE
+	var round_trip: int = (load("res://src/rules/content.gd").table("biomes").biomes as Array).size()
+	return "explore-%s%s" % [biome, "-deep" if int(state.depth) > round_trip else ""]
+
+
+## A fight's tune for its foe: a champion's own, or its kind's.
+static func fight_of(foe) -> String:
+	if foe == null:
+		return DEFAULT_FIGHT
+	if bool(foe.boss):
+		return "champion-" + str(foe.name).to_lower()
+	return "fight-" + str(foe.kind)
+
+
+static func track_path(name: String) -> String:
+	return CAMP if name == "camp" else "%s%s.ogg" % [DIR, name]
+
+
+## "explore" (the place's loop), "battle" (the next fight's tune, `fight_with`) or "silence".
 func set_mode(mode: String) -> void:
 	if not enabled or (mode == _mode and (mode != "battle" or _battle != null)):
 		return
@@ -117,6 +180,8 @@ func set_mode(mode: String) -> void:
 	print_verbose("music: %s -> %s" % [was, mode])
 	match mode:
 		"explore":
+			if _explore == null:
+				set_scene(DEFAULT_SCENE)
 			_drop_battle(FADES.battle.out)
 			if was == "":
 				_explore_in(FIRST_FADE_IN)
@@ -216,45 +281,18 @@ func sting_length() -> float:
 	return _sting_length
 
 
-# ---- a fight's theme
-
-## The exploring loop: the hum theme's or the passacaglia.
-func explore_path() -> String:
-	return HUM_EXPLORE if hum else EXPLORE
-
-
-## The fights' themes: the music set's three, or the hum theme's one, or the four old ones.
-func battles() -> Array:
-	if music_set:
-		return SET_BATTLES.values()
-	return HUM_BATTLES if hum else BATTLES
-
-
-## A theme that is not the last one's, unless there is only the one; a champion's fight always has `battle-crusade`. With the
-## music set, the theme of who the fight is with.
-func pick_battle() -> String:
-	if music_set: # the music set: the theme of who the fight is with
-		return str(SET_BATTLES[_foe])
-	var all := battles()
-	if champion and all.has(CHAMPION_THEME):
-		return CHAMPION_THEME
-	var fresh := all.filter(func(n): return n != _last_battle)
-	if fresh.is_empty():
-		fresh = all
-	return fresh[mini(floori(float(random.call()) * fresh.size()), fresh.size() - 1)]
-
+# ---- a fight's tune
 
 func _start_battle() -> void:
 	_drop_battle(FADES.battle.out) # a theme still fading from the last fight is let go; this fight gets its own player
-	_battle_name = pick_battle()
-	_last_battle = _battle_name
+	_battle_name = _fight
 	var stream: AudioStream = _stream(_battle_path(_battle_name))
 	_battle = _player(Mix.MUSIC_IN)
 	_battle.stream = stream
 	_battle.volume_db = SILENT_DB
 	_battle.play()
-	_fade(_battle, linear_to_db(VOLUME.battle) + SET_TRIM_DB if music_set else _level("battle"), FADES.battle["in"])
-	print_verbose("music: battle theme %s" % _battle_name)
+	_fade(_battle, _level("battle", _battle_name), FADES.battle["in"])
+	print_verbose("music: fight tune %s" % _battle_name)
 
 
 ## Let the fight's theme fade out and go; the next fight makes a new player.
@@ -278,9 +316,12 @@ func _explore_in(fade: float) -> void:
 	_explore.stream_paused = false # it keeps its place while resting and comes back from there
 	if not _explore.playing:
 		_explore.play()
-	_fade(_explore, _level("explore"), fade)
+	_fade(_explore, _level("explore", _scene), fade)
+	if _scene in STAY:
+		print_verbose("music: %s in, for as long as you are there" % _scene)
+		return
 	_schedule(_between(TRIAL.play if not motifs.is_empty() else PACE.play), _rest_after_playing)
-	print_verbose("music: exploring music in, resting in %.0f s" % pending_in())
+	print_verbose("music: %s in, resting in %.0f s" % [_scene, pending_in()])
 
 
 func _resume_explore() -> void:
@@ -397,20 +438,20 @@ func _player(bus: String) -> AudioStreamPlayer:
 	return p
 
 
-## A loop's playing level in dB ("explore" or "battle").
-func _level(track: String) -> float:
-	return linear_to_db(VOLUME[track]) + (HUM_TRIM_DB if hum else 0.0)
+## A loop's playing level in dB: "explore" or "battle", and the tune's own trim.
+func _level(track: String, tune: String) -> float:
+	return linear_to_db(VOLUME[track]) + float(TRIM_DB.get(tune, 0.0))
 
 
 func _battle_path(name: String) -> String:
-	return "res://assets/audio/%s.ogg" % name
+	return track_path(name)
 
 
 func _sting_path(name: String) -> String:
-	return "res://assets/audio/%s.ogg" % name
+	return "%ssting-%s.ogg" % [DIR, name]
 
 
-## A track, loaded the first time (the fights' themes and the stings were requested in the background at the start).
+## A track, loaded the first time (the stings, and the fights `prepare` was told of, were requested in the background).
 func _stream(path: String) -> AudioStream:
 	if not _streams.has(path):
 		var stream: AudioStream
@@ -420,7 +461,7 @@ func _stream(path: String) -> AudioStream:
 			stream = load(path)
 		if stream == null:
 			push_error("music: can't load '%s'; if it was just pulled, run `godot --headless --path . --import`" % path)
-		if stream is AudioStreamOggVorbis and (path == explore_path() or battles().any(func(n): return path == _battle_path(n))):
+		if stream is AudioStreamOggVorbis and not path.get_file().begins_with("sting-"):
 			stream.loop = true # the loops are cut to whole bars, so they wrap inside the music
 		_streams[path] = stream
 	return _streams[path]
