@@ -330,6 +330,12 @@ def hit(name: str, vel: float = 0.7, m: int | None = None) -> np.ndarray:
     return x * 0.2 / ref * (0.12 + 0.88 * vel**1.4)
 
 
+def reset() -> None:
+    """Start the round robins over: a tune takes the same samples in whatever order the pool built the others, so a
+    build is repeatable and a single tune rendered with `--only` is the tune the full build writes."""
+    _rr.clear()
+
+
 def use() -> None:
     """Play sampler.py's scores on this orchestra: every note their instruments name comes from here (an
     instrument the orchestra does not know is an error, not a fallback)."""

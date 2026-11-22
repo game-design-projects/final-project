@@ -622,6 +622,18 @@ SENDS = {"lead": 0.4, "lead2": 0.35, "echo": 0.6, "bass": 0.3, "chords": 0.35, "
          "tabor": 0.2, "bell": 0.65, "sparkle": 0.8, "choir": 0.5, "drone": 0.5}
 
 
+def air(x: np.ndarray) -> np.ndarray:
+    """A gentle lift above 2.5 kHz (about +4 dB by 8 kHz): close-miked sections in a generated hall come out dull, and a
+    dull orchestra reads as a synthesised one. Zero-phase and circular, so a loop stays seamless."""
+    return S.spectrum_filter(x, lambda f: 1.0 + 0.6 * np.clip((f - 2500.0) / 5500.0, 0.0, 1.0))
+
+
+def master(x: np.ndarray, target_db: float, **kw) -> tuple[np.ndarray, int]:
+    """The lift, then the loudness and the knee (`sampler.master`). It goes first: the knee keeps the mix under the
+    ceiling, and a lift after it put peaks past full scale that the 16-bit write clipped flat (fight-gumdrop did)."""
+    return S.master(air(x), target_db, **kw)
+
+
 def render_tune(t: Tune) -> tuple[np.ndarray, float, str]:
     fam = t.family
     unit = 60.0 / (fam.bpm * t.tempo)
@@ -639,7 +651,7 @@ def render_tune(t: Tune) -> tuple[np.ndarray, float, str]:
     log.info("%s: %s, %s, %d bars of %d at %.0f/min (%.1f s), tonic %s, leads %s", t.name, fam.name, fam.scale, len(p.chords), fam.meter,
              fam.bpm * t.tempo, seconds, S.name(tonic), "/".join(c.lead(k) for k in range(3)))
     x = S.mix(sc, LEVELS, SENDS, sections=secs, wet=0.8 if battle else 1.05)
-    x, hits = S.master(x, S.BATTLE_RMS_DB if battle else S.EXPLORE_RMS_DB)
+    x, hits = master(x, S.BATTLE_RMS_DB if battle else S.EXPLORE_RMS_DB)
     S.report(t.name, x, hits)
     return x, seconds, "loop"
 
@@ -699,7 +711,7 @@ def caves_first() -> tuple[np.ndarray, float, str]:
     secs = [("A", 0, 8 * bar), ("B", 8 * bar, 16 * bar), ("A2", 16 * bar, 24 * bar)]
     x = S.mix(sc, {"chords": -6, "bass": -9, "pad": -8, "lead": 0, "lead2": -1, "sparkle": -10, "bell": -8, "echo": -6},
               {"chords": 0.35, "bass": 0.3, "pad": 0.5, "lead": 0.55, "lead2": 0.5, "sparkle": 0.8, "bell": 0.7, "echo": 0.6}, sections=secs, wet=1.1)
-    x, hits = S.master(x, S.EXPLORE_RMS_DB)
+    x, hits = master(x, S.EXPLORE_RMS_DB)
     S.report("explore-caves", x, hits)
     return x, len(chords) * bar, "loop"
 
@@ -745,7 +757,7 @@ def vexalith() -> tuple[np.ndarray, float, str]:
     secs = [("organ", 0, 8 * bar), ("strings", 8 * bar, 16 * bar), ("break", 16 * bar, 24 * bar)]
     x = S.mix(sc, {"osti": -4, "drums": -8, "tabor": -10, "choir": -9, "pad": -10, "lead": 0, "lead2": -6, "bell": -5},
               {"osti": 0.2, "drums": 0.3, "tabor": 0.2, "choir": 0.5, "pad": 0.4, "lead": 0.35, "lead2": 0.35, "bell": 0.6}, sections=secs, wet=0.8)
-    x, hits = S.master(x, S.BATTLE_RMS_DB)
+    x, hits = master(x, S.BATTLE_RMS_DB)
     S.report("champion-vexalith", x, hits)
     return x, len(chords) * bar, "loop"
 
@@ -785,7 +797,7 @@ def sting(kind: str) -> tuple[np.ndarray, float, str]:
             sc.note("bass", "strings", m, t, 2.0 if t < land else 2.2, 0.45)
         x = S.mix(sc, {"lead": 0, "lead2": -5, "drums": -6, "pad": -6, "bell": -4, "bass": -7},
                   {"lead": 0.4, "lead2": 0.4, "drums": 0.3, "pad": 0.55, "bell": 0.7, "bass": 0.3}, wet=0.9)
-    x, hits = S.master(x, S.BATTLE_RMS_DB, length=length, fade=fade)
+    x, hits = master(x, S.BATTLE_RMS_DB, length=length, fade=fade)
     S.report("sting-" + kind, x, hits, loop=False)
     return x, length, "sting"
 
@@ -793,18 +805,12 @@ def sting(kind: str) -> tuple[np.ndarray, float, str]:
 # ---------------------------------------------------------------- build
 
 
-def air(x: np.ndarray) -> np.ndarray:
-    """A gentle lift above 2.5 kHz (about +4 dB by 8 kHz): close-miked sections in a generated hall come out dull, and a
-    dull orchestra reads as a synthesised one. Zero-phase and circular, so a loop stays seamless."""
-    return S.spectrum_filter(x, lambda f: 1.0 + 0.6 * np.clip((f - 2500.0) / 5500.0, 0.0, 1.0))
-
-
-
 def build(name: str, wav_dir: str) -> tuple[str, float, float]:
     """Render one tune and encode it. Returns (name, its length, seconds it took)."""
     logging.basicConfig(level=logging.INFO, format="%(message)s", force=True)
     started = time.time()
     S.rng = np.random.default_rng(zlib.crc32(name.encode()))  # the sampler's humanising, per tune: a build is repeatable
+    O.reset()  # and the orchestra's round robins start over, so the tune does not depend on what its worker played before
     if name == "explore-caves":
         x, seconds, how = caves_first()
     elif name == "champion-vexalith":
@@ -813,7 +819,9 @@ def build(name: str, wav_dir: str) -> tuple[str, float, float]:
         x, seconds, how = sting(name.removeprefix("sting-"))
     else:
         x, seconds, how = render_tune(tunes()[name])
-    x = air(x)
+    peak = float(np.abs(x).max())
+    if peak > 1.0:  # the knee keeps a master under its ceiling; anything over full scale is clipped flat on the way out
+        log.warning("%s: peak %+.2f dBFS is over full scale, and the 16-bit write will clip it", name, 20 * np.log10(peak))
     wav = os.path.join(wav_dir, name + ".wav")
     S.write(wav, x, loop=how == "loop")
     out = os.path.join(OUT_DIR, name + ".ogg")
