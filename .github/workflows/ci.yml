@@ -53,6 +53,14 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/doc_tools_test.py
+      # The credits are a legal record: the music is rendered from a CC BY-SA 3.0 soundfont, the fonts are under the SIL Open
+      # Font License (whose notice and text must travel with them), and the voice references are CC BY 4.0. The old credits
+      # named the font and music licences but shipped neither's text, and Godot exports only resources, so the fonts would
+      # have gone out without their licence and nothing failed. Needs no Godot either.
+      - name: Check the credits and the licence texts
+        run: |
+          set -euo pipefail
+          python3 tools/credits_test.py
       # Whole games from the start to the stairs with an autopilot, on the local rules and on the seeded mind. The tool exits
       # with 1 when a game stalls, never reaches the stairs, or runs into a script error in any part of the game.
       # Every tool below goes through tools/check.sh: Godot exits with 0 for a script that doesn't load, so the exit code
@@ -180,8 +188,11 @@ jobs:
           for f in index.html index.js index.wasm index.pck; do
             test -s "build/web/$f" || { echo "::error::build/web/$f is missing or empty"; exit 1; }
           done
-          # CREDITS.txt is not a resource: only the export's include_filter ships it, and the Credits page is empty without it
+          # CREDITS.txt and the licence texts are not resources: only the export's include_filter ships them, and the Credits
+          # and Licences pages are empty without them (a font or a piece of music has to carry its licence).
           grep -aq 'assets/CREDITS.txt' build/web/index.pck || { echo '::error::assets/CREDITS.txt is not in the web build'; exit 1; }
+          grep -aq 'assets/LICENSES/CC-BY-SA-3.0.txt' build/web/index.pck || { echo '::error::the music licence text is not in the web build'; exit 1; }
+          grep -aq 'assets/fonts/OFL-VT323.txt' build/web/index.pck || { echo '::error::the fonts have no licence text in the web build'; exit 1; }
           grep -aq 'assets/video/intro.ogv' build/web/index.pck || { echo '::error::the opening film is not in the web build'; exit 1; }
       # The pack runs, not only has the files in it: an export that loses a scene or a script still looks complete in a zip.
       # The editor binary plays the exported pack headless and the menu prints itself once it is up.

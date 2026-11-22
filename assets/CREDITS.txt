@@ -1,35 +1,68 @@
-Monster AI: Jev, the System One model by TypeSafe (https://typesafe.ai)
+What the game ships, who made it, and under what licence. Every asset in assets/ is named here; the
+full texts of the licences that need one travel with the game, in assets/LICENSES/ and
+assets/fonts/. tools/credits_test.py fails when an asset is missing from this list or a text it
+names is not there.
 
-Music (assets/audio/ambient.ogg, battle-*.ogg, fanfare.ogg, victory.ogg)
+MONSTER AI
+- Jev, the System One model by TypeSafe (https://typesafe.ai). The monsters think with it over the
+  network; nothing of the model ships with the game.
+
+ART (assets/art/*.png)
+- The drawings are the project's own. They were drawn for this game with OpenAI's image generation
+  (Codex's built-in image tool) from the prompts in tools/art/prompts/, kept as source sheets in
+  tools/art/source/ and cut into the game's atlases by tools/art/process.py (see docs/ART.md).
+
+OPENING FILM (assets/video/intro.ogv)
+- Generated with ByteDance's Seedance video model through Dreamina, from reference crops of the
+  game's own drawings and a text prompt (docs/intro/seedance-prompt.md), then re-encoded to Ogg
+  Theora.
+
+MUSIC: the old set (assets/audio/ambient.ogg, battle-charge.ogg, battle-crusade.ogg,
+battle-gallop.ogg, battle-toccata.ogg, fanfare.ogg, victory.ogg)
 - Original music made for this game, on the game's own melody. Rendered offline by
-  tools/music/build-ambient.py, build-battle.py and build-stings.py (the sampler is tools/music/sampler.py)
-  and encoded to Ogg Vorbis by tools/music/to_ogg.sh.
-- Instruments: harpsichord, church organ, string ensemble, choir aahs, music box and tubular bells
-  samples from the MusyngKite soundfont, via gleitz/midi-js-soundfonts. CC BY-SA 3.0:
-  https://creativecommons.org/licenses/by-sa/3.0/
+  tools/music/build-ambient.py, build-battle.py and build-stings.py (the sampler is
+  tools/music/sampler.py) and encoded to Ogg Vorbis by tools/music/to_ogg.sh.
+- Its instruments are samples from the MusyngKite soundfont, as rendered by gleitz/midi-js-soundfonts
+  (https://github.com/gleitz/midi-js-soundfonts), which released them under Creative Commons
+  Attribution-ShareAlike 3.0 (https://creativecommons.org/licenses/by-sa/3.0/).
+- Those seven .ogg files are rendered from those samples, so each is a derivative work of them: the
+  audio files are licensed Creative Commons Attribution-ShareAlike 3.0 as well, credited to
+  "MusyngKite soundfont, via gleitz/midi-js-soundfonts". Its full text is
+  assets/LICENSES/CC-BY-SA-3.0.txt.
 - Kettle drums and tabor: synthesised in tools/music/sampler.py, no samples.
 
-Music (assets/audio/hum-explore.ogg, hum-combat.ogg)
-- The hum theme, by Abdulla Alfalasi: an exploring loop and a combat loop on the same hummed melody. Source, MIDI and
-  the render script are in tools/music/hum-theme/.
+MUSIC: the hum theme (assets/audio/hum-explore.ogg, assets/audio/hum-combat.ogg)
+- Written for this game by Abdulla Alfalasi: an exploring loop and a combat loop on the same hummed
+  melody. His MIDI, source and render script were contributed to this repository (tools/music/
+  hum-theme/, with a README beside them), and the loops are the project's own recordings: they ship
+  under the game's own terms, and no separate licence is granted for reusing them elsewhere.
 - Rendered with GeneralUser GS v2.0.3 by S. Christian Collins (https://www.schristiancollins.com,
-  https://github.com/mrbumpy409/GeneralUser-GS). Its licence: "You may use GeneralUser GS without restriction for
-  your own music creation, private or commercial."
+  https://github.com/mrbumpy409/GeneralUser-GS). Its licence: "You may use GeneralUser GS without
+  restriction for your own music creation, private or commercial." It asks for no credit; this is
+  good form.
 
-Sound effects: synthesised when the game starts (src/audio/sfx.gd, src/audio/synth.gd), no samples.
+SOUND EFFECTS
+- Synthesised when the game starts (src/audio/sfx.gd, src/audio/synth.gd), no samples.
 
-Monster voices (assets/voices/): every line rendered ahead by an open text-to-speech model, each monster's voice
-cloned from a reference recording in LibriTTS-R. The reference clips are in tools/voices/refs/ (trimmed, mono,
-24 kHz); the rendered lines are new recordings in a voice like the reference speaker's, then pitch- and
-tempo-shaped per monster and loudness-normalised (tools/voices/render.py, tools/voices/voices.json).
-- assets/voices/cosyvoice3/: CosyVoice3 (FunAudioLLM/Fun-CosyVoice3-0.5B-2512, https://github.com/FunAudioLLM/CosyVoice),
-  Apache License 2.0. The engine of the Feiyu voice stack; the Feiyu voice library itself is not used.
-- assets/voices/qwen3/: Qwen3-TTS (Qwen/Qwen3-TTS-12Hz-0.6B-Base, https://github.com/QwenLM/Qwen3-TTS), Apache License 2.0.
-- assets/voices/gemini/: Google Gemini TTS (gemini-3.8-flash-tts, prebuilt voices Leda, Algenib, Enceladus, Orus and
-  Charon), reached through OpenRouter; not cloned from a reference. Generated audio used under the Gemini API terms.
-- Reference voices: LibriTTS-R (https://www.openslr.org/141/) by Y. Koizumi, H. Zen, S. Karita, Y. Ding, K. Yatabe,
-  N. Morioka, M. Bacchiani, Y. Zhang, W. Han and A. Bapna, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/);
-  derived from LibriTTS and LibriSpeech, from LibriVox recordings. Readers (LibriVox) and the clips used:
+MONSTER VOICES (assets/voices/): every line rendered ahead by an open text-to-speech model, each
+monster's voice cloned from a reference recording in LibriTTS-R. The reference clips are in
+tools/voices/refs/ (trimmed, mono, 24 kHz); the rendered lines are new recordings in a voice like
+the reference speaker's, then pitch- and tempo-shaped per monster and loudness-normalised
+(tools/voices/render.py, tools/voices/voices.json).
+- assets/voices/cosyvoice3/: CosyVoice3 (FunAudioLLM/Fun-CosyVoice3-0.5B-2512,
+  https://github.com/FunAudioLLM/CosyVoice), Apache License 2.0. The engine of the Feiyu voice
+  stack; the Feiyu voice library itself is not used.
+- assets/voices/qwen3/: Qwen3-TTS (Qwen/Qwen3-TTS-12Hz-0.6B-Base, https://github.com/QwenLM/Qwen3-TTS),
+  Apache License 2.0.
+- assets/voices/gemini/: Google Gemini TTS (gemini-3.8-flash-tts, prebuilt voices Leda, Algenib,
+  Enceladus, Orus and Charon), reached through OpenRouter; not cloned from a reference. Generated
+  audio used under the Gemini API terms.
+- Reference voices: LibriTTS-R (https://www.openslr.org/141/) by Y. Koizumi, H. Zen, S. Karita,
+  Y. Ding, K. Yatabe, N. Morioka, M. Bacchiani, Y. Zhang, W. Han and A. Bapna, Creative Commons
+  Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/); derived from LibriTTS and
+  LibriSpeech, from LibriVox recordings. Changes: the clips are trimmed, made mono and resampled to
+  24 kHz, used as voice references rather than played. Its full text is
+  assets/LICENSES/CC-BY-4.0.txt. Readers (LibriVox) and the clips used:
   - the dragon: speaker 7729 (Tim Bower), utterance 7729_102255_000010_000014
   - the rock golem: speaker 1188 (Duncan Murrell), utterance 1188_133604_000024_000000
   - the goblin: speaker 260 (Brad Bush), utterance 260_123286_000021_000005
@@ -37,11 +70,12 @@ tempo-shaped per monster and loudness-normalised (tools/voices/render.py, tools/
   - the snake: speaker 8463 (Michele Fry), utterance 8463_294828_000014_000000
   - the slime: speaker 5683 (Rachael Lapidis), utterance 5683_32866_000012_000001
 
-Hold to talk (desktop builds): the speech is recognised on your own machine, nothing is sent anywhere.
-- sherpa-onnx by k2-fsa (https://github.com/k2-fsa/sherpa-onnx), Apache License 2.0. Its licence ships beside the
-  helper program as LICENSE-sherpa-onnx.txt.
-- ONNX Runtime, copyright (c) Microsoft Corporation (https://github.com/microsoft/onnxruntime), MIT License. Its
-  licence and third-party notices ship beside the helper as LICENSE-onnxruntime.txt and
+HOLD TO TALK (desktop builds): the speech is recognised on your own machine, nothing is sent
+anywhere.
+- sherpa-onnx by k2-fsa (https://github.com/k2-fsa/sherpa-onnx), Apache License 2.0. Its licence
+  ships beside the helper program as LICENSE-sherpa-onnx.txt.
+- ONNX Runtime, copyright (c) Microsoft Corporation (https://github.com/microsoft/onnxruntime), MIT
+  License. Its licence and third-party notices ship beside the helper as LICENSE-onnxruntime.txt and
   ThirdPartyNotices-onnxruntime.txt.
 - Speech model: NVIDIA Nemotron Speech Streaming, nvidia/nemotron-speech-streaming-en-0.6b
   (https://huggingface.co/nvidia/nemotron-speech-streaming-en-0.6b), in sherpa-onnx's int8 export
@@ -50,10 +84,19 @@ Hold to talk (desktop builds): the speech is recognised on your own machine, not
   Licensed by NVIDIA Corporation under the NVIDIA Open Model License
   (https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-license/).
 
-Opening film (assets/video/intro.ogv): generated with ByteDance's Seedance video model through Dreamina, from reference crops of the game's own drawings and a text prompt (docs/intro/seedance-prompt.md), then re-encoded to Ogg Theora.
+RULES
+- Inspired by the Dungeons & Dragons 5th Edition System Reference Document, released by Wizards of
+  the Coast under Creative Commons Attribution 4.0
+  (https://creativecommons.org/licenses/by/4.0/); no SRD text is reproduced in the game.
 
-Rules inspired by the Dungeons & Dragons 5th Edition System Reference Document.
+FONTS (assets/fonts/)
+- assets/fonts/PressStart2P-Regular.ttf: Press Start 2P, copyright 2012 The Press Start 2P Project
+  Authors, with Reserved Font Name "Press Start 2P" (cody@zone38.net). Licence: SIL Open Font
+  License 1.1. The full text travels with the font, as assets/fonts/OFL-PressStart2P.txt.
+- assets/fonts/VT323-Regular.ttf: VT323, copyright 2011 The VT323 Project Authors
+  (peter.hull@oikoi.com). Licence: SIL Open Font License 1.1. The full text travels with the font, as
+  assets/fonts/OFL-VT323.txt.
+  Both are drawn at the sizes the text tables name (src/view/fonts.gd) and are not modified.
 
-Fonts (assets/fonts/):
-- Press Start 2P, copyright 2012 The Press Start 2P Project Authors (SIL Open Font License 1.1): OFL-PressStart2P.txt
-- VT323, copyright 2011 The VT323 Project Authors (SIL Open Font License 1.1): OFL-VT323.txt
+THE LICENCE TEXTS THE GAME SHIPS WITH: assets/LICENSES/CC-BY-SA-3.0.txt,
+assets/LICENSES/CC-BY-4.0.txt, assets/fonts/OFL-PressStart2P.txt, assets/fonts/OFL-VT323.txt.
