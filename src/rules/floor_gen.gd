@@ -88,8 +88,8 @@ static func generate(rng: Rng, plan := {}):
 
 ## The floor's lord (rules/lords.gd) in its biome: its place drawn from a generator of its own, so the floor's own draws, and
 ## so its layout, are what the seed always made. A lord is due here (#166), so its place is not given up for want of the
-## usual stretch of the walk: `Secrets.place_lord` falls back on any cell that leaves a way through the floor whole, and a
-## floor that somehow has none says so rather than quietly losing the run's second favour, the pact and the warren.
+## usual stretch of the walk: `Secrets.place_lord` falls back on any cell it may stand on that leaves a way through the floor
+## whole, and a floor that somehow has none says so rather than quietly losing the run's second favour, the pact and the warren.
 static func _place_lord(f, walk: Dictionary, hall: Vector2i, lord: Dictionary) -> void:
 	if f.quester.is_empty(): # no one was asking here: a place of its own, from the lord's generator, after the monsters stand
 		var lrng := Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
