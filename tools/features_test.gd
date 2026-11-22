@@ -47,6 +47,7 @@ const Words = preload("res://src/mind/words.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
+const Secrets = preload("res://src/rules/secrets.gd")
 const State = preload("res://src/game/state.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -79,6 +80,7 @@ func _run() -> void:
 	await _gate()
 	await _branching()
 	await _late_decisions()
+	await _log_keeps_the_newest()
 	await _clans()
 	await _hostility()
 	await _map_gen()
@@ -1747,6 +1749,32 @@ func _late_decisions() -> void:
 	_use()
 
 
+## The log keeps the newest lines: after a kill five lines are said and the box fits three, so the two the box can't show
+## are the oldest, and a "…" says they were cut instead of the last line — what the clans and the kill just said — being
+## the one dropped. The newest line is drawn even alone taller than the box.
+func _log_keeps_the_newest() -> void:
+	Hud.large_text = false
+	var five := []
+	for line in ["The foe falls.", "Its clan sees it.", "GLOP approves.", "The Crew is angry.", "A clan is angry with you."]:
+		five.append(State.sys_line(line))
+	_check(Hud.log_fits(five, 1100.0) < five.size(), "five lines don't all fit the log (%d of 5)" % Hud.log_fits(five, 1100.0))
+	var rows: Array = Hud.log_rows(five, 1100.0)
+	_check(rows.back().text == five.back().text, "a five-line log shows its last line (%s)" % str(rows.back().text))
+	_check(rows[0].text == Hud.LOG_GAP, "and marks the oldest lines cut with a %s, rather than dropping the end" % Hud.LOG_GAP)
+	_check(rows.size() >= 2 and rows[1].text == five[3].text, "the line before the last is kept too (%s)" % str(rows[1].text))
+	# a log that fits is drawn whole, with no mark
+	var small := [State.sys_line("One line."), State.sys_line("Two.")]
+	var kept: Array = Hud.log_rows(small, 1100.0)
+	_check(kept.size() == small.size() and kept[0].text == small[0].text and kept.back().text == small.back().text, "a log that fits is drawn whole")
+	# the newest line taller than the box: it is drawn (and cut by the box), never replaced by the lines above it
+	var tall: Dictionary = State.sys_line("word ".repeat(400))
+	var alone: Array = Hud.log_rows([State.sys_line("Older."), tall], 760.0)
+	_check(alone.size() == 1 and alone.back().text == tall.text, "a newest line taller than the box still shows")
+	# what the box draws is what it says it can: a row per line it fits, and the mark when it does not fit them all
+	_check(Hud.log_rows(five, 760.0).size() <= Hud.log_fits(five, 760.0) + 1, "the rows never outnumber the room the box has")
+	_use()
+
+
 ## The measurement issue #26 asks for: over 1,000 seeds, the fewest monster cells a walk from the start to the stairs
 ## must enter. With the champion on the stairs that is never zero; with it back in its hall most floors can still be
 ## walked past, which is the version the plan can still compare. The target is zero floors with no fight and no seed
@@ -3396,6 +3424,91 @@ func _lords() -> void:
 	var calm = _flow(7, ["no-clan-requests"])
 	await calm.new_run()
 	_check(not calm.state.floor_map.quester.get("redeem", false), "a clan that is only calm gets the usual favour")
+	await _lords_in_a_run()
+	_a_lord_when_the_trader_gives_up()
+
+
+## A whole run, every floor of it and both ways down each stair: a lord is due on the run's first floor of a biome, and where
+## that biome comes back (floors 4 and 5 of the three-biome cycle) the same lord asks its second favour, whose payment swears
+## the clan and opens its warren (#166). A floor that quietly lost its lord took the second favour, the pact and the warren out
+## of a played game, so none may: not a warren of another clan, where a lord's spare has no kin to name, and not a crowded
+## stretch of the walk, where a trader's place is given up and a lord's is not. The ways down are numbered from 1 (Floors.paths),
+## so one game takes each stair's first way and the other its second; B5F has no stair to pick a way on.
+func _lords_in_a_run() -> void:
+	# the lord on its floor is what `no-clan-requests` plays: with the clans' askers on, a lord stands in its hall and on no floor
+	var flow = _flow(1, ["no-clan-requests"])
+	await flow.new_run()
+	var lost := 0
+	var games := 0
+	var asked := 0
+	var second := 0
+	var homes := {}
+	for seed_value in range(1, 13):
+		for way_no in [1, 2]:
+			games += 1
+			var met: Array = []
+			for depth in range(1, 6):
+				flow.state.run_seed = seed_value
+				flow.state.depth = depth
+				flow.state.lords_met = met.duplicate() # as paying each favour would leave it
+				flow.state.lords_sworn = []
+				flow.state.reputation = {}
+				var way := {}
+				for w in ([] if depth == 1 else Floors.paths(seed_value, depth - 1, true, [])):
+					if int(w.get("path", 0)) == way_no:
+						way = w
+				await flow._make_floor(way)
+				var f = flow.state.floor_map
+				var first := true
+				for d in range(1, depth):
+					if str(Floors.biome(seed_value, d).get("id", "")) == str(f.biome):
+						first = false
+				var due: Dictionary = Lords.due(str(f.biome), int(f.seed_value), met, [], not first, {})
+				var q: Dictionary = f.quester
+				if q.is_empty() or not q.has("lord"):
+					if not due.is_empty():
+						lost += 1
+						print("features_test: seed %d B%dF (way %d) lost the lord of %s" % [seed_value, depth, int(way.get("path", 0)), str(due.get("clan", "?"))])
+					continue
+				asked += 1
+				if bool(q.get("big", false)):
+					second += 1
+				homes[str(q.lord)] = true
+				met.append(str(q.lord))
+	_check(lost == 0, "over twelve seeds and both ways down every stair, no floor with a lord due loses it (%d of %d games, %d lords asked)" % [games, games, asked])
+	_check(asked >= games * 3, "each game asks at least one lord a biome (%d lords over %d games)" % [asked, games])
+	_check(second > 0 and homes.size() == 4, "and a biome that comes back has its second favour to ask (%d of them, every lord %s)" % [second, str(homes.keys())])
+
+
+## A floor a trader's draw gives up is not one a lord's does (#166): where every cell that leaves a way through the floor whole
+## stands beside a secret (and the rest would cut it), `Secrets.place_trader` returns null and `Secrets.place_lord` has to find a
+## place anyway. The games above reach that path on no seed, so this pins it on a floor built to have it.
+func _a_lord_when_the_trader_gives_up() -> void:
+	var f := FloorMap.new()
+	f.size = 10
+	f.grid = []
+	for y in 4:
+		var row := []
+		for x in 10:
+			row.append(0)
+		f.grid.append(row)
+	for x in 8:
+		f.grid[1][x] = 1 # a corridor from the start into a loop of four...
+	f.grid[2][6] = 1
+	f.grid[2][7] = 1
+	f.grid[0][6] = FloorMap.CRACKED # ...whose cells each stand beside a cracked wall, so a trader will not stand in them
+	f.grid[0][7] = FloorMap.CRACKED
+	f.grid[2][5] = FloorMap.CRACKED
+	f.grid[2][8] = FloorMap.CRACKED
+	f.start = Vector2i(0, 1)
+	var hall := Vector2i(-5, -5) # no hall on this floor
+	var walk: Dictionary = FloorGen._walk_from(f, f.start, hall)
+	f.stairs = walk.farthest
+	var gave_up: Variant = Secrets.place_trader(Rng.new(5), f, walk, hall)
+	_check(gave_up == null, "a trader gives up a floor whose only ways round are cut cells or beside a secret (%s)" % str(gave_up))
+	var place: Variant = Secrets.place_lord(Rng.new(5), f, walk, hall)
+	_check(place != null, "a lord still gets a place on it (%s)" % str(place))
+	_check(place != null and Secrets._leaves_floor_whole(f, walk, f.reserved(), place), "and that place leaves a way through the floor whole")
 
 
 ## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.
@@ -4110,8 +4223,13 @@ func _charting() -> void:
 	flow.announce("A PURSE", "something else holds the picture")
 	await flow.encounter.leave_fight(ended)
 	_check(not s.charted.is_empty() and heard.size() == 2 and heard[1].how == "map", "one out of the way hands its map over (%d cells charted)" % s.charted.size())
-	_check(s.stage == "explore" and s.lines.any(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map")), "and the log says who was carrying it")
-	_check(s.banner.title == "A PURSE" and s.lines.size() == ended.size() + 1 and str(s.lines[0].text).contains(carrier.name) and str(s.lines[0].text).contains("map"), "with another banner on the picture the log says it first, where the lines the log cuts can't take it")
+	var map_said: Array = s.lines.filter(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map"))
+	_check(s.stage == "explore" and not map_said.is_empty(), "and the log says who was carrying it")
+	var map_text: String = str(map_said[0].text) if not map_said.is_empty() else ""
+	_check(s.banner.title == "A PURSE" and s.lines.size() == ended.size() + 1 and str(s.lines.back().text) == map_text, "with another banner on the picture the log says it last, where the lines the log keeps can't take it")
+	var room := Hud.log_fits(s.lines, 1100.0)
+	_check(room < s.lines.size(), "the fight's lines and the map's do not all fit the box (%d of %d)" % [room, s.lines.size()])
+	_check(Hud.log_rows(s.lines, 1100.0).any(func(r): return str(r.text) == map_text), "and a full box still draws it: the log keeps its newest lines, so the first line is the one the cut takes")
 	_check(Chart.known(s, s.floor_map.stairs) and not Chart.instinct_due(s), "the stairs are on the map, and instinct has nothing left to add")
 	# the same with the picture free: the banner says it, and the log's line comes after how the fight ended
 	await flow.new_run()

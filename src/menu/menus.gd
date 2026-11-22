@@ -47,6 +47,7 @@ static func main(panel, ctx: Dictionary) -> Dictionary:
 	items.append_array([
 		{"label": "SETTINGS", "act": _go(panel, func(): return settings(panel))},
 		{"label": "CREDITS", "act": _go(panel, func(): return credits())},
+		{"label": "LICENCES", "act": _go(panel, func(): return licences())},
 	])
 	if ctx.has("quit"):
 		items.append({"label": "QUIT GAME", "act": func(): ctx.quit.call()})
@@ -317,7 +318,27 @@ static func _achievements_row(ctx: Dictionary) -> Dictionary:
 	return {"label": "ACHIEVEMENTS", "sub": "%d of %d earned" % [Progress.earned().size(), Achievements.ids().size()], "act": func(): ctx.achievements.call()}
 
 
+## What the credits name, in full: the licences that require their text to travel with what they cover — the two fonts' SIL
+## Open Font License, and the two Creative Commons texts the old music's samples and the reference voices are under. Read from
+## the files themselves, so the page says what a build carries (a file missing from a build says so rather than going quiet).
+const LICENCE_FILES := [
+	"res://assets/fonts/OFL-PressStart2P.txt",
+	"res://assets/fonts/OFL-VT323.txt",
+	"res://assets/LICENSES/CC-BY-SA-3.0.txt",
+	"res://assets/LICENSES/CC-BY-4.0.txt",
+]
+
+
+static func licences() -> Dictionary:
+	var parts := []
+	for path in LICENCE_FILES:
+		var title := str(path).get_file().to_upper()
+		var text := FileAccess.get_file_as_string(str(path))
+		parts.append("%s\n%s\n\n%s" % [title, "=".repeat(title.length()), text.strip_edges()] if text.strip_edges() != "" else "%s\n\n(missing from this build)" % title)
+	return {"title": "LICENCES", "body": "\n\n".join(parts).replace("[", "[lb]"), "items": [], "hint": "UP / DOWN SCROLL · ESC BACK"}
+
+
 static func credits() -> Dictionary:
 	var text := FileAccess.get_file_as_string("res://assets/CREDITS.txt").replace("[", "[lb]")
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
-	return {"title": "CREDITS", "body": "[color=#ffd27a]Donjon %s[/color]\n\n%s" % [version, text], "items": [], "hint": "UP / DOWN SCROLL · ESC BACK"}
+	return {"title": "CREDITS", "body": "[color=#ffd27a]Donjon %s[/color]\n\n%s\n\nThe full texts are on the LICENCES page." % [version, text], "items": [], "hint": "UP / DOWN SCROLL · ESC BACK"}

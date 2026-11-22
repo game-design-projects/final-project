@@ -481,8 +481,9 @@ func _plain_step(f, c: Vector2i) -> bool:
 
 ## The foe that is now out of the way may have been carrying a map of the floor (rules/chart.gd): the rest of the layout goes onto
 ## your map. Returns `lines` with the log's line for it, or as they were when it had none. With the picture free a banner says it
-## too, and the log's line comes last. With a banner already up (a purse, a clan, a new friend) the log is the only place that
-## says it, so its line comes first: the log cuts the lines it has no room for, from the bottom.
+## too; with a banner already up (a purse, a clan, a new friend) the log is the only place that says it. Either way its line comes
+## last: the log keeps its newest lines (`Hud.log_rows`), so a full box drops the first ones and the line said last is the one it
+## cannot take.
 func _with_map(lines: Array, m) -> Array:
 	var s = flow.state
 	if s.floor_map == null or not Chart.drops(s, m, flow.dice):
@@ -495,10 +496,10 @@ func _with_map(lines: Array, m) -> Array:
 	var on_picture: bool = not flow.banner_up()
 	if on_picture:
 		flow.announce(str(words.title), str(words.text) % m.name)
-	print("encounter: %s was carrying the map (%.0f%% seen, chance %.0f%%), %d cells charted, said %s" % [m.name, seen * 100.0, chance * 100.0, cells, "on the picture and last in the log" if on_picture else "first in the log, a banner is up"])
+	print("encounter: %s was carrying the map (%.0f%% seen, chance %.0f%%), %d cells charted, said %s" % [m.name, seen * 100.0, chance * 100.0, cells, "on the picture and last in the log" if on_picture else "only the log says it, a banner is up"])
 	flow.event("charted", {"how": "map", "cells": cells})
 	flow.event("sound", {"name": "good"})
-	return lines + said if on_picture else said + lines
+	return lines + said
 
 
 ## Out of the fight with nothing owed: no gold, no grudge, and it heals up as if you were never there.

@@ -36,7 +36,8 @@ else
 fi
 
 # One preset per platform: everything in the project except the tools and the unused voice banks, plus config/ and the text
-# files of assets/ (CREDITS.txt: Godot ships only resources unless an include filter names the rest). The web build has its own page.
+# files of assets/ (CREDITS.txt, and the licence texts of assets/fonts/ and assets/LICENSES/: Godot ships only resources unless
+# an include filter names the rest, and a font or a piece of music has to carry its licence). The web build has its own page.
 # The two alternate voice banks (Qwen3, Gemini) are experiments heard with a flag or after `tools/voices/render.py`; the game's
 # own bank is `cosyvoice3`. Their audio is most of what a build would carry of them, so it stays out of every export: the flag
 # then falls back on the usual bank, as it does where no bank was rendered.
@@ -46,7 +47,7 @@ name="Web"
 platform="Web"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*, assets/*.txt"
+include_filter="config/*, assets/*.txt, assets/fonts/*.txt, assets/LICENSES/*"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*, assets/voices/gemini/*"
 export_path=""
 
@@ -63,7 +64,7 @@ name="Windows"
 platform="Windows Desktop"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*, assets/*.txt"
+include_filter="config/*, assets/*.txt, assets/fonts/*.txt, assets/LICENSES/*"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*, assets/voices/gemini/*"
 export_path=""
 
@@ -78,7 +79,7 @@ name="macOS"
 platform="macOS"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*, assets/*.txt"
+include_filter="config/*, assets/*.txt, assets/fonts/*.txt, assets/LICENSES/*"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*, assets/voices/gemini/*"
 export_path=""
 
@@ -95,7 +96,7 @@ name="Linux"
 platform="Linux"
 runnable=true
 export_filter="all_resources"
-include_filter="config/*, assets/*.txt"
+include_filter="config/*, assets/*.txt, assets/fonts/*.txt, assets/LICENSES/*"
 exclude_filter="tools/*, proxy/*, docs/*, build/*, assets/voices/qwen3/*, assets/voices/gemini/*"
 export_path=""
 

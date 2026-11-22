@@ -6,7 +6,7 @@ A hand-drawn dungeon crawler with Undertale-style fights. The dungeon is a real 
 
 Donjon is a Godot 4.7 project (GDScript) for the browser, Windows, macOS and Linux. Changes are in [CHANGELOG.md](CHANGELOG.md).
 
-**Docs:** [The game](docs/GAME.md) · [The art](docs/ART.md) · [Development](docs/DEVELOPMENT.md) · [Music and voices](docs/AUDIO.md) · [Architecture](docs/ARCHITECTURE.md) · [Dynamic moods](docs/MOODS.md) · [Social combat](docs/SOCIAL_COMBAT.md) · [A playtest](docs/PLAYTEST.md). Agents working here: start with [AGENTS.md](AGENTS.md).
+**Docs:** [The game](docs/GAME.md) · [The art](docs/ART.md) · [Development](docs/DEVELOPMENT.md) · [Music and voices](docs/AUDIO.md) · [Architecture](docs/ARCHITECTURE.md) · [Dynamic moods](docs/MOODS.md) · [Social combat](docs/SOCIAL_COMBAT.md) · [A playtest](docs/PLAYTEST.md) · [Credits and licences](assets/CREDITS.txt). Agents working here: start with [AGENTS.md](AGENTS.md).
 
 ## Run it
 
