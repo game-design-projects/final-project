@@ -3,7 +3,7 @@
 ## Commands
 
 ```bash
-godot --headless --path . --import                                # once, and after adding files or assets
+godot --headless --path . --import                                # once, and after adding files or assets or pulling new ones
 godot --path .                                                    # play
 godot --path . -s res://tools/screenshots.gd -- out=/some/dir seed=7   # pictures of each moment (opens a window)
 godot --headless --path . -s res://tools/autoplay.gd -- seed=7042 mock nosound nosave   # play whole games

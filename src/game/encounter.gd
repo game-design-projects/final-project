@@ -26,7 +26,11 @@ const Texts = preload("res://src/game/texts.gd")
 
 const REACTION_LINES := {"good": "pleased", "bad": "stung", "sad": "hurt", "fear": "scared", "odd": "puzzled"} # how a deed landed -> what it says about it
 
-var flow
+## The flow this belongs to, held weakly: the flow holds this, and a strong hold back would be a cycle neither is freed from.
+var _flow_ref: WeakRef
+var flow:
+	get:
+		return _flow_ref.get_ref() if _flow_ref else null
 ## Allies' reactions to the last deed, said with the next message.
 var pending_notes: Array = []
 var pending_rows: Array = []
@@ -35,7 +39,7 @@ var known_mercy := -1.0
 
 
 func _init(owner) -> void:
-	flow = owner
+	_flow_ref = weakref(owner)
 
 
 ## The genre the monster fights in this turn.

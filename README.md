@@ -13,7 +13,7 @@ Donjon is a Godot 4.7 project (GDScript) for the browser, Windows, macOS and Lin
 You need [Godot 4.7.2](https://godotengine.org/download). From the project folder:
 
 ```bash
-godot --headless --path . --import   # once, and again after adding files or assets
+godot --headless --path . --import   # once, and again after adding files or assets or pulling new ones
 godot --path .                       # play
 ```
 

@@ -11,11 +11,15 @@ var earned := {}
 ## The ones earned since this run began, in order.
 var this_run: Array = []
 
-var flow
+## The flow this belongs to, held weakly: the flow holds this, and a strong hold back would be a cycle neither is freed from.
+var _flow_ref: WeakRef
+var flow:
+	get:
+		return _flow_ref.get_ref() if _flow_ref else null
 
 
 func _init(owner) -> void:
-	flow = owner
+	_flow_ref = weakref(owner)
 	flow.happened.connect(_on_event)
 
 
