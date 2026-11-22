@@ -18,7 +18,7 @@ const FIELDS := {
 	"player_hurt": ["damage"], # a hazard hit you
 	"shield": [], # the slime's charm absorbed a hit
 	"second_wind": [], # the keepsake second wind kept you standing through the hit that would have felled you
-	"keepsake": ["id"], # you took a keepsake a champion left (the feature keepsakes)
+	"keepsake": ["id"], # you took a keepsake a champion left, or out of the Hoard's vault (the feature keepsakes)
 	"level": ["level"], # a fight's experience reached this level (#162)
 	"star": [], # you caught a star in the mini-game
 	"heart": [], # you caught a heart a friendly monster dropped in its attack
@@ -47,7 +47,7 @@ const FIELDS := {
 	"run_ended": ["how"], # the run ended at the stairs: "cleared" or "lonely"
 	"run_closed": ["embers"], # the run is over for good, having earned this many embers in all (the feature legacy)
 	"trophy": ["id"], # an achievement was earned; the scene keeps it
-	"found": ["what"], # you found something on the floor: "chest", or "lore" with {id, read, total}: the writing on a wall, and how many pieces of it have been read over all runs
+	"found": ["what"], # you found something on the floor: "chest", "vault" (the Hoard's keepsakes, rules/secrets.gd), or "lore" with {id, read, total}: the writing on a wall, and how many pieces of it have been read over all runs
 	"charted": ["how", "cells"], # the rest of the floor's layout went onto the map: "instinct" (enough of it seen) or "map" (a monster was carrying one), and how many cells that was
 	"butchered": ["species"], # a friend went into the bag
 	"found_out": ["species"], # a friend worked out what happened to another

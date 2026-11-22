@@ -314,19 +314,24 @@ func _arrival() -> Array:
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
 		lines.append(State.sys_line(biome.line))
-	if _vault_due() != "":
-		lines.append(State.sys_line(_vault_due()))
+	var vault_due := _vault_due()
+	if vault_due != "":
+		lines.append(State.sys_line(vault_due))
 	var senders := elites_from(state.floor_map)
 	if not senders.is_empty():
 		lines.append(State.sys_line(str(Clans.elite().arrival) % " and ".join(senders.map(func(c): return Clans.title(c)))))
 	return lines
 
 
-## The line about this run's vault while the floor still hides it (#161), or "" for a floor that holds none.
+## The line about this run's vault while the floor still hides it (#161), or "" for a floor that holds none: a broken wall
+## leaves the vault in sight (`State.seen`), so a run saved after that does not hear it is walled up when it is loaded.
 func _vault_due() -> String:
-	if state.floor_map == null or not state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))):
+	if state.floor_map == null:
 		return ""
-	return str(Content.table("keepsakes").vault.due)
+	for t in state.floor_map.treasure:
+		if bool(t.get("vault", false)) and not state.seen.has(t.cell):
+			return str(Content.table("keepsakes").vault.due)
+	return ""
 
 
 ## The clans that sent elites to this floor, in the order their elites stand.
@@ -415,8 +420,9 @@ func load_state(saved: Dictionary) -> bool:
 	print("flow: loaded a run (%s)" % state.summary())
 	event("state_replaced", {"how": "load"})
 	var lines := [State.sys_line(Texts.welcome_back(state.summary()))]
-	if _vault_due() != "": # a run left on the vault's floor hears of it again (#161)
-		lines.append(State.sys_line(_vault_due()))
+	var due := _vault_due() # a run left on the vault's floor hears of it again (#161), until its wall is broken
+	if due != "":
+		lines.append(State.sys_line(due))
 	await go("explore", {"lines": lines})
 	return true
 
