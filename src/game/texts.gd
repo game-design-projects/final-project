@@ -323,13 +323,14 @@ const DOOR_HINT := "Turn back and find a friend, or leave by the side way, alone
 ## {route, text, tail} for leaving the last floor with nobody.
 static func lonely_ending() -> Dictionary:
 	return {
+		"id": "end_lonely", # its story CG (data/story.json)
 		"route": "THE LONELY WAY OUT",
 		"text": "You squeeze out through the drain. Nobody sees you go, and the Last Door stays shut.",
 		"tail": "Not cleared. The door is still waiting for you and a friend.",
 	}
 
 
-## {route, text, tail} for the summary at the stairs.
+## {id, route, text, tail} for the summary at the stairs; `id` names its story CG (data/story.json).
 static func ending(tally: Dictionary, allies: Array) -> Dictionary:
 	var met: int = tally.spared + tally.slain
 	var route: String
@@ -346,9 +347,10 @@ static func ending(tally: Dictionary, allies: Array) -> Dictionary:
 	else:
 		route = "THE TANGLED ROUTE"
 		text = "Some you spared, some you didn't. The ones you spared saw what you did to the others."
+	var id := "end_" + route.trim_prefix("THE ").trim_suffix(" ROUTE").to_lower()
 	var tail := "Spared %d · slain %d · fled %d · recruited %d" % [tally.spared, tally.slain, tally.fled, tally.recruited]
 	if tally.left > 0:
 		tail += " · %d walked out on you" % tally.left
 	if not allies.is_empty():
 		tail += " · still with you: %s" % ", ".join(allies.map(func(a): return a.name))
-	return {"route": route, "text": text, "tail": tail + "."}
+	return {"id": id, "route": route, "text": text, "tail": tail + "."}

@@ -14,6 +14,7 @@ const DEFAULTS := {
 	"shake": true, # the battle screen shakes when something hits
 	"easy": false, # slower dodges
 	"tips": true, # the first-time tips
+	"story_cg": true, # a drawing over the screen at each moment of the story (view/story_cg.gd)
 	"text_size": "normal", # the log and the speech box
 	"seen_tips": [], # the tips already shown
 	"sfx": true,

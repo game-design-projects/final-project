@@ -114,6 +114,24 @@
 
 图集的亮度通道是线条，透明通道是轮廓，所以身体内部是黑的，能挡住身后的东西，线条可以染成任何颜色。
 
+## 剧情 CG
+
+每个剧情时刻都有一张盖满全屏的手绘图，下面配这一刻的字，按任意键继续，期间游戏停住（`src/view/story_cg.gd`）。每局每张只出现一次；设置里的 STORY PICTURES 关掉后，墙上文字和氏族大厅退回原来的横幅。
+
+| 时刻 | 图 | 什么时候 |
+| --- | --- | --- |
+| 开场 | `premise`：伸手去拿宝箱里的金币，金币挂在鱼线上，走廊像洗牌一样散开 | 新的一局，且前面没放开场影片 |
+| 闸门 | `gate`：小强盗拽着闸门的链子，扭头不看你 | 第三层楼梯 |
+| 最后的门 | `door`：一双手按在关着的门上 | 孤身走到最后的楼梯 |
+| 结局 | `end_ghost` `end_quiet` `end_blood` `end_tangled` `end_lonely` | 按路线 |
+| 氏族大厅 | `lord_burrow` `lord_crew` `lord_old_stone` `lord_coil`：领主坐在大厅尽头，族人分列两侧 | 走传送门进大厅 |
+| 最后的冠军 | `vexalith`：老龙盘在金币山上，守着最后的门 | 遇到 VEXALITH |
+| 墙上文字 | `lore_<层>_<warm/wary/cold>`，15 张 | 读墙 |
+
+画风跟 keyart 一样（黑底白线，身体实心黑），线条按 `data/story.json` 的 `tint` 染色：暖的金色，戒备的骨白，冷的灰蓝，氏族用各自的颜色。玩家从不露脸，最多从画面下沿伸进来一双手。
+
+出图：`tools/art/cg.sh [名字…]` 用 Codex 画（prompt 在 `tools/art/prompts/cg_*.txt`，共用 `_cg.txt`），keyart 当画风参考，角色参考由 `tools/art/cg_refs.py` 从原画表里裁出来，`sheets.json` 每张的 `refs` 写着用哪几个角色。挑好的用 `keep.sh cg_<名字> <编号>` 留下，再跑 `process.py` 缩到 1024 宽。
+
 ## 还能再做的
 
 - 商人和请求者没有生气、受伤的动作，因为他们不打架。

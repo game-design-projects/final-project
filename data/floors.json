@@ -84,6 +84,7 @@
  },
  "toll": {
   "depth": 3,
+  "title": "THE GATE",
   "hp": 10,
   "loyalty": -15.0,
   "ask": "The gate here drops unless someone holds its chain, and whoever holds it stays.",

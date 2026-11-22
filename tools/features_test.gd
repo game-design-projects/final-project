@@ -1701,7 +1701,7 @@ func _late_decisions() -> void:
 	_check(s.menu[-1].label == "MAIN MENU" and s.menu[0].label != toll.hold_label, "and the way down is open")
 	_check(s.vignette == "stairs", "and the picture is the stairs now, not the gate (%s)" % s.vignette)
 	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))).left_behind == ["GLOP"], "a save remembers who")
-	var ended := {"route": "x", "text": "y", "tail": "z"}
+	var ended := {"id": "end_quiet", "route": "x", "text": "y", "tail": "z"}
 	flow._stages["end"]._finish(flow, ended)
 	_check(s.lines[-1].text.contains("GLOP"), "and so does the end of the run (%s)" % s.lines[-1].text)
 	_choices_over_the_picture(s, "ending", 0, 2) # a run's end has nothing but buttons: no card to hold the question off them

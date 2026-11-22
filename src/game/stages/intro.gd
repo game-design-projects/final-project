@@ -43,7 +43,10 @@ func enter(flow, args: Dictionary) -> void:
 		"allies": s.allies.map(func(a): return a.to_dict()),
 	}
 	var champions: Array = Content.table("floors").champions
-	flow.event("encounter", {"boss": m.boss, "final": m.boss and str(m.name) == str(champions[-1].name)})
+	var final: bool = m.boss and str(m.name) == str(champions[-1].name)
+	flow.event("encounter", {"boss": m.boss, "final": final})
+	if final: # the one who built all this, at its Door
+		flow.story("vexalith", str(m.name), str(champions[-1].lore))
 	var enraged := Clans.enraged(s, m)
 	var rule: String
 	if m.boss:
