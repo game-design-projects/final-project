@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Every place and every foe its own music, by the repo's sampled baroque band (sampler.py).
+"""Every place and every foe its own music, played on the VSCO-2 CE orchestra (orchestra.py) and mixed by sampler.py.
 
 Each tune belongs to a family, and a family is one melody idea: a two-bar head motif, a mode, a metre, a way of
 accompanying, a band. Tunes of one family share the head (so a clan's fights sound like that clan) and differ in key,

@@ -8,8 +8,7 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 dest="${VSCO2:-$root/build/vsco2}"
 paths=('/Strings/' '/Brass/' '/Woodwinds/' '/Keys/Organ/' '/Percussion/Timpani/' '/Percussion/Glock/' '/Percussion/Marimba/'
-	'/Percussion/Snare2-*' '/Percussion/Tamb1-*' '/Percussion/Triangle3-*' '/Percussion/BDrumNewhit_*' '/Percussion/cymbal-crash1_*'
-	'/Percussion/susCymb1-*' '/Percussion/gongHit_*' '/LICENSE' '/README.md')
+	'/Percussion/Snare2-*' '/Percussion/Triangle3-*' '/Percussion/cymbal-crash1_*' '/LICENSE' '/README.md')
 
 if [ ! -d "$dest/.git" ]; then
 	git clone --filter=blob:none --no-checkout --depth 1 https://github.com/sgossner/VSCO-2-CE.git "$dest"

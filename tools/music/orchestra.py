@@ -31,7 +31,8 @@ DYN = {"ppp": 1, "pp": 2, "p": 3, "mp": 4, "mf": 5, "f": 6, "ff": 7, "fff": 8, "
 NOTE = re.compile(r"(?:^|[_\-\s])([A-G])(#|b|s)?(-?\d)(?=[_\-\s.]|$)")
 
 # name -> (folders under LIB, kind, release s, gain). kind: "sus" (held as long as written, faded at its end), "short"
-# (plays as recorded, cut at its written length plus release), "ring" (plays out). Folders are tried in order and pooled.
+# (plays as recorded, cut at its written length plus release), "ring" (plays out). A name lists one folder per recording
+# it accepts, and the first that exists is the one played (the others are the same notes cut another way).
 SPEC = {
     "violins": (["Strings/Violin Section/susVib"], "sus", 0.35, 1.0),
     "violas": (["Strings/Viola Section/susvib"], "sus", 0.35, 1.0),
@@ -83,22 +84,10 @@ SECTIONS = {
 HITS = {  # percussion: name -> glob under LIB
     "snare": "Percussion/Snare2-HitSN_*",
     "snare_soft": "Percussion/Snare2-taps_*",
-    "snare_roll": "Percussion/Snare2-rollSN_*",
-    "tamb": "Percussion/Tamb1-Hit_*",
-    "tamb_shake": "Percussion/Tamb1-Shake_*",
     "triangle": "Percussion/Triangle3-Hit_*",
-    "bassdrum": "Percussion/BDrumNewhit_*",
     "crash": "Percussion/cymbal-crash1_*",
-    "cymbal_swell": "Percussion/susCymb1-cresc-*",
-    "gong": "Percussion/gongHit_*",
     "timpani": "Percussion/Timpani/Timpani*_Hit_*",
 }
-
-MISSING: set = set()
-
-
-def available() -> bool:
-    return os.path.isdir(os.path.join(LIB, "Strings"))
 
 
 def _note_of(path: str) -> int | None:
@@ -262,7 +251,7 @@ def render_note(inst: str, m: int, dur: float, vel: float = 1.0) -> np.ndarray:
     """One note: the recorded dynamic nearest `vel`, as long as written (a held note) or as recorded (a struck one).
     A note outside the instrument is folded into it by octaves (a line is fitted whole first, by `fit_octave`)."""
     if inst not in SPEC and inst not in SECTIONS:
-        return _old_render(inst, m, dur, vel)
+        raise KeyError(f"orchestra: unknown instrument {inst!r}; SPEC and SECTIONS name the ones the tunes play")
     lo, hi = span(inst)
     while m < lo - 2:
         m += 12
@@ -341,9 +330,6 @@ def hit(name: str, vel: float = 0.7, m: int | None = None) -> np.ndarray:
     return x * 0.2 / ref * (0.12 + 0.88 * vel**1.4)
 
 
-_old_render = S.render_note
-
-
 def reset() -> None:
     """Start the round robins over: a tune takes the same samples in whatever order the pool built the others, so a
     build is repeatable and a single tune rendered with `--only` is the tune the full build writes."""
@@ -351,5 +337,6 @@ def reset() -> None:
 
 
 def use() -> None:
-    """Play sampler.py's scores on this orchestra: its notes by these names come from here, others as before."""
+    """Play sampler.py's scores on this orchestra: every note their instruments name comes from here (an
+    instrument the orchestra does not know is an error, not a fallback)."""
     S.render_note = render_note
