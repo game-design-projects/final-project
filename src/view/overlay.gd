@@ -36,6 +36,12 @@ const LANTERN_GLOW_R := 40.0 # how far the lantern's glow reaches, in picture pi
 const GOO_DROP := 70.0 # how far above its target a goo ball starts, in picture pixels
 const STRIKE_BAR_H := 30.0
 const HEAD_BAR := Rect2(W / 2.0 - 80.0, 21.0, 160.0, 7.0)
+## The foe's bar while it is small over the dodge box: the same line and height as the one over its head, so the card ends
+## above CARD_BOTTOM whichever size it is drawn at.
+const SMALL_BAR := Rect2(12.0, HEAD_BAR.position.y, 120.0, HEAD_BAR.size.y)
+## Nothing of the foe's card is drawn below this: a fight's banner starts under it, so news is read beside the odds, not over
+## them (the tip that says ACT first once covered the odds it was teaching, #164 read back).
+const CARD_BOTTOM := HEAD_BAR.position.y + HEAD_BAR.size.y + 7.0
 const GHOST_PER_S := 0.35 # how fast the trail behind the damage catches up (share of the bar per second)
 const COMET_MS := 320.0
 const SOUL_GLIDE := 28.0 # how fast your soul catches up with its square: the share left after a second is e to minus this
@@ -332,13 +338,14 @@ func whole_picture() -> Rect2:
 	return Rect2(-extra_x, 0.0, W + extra_x * 2.0, H)
 
 
-## Where the banner goes: above the dodge box or the strike bar when one is up, else low on the picture, clear of the health bars and the popups.
+## Where the banner goes: under the foe's card and above the dodge box or the strike bar when one is up, else low on the picture,
+## clear of the health bars and the popups.
 func banner_rect() -> Rect2:
 	var y := H - BANNER_H - 8.0
 	if not speech().is_empty():
 		y = SPEECH.position.y - BANNER_H - 4.0
 	if state != null and (state.dodge != null or state.bar != null):
-		y = 36.0
+		y = CARD_BOTTOM + 1.0
 	return Rect2((W - BANNER_W) / 2.0, y, BANNER_W, BANNER_H)
 
 
@@ -412,7 +419,34 @@ func _battle() -> void:
 func foe_bar() -> Rect2:
 	if state.dodge == null:
 		return HEAD_BAR
-	return Rect2(12, 26, 120, 6)
+	return SMALL_BAR
+
+
+## Where the foe's card draws, piece by piece: the bar and the gauge under it, the health numbers with the mercy odds after them
+## on the same line, the name, the feeling word, and the attack's name. Every piece ends above CARD_BOTTOM, where a fight's banner
+## starts, so the news of the moment is read beside the odds and never over them (#164 read back: the tip that says ACT first
+## covered the MERCY line it was teaching). What a check reads it by; `_name_and_health` draws from it.
+func foe_card(m) -> Dictionary:
+	var bar := foe_bar()
+	var small: bool = bar != HEAD_BAR
+	var numbers := "%d/%d" % [maxi(0, m.hp), m.max_hp]
+	var numbers_at := bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0)
+	var odds := ""
+	var odds_at := numbers_at
+	var mercy := mercy_gauge()
+	if mercy >= 0.0:
+		odds = "· MERCY %d%%" % roundi(mercy * 100.0)
+		odds_at += Vector2(_title.get_string_size(numbers, HORIZONTAL_ALIGNMENT_LEFT, -1, 6).x + 4.0, 0.0)
+	var at := Vector2(12.0, bar.position.y - 4.0) if small else Vector2(0.0, bar.position.y - 4.0)
+	return {
+		"bar": bar,
+		"name_at": at,
+		"name_width": W - 12.0 if small else W,
+		"numbers": numbers, "numbers_at": numbers_at,
+		"odds": odds, "odds_at": odds_at,
+		"gauge": Rect2(bar.position + Vector2(0.0, bar.size.y + 4.0), Vector2(bar.size.x, 3.0)),
+		"mood_at": Vector2(12.0, bar.position.y if not small else CARD_BOTTOM + 15.0),
+	}
 
 
 ## A word for how the foe feels now, and its colour. Read off its meters, so it changes as they do.
@@ -427,28 +461,27 @@ static func ghost_after(ghost: float, frac: float, dt: float) -> float:
 
 func _name_and_health(m) -> void:
 	var spare := can_spare()
-	var bar := foe_bar()
-	if bar == HEAD_BAR:
-		_text(_title, m.name, Vector2(0, bar.position.y - 4.0), 8, Palette.MERCY if spare else Palette.INK, HORIZONTAL_ALIGNMENT_CENTER, W)
-	else:
-		_text(_title, m.name, Vector2(12, 21), 8, Palette.MERCY if spare else Palette.INK)
+	var card := foe_card(m)
+	var bar: Rect2 = card.bar
+	var align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT if bar != HEAD_BAR else HORIZONTAL_ALIGNMENT_CENTER
+	_text(_title, m.name, card.name_at, 8, Palette.MERCY if spare else Palette.INK, align, card.name_width)
 	draw_rect(bar, Palette.FAINT)
 	var frac: float = m.hp_fraction()
 	if _ghost > frac:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * _ghost, bar.size.y)), Palette.INK)
 	var struck: bool = clock_ms < hurt_until
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Color.WHITE if struck else (Palette.WARN if frac < 0.4 else HEALTH_OK))
-	_text(_title, "%d/%d" % [maxi(0, m.hp), m.max_hp], bar.position + Vector2(bar.size.x + 4.0, bar.size.y - 1.0), 6, Palette.INK)
+	_text(_title, card.numbers, card.numbers_at, 6, Palette.INK)
 	if not m.is_gone():
 		var mood := mood_word(m)
-		_text(_title, mood[0], Vector2(12, 21) if bar == HEAD_BAR else Vector2(12, 50), 7, mood[1])
+		_text(_title, mood[0], card.mood_at, 7, mood[1])
 	var mercy := mercy_gauge()
-	if mercy >= 0.0:
-		var gauge := Rect2(bar.position + Vector2(0.0, bar.size.y + 4.0), Vector2(bar.size.x, 3.0))
+	if card.odds != "":
+		var gauge: Rect2 = card.gauge
+		_text(_title, card.odds, card.odds_at, 6, Palette.MERCY)
 		draw_rect(gauge, Palette.FAINT)
 		draw_rect(Rect2(gauge.position, Vector2(gauge.size.x * mercy, gauge.size.y)), Palette.MERCY)
 		draw_line(gauge.position + Vector2(gauge.size.x * MERCY_AT, -1.0), gauge.position + Vector2(gauge.size.x * MERCY_AT, gauge.size.y + 1.0), Palette.INK)
-		_text(_title, "MERCY %d%%" % roundi(mercy * 100.0), gauge.position + Vector2(gauge.size.x + 4.0, 5.0), 6, Palette.MERCY)
 	var genre: String = state.dodge.genre if state.dodge != null else state.genre_of(m)
 	var label: String = Content.table("encounter").genres[genre].name
 	if m.boss:
