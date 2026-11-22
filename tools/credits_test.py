@@ -3,8 +3,8 @@
 
 The credits are a legal record as much as a thank-you: the music is rendered from a soundfont released under CC BY-SA 3.0,
 the fonts under the SIL Open Font License (which requires the notice and the licence to travel with the font), the voices
-are cloned from CC BY 4.0 recordings, and the old credits named the licences of the 205/#218 art, the files and the build
-but not where their texts live — nor did `tools/build.sh` ship them, since Godot exports only resources unless an include
+are cloned from CC BY 4.0 recordings, and the old credits named the licences of the art, the files and the build but not
+where their texts live — nor did `tools/build.sh` ship them, since Godot exports only resources unless an include
 filter names the rest, so the fonts travelled without their licence. This check keeps that from happening again, and it
 needs no Godot:
 
