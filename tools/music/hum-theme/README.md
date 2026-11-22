@@ -9,7 +9,7 @@ After a rebuild here, copy the new `donjon_voice.ogg` over `assets/audio/hum-exp
 | File | What |
 | --- | --- |
 | `donjon_voice.ogg` | **Exploring.** 64 bars of 4/4 at 88 BPM = 174.55 s, one exact loop. A slow a-cappella "ooh" voice with echoes sings the theme over a soft lub-dub drum, bowed bass, pad, a faint "aah" choir, piano tolls and creeping tremolo strings. |
-| `donjon_combat.ogg` | **Fights.** 48 bars at 176 BPM = 65.45 s, one exact loop. The same melody and chords: driving 3+3+2 low strings, horns and violins on the melody, choir, taiko, timpani and toms (no hi-hats or snare), a breakdown with the echoing voice. |
+| `donjon_combat.ogg` | **Fights, before this.** 48 bars at 176 BPM = 65.45 s, one exact loop; no longer played. The same melody and chords: driving 3+3+2 low strings, horns and violins on the melody, choir, taiko, timpani and toms (no hi-hats or snare), a breakdown with the echoing voice. |
 | `donjon_voice_x2.mp3`, `donjon_combat_x2.mp3` | Previews only: each loop played twice so you can hear the seam. An MP3 can't loop cleanly; the game should use the `.ogg`. |
 | `donjon_voice.mid`, `donjon_combat.mid` | The MIDI the loops are rendered from. |
 | `*.py` | The source (below). |
@@ -59,6 +59,8 @@ your own music creation, private or commercial." No attribution is required, tho
 
 ## In the game
 
-`assets/audio/hum-explore.ogg` and `assets/audio/hum-combat.ogg` are byte-for-byte copies of `donjon_voice.ogg` and
-`donjon_combat.ogg`. `src/audio/music.gd` plays them (`HUM_EXPLORE`, `HUM_BATTLES`), GeneralUser GS is credited in
-`assets/CREDITS.txt`, and `tools/audio_test.gd` checks that both loop whole at 174.55 s and 65.45 s.
+`assets/audio/hum-explore.ogg` is a byte-for-byte copy of `donjon_voice.ogg`, and it is the only one of the two that
+ships: the camp's music, which `src/audio/music.gd` plays (`CAMP`, through `track_path("camp")`). `donjon_combat.ogg`
+is source only now: every fight has a tune of its own from `../build-themes.py`. GeneralUser GS is credited in
+`assets/CREDITS.txt`, and `tools/audio_test.gd` checks that the camp is the one old track left in `assets/audio/` and
+that it plays there.
