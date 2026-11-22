@@ -2630,6 +2630,22 @@ func _vault() -> void:
 	await kept.load_state(before)
 	_check(kept.state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))) and kept.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and a run left before it opened hears of it again, the vault still in the floor")
 
+	# the wall itself hides the vault, not what the camera saw: walking backwards into the crack breaks it while facing away,
+	# so the room never enters `State.seen`, and a save made there still must not hear it is walled up
+	var back = _flow(seed_value)
+	await back.load_state(before)
+	var bs = back.state
+	var door_dir: int = FloorMap.DIRS.find(chest.cell - wall)
+	bs.cell = wall + FloorMap.DIRS[(door_dir + 2) % 4]
+	bs.facing = (door_dir + 2) % 4 # away from the wall, so DOWN walks backwards into it
+	back.clock = 100000.0
+	await back.press("down")
+	_check(back.state.floor_map.is_open(wall) and not back.state.seen.has(chest.cell), "walking backwards into the wall opens it, its room still out of sight")
+	var behind: Dictionary = JSON.parse_string(JSON.stringify(back.state.to_dict()))
+	var backward = _flow(seed_value)
+	await backward.load_state(behind)
+	_check(not backward.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and a save then does not hear it is walled up (%s)" % [backward.state.lines.map(func(l): return l.text)])
+
 	# with keepsakes off the floor hides purses, and a run too short has no vault at all
 	var off = _flow(seed_value, ["no-keepsakes"])
 	await off.new_run()

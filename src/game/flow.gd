@@ -15,6 +15,7 @@ const Dice = preload("res://src/utils/dice.gd")
 const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
+const FloorMap = preload("res://src/rules/floor_map.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
@@ -323,15 +324,24 @@ func _arrival() -> Array:
 	return lines
 
 
-## The line about this run's vault while the floor still hides it (#161), or "" for a floor that holds none: a broken wall
-## leaves the vault in sight (`State.seen`), so a run saved after that does not hear it is walled up when it is loaded.
+## The line about this run's vault while the floor still hides it (#161), or "" for a floor that holds none: the vault is
+## hidden by its cracked wall until the wall is broken into, whichever way the party walked into it. The wall is the floor's
+## own cell and is saved with it, so a run saved after that does not hear it is walled up when it is loaded.
 func _vault_due() -> String:
 	if state.floor_map == null:
 		return ""
 	for t in state.floor_map.treasure:
-		if bool(t.get("vault", false)) and not state.seen.has(t.cell):
+		if bool(t.get("vault", false)) and _vault_walled(t.cell):
 			return str(Content.table("keepsakes").vault.due)
 	return ""
+
+
+## Whether the vault's room is still walled up: a cracked cell beside it is the wall, and a broken one is open floor.
+func _vault_walled(cell: Vector2i) -> bool:
+	for d in FloorMap.DIRS:
+		if state.floor_map.is_cracked(cell + d):
+			return true
+	return false
 
 
 ## The clans that sent elites to this floor, in the order their elites stand.
