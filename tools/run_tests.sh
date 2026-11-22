@@ -132,4 +132,10 @@ fi
 if ! GODOT="$GODOT" OUT="$OUT" tools/favours_test.sh; then
 	failed=1
 fi
+# A lord is in a normal game, and so is the second favour whose payment swears a clan (#166): the default seeds, played the
+# way a player's first games are, have to meet a lord each and swear at least one clan. It lives in a script of its own
+# because CI runs it too.
+if ! GODOT="$GODOT" OUT="$OUT" tools/lords_test.sh; then
+	failed=1
+fi
 exit "$failed"
