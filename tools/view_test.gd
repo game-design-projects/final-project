@@ -738,18 +738,33 @@ func _strike_bar_stands_clear(s, m) -> void:
 	overlay.state = s
 	var stage_was: String = s.stage
 	var foe_was = s.foe
+	var rows_was: Array = s.mind_rows
+	var lines_was: Array = s.lines
 	s.foe = m
 	s.stage = "fightbar"
 	s.bar = {"t0": 0.0, "dur": 1000.0, "heavy": true}
 	s.banner = {"title": "TIP", "text": "words", "t0": 0.0, "ms": 1000.0}
 	s.lines = [State.speech(m.name, "words")]
+	s.mind_rows = [{"id": "mercy", "label": "", "answer": 0.42}]
 	_check(not overlay.speech().is_empty() and not overlay.strike_bar_rect().intersects(Overlay.SPEECH), "the bar stands above the foe's words")
 	_check(not overlay.strike_bar_rect().intersects(overlay.banner_rect()), "and a banner stands above the bar")
+	var card: Dictionary = overlay.foe_card(m)
+	_check(card.odds != "" and overlay.banner_rect().position.y > card.odds_at.y, "a banner stands under the odds, not over them")
+	_check(overlay.banner_rect().position.y > card.gauge.end.y, "and under the gauge they sit on")
+	# the same card is drawn small over the dodge box, and a banner takes the same line there
+	s.bar = null
+	s.dodge = {"soul": Vector2i(1, 1)}
+	var small: Dictionary = overlay.foe_card(m)
+	_check(small.gauge.end.y <= Overlay.CARD_BOTTOM and small.odds_at.y < Overlay.CARD_BOTTOM, "the small card ends above the room a banner takes too")
+	_check(overlay.banner_rect().position.y > small.gauge.end.y, "so no banner stands over it there either")
 	overlay.free()
 	s.stage = stage_was
 	s.foe = foe_was
 	s.bar = null
 	s.banner = null
+	s.dodge = null
+	s.mind_rows = rows_was
+	s.lines = lines_was
 
 
 func _fight_eases(s, m) -> void:
