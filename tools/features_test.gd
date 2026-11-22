@@ -3866,8 +3866,13 @@ func _charting() -> void:
 	flow.announce("A PURSE", "something else holds the picture")
 	await flow.encounter.leave_fight(ended)
 	_check(not s.charted.is_empty() and heard.size() == 2 and heard[1].how == "map", "one out of the way hands its map over (%d cells charted)" % s.charted.size())
-	_check(s.stage == "explore" and s.lines.any(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map")), "and the log says who was carrying it")
-	_check(s.banner.title == "A PURSE" and s.lines.size() == ended.size() + 1 and str(s.lines[0].text).contains(carrier.name) and str(s.lines[0].text).contains("map"), "with another banner on the picture the log says it first, where the lines the log cuts can't take it")
+	var map_said: Array = s.lines.filter(func(l): return str(l.text).contains(carrier.name) and str(l.text).contains("map"))
+	_check(s.stage == "explore" and not map_said.is_empty(), "and the log says who was carrying it")
+	var map_text: String = str(map_said[0].text) if not map_said.is_empty() else ""
+	_check(s.banner.title == "A PURSE" and s.lines.size() == ended.size() + 1 and str(s.lines.back().text) == map_text, "with another banner on the picture the log says it last, where the lines the log keeps can't take it")
+	var room := Hud.log_fits(s.lines, 1100.0)
+	_check(room < s.lines.size(), "the fight's lines and the map's do not all fit the box (%d of %d)" % [room, s.lines.size()])
+	_check(Hud.log_rows(s.lines, 1100.0).any(func(r): return str(r.text) == map_text), "and a full box still draws it: the log keeps its newest lines, so the first line is the one the cut takes")
 	_check(Chart.known(s, s.floor_map.stairs) and not Chart.instinct_due(s), "the stairs are on the map, and instinct has nothing left to add")
 	# the same with the picture free: the banner says it, and the log's line comes after how the fight ended
 	await flow.new_run()
