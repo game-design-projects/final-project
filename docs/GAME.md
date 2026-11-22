@@ -55,6 +55,8 @@ Floors hide things: chests behind cracked walls (walk into a crack to break it),
 | The Coil | SISSEL | BRING A BANDIT | Come back with a bandit that chose to follow you. It is lectured, and storms off |
 | The Coil | SISSEL | HISS AT IT | Type a hiss, and a long one: "hiss" is an insult, "hisssssss" will do |
 
+A request the fight menu cannot do is not asked at all: WIN HEAVY wants HEAVY in the menu, which the feature `heavy-strike` gives it, so with `no-heavy-strike` or the `skill-combat` experiment — whose menu has SKILLS where FIGHT and HEAVY were — SLATE asks only to be spoken to flat.
+
 What is typed is judged by the mind: Jev when the game can reach it, and otherwise a rule (the longest run of s; no capitals, question or exclamation; a question about liking that names slimes). Some requests cost you with another clan, as any deed does: five dead snakes enrage the Coil.
 
 **A clan's teleporter.** The second request done for a clan opens its teleporter, which the next stairs offer beside the ways down. It leads to the clan's hall, a room off the run's count of floors: every kind of the clan stands either side of an aisle, nobody there fights, and its lord waits at the far end. Heard out, the lord tells its part of what happened down here, pays 8 gold and 6 health and moves its clan well towards you. The hall's stairs go on down to the next floor. Going through shows on the picture: the warp of a pad on the floor, and with it the picture floods with light and its colours tear apart and settle.

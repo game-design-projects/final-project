@@ -23,7 +23,8 @@ func enter(flow, args: Dictionary) -> void:
 		return
 	var t := Envoys.table()
 	var clan := str(_who.clan)
-	var open := Envoys.open_for(s, clan)
+	var heavy: bool = flow.feature("heavy-strike") and not flow.feature("skill-combat") # the menu's HEAVY (stages/menu.gd)
+	var open := Envoys.open_for(s, clan).filter(func(r): return Envoys.can_do(r, heavy))
 	var said := []
 	_rows = []
 	s.menu = []
@@ -99,7 +100,7 @@ func _give(flow, r: Dictionary) -> void:
 			await cancel(flow)
 			return
 		if done_words.contains("%s"):
-			done_words = done_words % Envoys._spoken(friend.name)
+			done_words = done_words % Envoys.spoken(friend.name)
 		s.allies.erase(friend)
 		flow.event("ally_left", {"species": friend.species})
 		var gone := str(Envoys.table().lines[str(r.gone)])
@@ -122,14 +123,12 @@ static func finished(flow, r: Dictionary, lines: Array, to_walk := true) -> Arra
 		return lines
 	var clan_name := Clans.title(str(r.clan))
 	flow.event("sound", {"name": "good"})
-	flow.event("request_done", {"clan": str(r.clan), "id": str(r.id)})
 	var paid := str(t.lines.done_line) % [int(got.gold), int(got.healed), clan_name]
 	if not flow.banner_up():
 		flow.announce(str(t.lines.done_title), paid)
 	else:
 		lines.append(State.sys_line(paid))
 	if str(got.opened) != "":
-		flow.event("gate_opened", {"clan": str(got.opened)})
 		lines.append(State.sys_line("%s. %s" % [str(t.lines.open_title) % clan_name.to_upper(), str(t.lines.open_line)]))
 	if to_walk:
 		await flow.go("explore", {"lines": lines})
@@ -159,7 +158,6 @@ func _lord(flow) -> void:
 		var got := Envoys.meet_lord(s, clan)
 		if not got.is_empty():
 			flow.event("sound", {"name": "good"})
-			flow.event("lord_met", {"clan": clan})
 			flow.announce(str(t.hall.met_title) % str(_who.name), str(t.hall.met_line) % [int(got.gold), int(got.healed), Clans.title(clan)])
 		s.say(said)
 		_add(s, str(t.lines.leave), str(t.lines.not_now_sub), "leave", {})

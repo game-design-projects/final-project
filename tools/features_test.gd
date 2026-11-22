@@ -3235,6 +3235,8 @@ func _clan_requests() -> void:
 	_check(Envoys.felled(run, rock).is_empty(), "nor is a fight with no strike at all")
 	rock.strikes = {"heavy": 1}
 	_check(Envoys.felled(run, rock) == ["old_stone_heavy"], "heavy strikes only is")
+	_check(Envoys.can_do(Envoys.request("old_stone_heavy"), true) and not Envoys.can_do(Envoys.request("old_stone_heavy"), false), "a request that wants HEAVY strikes wants a fight menu with them")
+	_check(Envoys.can_do(Envoys.request("coil_hiss"), false), "and a request that wants only words minds no menu")
 	Envoys.take(run, "burrow_bring")
 	_check(Envoys.status(run, Envoys.request("burrow_bring")) == "waiting" and Envoys.friend_for(run, Envoys.request("burrow_bring")) == null, "bring a slime: none with you yet")
 	run.allies = [Ally.make("snake", "HISS", 60.0), Ally.make("slime", "GLOP", 60.0)]
@@ -3289,6 +3291,21 @@ func _clan_requests() -> void:
 	_check(s.menu[1].label == "HAND OVER 50 GOLD", "fifty gold in the purse and the line hands it over (%s)" % s.menu[1].label)
 	await flow.press("2")
 	_check(s.gold == 60 - 50 + int(t.pays.gold) and Envoys.is_done(s, "crew_gold") and s.lines.any(func(l): return str(l.text).contains("definitely stole it")), "the fifty is gone, the request pays, and the asker says where it thinks it came from (%d gold)" % s.gold)
+
+	# a request the fight menu cannot do is not offered: no HEAVY strikes, no asking for a fight won with them
+	var slate := Envoys.figure("old_stone", f.envoys[0].cell)
+	var no_heavy = _flow(7, ["no-heavy-strike"])
+	await no_heavy.new_run()
+	await no_heavy.go("envoy", {"who": slate})
+	_check(no_heavy.state.menu.size() == 2 and not no_heavy.state.menu.any(func(row): return str(row.label).contains("WIN HEAVY")), "no-heavy-strike: the Old Stone asks nothing it cannot be paid (%s)" % str(no_heavy.state.menu.map(func(row): return str(row.label))))
+	var skilled = _flow(7, ["skill-combat"])
+	await skilled.new_run()
+	await skilled.go("envoy", {"who": slate})
+	_check(not skilled.state.menu.any(func(row): return str(row.label).contains("WIN HEAVY")), "and neither in skill-combat, whose menu has no HEAVY (%s)" % str(skilled.state.menu.map(func(row): return str(row.label))))
+	_use()
+	await flow.go("envoy", {"who": slate})
+	_check(s.menu.size() == 3 and s.menu[0].label == "WIN HEAVY", "where HEAVY is, it asks for it as before (%s)" % str(s.menu.map(func(row): return str(row.label))))
+	await flow.press("cancel")
 
 	# away from the asker: a fight won heavy, and a dragon asked
 	Envoys.take(s, "old_stone_heavy")
