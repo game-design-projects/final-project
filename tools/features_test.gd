@@ -2075,7 +2075,7 @@ func _hostility() -> void:
 	_check(not Clans.enraged(tally, goo) and cooled.any(func(c): return c.clan == clan and c.to == "furious"), "sparing one of its friends cools it back to furious (%s)" % str(cooled))
 	var favoured: Array = Clans.favour(tally, "slime", 30.0)
 	_check(favoured.any(func(c): return c.clan == clan and Clans.rank(c.to) < Clans.rank(c.from)), "and a favour to its kind cools it further (%s)" % str(favoured))
-	_check(Clans.mood_word(20.0) == "FRIENDLY", "a clan that likes you says so")
+	_check(Clans.mood_word(30.0) == "FRIENDLY", "a clan that likes you says so")
 	var title_font: Font = load("res://src/view/fonts.gd").title()
 	for id in Content.table("clans").clans:
 		for change in [{"clan": id, "from": "", "to": "angry"}, {"clan": id, "from": "angry", "to": "furious"}, {"clan": id, "from": "furious", "to": "enraged"}, {"clan": id, "from": "enraged", "to": "furious"}, {"clan": id, "from": "angry", "to": ""}]:
@@ -4555,7 +4555,11 @@ func _input_cooldown() -> void:
 
 ## #290: a clan that likes you does things for you, one more at each level, and a devoted one's faith breaks at a strike.
 func _favour() -> void:
-	_check(Clans.mood_word(13.0) == "CALM" and Clans.mood_word(14.0) == "FRIENDLY" and Clans.mood_word(40.0) == "TRUSTED" and Clans.mood_word(70.0) == "DEVOTED", "three levels of favour, each with its word")
+	_check(Clans.mood_word(29.0) == "CALM" and Clans.mood_word(30.0) == "FRIENDLY" and Clans.mood_word(60.0) == "TRUSTED" and Clans.mood_word(90.0) == "DEVOTED", "three levels of favour, each with its word")
+	var clan_t: Dictionary = Content.table("clans")
+	_check(float(clan_t.favour[0].at) == float(clan_t.friendly_at), "the first level of favour is the clans' friendly line")
+	var one_spare: float = float(clan_t.deeds.spared)
+	_check(Clans.favour_level(one_spare * 2.0) == "" and Clans.favour_level(one_spare * 3.0) == "friendly" and Clans.favour_level(one_spare * 4.0) == "friendly" and Clans.favour_level(one_spare * 6.0) == "trusted" and Clans.favour_level(one_spare * 6.0 + 5.0) != "devoted", "favour is slow: three sparings to be friendly, five to be trusted, seven to be devoted")
 	var title_font: Font = load("res://src/view/fonts.gd").title()
 	for id in Content.table("clans").clans:
 		for change in [{"clan": id, "from": "", "to": "friendly", "favour": true}, {"clan": id, "from": "friendly", "to": "trusted", "favour": true}, {"clan": id, "from": "trusted", "to": "devoted", "favour": true}, {"clan": id, "from": "trusted", "to": "friendly", "favour": true}, {"clan": id, "from": "devoted", "to": "", "favour": true, "broken": true}]:
@@ -4563,7 +4567,7 @@ func _favour() -> void:
 			_check_quietly(Overlay.banner_fits(words.text) and words.line.contains(Clans.title(id)) and title_font.get_string_size(words.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x <= Overlay.BANNER_W, "%s favour %s->%s fits the banner: %s / %s" % [id, change.from, change.to, words.title, words.line])
 	_check(true, "every move of every clan's favour fits the banner")
 	var tally := State.new()
-	var up: Array = Clans.favour(tally, "slime", 20.0)
+	var up: Array = Clans.favour(tally, "slime", 30.0)
 	_check(up.any(func(c): return c.clan == Clans.of("slime") and c.get("favour", false) and c.to == "friendly"), "a favour that makes a clan friendly says so (%s)" % str(up))
 
 	var flow = _flow(7, ["no-branching"])
@@ -4575,10 +4579,10 @@ func _favour() -> void:
 	m.no_hunt = 0
 	var near := {m.cell: 1}
 	_check(Roaming._intent(m, s.floor_map, near, s, {"revenge": true}) == "hunt", "an angry %s right beside you hunts you" % m.species)
-	s.reputation[clan] = 20.0
+	s.reputation[clan] = 30.0
 	_check(Roaming._intent(m, s.floor_map, near, s, {"revenge": true}) != "hunt", "and the same one doesn't, when its clan is friendly")
 
-	s.reputation[clan] = 45.0
+	s.reputation[clan] = 65.0
 	s.charted = {}
 	flow.encounter.pending_notes = []
 	flow.encounter.greeting(m)
@@ -4588,7 +4592,7 @@ func _favour() -> void:
 	flow.encounter.greeting(m)
 	_check(s.charted.size() == charted and flow.encounter._take_notes().is_empty(), "and says nothing once the floor is known")
 
-	s.reputation[clan] = 75.0
+	s.reputation[clan] = 95.0
 	_check(Clans.devoted(s, m) and await flow.encounter.mercy(m) >= 0.75, "one of a devoted clan takes mercy readily")
 	_check(Tips.clan_text(m, s).contains("takes mercy readily"), "and its card says so (%s)" % Tips.clan_text(m, s))
 	flow.encounter.struck(m)
