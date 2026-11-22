@@ -17,8 +17,25 @@ mkdir -p "$OUT"
 log="$OUT/on-favours.log"
 : >"$log"
 code=0
+
+# timeout(1) is GNU coreutils: macOS has it only as gtimeout, and with neither a run is left to its own watchdog (the
+# suites' 90 s in tools/test_base.gd, autoplay's MAX_FRAMES). A system with no timeout says so once, rather than every
+# command failing as "timeout: command not found" and the run looking like so many broken tests.
+if command -v timeout >/dev/null 2>&1; then LIMIT="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then LIMIT="gtimeout"
+else
+	LIMIT=""
+	echo "note: no timeout(1) or gtimeout(1) here; each run is left to the game's own watchdog" >&2
+fi
+
+# Run the command that follows with a limit of $1 seconds, when the system has a timeout to give it.
+limit() {
+	local secs="$1"; shift
+	if [ -n "$LIMIT" ]; then "$LIMIT" "$secs" "$@"; else "$@"; fi
+}
+
 for seed in 7 11 23 47; do
-	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=1
+	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=1
 done
 reached=$(grep -cE '^autoplay: 1 of 1' "$log" || true)
 taken=$(grep -cE '^request: taken' "$log" || true)

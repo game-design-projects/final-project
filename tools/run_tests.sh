@@ -12,6 +12,22 @@ mkdir -p "$OUT"
 SUITES=(social_test moods_test rules_test kinds_test gameplay_test menu_test saves_test network_test view_test audio_test map_test meta_test art_test features_test experience_test)
 failed=0
 
+# timeout(1) is GNU coreutils: macOS has it only as gtimeout, and with neither a run is left to its own watchdog (the
+# suites' 90 s in tools/test_base.gd, autoplay's MAX_FRAMES). A system with no timeout says so once, rather than every
+# command failing as "timeout: command not found" and the run looking like so many broken tests.
+if command -v timeout >/dev/null 2>&1; then LIMIT="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then LIMIT="gtimeout"
+else
+	LIMIT=""
+	echo "note: no timeout(1) or gtimeout(1) here; each run is left to the game's own watchdog" >&2
+fi
+
+# Run the command that follows with a limit of $1 seconds, when the system has a timeout to give it.
+limit() {
+	local secs="$1"; shift
+	if [ -n "$LIMIT" ]; then "$LIMIT" "$secs" "$@"; else "$@"; fi
+}
+
 run_mode() {
 	local mode="$1"; shift
 	local extra=("$@")
@@ -22,7 +38,7 @@ run_mode() {
 		if [ "$t" = audio_test ]; then
 			sound="" # it builds the audio buses
 		fi
-		timeout 170 "$GODOT" --headless --path . -s "res://tools/$t.gd" -- nosave $sound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
+		limit 170 "$GODOT" --headless --path . -s "res://tools/$t.gd" -- nosave $sound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
 		local fails
 		fails=$(grep -c ' FAIL ' "$log" || true)
 		if ! grep -q 'all checks passed' "$log"; then
@@ -48,7 +64,7 @@ run_mode() {
 	done
 	local log="$OUT/$mode-autoplay.log"
 	local code=0
-	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
+	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound ${extra[@]+"${extra[@]}"} >"$log" 2>&1 || code=$?
 	if ! grep -qE '^autoplay: [0-9]+ of' "$log"; then
 		code=1 # as above: a script that doesn't parse exits with 0
 	fi
@@ -69,7 +85,7 @@ fi
 # A first run, which starts on the practice floor and has to get from it to the end like any other.
 log="$OUT/on-practice.log"
 code=0
-timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound practice >"$log" 2>&1 || code=$?
+limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound practice >"$log" 2>&1 || code=$?
 if ! grep -qE '^autoplay: 5 of 5' "$log"; then
 	code=1
 fi
@@ -85,7 +101,7 @@ fi
 # skill-combat is off unless named: play it through too.
 log="$OUT/on-skill-combat.log"
 code=0
-timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound skill-combat >"$log" 2>&1 || code=$?
+limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound skill-combat >"$log" 2>&1 || code=$?
 if ! grep -qE '^autoplay: 5 of 5' "$log"; then
 	code=1
 fi
@@ -99,7 +115,7 @@ log="$OUT/on-stall-seeds.log"
 : >"$log"
 code=0
 for seed in 313 357 362 415 451 454; do
-	timeout 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=$?
+	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=$?
 done
 reached=$(grep -cE '^autoplay: 1 of 1' "$log" || true)
 if [ "$reached" != 6 ]; then
