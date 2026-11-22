@@ -3044,7 +3044,7 @@ func _heavy_trade() -> void:
 	# a dragon (11.0), a snake (7.3) and a slime (5.1). At 0.6 of the bar it was about even with a bandit and ahead against a
 	# dragon from that hand, which is the "HEAVY may be too easy" the playtest wrote.
 	_check(mean[80.0].rock > mean[80.0].quick, "an ordinary hand still wants it against a rock (%.1f against %.1f)" % [mean[80.0].rock, mean[80.0].quick])
-	for ordinary_out in ["bandit", "dragon"]:
+	for ordinary_out in ["bandit", "dragon", "snake"]:
 		_check(mean[80.0][ordinary_out] < mean[80.0].quick, "and stays with FIGHT against a %s (%.1f against %.1f)" % [ordinary_out, mean[80.0][ordinary_out], mean[80.0].quick])
 	for error_ms in mean:
 		_check(mean[error_ms].slime < mean[error_ms].quick, "against a slime FIGHT is always better (%.0f ms: %.1f against %.1f)" % [error_ms, mean[error_ms].slime, mean[error_ms].quick])
