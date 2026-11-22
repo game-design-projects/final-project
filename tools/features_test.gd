@@ -85,6 +85,7 @@ func _run() -> void:
 	await _hostility()
 	await _map_gen()
 	await _secrets()
+	await _vault()
 	await _lore()
 	await _items()
 	await _shop()
@@ -754,7 +755,7 @@ func _keepsakes() -> void:
 	_check(Keepsakes.offer(11, 1, first).all(func(id): return not first.has(id)), "one already held is never offered again")
 	_check(Keepsakes.offer(11, 1, all.slice(0, 7)).size() == 2 and Keepsakes.offer(11, 1, all).is_empty(), "with few left fewer are offered, and with none left none")
 	_check(range(40).all(func(i): return Keepsakes.offer(i, 1, [], false).all(func(id): return not Keepsakes.NEEDS_NERVE.has(id))), "a game without nerve is never offered the ones that feed it")
-	_check(Transitions.allowed("fightbar", "keepsake") and Transitions.allowed("ask", "keepsake") and Transitions.allowed("keepsake", "explore") and not Transitions.allowed("explore", "keepsake"), "the choice comes at the end of a fight and nowhere else")
+	_check(Transitions.allowed("fightbar", "keepsake") and Transitions.allowed("ask", "keepsake") and Transitions.allowed("keepsake", "explore") and Transitions.allowed("explore", "keepsake"), "the choice comes at the end of a fight, and out of the Hoard's vault on the walk (#161)")
 	_check(Transitions.WALK.has("keepsake") and Transitions.DECIDING.has("keepsake"), "it is made on the floor, the fight behind you, and it is the whole moment: its cards go over the picture")
 	var named := {}
 	var naming := RegEx.create_from_string('vignette = (?:"(\\w+)" if .* else )?"(\\w+)"')
@@ -1883,6 +1884,13 @@ func _clans() -> void:
 			kinds += ["rival_slain", "rival_kept"]
 		for kind in kinds:
 			_check(not Content.species(species).lines.get(kind, []).is_empty(), "%s has %s lines" % [species, kind])
+	# a kill pleases a clan that dislikes the victim's, and each says so in its own voice (#165); a clan that dislikes nobody
+	# has no rival lines to say
+	for species in Content.table("species"):
+		for line in Content.species(species).lines.get("rival_slain", []):
+			var said: String = Content.fill(str(line), {"kin": "Goo"})
+			_check(not said.contains("{") and Overlay.banner_fits(said), "every rival line fills and fits the banner: %s" % said)
+	_check(Content.species("dragon").lines.get("rival_slain", []).size() == 2 and not Content.species("slime").lines.has("rival_slain"), "the Hoard hates the Crew and has its own rival lines; the Burrow dislikes nobody and has none")
 
 	# the test the issue asks for: spare one, and a later one of the same group reacts and starts in another mood
 	var flow = _flow(31)
@@ -1996,6 +2004,20 @@ func _clans() -> void:
 	var sore_rival = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(rivals[0]))[0], Vector2i.ONE)
 	var sore: Dictionary = Clans.hear(sore_rival, taken_in)
 	_check(taken_in.reputation[rivals[0]] < 0.0 and sore.kind == "rival_kept" and sore.tone == "bad", "taking one in does: its rival is sore about it (%s, %s)" % [str(taken_in.reputation), str(sore)])
+	_check(str(a_rival.heard.get("heard", [])).contains("the player killed OOZE"), "and the deed it keeps is a verb a mind can read (%s)" % str(a_rival.heard.get("heard", [])))
+
+	# a favour tells no tale: with nothing it heard that moved it up, the newest it heard of is still its news, so its mood moves
+	var favour_only := State.new()
+	var coil_victim := Monster.new()
+	coil_victim.species = "snake"
+	coil_victim.name = "HISS"
+	Clans.record(favour_only, coil_victim, "slain")
+	Clans.favour(favour_only, "slime", 20.0)
+	var favour_slime := Monster.new()
+	favour_slime.species = "slime"
+	favour_slime.name = "DRIP"
+	var favour_news: Dictionary = Clans.hear(favour_slime, favour_only)
+	_check(not favour_news.is_empty() and favour_slime.meters.friendliness > 0.0, "a clan moved only by a favour still starts friendlier, and has a deed to tell (%s)" % str(favour_news))
 
 	# every deed says which clans like it or dislike it, and why
 	var told_slain: Array = Clans.felt("slime", "slain")
@@ -2477,6 +2499,134 @@ func _secrets() -> void:
 	_check(fissures.size() == 2, "a cracked wall always shows a fissure, on both its faces (%d)" % fissures.size())
 	var legend: Array = Tips.map_blocks().map(func(b): return str(b.get("left", "")))
 	_check(legend.has("PAD") and legend.has("CHEST"), "the legend names pads and chests")
+	_use()
+
+
+## The Hoard's vault (#161): one floor of a run hides its keepsakes behind a cracked wall, arriving there says so, and the
+## choice leaves you back on the walk with one, the walk going on from the cell it stopped at.
+func _vault() -> void:
+	# which floor, from the run's seed: always one of the middle floors, and every one of them can be the one
+	var floors := {}
+	var steady := true
+	for seed_value in range(1, 200):
+		var at := Floors.vault_floor(seed_value)
+		steady = steady and at == Floors.vault_floor(seed_value)
+		floors[at] = floors.get(at, 0) + 1
+	_check(steady, "the run's seed picks the vault's floor, the same every time")
+	_check(not floors.has(0) and floors.keys().all(func(d): return d >= Floors.FIRST_VAULT_DEPTH and d < Floors.run_floors()), "never the first floor nor the last (%s)" % [floors.keys()])
+	_check(floors.size() == Floors.run_floors() - 2 and floors.values().all(func(n): return n > 0), "and every floor between them can be the one (%s)" % [floors])
+
+	# generation: only that floor of a run holds one, and it is a chest behind a crack like any other
+	var wrong := []
+	var checked := 0
+	for seed_value in [1, 2, 3, 7, 47]:
+		var at := Floors.vault_floor(seed_value)
+		for depth in range(1, Floors.run_floors() + 1):
+			var plan: Dictionary = Floors.plan(depth)
+			plan.biome = Floors.biome(seed_value, depth)
+			plan.secrets = Floors.secrets(plan.biome)
+			plan.vault = depth == at
+			plan.items = true
+			plan.food = true
+			plan.lurkers = true
+			plan.lore = true
+			plan.names_taken = {}
+			var made = FloorGen.generate(Rng.new(Floors.floor_seed(seed_value, depth)), plan)
+			checked += 1
+			var vaults: Array = made.treasure.filter(func(t): return bool(t.get("vault", false)))
+			if vaults.size() != (1 if depth == at else 0) or made.treasure.any(func(t): return int(t.get("gold", 0)) <= 0):
+				wrong.append("seed %d B%dF: %s" % [seed_value, depth, made.treasure])
+	_check(wrong.is_empty(), "one floor of each run hides one vault, and every vault still holds the purse it would have (%d floors, %s)" % [checked, wrong])
+
+	# the walk: arriving says so, the wall gives into it, and the choice goes back to the walk
+	var seed_value := -1
+	for i in range(1, 60):
+		if Floors.vault_floor(i) == 2:
+			seed_value = i
+			break
+	_check(seed_value > 0, "a seed with its vault on B2F, to meet one on the walk")
+	var flow = _flow(seed_value)
+	var seen := []
+	flow.happened.connect(func(name, data): seen.append([name, data]))
+	await flow.new_run()
+	var s = flow.state
+	await flow.next_floor()
+	_check(s.depth == 2 and s.floor_map.treasure.any(func(t): return bool(t.get("vault", false))), "B2F of that run hides the vault (%s)" % [s.floor_map.treasure])
+	_check(s.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and arriving says something of the Hoard's is walled up here (%s)" % [s.lines.map(func(l): return l.text)])
+	var f = s.floor_map
+	var chest: Dictionary = f.treasure.filter(func(t): return bool(t.get("vault", false)))[0]
+	var wall := Vector2i(-1, -1)
+	for y in f.size:
+		for x in f.size:
+			if f.is_cracked(Vector2i(x, y)) and absi(x - chest.cell.x) + absi(y - chest.cell.y) == 1:
+				wall = Vector2i(x, y)
+	_check(wall != Vector2i(-1, -1) and not s.seen.has(chest.cell), "behind a cracked wall, out of sight")
+	var copy = FloorMap.from_dict(JSON.parse_string(JSON.stringify(f.to_dict())), Monster)
+	_check(JSON.stringify(copy.treasure) == JSON.stringify(f.treasure) and copy.treasure.any(func(t): return bool(t.get("vault", false))), "a save keeps the vault in the floor")
+	var older: Dictionary = JSON.parse_string(JSON.stringify(f.to_dict()))
+	older.treasure = [{"cell": [chest.cell.x, chest.cell.y], "gold": 7}]
+	var read = FloorMap.from_dict(older, Monster)
+	_check(read.treasure.size() == 1 and read.treasure[0].gold == 7 and not read.treasure[0].has("vault"), "and a save from before the vaults reads its chests as the purses they were")
+	var before: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	s.banner = null
+	flow.clock = 100000.0
+	flow.coach.seen = {}
+	_face(s, wall)
+	var gold_before: int = s.gold
+	var held_before: Array = s.keepsakes.duplicate()
+	await flow.press("up")
+	_check(f.is_open(wall) and s.cell != chest.cell, "walking into the wall opens it")
+	var opened: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict())) # the wall open, the vault in sight and its keepsakes untaken
+	var looked = _flow(seed_value)
+	await looked.load_state(opened)
+	_check(looked.state.seen.has(chest.cell) and not looked.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "a run left with the wall already open no longer hears it is walled up (%s)" % [looked.state.lines.map(func(l): return l.text)])
+	s.cell = wall
+	s.facing = f.DIRS.find(chest.cell - wall)
+	await flow.press("up")
+	_check(s.stage == "keepsake" and s.cell == chest.cell, "stepping on the vault offers keepsakes (%s)" % s.stage)
+	var offered: Array = Keepsakes.offer(s.run_seed, s.depth, held_before, true, Keepsakes.VAULT_SALT)
+	_check(s.menu.map(func(row): return row.label) == offered.map(func(id): return Keepsakes.name_of(id)), "the vault's own three, drawn apart from the champion's (%s)" % [s.menu.map(func(row): return row.label)])
+	_check(str(s.lines[-1].text) == str(Content.table("keepsakes").vault.ask) and s.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.opened)), "and the log says the wall gave into it and what it holds")
+	_check(not f.treasure.any(func(t): return t.cell == chest.cell) and s.gold == gold_before, "the vault is emptied, and pays no purse with the keepsake")
+	_check(seen.any(func(h): return h[0] == "found" and str(h[1].get("what", "")) == "vault"), "the game says it found a vault")
+	await flow.tick(flow.clock + Flow.BEFORE_KEEPSAKE_MS + 1.0)
+	await flow.press("confirm")
+	var mine: String = offered[0]
+	_check(s.stage == "explore" and s.keepsakes == held_before + [mine], "taking one goes back to the walk, the keepsake held (%s, %s)" % [s.stage, s.keepsakes])
+	_check(s.lines.any(func(l): return str(l.text).begins_with("You take the %s" % Keepsakes.name_of(mine))), "and the log says which")
+	await flow.tick(flow.clock + Flow.AFTER_FIGHT_MS + 1.0)
+	var stood: Vector2i = s.cell
+	await flow.press("down")
+	_check(s.stage == "explore" and s.cell != stood, "and the walk goes on (%s to %s)" % [stood, s.cell])
+	var emptied: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	var after = _flow(seed_value)
+	await after.load_state(emptied)
+	_check(after.state.depth == 2 and not after.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "a run left after the vault is emptied no longer hears it is walled up (%s)" % [after.state.lines.map(func(l): return l.text)])
+	var kept = _flow(seed_value)
+	await kept.load_state(before)
+	_check(kept.state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))) and kept.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and a run left before it opened hears of it again, the vault still in the floor")
+
+	# the wall itself hides the vault, not what the camera saw: walking backwards into the crack breaks it while facing away,
+	# so the room never enters `State.seen`, and a save made there still must not hear it is walled up
+	var back = _flow(seed_value)
+	await back.load_state(before)
+	var bs = back.state
+	var door_dir: int = FloorMap.DIRS.find(chest.cell - wall)
+	bs.cell = wall + FloorMap.DIRS[(door_dir + 2) % 4]
+	bs.facing = (door_dir + 2) % 4 # away from the wall, so DOWN walks backwards into it
+	back.clock = 100000.0
+	await back.press("down")
+	_check(back.state.floor_map.is_open(wall) and not back.state.seen.has(chest.cell), "walking backwards into the wall opens it, its room still out of sight")
+	var behind: Dictionary = JSON.parse_string(JSON.stringify(back.state.to_dict()))
+	var backward = _flow(seed_value)
+	await backward.load_state(behind)
+	_check(not backward.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and a save then does not hear it is walled up (%s)" % [backward.state.lines.map(func(l): return l.text)])
+
+	# with keepsakes off the floor hides purses, and a run too short has no vault at all
+	var off = _flow(seed_value, ["no-keepsakes"])
+	await off.new_run()
+	await off.next_floor()
+	_check(off.state.depth == 2 and not off.state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))) and not off.state.floor_map.treasure.is_empty(), "with keepsakes off, the floor hides purses and no vault (%s)" % [off.state.floor_map.treasure])
 	_use()
 
 

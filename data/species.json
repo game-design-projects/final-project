@@ -146,7 +146,8 @@
    ],
    "friend_slain": [
     "*shrinks back* {kin} is gone. The floor told us.",
-    "*trembles* You hurt {kin}. We drew {kin} once. On the wall."
+    "*trembles* You hurt {kin}. We drew {kin} once. On the wall.",
+    "*trembles* You hurt {kin}. The whole floor felt it."
    ]
   },
   "reactions": {

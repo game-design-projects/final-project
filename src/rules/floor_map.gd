@@ -15,7 +15,7 @@ var monsters: Array = [] # Monster; the champion (boss) is the last one, on the 
 var seed_value := 0
 var biome := "" # its id in data/biomes.json, "" for a floor with none
 var hp_scale := 0.0 # how tough its monsters were made, for the header (rules/floors.gd's plan); 0 for a save from before, which says nothing
-var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find
+var treasure: Array = [] # {cell: Vector2i, gold: int}, the chests still to find; the one that is the Hoard's vault also says `vault` (#161)
 var teleports: Array = [] # {a: Vector2i, b: Vector2i}, pairs of pads
 var pickups: Array = [] # {cell: Vector2i, item: String}, things lying about
 var merchant := {} # {cell: Vector2i, stock: [item id]}, or empty when no trader is here
@@ -113,12 +113,12 @@ func remove_pickup(c: Vector2i) -> void:
 	pickups = pickups.filter(func(p): return p.cell != c)
 
 
-## Opens the chest in this cell if there is one: its gold, or 0.
-func take_treasure(c: Vector2i) -> int:
+## Opens the chest in this cell if there is one: what it held ({cell, gold}, and `vault` when it is the Hoard's), or {}.
+func take_treasure(c: Vector2i) -> Dictionary:
 	for i in treasure.size():
 		if treasure[i].cell == c:
-			return int(treasure.pop_at(i).gold)
-	return 0
+			return treasure.pop_at(i)
+	return {}
 
 
 ## The monster standing in this cell that is still around, or null.
@@ -150,7 +150,7 @@ func to_dict() -> Dictionary:
 		"size": size, "grid": grid, "stairs": [stairs.x, stairs.y], "start": [start.x, start.y], "seed": seed_value,
 		"monsters": monsters.map(func(m): return m.to_dict()),
 		"biome": biome,
-		"treasure": treasure.map(func(t): return {"cell": [t.cell.x, t.cell.y], "gold": t.gold}),
+		"treasure": treasure.map(func(t): return _treasure_dict(t)),
 		"teleports": teleports.map(func(t): return {"a": [t.a.x, t.a.y], "b": [t.b.x, t.b.y]}),
 		"pickups": pickups.map(func(p): return {"cell": [p.cell.x, p.cell.y], "item": p.item}),
 		"merchant": {} if merchant.is_empty() else {"cell": [merchant.cell.x, merchant.cell.y], "stock": merchant.stock.duplicate()},
@@ -173,6 +173,23 @@ func _quester_dict() -> Dictionary:
 	return out
 
 
+## A chest as the save keeps it: its cell and gold, and `vault` only for the one that holds a keepsake, so a save made before
+## the vaults reads as the purses it always did.
+static func _treasure_dict(t: Dictionary) -> Dictionary:
+	var out := {"cell": [t.cell.x, t.cell.y], "gold": int(t.gold)}
+	if bool(t.get("vault", false)):
+		out.vault = true
+	return out
+
+
+## A chest read back, with a key in the chest only when it is a vault: a floor of purses comes back as it was made.
+static func _treasure_from(t: Dictionary) -> Dictionary:
+	var out := {"cell": _cell(t.cell), "gold": int(t.gold)}
+	if bool(t.get("vault", false)):
+		out.vault = true
+	return out
+
+
 static func from_dict(d: Dictionary, monster_script):
 	var f = new()
 	f.size = int(d.get("size", 0))
@@ -184,7 +201,7 @@ static func from_dict(d: Dictionary, monster_script):
 	f.seed_value = int(d.get("seed", 0))
 	f.monsters = d.get("monsters", []).map(func(md): return monster_script.from_dict(md))
 	f.biome = str(d.get("biome", ""))
-	f.treasure = d.get("treasure", []).map(func(t): return {"cell": _cell(t.cell), "gold": int(t.gold)})
+	f.treasure = d.get("treasure", []).map(func(t): return _treasure_from(t))
 	f.teleports = d.get("teleports", []).map(func(t): return {"a": _cell(t.a), "b": _cell(t.b)})
 	f.pickups = d.get("pickups", []).map(func(p): return {"cell": _cell(p.cell), "item": str(p.item)})
 	var trader: Dictionary = d.get("merchant", {})

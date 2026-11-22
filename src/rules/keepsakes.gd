@@ -17,6 +17,7 @@ const OPEN_MERCY := 0.15 # open hand: added to the odds that a monster takes mer
 const LUCKY_GOLD := 1.5 # lucky coin: what a purse or a chest is worth
 const NEEDS_NERVE := ["quick_feet", "deep_breath"] # never offered in a game without the feature nerve
 const SEED_OFFSET := 7700 # so an offer draws its own numbers from the run's seed
+const VAULT_SALT := 1000 # what a floor's vault offer is drawn apart from its champion's
 
 
 static func table() -> Dictionary:
@@ -44,11 +45,12 @@ static func has(s, id: String) -> bool:
 	return s.keepsakes.has(id)
 
 
-## The three offered after the champion of floor `depth`: always the same three for the same run, floor and holdings, and none
-## already held. Fewer when fewer are left; `nerve` false leaves out the ones that only matter with the feature nerve.
-static func offer(run_seed: int, depth: int, held: Array, nerve := true) -> Array:
+## The three offered after the champion of floor `depth`, or out of its vault (`salt` keeps the two offers of one floor apart):
+## always the same three for the same run, floor, holdings and salt, and none already held. Fewer when fewer are left; `nerve`
+## false leaves out the ones that only matter with the feature nerve.
+static func offer(run_seed: int, depth: int, held: Array, nerve := true, salt := 0) -> Array:
 	var pool: Array = ids().filter(func(id): return not held.has(id) and (nerve or not NEEDS_NERVE.has(id)))
-	Rng.new(Rng.offset(run_seed, SEED_OFFSET + depth)).shuffle(pool)
+	Rng.new(Rng.offset(run_seed, SEED_OFFSET + depth + salt)).shuffle(pool)
 	return pool.slice(0, OFFERED)
 
 
