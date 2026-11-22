@@ -258,6 +258,7 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	if how == "slain" and blessed: # a kill the party was glad of: the halls do not hold it against you (rules/warmth.gd)
 		s.tally.blessed += 1
 	flow.event(how, {"boss": m.boss})
+	var other_side: Dictionary = _rivals_standing(m, how) # before the deed is written, so a clan crossing above nothing can be named
 	var moved := Clans.record(s, m, how)
 	if m.boss:
 		_reward_for_champion(m)
@@ -267,13 +268,14 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	if how == "spared" and allow_join:
 		await flow.go("ask", {"lines": learned})
 		return
+	var pleased := _pleased(other_side, m)
 	var line = foe_line(m, "leave_peacefully") if how == "spared" else null
 	var verdict: String
 	if how == "spared":
 		verdict = settlement if settlement != "" else Texts.VERDICT_SPARED
 	else:
 		verdict = Texts.VERDICT_SLAIN
-	var lines := learned + [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + told + _take_notes()
+	var lines := learned + [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + told + pleased + _take_notes()
 	s.mind_rows = pending_rows
 	pending_rows = []
 	await leave_fight(lines)
@@ -291,6 +293,32 @@ func tell_hostility(moved: Array) -> Array:
 		flow.announce(words.title, words.text)
 		return []
 	return [State.sys_line(words.line)]
+
+
+## The standing of every clan on the other side of the victim's, read before the deed is written into the run, so `_pleased`
+## can tell which of them this kill has just carried above nothing (#163, #165). A mercy reads nothing: a kindness reaches no
+## rival at all.
+func _rivals_standing(m, how: String) -> Dictionary:
+	var standing := {}
+	if how != "slain":
+		return standing
+	for clan in Clans.rivals(Clans.of(m.species)):
+		standing[clan] = float(flow.state.reputation.get(clan, 0.0))
+	return standing
+
+
+## One line for the log for each rival clan this kill has pleased into the positive. The crossing is the whole answer — the
+## deed took it from nothing or less to above nothing — so nothing is saved to remember it, and a clan already above nothing is
+## not told twice in a run (#163, #165).
+func _pleased(standing: Dictionary, m) -> Array:
+	var s = flow.state
+	if s.testing: # the test room forgets it at once, so it isn't said
+		return []
+	var lines := []
+	for clan in standing:
+		if float(standing[clan]) <= 0.0 and float(s.reputation.get(clan, 0.0)) > 0.0:
+			lines.append(State.sys_line(Clans.pleased() % [Clans.title(clan), m.name]))
+	return lines
 
 
 ## What this fight taught: experience from rules/experience.gd, and the levels it made (#162). A level is more max HP, some

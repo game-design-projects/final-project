@@ -1872,6 +1872,14 @@ func _clans() -> void:
 		_check(Clans.of(species) != "", "%s has a clan" % species)
 		for kind in ["kin_spared", "kin_slain", "side_spared", "side_slain"]:
 			_check(not Content.species(species).lines.get(kind, []).is_empty(), "%s has %s lines" % [species, kind])
+	# a kill pleases the clans on the other side, and each says so in its own voice (#165); the Hoard has no rivals to please
+	for species in ["slime", "bandit", "snake", "rock"]:
+		var rival_lines: Array = Content.species(species).lines.get("rival_slain", [])
+		_check(rival_lines.size() == 2, "%s has its two rival_slain lines" % species)
+		for line in rival_lines:
+			var said: String = Content.fill(str(line), {"kin": "Goo"})
+			_check(not said.contains("{") and Overlay.banner_fits(said), "and it fills and fits the banner: %s" % said)
+	_check(not Content.species("dragon").lines.has("rival_slain"), "the Hoard has no rival_slain line: nobody is its rival")
 
 	# the test the issue asks for: spare one, and a later one of the same group reacts and starts in another mood
 	var flow = _flow(31)
@@ -1948,8 +1956,12 @@ func _clans() -> void:
 	var side_clans: Array = Clans.side_of(clan)
 	_check(side_clans.size() >= 1, "a clan has others on its side")
 	_check(slain.reputation[clan] < 0.0 and slain.reputation[side_clans[0]] < 0.0 and slain.reputation[side_clans[0]] > slain.reputation[clan], "killing one hurts its clan most, its side less (%s)" % str(slain.reputation))
+	# the clans on the other side care now, and the other way round: a kill pays them half what it costs its own (#165)
 	var rival: String = Clans.of("bandit")
-	_check(not side_clans.has(rival) and slain.reputation.get(rival, 0.0) == 0.0, "another side doesn't care (%s)" % str(slain.reputation))
+	var rival_of: Array = Clans.rivals(clan)
+	_check(not side_clans.has(rival) and rival_of.size() == 2 and not rival_of.has(clan) and not rival_of.has(Clans.of("dragon")), "the clans on the other side are its rivals, and the Hoard is nobody's (%s)" % str(rival_of))
+	_check(is_equal_approx(float(slain.reputation[rival]), absf(float(slain.reputation[clan])) * float(Content.table("clans").rivalry)), "a kill is half as welcome to each of them as it is unwelcome to its own (#165) (%s)" % str(slain.reputation))
+	_check(is_equal_approx(float(slain.reputation[rival]), 9.0), "so a slime's death is worth 9 to the Crew")
 	_check(slain.reputation[Clans.of("dragon")] < 0.0, "the dragon hears of everything")
 	var grudge = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0], Vector2i.ONE)
 	var was_angry: float = grudge.meters.anger
@@ -1961,7 +1973,44 @@ func _clans() -> void:
 	_check(Clans.hear(on_side, slain).kind == "side_slain", "its side has heard too")
 	var far = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "bandit")[0], Vector2i.ONE)
 	var far_mood: float = far.meters.friendliness
-	_check(Clans.hear(far, slain).is_empty() and far.meters.friendliness == far_mood and far.heard.is_empty(), "another side has nothing to say")
+	var far_news: Dictionary = Clans.hear(far, slain)
+	_check(far_news.kind == "rival_slain" and far_news.tone == "good" and far_news.who == "OOZE", "the other side hears of the kill, and is glad of it (#165) (%s)" % str(far_news))
+	_check(far.meters.friendliness > far_mood and far.heard.get("clan", "") == rival, "so it starts friendlier (%.0f -> %.0f)" % [far_mood, far.meters.friendliness])
+	_check(str(far.heard.get("heard", [])).contains("OOZE"), "and remembers who died (%s)" % str(far.heard.get("heard", [])))
+
+	# a mercy reaches nobody across the sides: only a kill is good news to a rival (#165)
+	var mercy := State.new()
+	Clans.record(mercy, victim, "spared")
+	Clans.record(mercy, victim, "recruited")
+	Clans.favour(mercy, "slime", 20.0)
+	_check(rival_of.all(func(c): return not mercy.reputation.has(c)), "a spare, a recruit and a favour move no rival at all (%s)" % str(mercy.reputation))
+
+	# killing its enemies cools an angry clan by exactly the 9 a kill pays its rivals (#165)
+	var cooled := State.new()
+	var thug := Monster.new()
+	thug.species = "bandit"
+	thug.name = "THUG"
+	Clans.record(cooled, thug, "slain")
+	_check(float(cooled.reputation[rival]) == -18.0 and Clans.hostility_of(cooled, "bandit") == "angry", "killing a bandit makes the Crew angry (%s)" % str(cooled.reputation))
+	Clans.record(cooled, victim, "slain")
+	_check(float(cooled.reputation[rival]) == -9.0 and Clans.hostility_of(cooled, "bandit") == "", "one slime lifts it out of angry: -18 -> -9 (%s)" % str(cooled.reputation))
+	Clans.record(cooled, victim, "slain")
+	_check(float(cooled.reputation[rival]) == 0.0 and Clans.mood_word(float(cooled.reputation[rival])) == "CALM", "two leave it level with you, and calm (%s)" % str(cooled.reputation))
+	var fond := State.new()
+	for i in 20:
+		Clans.record(fond, victim, "slain")
+	_check(float(fond.reputation[rival]) == Clans.STANDING_MAX, "a rival's standing stops at STANDING_MAX (%s)" % str(fond.reputation))
+
+	# the log says so the first time a kill pleases a rival past nothing, by clan and by name, and only then (#163, #165)
+	var victory = _flow(34)
+	var doomed = await _at_menu(victory)
+	await victory.encounter.defeat(doomed, "slain")
+	var won = victory.state
+	var pleased_line: String = Clans.pleased() % [Clans.title(rival), doomed.name]
+	_check(won.lines.any(func(l): return l.text == pleased_line), "a kill pleases the Crew, and the log says it by clan and by name (%s)" % str(won.lines.map(func(l): return l.text)))
+	_check(won.lines.filter(func(l): return l.text.contains("is pleased:")).size() == 2, "both clans on the other side are named, and nobody else")
+	_check(victory.encounter._pleased({rival: 9.0}, doomed).is_empty(), "a clan already above nothing is not told twice in a run")
+	_check(victory.encounter._rivals_standing(doomed, "spared").is_empty(), "and a mercy reads no rival standing at all")
 
 	# every sentence fits the banner, and a hated monster can still be won over
 	for id in Content.table("clans").clans:
@@ -1992,7 +2041,7 @@ func _hostility() -> void:
 	kill.call("slime", "B")
 	_check(Clans.hostility_of(tally, "slime") == "furious" and Clans.sends_elites(tally, "slime"), "two kills: furious, and it sends elites")
 	_check(Clans.hostility(float(tally.reputation[side])) == "angry" and not Clans.sends_elites(tally, side_species(side)), "its side is only angry (%s)" % str(tally.reputation))
-	_check(not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "another side doesn't care")
+	_check(float(tally.reputation[Clans.of("bandit")]) == 18.0 and not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "the other side is pleased instead, and sends no elites (%s)" % str(tally.reputation))
 	var goo = Monster.make(Rng.new(5), slime_line, Vector2i.ONE)
 	_check(not Clans.enraged(tally, goo), "furious still takes mercy")
 	kill.call("slime", "C")
