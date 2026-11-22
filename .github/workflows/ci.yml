@@ -53,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/doc_tools_test.py
-      # The credits are a legal record: the music is rendered from a CC BY-SA 3.0 soundfont, the fonts are under the SIL Open
+      # The credits are a legal record: the music is played on a CC0 orchestra, the fonts are under the SIL Open
       # Font License (whose notice and text must travel with them), and the voice references are CC BY 4.0. The old credits
       # named the font and music licences but shipped neither's text, and Godot exports only resources, so the fonts would
       # have gone out without their licence and nothing failed. Needs no Godot either.
