@@ -73,6 +73,9 @@ class FakeMusic:
 	func prepare(names: Array) -> void:
 		prepared.append_array(names)
 
+	func mode() -> String:
+		return "explore"
+
 	func set_mode(mode: String) -> void:
 		calls.append("mode:" + mode)
 

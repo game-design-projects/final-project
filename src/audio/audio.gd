@@ -48,7 +48,7 @@ func _ready() -> void:
 
 ## The exploring tune of where the party is, and the fights its floor may bring loaded in the background.
 func _place_music() -> void:
-	if _flow == null or _flow.state == null:
+	if _flow == null or _flow.state == null or _flow.state.floor_map == null:
 		return
 	var s = _flow.state
 	_music.set_scene(Music.scene_of(s))
@@ -60,7 +60,7 @@ func _place_music() -> void:
 func bind(flow) -> void:
 	_flow = flow
 	flow.happened.connect(_on_event)
-	if not _quiet:
+	if not _quiet and flow.state != null and flow.state.floor_map != null: # a run with no floor yet starts its music at its first
 		_place_music()
 		_music.set_mode("explore")
 
@@ -87,6 +87,8 @@ func _on_event(name: String, data: Dictionary) -> void:
 				_music.set_mode("explore")
 		"state_replaced": # a new floor, a hall, the test room: its own tune, and its foes' made ready
 			_place_music()
+			if _music.mode() == "":
+				_music.set_mode("explore")
 		"encounter":
 			_sfx.play("boss" if data.boss else "encounter")
 			_music.fight_with(Music.fight_of(_flow.state.foe if _flow != null and _flow.state != null else null)) # its kind's tune, or the champion's
