@@ -49,14 +49,9 @@ func foe_line(m, kind: String, who := ""):
 	var pool: Array = Content.species(m.species).lines.get(kind, [])
 	if pool.is_empty():
 		return null
-	var text := Content.fill(flow.rng.pick(pool), {"name": _spoken(m.name), "target": "you", "kin": _spoken(who)})
+	var text := Content.fill(flow.rng.pick(pool), {"name": Envoys.spoken(m.name), "target": "you", "kin": Envoys.spoken(who)})
 	flow.event("shout", {"text": text, "species": m.species, "boss": m.boss})
 	return State.speech(m.name, text)
-
-
-## A NAME as it is said out loud: Name.
-static func _spoken(a_name: String) -> String:
-	return a_name.left(1) + a_name.substr(1).to_lower()
 
 
 ## `m` meets you, having heard what you did to its clan. Its mood has moved by the time this returns. The line it says about

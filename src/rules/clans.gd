@@ -59,7 +59,7 @@ static func felt_by(clan: String, how: String) -> Array:
 	return _table().clans.keys().filter(func(c): return feeling(clan, c) == how)
 
 
-## The clans that feel this way about `about`.
+## The clans that feel this way about `about` ("likes", "dislikes"): the other side of `felt_by`.
 static func who_feels(how: String, about: String) -> Array:
 	return _table().clans.keys().filter(func(c): return feeling(c, about) == how)
 

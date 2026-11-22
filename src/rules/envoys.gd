@@ -143,16 +143,25 @@ static func speak(s, r: Dictionary) -> String:
 		"ready":
 			var friend = friend_for(s, r)
 			var words := str(r.get("ready", r.wait))
-			return words % _spoken(friend.name) if friend != null and words.contains("%s") else words
+			return words % spoken(friend.name) if friend != null and words.contains("%s") else words
 		"done":
 			return str(r.done)
 	var wait := str(r.wait)
 	return wait % [count(s, str(r.id)), int(r.count)] if str(r.kind) == "slay" else wait
 
 
-## A NAME as it is said out loud: Name.
-static func _spoken(a_name: String) -> String:
+## A NAME as it is said out loud: Name. The stages have it too (a friend handed over is named in the asker's line), so it is
+## not private to this file.
+static func spoken(a_name: String) -> String:
 	return a_name.left(1) + a_name.substr(1).to_lower()
+
+
+## Whether a game played with the fight menu as it stands can do this request at all: one that wants a fight won with HEAVY
+## strikes needs a menu that offers HEAVY, which the feature `heavy-strike` gives it and the `skill-combat` experiment takes away
+## (rules and stages don't read each other's flags, so the caller says whether the menu has it). A request the menu can't do is
+## never offered: an asker that keeps asking for what you cannot give holds its teleporter shut for good.
+static func can_do(r: Dictionary, heavy: bool) -> bool:
+	return str(r.kind) != "heavy_win" or heavy
 
 
 ## A request is done: it pays, its clan hears, and the second one done for a clan opens its teleporter. Returns {gold, healed,
