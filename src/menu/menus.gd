@@ -247,6 +247,7 @@ static func gameplay() -> Dictionary:
 		_setting("text_size", "TEXT SIZE", "The log and what monsters say, wherever the larger size fits"),
 		_setting("easy", "EASY DODGE", "Attacks come slower, with longer warnings"),
 		_setting("tips", "TIPS", "Short tips the first time you meet something; off skips the tutorial"),
+		_setting("story_cg", "STORY PICTURES", "A drawing over the screen at each moment of the story; off puts the words on a banner"),
 		{"label": "SHOW THE TIPS AGAIN", "sub": "Forget which tips you have seen", "act": func(): Settings.set_value("seen_tips", [])},
 	]}
 

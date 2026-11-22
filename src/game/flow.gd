@@ -103,6 +103,10 @@ var legacy_ranks := {}
 ## The writing read on any run so far (piece id -> true, rules/lore.gd), which the scene hands in and hears of through the event "found".
 var lore_read := {}
 var easy_dodge := false
+## Whether the scene will put a moment of the story up as a drawing (view/story_cg.gd), asked with its id: then the moment's words
+## go on the drawing and not on a banner as well. The scene hands it in; with none (the tests), every moment is a banner.
+var story_pictures: Callable = func(_id: String) -> bool: return false
+var _told := {} # the moments of the story told this run (id -> true): a retried fight or a door come back to doesn't tell one twice
 ## The monsters still to fight, back to back, with no walk between (the social-demo playtest). A new floor, a load or fleeing
 ## clears it.
 var fight_queue: Array = []
@@ -111,6 +115,7 @@ var _room_start := {} # the test room's party and monsters as they were on walki
 var _stages := {}
 var _since := 0.0 # clock when the current stage began
 var _wick_comes := false # a new run: she is on her way, and her words wait for the ones up now
+var film_played := false # the opening film ran before this run, watched or skipped: the premise needs no drawing of its own
 var film_seen := false # the opening film (menu/intro_cg.gd) showed her to the end: she needn't hop in again, and her words follow it
 var _teach_walk := false # on the practice floor: Wick says how to walk once her welcome is gone
 var _keys_back_at := -1.0 # keys do nothing until the clock says this, once a fight is over
@@ -157,8 +162,12 @@ func new_run(practice := false) -> void:
 	encounter.pending_rows = []
 	print("flow: new run, seed %d%s" % [rng.seed_value, ", on the practice floor" if state.practice else ""])
 	event("state_replaced", {"how": "new"})
+	_told = {}
 	var lines := _arrival()
 	var premise: Dictionary = Floors.premise()
+	if not film_played: # the opening film is this moment already
+		story("premise", str(premise.title), str(premise.line))
+	film_played = false
 	lines = [State.sys_line(premise.line), lines[0]] # the log has room for two: why you are here says more than where
 	announce(premise.title, premise.door if feature("last-door") else premise.banner, DOOR_THEN_WICK_MS if feature("wick") else STORY_BANNER_MS)
 	if feature("wick"):
@@ -189,6 +198,7 @@ func test_room() -> void:
 	_teach_walk = false
 	print("flow: the test room, seed %d, %d monsters" % [rng.seed_value, state.floor_map.monsters.size()])
 	event("state_replaced", {"how": "test"})
+	_told = {}
 	announce(str(words.title), str(words.banner), STORY_BANNER_MS)
 	await go("explore", {"lines": [State.sys_line(str(words.line))]})
 
@@ -300,7 +310,7 @@ func visit_hall(clan: String) -> void:
 	event("state_replaced", {"how": "floor"})
 	event("teleport", {"to": "hall"})
 	var hall: Dictionary = Envoys.entry(clan).hall
-	announce(str(hall.name), str(hall.line))
+	story("lord_" + clan, str(hall.name), str(hall.line), BANNER_MS)
 	await go("explore", {"lines": [State.sys_line(str(Envoys.table().hall.arrive) % str(hall.name))]})
 
 
@@ -458,6 +468,7 @@ func load_state(saved: Dictionary) -> bool:
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())
 	event("state_replaced", {"how": "load"})
+	_told = {}
 	var lines := [State.sys_line(Texts.welcome_back(state.summary()))]
 	var due := _vault_due() # a run left on the vault's floor hears of it again (#161), until its wall is broken
 	if due != "":
@@ -510,6 +521,21 @@ func _note_warmth() -> void:
 		announce(WARMTH_TITLE, said + ("\n" + does if does != "" else ""))
 	if does != "" and not state.testing:
 		state.say(state.lines + [State.sys_line(does)])
+
+
+## A moment of the story: the scene puts it up as a drawing over everything, once a run, if it has one (`story_pictures`).
+## With `banner_ms` set the words were going on a banner anyway, and still do when there is no drawing for them.
+func story(id: String, title: String, text: String, banner_ms := -1) -> void:
+	if state.testing or _told.has(id):
+		if banner_ms >= 0:
+			announce(title, text, banner_ms)
+		return
+	_told[id] = true
+	var pictured: bool = story_pictures.call(id)
+	print("flow: story %s (%s)" % [id, "a drawing" if pictured else "no drawing"])
+	event("story", {"id": id, "title": title, "text": text, "pictured": pictured})
+	if not pictured and banner_ms >= 0:
+		announce(title, text, banner_ms)
 
 
 ## Put a moment worth stopping for on the picture: a banner that fades by itself.

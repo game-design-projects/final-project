@@ -73,6 +73,8 @@ What is typed is judged by the mind: Jev when the game can reach it, and otherwi
 
 **Writing on the walls.** Every floor has one piece of writing, a banner in the accent colour on the closed end of a quiet corridor, marked in gold on the map once seen (grey once read). Step up to it to read it. What it says depends on the floor and on how the halls feel about you as you read: warm (kind or beloved), wary, or cold (shut or cold). So a kind run, a mixed one and a cruel one each read their own five of the fifteen, which tell why the walls watch (they are the thieves who came down alone, folded into the stone), who lights them (Wick, who is in the wall too), what the clans hold against each other, and who built the place and why its Last Door wants two. What has been read is kept across runs, the log counts it ("Writing 4 of 15 found"), and reading all of it is an achievement. The words are in `data/lore.json`.
 
+**Story pictures.** Every moment of the story comes up as a drawing over the whole screen, its words under it, and waits for a key while the game holds still: the premise of a run the opening film didn't open, the gate, the Last Door shut to someone alone, each ending, each clan's hall, VEXALITH, and every piece of writing on the walls. Each shows once a run; STORY PICTURES in the gameplay settings turns them off. See [ART.md](ART.md).
+
 ## Fights
 
 - **FIGHT** is a timing bar: strike when the line crosses the middle. A hit sours the monster's mood.
