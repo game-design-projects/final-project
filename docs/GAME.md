@@ -24,7 +24,7 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 
 **A champion leaves keepsakes.** On every floor but the last, the champion out of your way leaves three keepsakes and you take one, yours for the rest of the run. The same run offers the same three on the same floor, and never one you already hold, so four champions make four choices out of nine. What you carry is listed beside the dodge box, and sitting down (Enter on the walk) says it too.
 
-**One floor of a run holds a vault** (#161). The run's seed picks one of the floors between the first and the last, and arriving there says so: something of the Hoard's is walled up on it, behind a cracked wall. A save left on that floor says it again when it is loaded, and stops once the vault is emptied. Break in and the wall gives into the vault, which offers three keepsakes of its own, drawn apart from that floor's champion and never one you already hold — five choices out of nine in a run that looks for it. A game with keepsakes off has no vault, and its floors hide purses as they always did.
+**One floor of a run holds a vault** (#161). The run's seed picks one of the floors between the first and the last, and arriving there says so: something of the Hoard's is walled up on it, behind a cracked wall. A save left on that floor says it again when it is loaded, until the wall is broken into or the vault is emptied. Break in and the wall gives into the vault, which offers three keepsakes of its own, drawn apart from that floor's champion and never one you already hold — five choices out of nine in a run that looks for it. A game with keepsakes off has no vault, and its floors hide purses as they always did.
 
 | Keepsake | What it does |
 | --- | --- |

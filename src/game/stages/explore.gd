@@ -178,7 +178,7 @@ func _find_secrets(flow) -> String:
 				print("explore: the Hoard's vault at %s, %d keepsakes offered" % [s.cell, offered.size()])
 				flow.event("found", {"what": "vault"})
 				flow.event("sound", {"name": "good"})
-				await flow.go("keepsake", {"offered": offered, "vault": true, "from": "The vault", "then": "walk", "lines": [State.sys_line(str(words.opened))]})
+				await flow.go("keepsake", {"offered": offered, "vault": true, "then": "walk", "lines": [State.sys_line(str(words.opened))]})
 				return "keepsake"
 		var gold: int = Keepsakes.gold(s, int(chest.get("gold", 0)))
 		if gold > 0:

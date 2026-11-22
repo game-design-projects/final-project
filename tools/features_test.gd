@@ -2600,6 +2600,10 @@ func _vault() -> void:
 	var held_before: Array = s.keepsakes.duplicate()
 	await flow.press("up")
 	_check(f.is_open(wall) and s.cell != chest.cell, "walking into the wall opens it")
+	var opened: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict())) # the wall open, the vault in sight and its keepsakes untaken
+	var looked = _flow(seed_value)
+	await looked.load_state(opened)
+	_check(looked.state.seen.has(chest.cell) and not looked.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "a run left with the wall already open no longer hears it is walled up (%s)" % [looked.state.lines.map(func(l): return l.text)])
 	s.cell = wall
 	s.facing = f.DIRS.find(chest.cell - wall)
 	await flow.press("up")
