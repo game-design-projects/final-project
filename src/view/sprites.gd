@@ -21,6 +21,12 @@ static func look_of(m) -> String:
 	return kind if kind != "" and has(kind) else str(m.species)
 
 
+## The sheet a clan's lord is drawn from: its own drawing (`lord_<species>`), or its species' while it has none.
+static func lord_look(species: String) -> String:
+	var own := "lord_%s" % species
+	return own if has(own) else species
+
+
 static func texture(name: String) -> Texture2D:
 	if not _textures.has(name):
 		_textures[name] = load(str(sheet(name).file))

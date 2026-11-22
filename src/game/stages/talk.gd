@@ -3,6 +3,8 @@
 extends "res://src/game/stages/stage.gd"
 
 const Content = preload("res://src/rules/content.gd")
+const Envoy = preload("res://src/game/stages/envoy.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Hints = preload("res://src/rules/hints.gd")
 const Odds = preload("res://src/rules/odds.gd")
 const State = preload("res://src/game/state.gd")
@@ -44,6 +46,8 @@ static func say(flow, text: String, read = null) -> void:
 	flow.event("said", {"text": text})
 	s.listening = true
 	var words: Dictionary = read if read is Dictionary else await flow.mind.read_words(text)
+	var errand: Dictionary = Envoys.to_ask(s, m) if flow.feature("clan-requests") else {} # a request sent you to ask this one something
+	var asked_it: bool = not errand.is_empty() and Envoys.passes(await flow.mind.sounds_like(text, str(errand.sounds)))
 	var top := Odds.top(words)
 	if m.species in CASHES_IN and top == "gold" and Words.mentions_money(text):
 		s.listening = false
@@ -72,4 +76,8 @@ static func say(flow, text: String, read = null) -> void:
 			lines.append(State.speech(m.name, "%s: %s" % [Texts.reveal_reason(m), hint]))
 		else:
 			lines.append(State.sys_line(Texts.no_answer(m)))
+	if asked_it: # it answers, and the request is done wherever its asker is
+		flow.event("shout", {"text": str(errand.answer), "species": m.species, "boss": m.boss})
+		lines.append(State.speech(m.name, str(errand.answer)))
+		lines = await Envoy.finished(flow, errand, lines, false)
 	await flow.encounter.after_player(lines, decision, not asked)

@@ -609,7 +609,7 @@ func _on_event(name: String, data: Dictionary) -> void:
 			if data.to == "explore" and (data.from != "" or _fresh_floor):
 				_fresh_floor = false
 				_autosave()
-			_dock.set_talking(data.to == "talk")
+			_dock.set_talking(data.to in Transitions.TYPING)
 		"bump":
 			_stage.bump(now)
 		"pad": # a warp: the picture's field of view swells and settles, with a flash in the run's accent
@@ -666,6 +666,9 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_postfx.flash(Palette.BOSS, 0.4 * _softness())
 		"said":
 			_overlay.send_words(data.text)
+		"teleport": # a clan's teleporter: a pad's warp, and the picture floods with light and tears before it comes back together
+			_stage.warp(now)
+			_postfx.warp(Palette.YOU, _softness())
 		"mood":
 			_overlay.emote(data.tone)
 			if data.tone == "good":
@@ -747,7 +750,7 @@ func _resume() -> void:
 	_social.suspended = false
 	_pause.visible = false
 	_tips.visible = true
-	_dock.set_talking(flow.state.stage == "talk")
+	_dock.set_talking(flow.state.stage in Transitions.TYPING)
 	print("gameplay: resumed")
 
 
@@ -773,7 +776,7 @@ func _trophies_closed() -> void:
 		return
 	_social.suspended = false
 	_tips.visible = true
-	_dock.set_talking(flow.state.stage == "talk")
+	_dock.set_talking(flow.state.stage in Transitions.TYPING)
 
 
 ## Save into a slot from the pause menu; the log says whether it worked.

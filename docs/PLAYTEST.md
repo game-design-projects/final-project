@@ -61,10 +61,11 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **A level.** #162: every fight teaches experience, however it ended, and enough makes a level (2 more max HP and the health
   with it, and every second level a harder strike). Does a tester notice the banner and the row's fill, and can they say what
   the level gave them?
-- **Clans on the other side.** #165: a kill is half as welcome to each of the clans on the other side as it is unwelcome to the
-  victim's own, and the log says so the first time; two rival kills are worth one of its own dead, so killing a clan's enemies
-  can cool a clan that hates you. Does a tester notice a rival clan's monsters starting friendlier, does a kill start to read as
-  taking a side, and does the praise ever make killing feel cheaper than it should?
+- **Clans' feelings about each other.** #165: the clans have opinions of one another (the Old Stone dislikes the Burrow, the
+  Crew hunts the Coil, the Hoard hates thieves), a clan that likes the victim takes the deed as its own by half, one that
+  dislikes it is glad of a kill and sore when you take one in, and after a fight the log says each of those in a line. Does a
+  tester notice a clan's monsters starting friendlier, does a kill start to read as taking a side, and does the praise ever make
+  killing feel cheaper than it should?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
 - **The vault.** #161: one floor of the run says something of the Hoard's is walled up on it, behind a cracked wall, and the
   vault holds a keepsake. Does a tester go looking for the crack once the log says so, is the vault found without being shown

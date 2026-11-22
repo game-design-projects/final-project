@@ -10,7 +10,7 @@ const FIELDS := {
 	"step": [], # the party walked one cell
 	"pad": [], # a pad carried the party to its partner somewhere else on the floor
 	"bump": [], # walked into a wall
-	"encounter": ["boss"], # a fight begins
+	"encounter": ["boss", "final"], # a fight begins: with a champion (`boss`), and with the last of them, who waits at the Last Door (`final`)
 	"strike": ["damage", "crit"], # your hit landed
 	"miss": [], # your swing missed
 	"sweep": ["step"], # the strike bar's line crossed another part of the bar: 1 at the ends, up to 4 in the middle
@@ -38,6 +38,10 @@ const FIELDS := {
 	"recruited": ["species"],
 	"lord_joined": ["species"], # a clan's lord, sworn by its second favour, came along (rules/lords.gd)
 	"ally_left": ["species"],
+	"request_done": ["clan", "id"], # one of a clan's requests is done (rules/envoys.gd)
+	"gate_opened": ["clan"], # the second: its teleporter is open at the next stairs
+	"lord_met": ["clan"], # its lord was heard out in its hall
+	"teleport": ["to"], # carried off the floor through a clan's teleporter, `to` its "hall" (a pad across the floor is "pad")
 	"shout": ["text", "species", "boss"], # a monster says a line
 	"warmth": ["from", "to"], # the halls moved to another level of how they feel about you (rules/warmth.gd)
 	"dead": [],

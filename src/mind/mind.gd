@@ -17,6 +17,12 @@ func read_words(_text: String) -> Dictionary:
 	return _unanswered("read_words")
 
 
+## How much does what the player typed sound like `what` (a key of words.gd's SOUNDS: "hiss", "monotone", "likes_slimes")? 0..1.
+## A clan's asker wants something said a certain way, and a request sends you to ask a dragon something (rules/envoys.gd).
+func sounds_like(_text: String, _what: String) -> float:
+	return _unanswered("sounds_like")
+
+
 ## How does the monster feel after being hit? Feeling id -> probability.
 func feeling_when_hit(_m) -> Dictionary:
 	return _unanswered("feeling_when_hit")

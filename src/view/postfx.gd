@@ -15,6 +15,8 @@ const SPLIT_BASE := 0.35 # the colour split always there, in picture pixels
 const SPLIT_HIT := 2.2 # what a hit adds, up to
 const SPLIT_MAX := 3.0
 const CALM_PULSE := 0.5
+const WARP_S := 0.7 # how long a teleport shows: the picture floods with light and its colours tear, then both settle
+const WARP_SPLIT := 6.0 # how far the colours tear at its height, in picture pixels
 const BLOOM_DIVISOR := 4 # the bloom picture is this many times smaller each way
 
 var material := ShaderMaterial.new()
@@ -26,6 +28,9 @@ var _flash := 0.0
 var _flash_color := Color.WHITE
 var _pulse := 0.0
 var _time := 0.0
+var _warp := 0.0 # 1 at the moment of a teleport, falling to 0 over WARP_S
+var _warp_color := Color.WHITE
+var _warp_strength := 1.0
 var _rect: TextureRect
 var _bloom_view: SubViewport
 var _bloom_paint: ColorRect
@@ -126,12 +131,32 @@ func beat() -> void:
 	_pulse = 1.0
 
 
+## You were carried somewhere else (a clan's teleporter): a flood of `color` that falls away while the colours tear
+## apart and come back together. `strength` softens it (the calm setting).
+func warp(color: Color, strength := 1.0) -> void:
+	_warp = 1.0
+	_warp_color = color
+	_warp_strength = strength
+
+
+## How far through a teleport the picture is: 1 as it happens, 0 when it is over.
+func warping() -> float:
+	return _warp
+
+
 func update(dt: float) -> void:
 	_hurt *= exp(-HURT_DECAY * dt)
 	_flash *= exp(-FLASH_DECAY * dt)
 	_pulse *= exp(-PULSE_DECAY * dt)
 	_split *= exp(-SPLIT_DECAY * dt)
 	_time = fmod(_time + dt, 100.0)
+	if _warp > 0.0:
+		_warp = maxf(0.0, _warp - dt / WARP_S)
+		var wave := sin(_warp * PI) # the tear swells and settles
+		flash(_warp_color, _warp * _warp * 0.9 * _warp_strength)
+		if not calm:
+			_split = maxf(_split, wave * WARP_SPLIT * _warp_strength)
+		_pulse = maxf(_pulse, wave * _warp_strength)
 	material.set_shader_parameter("hurt_level", _hurt)
 	material.set_shader_parameter("split", SPLIT_BASE + _split)
 	material.set_shader_parameter("pulse", CALM_PULSE if calm else _pulse)

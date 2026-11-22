@@ -20,6 +20,8 @@ const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
+const ClanHall = preload("res://src/rules/clan_hall.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Practice = preload("res://src/rules/practice.gd")
 const TestRoom = preload("res://src/rules/test_room.gd")
 const Requests = preload("res://src/rules/requests.gd")
@@ -69,6 +71,8 @@ const STAGES := {
 	"trade": preload("res://src/game/stages/trade.gd"),
 	"camp": preload("res://src/game/stages/camp.gd"),
 	"request": preload("res://src/game/stages/request.gd"),
+	"envoy": preload("res://src/game/stages/envoy.gd"),
+	"envoy_say": preload("res://src/game/stages/envoy_say.gd"),
 	"talk": preload("res://src/game/stages/talk.gd"),
 	"fightbar": preload("res://src/game/stages/fightbar.gd"),
 	"keepsake": preload("res://src/game/stages/keepsake.gd"),
@@ -259,6 +263,7 @@ func _meet_wick() -> void:
 ## which way down was chosen (Floors.paths), if there was a choice.
 func next_floor(way := {}) -> void:
 	await _leave_current()
+	state.visiting = "" # a clan's hall is left by its stairs, which go on down as the floor's own would have
 	if state.practice: # its stairs lead to B1F, and the run starts there whole
 		state.practice = false
 		state.hp = state.max_hp
@@ -279,6 +284,24 @@ func next_floor(way := {}) -> void:
 	if Floors.is_last(state.depth):
 		event("reached_last")
 	await go("explore", {"lines": _arrival()})
+
+
+## Through a clan's teleporter (rules/envoys.gd) to its hall, which is off the run's count: the floor's number stays, and the
+## hall's stairs go down to the next one.
+func visit_hall(clan: String) -> void:
+	await _leave_current()
+	state.gates.erase(clan)
+	state.visiting = clan
+	state.foe = null
+	_make_floor()
+	encounter.pending_notes = []
+	encounter.pending_rows = []
+	print("flow: through the teleporter to the hall of %s" % clan)
+	event("state_replaced", {"how": "floor"})
+	event("teleport", {"to": "hall"})
+	var hall: Dictionary = Envoys.entry(clan).hall
+	announce(str(hall.name), str(hall.line))
+	await go("explore", {"lines": [State.sys_line(str(Envoys.table().hall.arrive) % str(hall.name))]})
 
 
 ## This run is over for good: at the last stairs, or given up after a fall. What it earned in all (0 without the feature legacy). The scene
@@ -384,6 +407,8 @@ func _make_floor(way := {}) -> void:
 		state.floor_map = Practice.make(Rng.new(Floors.floor_seed(state.run_seed, 0, Practice.SEED)))
 	elif state.testing:
 		state.floor_map = TestRoom.make(Rng.new(Floors.floor_seed(state.run_seed, 0, TestRoom.SEED)))
+	elif state.visiting != "":
+		state.floor_map = ClanHall.make(Rng.new(Floors.floor_seed(state.run_seed, state.depth, ClanHall.SEED)), state.visiting, state.names_met())
 	else:
 		var floor_rng = Rng.new(Floors.floor_seed(state.run_seed, state.depth, int(way.get("path", 0))))
 		var plan: Dictionary = Floors.plan(state.depth, way)
@@ -401,6 +426,10 @@ func _make_floor(way := {}) -> void:
 		plan.lords_done = state.lords_met.duplicate()
 		plan.lords_sworn = state.lords_sworn.duplicate()
 		plan.lords_standing = state.reputation.duplicate() # a clan that is angry at home here has its lord offer a way back
+		if feature("clan-requests"): # the clans' askers stand here, in place of the stray asker and the lord on its floor (rules/envoys.gd)
+			plan.lords = false
+			plan.lords_return = false
+			plan.envoys = Envoys.on_floor(state.run_seed, state.depth)
 		plan.lore = true
 		plan.names_taken = state.names_met()
 		state.floor_map = FloorGen.generate(floor_rng, plan)
@@ -537,7 +566,7 @@ func exclusive(action: Callable) -> void:
 ## The pointer is over command `index` of the menu: it becomes the picked one, as if the arrows had moved there. Nothing
 ## else happens, so hovering never does anything the player didn't ask for.
 func select(index: int) -> void:
-	if state.stage in ["", "talk"] or index < 0 or index >= state.menu.size() or index == state.selected or state.menu[index].get("disabled", false):
+	if state.stage == "" or state.stage in Transitions.TYPING or index < 0 or index >= state.menu.size() or index == state.selected or state.menu[index].get("disabled", false):
 		return
 	state.selected = index
 	print_verbose("flow: %s -> command %d picked by the pointer" % [state.stage, index])
@@ -545,7 +574,7 @@ func select(index: int) -> void:
 
 ## The player sent a line of text in the talk stage.
 func submit_text(text: String) -> void:
-	if busy or state.stage not in ["talk", "social"]:
+	if busy or not (state.stage in Transitions.TYPING or state.stage == "social"):
 		return
 	busy = true
 	await _stages[state.stage].submit(self, text)

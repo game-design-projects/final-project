@@ -4,6 +4,7 @@
 ## and look for one, or take the lonely way out, which ends the run without clearing it.
 extends "res://src/game/stages/list_stage.gd"
 
+const Envoys = preload("res://src/rules/envoys.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Legacy = preload("res://src/rules/legacy.gd")
 const Practice = preload("res://src/rules/practice.gd")
@@ -48,6 +49,8 @@ func enter(flow, _args: Dictionary) -> void:
 		s.say([State.sys_line(Practice.line("done"))])
 		s.menu = [{"label": "GO DOWN", "sub": Practice.line("down_sub")}, {"label": "MAIN MENU", "sub": ""}]
 		print("end: the practice floor done")
+	elif s.visiting != "": # a clan's hall: its stairs go on down, as the floor's own would have
+		_offer_ways(flow, [State.sys_line(str(Envoys.table().hall.out))])
 	elif flow.feature("toll") and s.depth == int(Floors.toll().depth) and not s.allies.is_empty():
 		_ask_toll(flow)
 	else:
@@ -63,11 +66,14 @@ func _offer_ways(flow, lines: Array) -> void:
 	_ways = Floors.paths(s.run_seed, s.depth, true, s.lords_warren) if branching else []
 	if branching: # no choice is offered with the feature off, so the mark waits for a stair that offers one
 		s.lords_warren = [] # the offer is made once: the stairs below are the ones it was for
+	if _ways.is_empty():
+		_ways = [{"label": "GO DOWN", "sub": ""}]
+	if flow.feature("clan-requests"): # a clan's teleporter, open once two of its requests are done (rules/envoys.gd)
+		for clan in Envoys.ways(s):
+			_ways.append(Envoys.way(str(clan)))
 	s.menu = []
 	for way in _ways:
 		s.menu.append({"label": way.label, "sub": way.sub})
-	if _ways.is_empty():
-		s.menu.append({"label": "GO DOWN", "sub": ""})
 	s.menu.append({"label": "MAIN MENU", "sub": ""})
 	print("end: B%dF done" % s.depth)
 
@@ -150,6 +156,9 @@ func pick(flow, index: int) -> void:
 		_pay_toll(flow, index)
 	elif flow.state.run_over:
 		await flow.new_run()
+	elif index < _ways.size() and _ways[index].has("hall"):
+		print("end: through %s" % _ways[index].label)
+		await flow.visit_hall(str(_ways[index].hall))
 	elif index < _ways.size():
 		print("end: taking %s" % _ways[index].label)
 		await flow.next_floor(_ways[index])

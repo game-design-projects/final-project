@@ -1,0 +1,154 @@
+{
+ "_doc": "The clans' askers (rules/envoys.gd): one named monster of each clan, with two requests of its own. Two done for a clan open its teleporter at the next stairs, to the hall where its lord stands among its own. Each request has a `kind` the rules know: ask_dragon (say it to a dragon in a fight), bring (come back with a friend of `species`, who is taken off you), heavy_win (win a fight landing only heavy strikes), say (type it to the asker: `sounds` names what the mind listens for), slay (kill `count` of `species`, on any floors), gold (hand over `count` gold).",
+ "need": 2,
+ "per_floor": 2,
+ "tag": "A REQUEST",
+ "pass_at": 0.6,
+ "pays": {"gold": 6, "heal": 4, "standing": 10},
+ "lines": {
+  "done_title": "A DEBT PAID",
+  "done_line": "%d gold and %d health, and %s thinks better of you.",
+  "open_title": "%s WILL SEE YOU",
+  "open_line": "Two favours done. Its teleporter waits at the stairs.",
+  "way_label": "%s'S TELEPORTER",
+  "way_sub": "To %s, where its lord is. The stairs down are there too",
+  "say_hint": "TYPE IT · ENTER SAY IT · ESC NEVER MIND",
+  "said": "You say: \"%s\"",
+  "yes_sub": "Say you will",
+  "not_now": "NOT NOW",
+  "not_now_sub": "Back to the walk",
+  "leave": "LEAVE",
+  "farewell": "%s goes back to waiting.",
+  "nothing_left": "%s has nothing more to ask of you.",
+  "pay_sub": "It pays %d gold, and heals %d",
+  "taken_away": "%s goes with %s, and is out of your party.",
+  "stormed_off": "%s has heard enough, and storms off.",
+  "listening": "LISTENING"
+ },
+ "hall": {
+  "tag": "THE LORD",
+  "pays": {"gold": 8, "heal": 6, "standing": 24},
+  "met_title": "%s HAS SEEN YOU",
+  "met_line": "%d gold and %d health, and %s stands with you.",
+  "minion": "%s looks you over, and lets you by. Nobody here means you harm.",
+  "again": "%s has said its piece. The stairs are behind you.",
+  "out": "The stairs here go on down.",
+  "arrive": "The teleporter lets go of you in %s.",
+  "hear": "HEAR IT OUT",
+  "hear_sub": "What the lord of this clan has to say"
+ },
+ "clans": {
+  "burrow": {
+   "name": "DOLLOP",
+   "species": "slime",
+   "hall": {"name": "THE BURROW", "biome": "caves", "line": "Warm and damp, and every wall a drawing of a dragon."},
+   "lord_says": [
+    "There was a fire once. The dragons flew through it, and we lived behind them.",
+    "They never looked back. They don't know our names. We drew them anyway.",
+    "The little witch lights the walls so they can see. She is sorry about something. Ask her gently."
+   ],
+   "requests": [
+    {
+     "id": "burrow_ask", "kind": "ask_dragon", "sounds": "likes_slimes",
+     "label": "ASK A DRAGON", "sub": "In a fight with a dragon, ACT and SAY SOMETHING: ask it if it likes slimes",
+     "ask": "Go and ask a dragon if it likes us. Slimes. Ask nicely! *wobbles* We have to know.",
+     "wait": "Did you ask? A dragon? About us? *holds very still*",
+     "answer": "Why do slimes keep sending people to ask us?! They are desperate for attention...",
+     "done": "It said WHAT? ...It talked about us. *melts a little* It knows we exist."
+    },
+    {
+     "id": "burrow_bring", "kind": "bring", "species": "slime",
+     "label": "BRING A SLIME", "sub": "Win a slime over so it comes along, and bring it back here", "give": "HERE IS %s",
+     "ask": "Anyone can say they are nice. Bring me a slime who came with you because it wanted to.",
+     "wait": "No slime with you yet. We are easy to like! Try.",
+     "ready": "Is that %s? With you? On purpose?",
+     "done": "%s likes you. That is proof. Come on, home we go.",
+     "gone": "taken_away"
+    }
+   ]
+  },
+  "old_stone": {
+   "name": "SLATE",
+   "species": "rock",
+   "hall": {"name": "THE OLD STONE", "biome": "undercroft", "line": "Nothing moves here. It never needed to."},
+   "lord_says": [
+    "...we were here first. ...the halls are cut from us.",
+    "...when the halls fold, we fall. ...we never mean it.",
+    "...the walls are not ours. ...the walls are thieves. ...soft ones, who came alone."
+   ],
+   "requests": [
+    {
+     "id": "old_stone_heavy", "kind": "heavy_win",
+     "label": "WIN HEAVY", "sub": "Win a fight landing only HEAVY strikes, and never a light one",
+     "ask": "...win a fight using only heavy strikes. ...then you are heavy. ...and a brother of ours.",
+     "wait": "...not yet. ...light hands. ...I can tell.",
+     "done": "...only heavy strikes. ...so you are heavy. ...and a brother of ours."
+    },
+    {
+     "id": "old_stone_flat", "kind": "say", "sounds": "monotone",
+     "label": "SPEAK LIKE A ROCK", "sub": "Type something to it, as flat and monotone as you can",
+     "ask": "...speak to me. ...flat. ...like a rock in a wall. ...no ups. ...no downs.",
+     "wait": "...I am listening. ...flat. ...like a rock in a wall.",
+     "fail": "...too lively. ...a rock does not get excited. ...again.",
+     "done": "...flat. ...dull. ...beautiful. ...you sound like home."
+    }
+   ]
+  },
+  "crew": {
+   "name": "MAGPIE",
+   "species": "bandit",
+   "hall": {"name": "THE CREW'S DEN", "biome": "halls", "line": "Loot to the ceiling, and everyone keeps an eye on the ceiling."},
+   "lord_says": [
+    "We all came down for the gold, same as you. It was bait. For every one of us.",
+    "The ones who stop laughing end up in the wall. So we keep laughing, and we keep stealing.",
+    "And if a rock lands on you down here, don't take it personally. We do."
+   ],
+   "requests": [
+    {
+     "id": "crew_sport", "kind": "slay", "species": "snake", "count": 5,
+     "label": "BAG FIVE SNAKES", "sub": "Kill 5 snakes, on any floors",
+     "ask": "Sport's slow this season. Bag five snakes and you're one of us. Five. I'll be counting.",
+     "wait": "That's %d of %d. Keep at it.",
+     "done": "Five! Ha! Now that's a season. You're one of us."
+    },
+    {
+     "id": "crew_gold", "kind": "gold", "count": 50,
+     "label": "HAND OVER 50 GOLD", "sub": "Come back with 50 gold and give it up", "give": "HAND OVER %d GOLD",
+     "ask": "Fifty gold. Put it in my hand, and then we'll see what you are.",
+     "wait": "That's not fifty. Come back rich.",
+     "ready": "Is that fifty? I can hear it from here.",
+     "done": "If you have that much gold then you definitely stole it. There's no other way to be that rich in this life!"
+    }
+   ]
+  },
+  "coil": {
+   "name": "SISSEL",
+   "species": "snake",
+   "hall": {"name": "THE COIL", "biome": "caves", "line": "Quiet water, and a count scratched into every stone."},
+   "lord_says": [
+    "The Crew huntsss usss for sssport. We keep the count.",
+    "Vexalith built thisss place to catch the greedy. The Crew are only the onesss not yet caught.",
+    "The Door wantsss two. He never had a sssecond. Remember that when you meet him."
+   ],
+   "requests": [
+    {
+     "id": "coil_bring", "kind": "bring", "species": "bandit",
+     "label": "BRING A BANDIT", "sub": "Win a bandit over so it comes along, and bring it back here", "give": "HERE IS %s",
+     "ask": "Bring me one of the Crew. Alive, and walking with you. I have thingsss to sssay to it.",
+     "wait": "No bandit with you. I can wait. We are good at waiting.",
+     "ready": "Isss that %s? Hold it ssstill.",
+     "done": "Why do you keep hunting usssssss? Don't blame usss for biting your legsss. It'sss kind of fun.",
+     "gone": "stormed_off"
+    },
+    {
+     "id": "coil_hiss", "kind": "say", "sounds": "hiss",
+     "label": "HISS AT IT", "sub": "Type the longest, snakiest hiss you can",
+     "ask": "Hisss at me. Properly. The sssnakiest hisss you have. A short one isss an insssult.",
+     "wait": "I am waiting for a hisss. A long one.",
+     "fail": "Too ssshort. That wasss a leak, not a hisss. Again.",
+     "done": "Yesssssss. Now THAT isss a hisss."
+    }
+   ]
+  }
+ }
+}

@@ -11,7 +11,13 @@ const MERCY_Q := {"type": "noul", "instructions": "Would this monster accept mer
 const PRESSURE_Q := {"type": "score", "instructions": "How hard will this monster press the player with its next attack? 0 gentle, 3 relentless.", "criteria": ["gentle", "firm", "fierce", "relentless"]}
 const KNOWN_MAX := 64
 ## What each question asks, in the words the screen uses while it waits (and the mind card uses for the answer).
-const ASKS := {"words": "WHAT DID YOUR WORDS MEAN?", "feeling": "HOW DOES IT FEEL?", "mercy": "WILL IT ACCEPT MERCY?", "pressure": "HOW HARD WILL IT ATTACK?", "join": "DOES IT WANT TO COME ALONG?"}
+const ASKS := {"words": "WHAT DID YOUR WORDS MEAN?", "feeling": "HOW DOES IT FEEL?", "mercy": "WILL IT ACCEPT MERCY?", "pressure": "HOW HARD WILL IT ATTACK?", "join": "DOES IT WANT TO COME ALONG?", "sounds": "HOW DID THAT SOUND?"}
+## What Jev is asked about a typed line, for each thing a request listens for (rules/envoys.gd).
+const SOUNDS := {
+	"hiss": "Is `player_said` a long, drawn-out snake hiss (like \"hissssssssss\"), rather than a short hiss or ordinary words?",
+	"monotone": "Is `player_said` written in a flat, dull, monotone way, the way a rock in a wall would talk, with no excitement or emphasis?",
+	"likes_slimes": "Is `player_said` asking whether dragons (or this dragon) like slimes?",
+}
 
 
 ## A question still out: whoever asks the same thing meanwhile waits for this answer instead of asking again.
@@ -41,6 +47,13 @@ func read_words(text: String) -> Dictionary:
 	kinds["gibberish"] = "Typed nonsense, not words"
 	var a = await _choice({"player_said": text}, "Which kind of thing is `player_said`?", kinds, ASKS.words)
 	return a if a != null else await _fallback.read_words(text)
+
+
+func sounds_like(text: String, what: String) -> float:
+	if not SOUNDS.has(what):
+		return await _fallback.sounds_like(text, what)
+	var a := await _noul({"player_said": text}, str(SOUNDS[what]), ASKS.sounds)
+	return a if a >= 0.0 else await _fallback.sounds_like(text, what)
 
 
 func feeling_when_hit(m) -> Dictionary:

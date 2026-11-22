@@ -7,6 +7,9 @@
 # pilot plays by taking SPARE whenever the kin it was asked for is the foe (killing it would fail the favour). A lord met on
 # the first floor of a biome asks a second favour where that biome comes back; paying it swears the clan (and its lord joins),
 # so at least one of those is checked too: the pilot used to skip a name it already knew, which left the pact unplayed.
+# These are the stray asker's and the floor lord's favours, so the games are played with `no-clan-requests`: with the clans'
+# askers on (the default) those two stand on no floor, and the pilot steps past a clan's asker without taking its request
+# (`tools/features_test.gd` plays those, a request at a time).
 #   tools/favours_test.sh
 # GODOT points at the Godot binary (default: godot on PATH); OUT is where the log goes (default: the run_tests.sh one).
 set -euo pipefail
@@ -35,7 +38,7 @@ limit() {
 }
 
 for seed in 7 11 23 47; do
-	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$log" 2>&1 || code=1
+	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock no-clan-requests "seed=$seed" >>"$log" 2>&1 || code=1
 done
 reached=$(grep -cE '^autoplay: 1 of 1' "$log" || true)
 taken=$(grep -cE '^request: taken' "$log" || true)

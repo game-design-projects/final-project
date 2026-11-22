@@ -112,7 +112,7 @@ func _press_something(flow) -> void:
 			# food is listed first, then the party (to feed or butcher), and LEAVE last: it eats what there is, then gets up. Taking "1" with no
 			# food left would ask to butcher a friend, answer NO, and ask again for as long as the game lasts.
 			await flow.press("1" if str(s.menu[0].label).begins_with("EAT") else "cancel")
-		"trade":
+		"trade", "envoy", "envoy_say":
 			await flow.press("cancel")
 		"request":
 			# the first choice accepts the favour (or hands it over, or leaves when it has failed), so a whole game now asks,

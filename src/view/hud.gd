@@ -10,6 +10,7 @@ const Content = preload("res://src/rules/content.gd")
 const Experience = preload("res://src/rules/experience.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const ChoicePopup = preload("res://src/view/choice_popup.gd")
+const Transitions = preload("res://src/game/transitions.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Practice = preload("res://src/rules/practice.gd")
@@ -160,7 +161,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if not event is InputEventMouseButton or not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
 		return
-	if state.stage == "talk":
+	if state.stage in Transitions.TYPING:
 		if _say_button.has_point(event.position):
 			_submit(_talk.text)
 		return
@@ -187,7 +188,7 @@ func _set_hover(at: int) -> void:
 
 
 func _hover_at(at: Vector2) -> int:
-	if state.stage == "talk":
+	if state.stage in Transitions.TYPING:
 		return SAY_BUTTON if _say_button.has_point(at) else -1
 	var page := _page_at(at)
 	if page != -1:
@@ -240,7 +241,7 @@ func _page_at(at: Vector2) -> int:
 ## Where each command of the menu is, in the dock's own pixels.
 func command_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	if state == null or state.stage == "talk" or state.menu.is_empty() or ChoicePopup.deciding(state):
+	if state == null or state.stage in Transitions.TYPING or state.menu.is_empty() or ChoicePopup.deciding(state):
 		return out
 	var slot := Rect2(0, LOG_H + GAP, size.x, _slot_height())
 	var cols := mini(3, state.menu.size()) if _grid() else clampi(state.menu.size(), 1, 4)
@@ -305,6 +306,8 @@ func _header() -> void:
 		floor_name = Practice.line("header") + " "
 	elif state.testing:
 		floor_name = str(Content.table("floors").test_room.header) + " "
+	elif state.visiting != "": # a clan's hall is no floor of the count (rules/clan_hall.gd)
+		floor_name = str(Content.table("envoys").clans[state.visiting].hall.name) + " "
 	var spared: int = state.tally.spared
 	var slain: int = state.tally.slain
 	var route := "UNWRITTEN" if spared + slain == 0 else "%d SPARED · %d SLAIN" % [spared, slain]
@@ -463,7 +466,7 @@ func _dock() -> void:
 	if ChoicePopup.deciding(state): # the choices are over the picture: this keeps the lines before them, and the keys
 		_keys(Rect2(0, LOG_H + GAP, size.x, KEYS_H)) # right under the log, where nothing is between them
 		return
-	if state.stage == "talk":
+	if state.stage in Transitions.TYPING:
 		_talk_row(slot)
 	else:
 		_commands(slot)

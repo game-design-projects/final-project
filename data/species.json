@@ -140,17 +140,14 @@
     "*shakes* {kin}... you hurt {kin}. {kin} was bro.",
     "No more {kin}. Why? *quivers, hot*"
    ],
-   "side_spared": [
-    "*blinks* The stones say you let {kin} go. Good?",
+   "friend_spared": [
+    "*blinks* The walls say you let {kin} go. Good?",
     "Heard! Heard about {kin}! *bounces*"
    ],
-   "side_slain": [
+   "friend_slain": [
     "*shrinks back* {kin} is gone. The floor told us.",
+    "*trembles* You hurt {kin}. We drew {kin} once. On the wall.",
     "*trembles* You hurt {kin}. The whole floor felt it."
-   ],
-   "rival_slain": [
-    "*blorp!* {kin} was mean to us. Now {kin} is quiet.",
-    "*bounces in place* You got {kin}! We... we like that."
    ]
   },
   "reactions": {
@@ -316,17 +313,13 @@
     "Hey! You killed {kin}! That's my dad, you know!",
     "{kin} owed me money. Now you owe me."
    ],
-   "side_spared": [
-    "The snakes talk. You let {kin} walk, they say. Good for trade.",
-    "Heard about {kin}. Sparing's good for business."
-   ],
-   "side_slain": [
-    "You did {kin} in, I hear. Bad for business. Very bad for yours.",
-    "{kin} had a deal with us. You broke it."
-   ],
    "rival_slain": [
-    "So {kin} is dead. Ha! Best thing I've heard all week.",
-    "{kin} had it coming, and then some. You're alright."
+    "Ha! {kin}'s done? Saves us the trouble. You're all right.",
+    "Heard you got {kin}. Good riddance. Drinks are on you, though."
+   ],
+   "rival_kept": [
+    "You're walking around with {kin}? I don't trust your taste.",
+    "{kin} follows you now? Keep it away from my boots."
    ]
   },
   "reactions": {
@@ -493,17 +486,21 @@
     "You ssslew {kin}. I have been waiting to meet you.",
     "{kin}'sss nest is cold now. Whossse doing?"
    ],
-   "side_spared": [
-    "The Crew whispersss you let {kin} go. Interesssting.",
+   "friend_spared": [
+    "The Burrow whispersss you let {kin} go. Interesssting.",
     "Mercy for {kin}? Ssso you can bargain."
    ],
-   "side_slain": [
-    "{kin} was usssseful to usss. Was.",
+   "friend_slain": [
+    "{kin} was sssoft, and oursss to look after. Was.",
     "Word travelsss fassst. {kin} is dead, and here you are."
    ],
    "rival_slain": [
-    "{kin}'sss end is... convenient. Ssso. Thank you.",
-    "You sssoft things have your ussses. {kin} is gone. Good."
+    "{kin} hunted usss for ssport. You ended that. Ssspeak.",
+    "One lesss of the Crew. {kin} will not be misssed."
+   ],
+   "rival_kept": [
+    "You keep {kin} at your ssside? A hunter. Near usss.",
+    "{kin} walksss with you. We count that againssst you."
    ]
   },
   "reactions": {
@@ -669,17 +666,13 @@
     "...{kin} stood here an age. You ended that.",
     "...{kin}. Broken. ...I will not forget."
    ],
-   "side_spared": [
-    "...the small ones say you spared {kin}.",
-    "...{kin} lives. The floor hums with it."
-   ],
-   "side_slain": [
-    "...{kin} is gone. The floor told me.",
-    "...the small ones weep for {kin}. I hear them."
-   ],
    "rival_slain": [
-    "...{kin} troubled the floor. No longer. ...good.",
-    "...the loud ones are fewer. {kin}. ...acceptable."
+    "...{kin} is gone. Too soft to last. ...good.",
+    "...one less soft thing. {kin}. ...the floor is firmer."
+   ],
+   "rival_kept": [
+    "...you carry {kin} about. ...soft company.",
+    "...{kin} follows you. ...it will make you soft."
    ]
   },
   "reactions": {
@@ -842,13 +835,21 @@
     "You slew {kin}. Do you know whose blood that was?",
     "{kin} was mine. Kneel, or burn."
    ],
-   "side_spared": [
+   "friend_spared": [
     "A little bird says you spared {kin}. Are you soft, or wise?",
     "So you let {kin} live. Word reaches me in everything."
    ],
-   "side_slain": [
+   "friend_slain": [
     "I hear {kin} fell by your hand. Bold.",
     "{kin}'s end reached me before you did."
+   ],
+   "rival_slain": [
+    "{kin} was a thief, and you ended it. Perhaps you are useful.",
+    "One thief fewer. {kin} will not be mourned here."
+   ],
+   "rival_kept": [
+    "You keep {kin}, a thief, at your heel. Like finds like.",
+    "{kin} walks with you? Then count your gold. I shall count mine."
    ]
   },
   "reactions": {

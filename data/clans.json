@@ -1,8 +1,16 @@
 {
  "deeds": {"spared": 14, "recruited": 8, "slain": -18},
  "champion_weight": 1.5,
- "spill": 0.5,
- "rivalry": 0.5,
+ "feelings": {
+  "likes": {"spared": 0.5, "recruited": 0.5, "slain": 0.5},
+  "dislikes": {"spared": 0.0, "recruited": -0.75, "slain": -0.5},
+  "ignores": {"spared": 0.0, "recruited": 0.0, "slain": 0.0}
+ },
+ "felt": {
+  "glad": "%s likes that you %s %s: %s.",
+  "sore": "%s dislikes that you %s %s: %s.",
+  "deeds": {"spared": "spared", "recruited": "took in", "slain": "killed"}
+ },
  "mood": {"friendliness": 0.5, "anger": -0.4},
  "friendly_at": 14,
  "hostility": [
@@ -11,7 +19,6 @@
   {"id": "enraged", "at": -72, "title": "ENRAGED", "effect": "None of its own will take mercy now.", "line": "%s is enraged: none of its own will take mercy now."}
  ],
  "calmer": {"title": "%s COOLS", "effect": "Now %s, no longer %s.", "line": "%s has cooled to %s."},
- "pleased": "%s is pleased: %s is dead.",
  "elite": {
   "from": "furious",
   "hp_scale": 1.25,
@@ -33,10 +40,24 @@
   "cut": "%s is enraged: no price will do."
  },
  "clans": {
-  "burrow": {"name": "The Burrow", "side": "under", "species": ["slime"]},
-  "old_stone": {"name": "The Old Stone", "side": "under", "species": ["rock"]},
-  "crew": {"name": "The Crew", "side": "takers", "species": ["bandit"]},
-  "coil": {"name": "The Coil", "side": "takers", "species": ["snake"]},
-  "hoard": {"name": "The Hoard", "side": "", "hears_all": 0.25, "species": ["dragon"]}
+  "burrow": {"name": "The Burrow", "species": ["slime"], "feels": {
+   "hoard": {"how": "likes", "why": "it adores the dragons"},
+   "coil": {"how": "likes", "why": "the Coil shares the Wet Caves with it"}
+  }},
+  "old_stone": {"name": "The Old Stone", "species": ["rock"], "feels": {
+   "burrow": {"how": "dislikes", "why": "slimes are too soft"}
+  }},
+  "crew": {"name": "The Crew", "species": ["bandit"], "feels": {
+   "coil": {"how": "dislikes", "why": "it hunts snakes for sport"},
+   "old_stone": {"how": "dislikes", "why": "rocks keep falling on it"}
+  }},
+  "coil": {"name": "The Coil", "species": ["snake"], "feels": {
+   "burrow": {"how": "likes", "why": "the Burrow shares the Wet Caves with it"},
+   "crew": {"how": "dislikes", "why": "the Crew hunts it for sport"}
+  }},
+  "hoard": {"name": "The Hoard", "hears_all": 0.25, "species": ["dragon"], "feels": {
+   "crew": {"how": "dislikes", "why": "bandits are thieves"},
+   "burrow": {"how": "ignores", "why": "it has never noticed the slimes"}
+  }}
  }
 }

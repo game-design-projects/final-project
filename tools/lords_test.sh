@@ -8,6 +8,9 @@
 # second favour, which is why a favour check alone could not see the path.
 #   tools/lords_test.sh
 # GODOT points at the Godot binary (default: godot on PATH); OUT is where the log goes (default: the run_tests.sh one).
+# The lord on its floor is what `no-clan-requests` plays: with the clans' askers on (the default) a lord stands in its clan's
+# hall, behind two requests the pilot does not take, and on no floor of the run. So these games switch the askers off, as
+# tools/favours_test.sh does; tools/features_test.gd walks to a lord in its hall.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 GODOT=${GODOT:-godot}
@@ -33,7 +36,7 @@ limit() {
 
 SEEDS=(1 2 3 4 5)
 for seed in "${SEEDS[@]}"; do
-	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound "seed=$seed" >>"$log" 2>&1 || code=1
+	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound no-clan-requests "seed=$seed" >>"$log" 2>&1 || code=1
 done
 reached=$(grep -cE '^autoplay: seed [0-9]+ reached the last stairs' "$log" || true)
 # per game: the summary line says how many lords it met and how many clans swore to it

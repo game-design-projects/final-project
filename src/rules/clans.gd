@@ -1,11 +1,17 @@
-## Who stands with whom, and what the run has done to them. Every kind of monster belongs to a clan (data/clans.json); what you
-## do to one changes how its clan, less so the clans on its side, and a little the dragon's hoard, think of you, and a kill of it
-## pleases the clans on the other side, which are glad of what hurts their rivals (#165). A monster hears of it when it meets
-## you: it starts in a different mood, and says so. No rolls here: the same deeds always mean the same.
+## Who feels what about whom, and what the run has done to them. Every kind of monster belongs to a clan (data/clans.json); what
+## you do to one changes how its clan thinks of you, and how the clans with a feeling about it do: one that likes it takes your
+## deed as its own clan does, by half; one that dislikes it is glad of a killing and sore when you take one in. The dragon's hoard
+## hears a little of everything. A monster hears of it when it meets you: it starts in a different mood, and says so. No rolls
+## here: the same deeds always mean the same.
+##
+## The feelings (the owner's lore): the Old Stone dislikes the Burrow, which is too soft; the Burrow adores the Hoard, which once
+## saved it from a fire and never noticed, and is friends with the Coil, who share the Wet Caves; the Crew hunts the Coil for
+## sport, and the Coil wants that paid back; the Crew dislikes the Old Stone, whose rocks keep falling on it; the Hoard hates the
+## Crew, who are thieves.
 ##
 ## Killing climbs a clan's hostility (`hostility`): angry, then furious (two of its own dead, nothing made up for it: the floors
 ## made after that send its elites), then enraged (four: none of its own will take mercy). Its standing is the one number behind
-## all of it, so sparing its side or doing one of its kind a favour brings it back down.
+## all of it, so sparing its own or its friends, or doing one of its kind a favour, brings it back down.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -38,41 +44,55 @@ static func is_clan(clan: String) -> bool:
 	return _table().clans.has(clan)
 
 
-## The other clans on this clan's side.
-static func side_of(clan: String) -> Array:
-	var clans: Dictionary = _table().clans
-	var side: String = clans[clan].side
-	if side == "":
-		return []
-	return clans.keys().filter(func(c): return c != clan and clans[c].side == side)
+## How `clan` feels about `about`: "likes", "dislikes", "ignores", or "" when it has no feeling of its own.
+static func feeling(clan: String, about: String) -> String:
+	return str(_table().clans[clan].get("feels", {}).get(about, {}).get("how", ""))
 
 
-## How much of what is done to `from` reaches `to`: all of it within a clan, some across a side, and what the clan hears of everything.
-## A kill reaches a rival clan (a clan on another side) with the opposite sign and half the weight, since it is glad of it (#165);
-## only a kill is asked with a `deed`, so a mercy reaches nobody across the sides.
-static func reach(from: String, to: String, deed := "") -> float:
+## Why `clan` feels as it does about `about`, in a few words that end a sentence ("slimes are too soft"), or "".
+static func why(clan: String, about: String) -> String:
+	return str(_table().clans[clan].get("feels", {}).get(about, {}).get("why", ""))
+
+
+## The clans `clan` feels this way about ("likes", "dislikes").
+static func felt_by(clan: String, how: String) -> Array:
+	return _table().clans.keys().filter(func(c): return feeling(clan, c) == how)
+
+
+## The clans that feel this way about `about`.
+static func who_feels(how: String, about: String) -> Array:
+	return _table().clans.keys().filter(func(c): return feeling(c, about) == how)
+
+
+## How much of a deed done to `from` reaches `to`, and which way: all of it within a clan; by its feeling where it has one (a
+## friend's share, or a rival's, which is negative: glad of what hurts the other); else what the clan hears of everything.
+static func reach(from: String, to: String, deed: String) -> float:
 	if from == to:
 		return 1.0
-	if side_of(from).has(to):
-		return float(_table().spill)
-	if deed == "slain" and rivals(from).has(to):
-		return -float(_table().rivalry)
+	var how := feeling(to, from)
+	if how != "":
+		return float(_table().feelings[how][deed])
 	return float(_table().clans[to].get("hears_all", 0.0))
 
 
-## The clans on another side of this one, which are pleased by what hurts it. The Hoard has no side: it is nobody's rival, and
-## has none of its own.
-static func rivals(clan: String) -> Array:
-	var clans: Dictionary = _table().clans
-	var side: String = clans[clan].side
-	if side == "":
-		return []
-	return clans.keys().filter(func(c): return str(clans[c].side) != "" and str(clans[c].side) != side)
-
-
-## The words of a clan pleased by a kill, when it first crosses above nothing: {clan, dead}.
-static func pleased() -> String:
-	return str(_table().pleased)
+## What the other clans make of a deed ("spared", "recruited", "slain") done to one of `species`, for the log: [{clan, glad,
+## text}], only the clans with a feeling about its clan that this deed moves, the sore ones first.
+static func felt(species: String, deed: String) -> Array:
+	var from := of(species)
+	var out := []
+	if from == "":
+		return out
+	var words: Dictionary = _table().felt
+	for clan in _table().clans:
+		if clan == from or feeling(clan, from) == "":
+			continue
+		var part: float = float(_table().deeds[deed]) * reach(from, clan, deed)
+		if part == 0.0:
+			continue
+		var glad := part > 0.0
+		out.append({"clan": clan, "glad": glad, "text": str(words.glad if glad else words.sore) % [title(clan), str(words.deeds[deed]), "a %s" % species, why(clan, from)]})
+	out.sort_custom(func(a, b): return not a.glad and b.glad)
+	return out
 
 
 ## Write a deed into the run: "spared", "slain" or "recruited" against monster `m`. Returns how it moved the clans' hostility,
@@ -92,15 +112,16 @@ static func record(state, m, deed: String) -> Array:
 
 
 ## A kindness to this kind of monster that isn't a deed in a fight: it moves opinions, and nobody tells the tale. Returns how it
-## moved the clans' hostility, as `record` does.
+## moved the clans' hostility, as `record` does. The other clans take a kindness as a sparing and a wrong (`worth` under 0) as a
+## killing.
 static func favour(state, species: String, worth: float) -> Array:
 	var from := of(species)
 	if from == "":
 		return []
-	return _spread(state, from, worth)
+	return _spread(state, from, worth, "spared" if worth >= 0.0 else "slain")
 
 
-static func _spread(state, from: String, worth: float, deed := "") -> Array:
+static func _spread(state, from: String, worth: float, deed: String) -> Array:
 	var moved := []
 	for clan in _table().clans:
 		var part: float = worth * reach(from, clan, deed)
@@ -227,21 +248,29 @@ static func hear(m, state) -> Dictionary:
 	for k in now:
 		m.meters[k] = clampf(float(m.meters.get(k, 0.0)) + now[k] - was[k], 0.0, 100.0)
 	m.heard = {"clan": clan, "standing": standing, "deed": deed.deed, "who": deed.who, "heard": _retell(state.deeds, clan)}
-	var bad: bool = deed.deed == "slain"
-	var kin: bool = deed.clan == clan
-	var rival: bool = not kin and bad and rivals(deed.clan).has(clan)
 	var news := {
 		"clan": clan, "deed": deed.deed, "who": deed.who, "tone": "good" if standing > before else "bad",
-		"kind": "rival_slain" if rival else ("kin_" if kin else "side_") + ("slain" if bad else "spared"),
+		"kind": _news_kind(clan, deed),
 	}
 	print("clans: %s heard %s %s; friendliness %.0f, anger %.0f" % [m.name, deed.deed, deed.who, m.meters.friendliness, m.meters.anger])
 	return news
 
 
-## The deed a clan talks about: its own last one if it has one, or else the newest it heard of with the sign its opinion moved in —
-## a kill on the other side is heard with the opposite sign, so a deed of its own side is not the news when the clan is gladder of
-## you — and, when nothing it heard has that sign, the newest it heard of, so a favour, which tells no tale, still leaves it one to
-## tell (#165).
+## Which of its lines a monster of `clan` says about a deed (data/species.json `lines`): about its own kin, about a clan it
+## dislikes ("rival_slain", glad; "rival_kept", sore that you took one in), or about anyone else it hears of.
+static func _news_kind(clan: String, deed: Dictionary) -> String:
+	var bad: bool = deed.deed == "slain"
+	if deed.clan == clan:
+		return "kin_slain" if bad else "kin_spared"
+	if feeling(clan, deed.clan) == "dislikes":
+		return "rival_slain" if bad else "rival_kept"
+	return "friend_slain" if bad else "friend_spared"
+
+
+## The deed a clan talks about: its own last one if it has one, or else the newest it heard of with the sign its opinion moved in
+## — a clan that is glad of a kill of a clan it dislikes hears it with a plus, so a deed of its own is not the news when it is
+## gladder of you — and, when nothing it heard has that sign, the newest it heard of, so a favour, which tells no tale, still
+## leaves it one to tell (#165).
 static func _latest(deeds: Array, clan: String, rose: bool) -> Dictionary:
 	var heard := {}
 	var newest := {}
@@ -263,8 +292,11 @@ static func _latest(deeds: Array, clan: String, rose: bool) -> Dictionary:
 static func _retell(deeds: Array, clan: String) -> Array:
 	var out := []
 	for deed in deeds:
-		if reach(deed.clan, clan, str(deed.deed)) != 0.0:
+		if reach(deed.clan, clan, deed.deed) != 0.0:
 			var whose := "one of its own" if deed.clan == clan else "of %s" % title(deed.clan)
+			var how := feeling(clan, deed.clan)
+			if how == "likes" or how == "dislikes":
+				whose += ", which its clan %s because %s" % [how, why(clan, deed.clan)]
 			var did := "killed" if deed.deed == "slain" else str(deed.deed)
 			out.append("the player %s %s the %s, %s" % [did, deed.who, deed.species, whose])
 	return out.slice(-HEARD_SHOWN)
@@ -272,5 +304,5 @@ static func _retell(deeds: Array, clan: String) -> Array:
 
 ## One line for the banner and the card: what was heard, and how the monster took it.
 static func news(heard: Dictionary) -> String:
-	var did: String = "killed" if heard.deed == "slain" else "spared"
+	var did: String = str(_table().felt.deeds.get(heard.deed, "spared"))
 	return "%s heard you %s %s. It starts %s." % [title(heard.clan), did, heard.who, "friendlier" if heard.tone == "good" else "angrier"]

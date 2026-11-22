@@ -28,6 +28,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 const SecretProps = preload("res://src/view/secret_props.gd")
 const Requests = preload("res://src/rules/requests.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Vision = preload("res://src/rules/vision.gd")
 
@@ -109,6 +110,7 @@ var _trader: Node3D
 var _trader_tag: Label3D
 var _quester: Node3D
 var _quester_tag: Label3D
+var _envoys: Array = [] # [{node, tag, cell}]: the clans' askers on this floor, or the lord in its hall (rules/envoys.gd)
 var _stirs := {} # Monster -> Node3D, what you see of it while it lurks
 var _pos := Vector3.ZERO
 var _yaw := 0.0
@@ -351,9 +353,20 @@ func _build_trader() -> void:
 		_trader_tag = _name_tag("TRADER", Palette.MERCY, _top_of(_trader))
 		_trader.add_child(_trader_tag)
 	if not _floor_map.quester.is_empty():
-		_quester = _figure(_floor_map.quester.species, Palette.YOU, _floor_map.quester.cell)
+		var asks: Dictionary = _floor_map.quester
+		_quester = _figure(Sprites.lord_look(str(asks.species)) if str(asks.get("lord", "")) != "" else str(asks.species), Palette.YOU, asks.cell)
 		_quester_tag = _name_tag(str(Requests.table().tag), Palette.YOU, _top_of(_quester))
 		_quester.add_child(_quester_tag)
+	for old in _envoys:
+		old.node.queue_free()
+	_envoys = []
+	for e in _floor_map.envoys:
+		var lord: bool = e.get("lord", false)
+		var color: Color = Palette.MERCY if lord else Palette.YOU
+		var node := _figure(Sprites.lord_look(str(e.species)) if lord else str(e.species), color, e.cell)
+		var tag := _name_tag(str(Envoys.table().hall.tag if lord else Envoys.table().tag), color, _top_of(node))
+		node.add_child(tag)
+		_envoys.append({"node": node, "tag": tag, "cell": e.cell})
 
 
 func _figure(look: String, color: Color, cell: Vector2i) -> Node3D:
@@ -500,6 +513,8 @@ func _show_monsters(state, now: float, dt: float) -> void:
 	_drop_the_replaced(state.floor_map)
 	if _trader != null:
 		_show_figure(_trader, _trader_tag, state.floor_map, state.floor_map.merchant.cell, now)
+	for e in _envoys:
+		_show_figure(e.node, e.tag, state.floor_map, e.cell, now)
 	if _quester != null:
 		_quester.visible = not state.floor_map.quester.is_empty()
 		if _quester.visible:

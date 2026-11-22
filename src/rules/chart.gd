@@ -53,7 +53,7 @@ static func open(s) -> bool:
 ## Whether this floor may still be charted at all, before asking how much of it is seen (`share` walks every cell of the floor,
 ## and the two below are asked on every step: they count it once).
 static func _unspent(s) -> bool:
-	return s.floor_map != null and not s.practice and not s.testing and s.charted.is_empty()
+	return s.floor_map != null and not s.practice and not s.testing and s.visiting == "" and s.charted.is_empty()
 
 
 ## Whether your instinct fills in the rest now.

@@ -15,22 +15,49 @@
   "crew": {
    "name": "SIRRA",
    "title": "LORD OF THE CREW",
-   "kind": "rid"
+   "kind": "rid",
+   "hunts": ["snake", "rock"],
+   "says": {
+    "ask": "%s is on my floor. If it's a snake, that's sport. If it's a rock, it fell on one of mine. Out.",
+    "wait": "%s is still out there. My people are watching the ceiling.",
+    "ready": "%s is gone? Ha. And nothing fell on anyone.",
+    "thanks": "The Crew pays its debts. It's what keeps us out of the walls."
+   }
   },
   "old_stone": {
    "name": "BEDROCK",
    "title": "LORD OF THE OLD STONE",
-   "kind": "fetch"
+   "kind": "fetch",
+   "says": {
+    "ask": "...I want %s. ...it is on this floor. ...I do not move. You do.",
+    "wait": "...no %s. ...I have waited longer for less.",
+    "ready": "...that is %s. ...put it down. ...gently. Not soft. Gently.",
+    "thanks": "...good. ...hard work, done hard. ...take this."
+   }
   },
   "burrow": {
    "name": "MOTHER GLOOP",
    "title": "LORD OF THE BURROW",
-   "kind": "spare"
+   "kind": "spare",
+   "says": {
+    "ask": "%s is one of my little ones, and far too brave. Don't pop them. Please.",
+    "wait": "Is %s still wobbling? Keep them wobbling.",
+    "ready": "%s came home, whole. I felt it through the floor.",
+    "failed": "You popped %s. I asked so nicely. Go away.",
+    "thanks": "You could have. You didn't. The dragons would be proud. Take this."
+   }
   },
   "coil": {
    "name": "THE COILED ONE",
    "title": "LORD OF THE COIL",
-   "kind": "rid"
+   "kind": "rid",
+   "hunts": ["bandit"],
+   "says": {
+    "ask": "%s huntsss my kind for sssport. End the hunt. I will not asssk how.",
+    "wait": "%s ssstill walksss. We are patient. Not endlessssly.",
+    "ready": "%s is gone. The count is one ssshorter.",
+    "thanks": "The Coil remembersss a debt both waysss. Take thisss."
+   }
   }
  },
  "pays": {

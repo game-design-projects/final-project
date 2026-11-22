@@ -5,6 +5,7 @@ extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
 const Items = preload("res://src/rules/items.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Requests = preload("res://src/rules/requests.gd")
 
 const GRID_MAX := 64 # the biggest floor a save may describe (the biomes' largest is 55)
@@ -87,6 +88,9 @@ static func _floor_problem(f) -> String:
 	if f.has("lore") and not f.lore.is_empty():
 		if not is_cell(f.lore.get("cell")) or not is_open(f, cell(f.lore.cell)) or not is_num(f.lore.get("side")) or to_int(f.lore.side) < 0 or to_int(f.lore.side) > 3 or not f.lore.get("read", false) is bool:
 			return "the floor's writing is not on a side of an open cell"
+	if f.has("envoys"):
+		if not f.envoys is Array or f.envoys.any(func(e): return not e is Dictionary or not is_cell(e.get("cell")) or not is_open(f, cell(e.cell)) or not Envoys.is_clan(str(e.get("clan", ""))) or not e.get("name") is String or not Content.table("species").has(str(e.get("species", ""))) or not e.get("lord", false) is bool or not e.get("title", "") is String):
+			return "the floor's askers are not ones of the clans, on open cells"
 	if f.has("quester") and not f.quester is Dictionary:
 		return "the floor's request is not a record"
 	if f.has("quester") and not f.quester.is_empty():

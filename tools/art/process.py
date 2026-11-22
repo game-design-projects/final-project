@@ -5,8 +5,9 @@
 # ///
 """Turns the sheets Codex drew (tools/art/source/, white lines on black) into what the game loads.
 
-Two kinds of sheet, both listed in sheets.json. A figure is continuous animation: <name>.set1.png and <name>.set2.png, each row one action
-in equal cells. Anything else is one <name>.png of separate drawings. For each: cut it into cells (every stroke goes to the cell its
+Three kinds of sheet, all listed in sheets.json. A figure is continuous animation: <name>.set1.png and <name>.set2.png, each row one action
+in equal cells. A still is a figure made from one drawing, a cell of another sheet: its idle is bent out of that drawing here (a clan's
+lord). Anything else is one <name>.png of separate drawings. For each: cut it into cells (every stroke goes to the cell its
 middle is nearest), line the frames up on the feet, work out a silhouette so the inside of a body hides what is behind it, and write
   assets/art/<name>.png        the atlas: L the line (white on black inside a body), A the silhouette
   data/sprites.json            where each frame is, where the feet are, how big it stands in the world, how each action plays
@@ -34,6 +35,7 @@ META = ROOT / "data" / "sprites.json"
 
 LINE_AT = 0.28  # a pixel this bright is part of a stroke
 GAP_CLOSE = 3  # strokes closer than this many source pixels count as joined when working out what a body encloses
+FILL_WIDER_THAN = 26  # a solid shape wider than this many source pixels is a fill, not a stroke or an eye (process_still)
 PAD = 12  # empty pixels between atlas cells, so mipmaps of one frame don't bleed into the next
 
 
@@ -146,6 +148,11 @@ def process_figure(name: str, spec: dict) -> dict:
                 # `pin` holds the feet still frame by frame on each axis named; otherwise a frame stays where it was drawn against the row's first
                 f["feet"] = (f["centre"] if "x" in rule.get("pin", "") else shots[0]["centre"] + c * cell_w, f["bottom"] if "y" in rule.get("pin", "") else shots[0]["bottom"])
             rows.append((anim, rule, shots))
+    return figure_atlas(name, spec, rows)
+
+
+def figure_atlas(name: str, spec: dict, rows: list) -> dict:
+    """Every frame of every action in `rows` on one canvas with the same feet: the atlas, its reels and what the game needs to know."""
     all_shots = [f for _, _, shots in rows for f in shots]
     left = max(f["feet"][0] - f["box"][0] for f in all_shots)
     right = max(f["box"][2] - f["feet"][0] for f in all_shots)
@@ -192,6 +199,81 @@ def process_figure(name: str, spec: dict) -> dict:
         "world_h": spec.get("world_h", 1.0),
         "anims": anims,
     }
+
+
+def soft_rect(shape: tuple, rect: list, feather: float) -> np.ndarray:
+    """1 inside rect (x, y, w, h), fading to 0 over about `feather` pixels, so a part that moves pulls its surroundings with it."""
+    x, y, w, h = rect
+    mask = np.zeros(shape, dtype=np.float32)
+    mask[max(0, y) : y + h, max(0, x) : x + w] = 1.0
+    return ndi.gaussian_filter(mask, feather / 2.0) if feather > 0 else mask
+
+
+def still_pose(cell: np.ndarray, spec: dict, breath: float, blink: float) -> np.ndarray:
+    """One drawing bent into a moment of its idle: `breath` 0..1 through a breath in, `blink` 0..1 through a blink.
+
+    A figure with drawn animation has a drawing for every frame; a lord has one. So the frames are made here: the whole body rises
+    off its feet as it breathes in, and each entry of `moves` shifts a part of it with the breath:
+      bob    the part rises (negative) or sinks by this many pixels: a crown, a pebble hanging in the air
+      sway   its bottom swings this many pixels sideways and its top stays: a beard
+      lean   its top swings and its bottom stays: a pile of jelly
+      pump   it widens by this share about its own middle: a chest
+      grow   it swells by this share about its own middle: a sparkle
+    A blink squashes each of `eyes` flat, and lifts each of `brows` by its `bob`, for a face with no eyes to shut."""
+    h, w = cell.shape
+    ys, xs = np.nonzero(cell > LINE_AT)
+    feet_y, mid_x = float(ys.max()), (xs.min() + xs.max()) / 2.0
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    rise = spec.get("breath", 0.025) * breath
+    dy = -(feet_y - yy) * rise
+    dx = -(xx - mid_x) * rise * 0.4
+    for m in spec.get("moves", []):
+        x, y, rw, rh = m["rect"]
+        mask = soft_rect(cell.shape, m["rect"], m.get("feather", 12.0)) * breath
+        dy += mask * m.get("bob", 0.0)
+        dx += mask * m.get("sway", 0.0) * np.clip((yy - y) / rh, 0.0, 1.0)
+        dx += mask * m.get("lean", 0.0) * np.clip((y + rh - yy) / rh, 0.0, 1.0)
+        dx += mask * (xx - (x + rw / 2.0)) * (m.get("pump", 0.0) + m.get("grow", 0.0))
+        dy += mask * (yy - (y + rh / 2.0)) * m.get("grow", 0.0)
+    for m in spec.get("brows", []):
+        dy += soft_rect(cell.shape, m["rect"], m.get("feather", 8.0)) * m["bob"] * blink
+    out = ndi.map_coordinates(cell, [yy - dy, xx - dx], order=1, mode="constant", cval=0.0)
+    if blink > 0.0:
+        keep = 1.0 - 0.85 * blink  # how much of its height an eye keeps
+        for x, y, rw, rh in spec.get("eyes", []):
+            eye = out[y : y + rh, x : x + rw]
+            rows = np.clip((np.arange(rh) - (rh - 1) / 2.0) / keep + (rh - 1) / 2.0, 0, rh - 1)
+            out[y : y + rh, x : x + rw] = ndi.map_coordinates(eye, np.meshgrid(rows, np.arange(rw), indexing="ij"), order=1, mode="nearest")
+    return np.clip(out, 0.0, 1.0)
+
+
+def process_still(name: str, spec: dict) -> dict:
+    """A figure made from one drawing (a cell of another sheet): its idle, breathing and blinking, bent out of that drawing."""
+    of = spec["still"]
+    cell = cut_cells(load_gray(SOURCE / f"{of['sheet']}.png"), of["cols"], of["rows"])[of["cell"]]
+    if cell.max() <= LINE_AT:
+        raise SystemExit(f"{name}: cell {of['cell'] + 1} of {of['sheet']}.png is empty")
+    if "fill" in spec:
+        # a filled-in shape (a beard, a pale belly) is a big bright patch, and the game's glow turns it into a lamp: it keeps a
+        # bright rim and its inside is dimmed. Eyes and other small solid marks are too narrow to count.
+        r = FILL_WIDER_THAN // 2
+        yy, xx = np.ogrid[-r : r + 1, -r : r + 1]
+        wide = ndi.binary_opening(cell > 0.5, xx * xx + yy * yy <= r * r)
+        inside = ndi.gaussian_filter(ndi.binary_erosion(wide, iterations=4).astype(np.float32), 1.5)
+        cell = cell * (1.0 - inside * (1.0 - spec["fill"]))
+    shots = []
+    for breath, blink in [(0.0, 0.0), (0.5, 0.0), (1.0, 0.0), (0.5, 0.0), (0.0, 0.5), (0.0, 1.0)]:  # in, in, held, out, and a blink
+        frame = still_pose(cell, spec, breath, blink)
+        ys, xs = np.nonzero(frame > 0.08)
+        shots.append({"cell": frame, "closed": silhouette(frame), "box": (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)})
+    ys, xs = np.nonzero(cell > LINE_AT)
+    rest = {"centre": (xs.min() + xs.max() + 1) / 2.0, "bottom": float(ys.max() + 1), "top": float(ys.min())}
+    for f in shots:  # the whole drawing is the body, and it stays on the feet it was drawn on
+        f.update(rest)
+        f["feet"] = (rest["centre"], rest["bottom"])
+    share = float(shots[0]["closed"].sum()) / float(max(1, (xs.max() - xs.min()) * (ys.max() - ys.min())))
+    print(f"  {name}: from cell {of['cell'] + 1} of {of['sheet']}.png, {xs.max() - xs.min()}x{ys.max() - ys.min()}, encloses {share:.0%}")
+    return figure_atlas(name, spec, [("idle", spec["anims"]["idle"], shots)])
 
 
 def gif_frame(shot: np.ndarray, tint: np.ndarray) -> Image.Image:
@@ -328,6 +410,9 @@ def main() -> None:
         print(name)
         if spec.get("figure"):
             meta[name] = process_figure(name, {**figure, **spec})
+            continue
+        if spec.get("still"):
+            meta[name] = process_still(name, {**figure, **spec})
             continue
         if not (SOURCE / f"{name}.png").exists():
             print(f"  skipped: no {SOURCE.relative_to(ROOT)}/{name}.png")

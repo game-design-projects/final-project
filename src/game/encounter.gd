@@ -6,6 +6,8 @@ const Ally = preload("res://src/game/ally.gd")
 const Allies = preload("res://src/rules/allies.gd")
 const Chart = preload("res://src/rules/chart.gd")
 const Clans = preload("res://src/rules/clans.gd")
+const Envoy = preload("res://src/game/stages/envoy.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const Experience = preload("res://src/rules/experience.gd")
@@ -72,7 +74,10 @@ func greeting(m):
 	flow.event("mood", {"tone": news.tone})
 	if not flow.banner_up():
 		flow.announce("WORD HAS SPREAD", Clans.news(news))
-	return memory if memory != null else foe_line(m, news.kind, news.who)
+	if memory != null:
+		return memory
+	var said = foe_line(m, news.kind, news.who)
+	return said if said != null else foe_line(m, "converse")
 
 
 ## Whether it was begging when you struck: the odds as the gauge last showed them, not asked again, so a blow that ends the
@@ -258,7 +263,6 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	if how == "slain" and blessed: # a kill the party was glad of: the halls do not hold it against you (rules/warmth.gd)
 		s.tally.blessed += 1
 	flow.event(how, {"boss": m.boss})
-	var other_side: Dictionary = _rivals_standing(m, how) # before the deed is written, so a clan crossing above nothing can be named
 	var moved := Clans.record(s, m, how)
 	if m.boss:
 		_reward_for_champion(m)
@@ -268,17 +272,43 @@ func defeat(m, how: String, allow_join := true, settlement := "", blessed := fal
 	if how == "spared" and allow_join:
 		await flow.go("ask", {"lines": learned})
 		return
-	var pleased := _pleased(other_side, m)
 	var line = foe_line(m, "leave_peacefully") if how == "spared" else null
 	var verdict: String
 	if how == "spared":
 		verdict = settlement if settlement != "" else Texts.VERDICT_SPARED
 	else:
 		verdict = Texts.VERDICT_SLAIN
-	var lines := learned + [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + told + pleased + _take_notes()
+	var lines := learned + [line if line != null else State.sys_line(Texts.falls(m)), State.sys_line(verdict)] + felt_lines(m, how) + told + await _requests_done(m, how) + _take_notes()
 	s.mind_rows = pending_rows
 	pending_rows = []
 	await leave_fight(lines)
+
+
+## The requests a foe's fall finishes (rules/envoys.gd): a count reached, or a fight won with heavy strikes only. Their asker's
+## words and what they paid, for the log.
+func _requests_done(m, how: String) -> Array:
+	var s = flow.state
+	var lines := []
+	if how != "slain" or s.testing or s.practice or not flow.feature("clan-requests"):
+		return lines
+	for id in Envoys.slain(s, m) + Envoys.felled(s, m):
+		var r := Envoys.request(id)
+		lines.append(State.speech(str(Envoys.entry(r.clan).name), str(r.done)))
+		lines = await Envoy.finished(flow, r, lines, false)
+	return lines
+
+
+## What the other clans make of a deed done to `m` (Clans.felt), for the log: which clan likes or dislikes it, and why. Nothing
+## on the practice floor, which is still teaching the fight, nor in the test room, which forgets the deed at once.
+func felt_lines(m, deed: String) -> Array:
+	var s = flow.state
+	if s.testing or s.practice:
+		return []
+	var out := []
+	for felt in Clans.felt(m.species, deed):
+		out.append(State.sys_line(felt.text))
+		print("encounter: %s" % felt.text)
+	return out
 
 
 ## A clan's hostility moved (Clans.record or Clans.favour): the first move is said on the picture, or in the log when something
@@ -293,32 +323,6 @@ func tell_hostility(moved: Array) -> Array:
 		flow.announce(words.title, words.text)
 		return []
 	return [State.sys_line(words.line)]
-
-
-## The standing of every clan on the other side of the victim's, read before the deed is written into the run, so `_pleased`
-## can tell which of them this kill has just carried above nothing (#163, #165). A mercy reads nothing: a kindness reaches no
-## rival at all.
-func _rivals_standing(m, how: String) -> Dictionary:
-	var standing := {}
-	if how != "slain":
-		return standing
-	for clan in Clans.rivals(Clans.of(m.species)):
-		standing[clan] = float(flow.state.reputation.get(clan, 0.0))
-	return standing
-
-
-## One line for the log for each rival clan this kill has pleased into the positive. The crossing is the whole answer — the
-## deed took it from nothing or less to above nothing — so nothing is saved to remember it: a clan already above nothing is not
-## told for this crossing, and one carried past nothing again later in the run is told again (#163, #165).
-func _pleased(standing: Dictionary, m) -> Array:
-	var s = flow.state
-	if s.testing: # the test room forgets it at once, so it isn't said
-		return []
-	var lines := []
-	for clan in standing:
-		if float(standing[clan]) <= 0.0 and float(s.reputation.get(clan, 0.0)) > 0.0:
-			lines.append(State.sys_line(Clans.pleased() % [Clans.title(clan), m.name]))
-	return lines
 
 
 ## What this fight taught: experience from rules/experience.gd, and the levels it made (#162). A level is more max HP, some
@@ -386,7 +390,7 @@ func take_along(m, wants: float) -> void:
 	var healed := _heal(Allies.gift(m.species).heal)
 	flow.announce(Texts.joined_title(m), "%s: %s" % [charm.name, charm.text])
 	print("encounter: %s joins, loyalty %.0f, healed %d" % [m.name, s.allies.back().loyalty, healed])
-	await leave_fight([State.sys_line(Texts.joined(m, charm, healed))] + _take_notes())
+	await leave_fight([State.sys_line(Texts.joined(m, charm, healed))] + felt_lines(m, "recruited") + _take_notes())
 
 
 ## The answer at the ask stage: it goes its own way, and leaves you something.
@@ -398,7 +402,7 @@ func part_ways(m) -> void:
 	print("encounter: %s leaves a gift: %d gold, healed %d" % [m.name, gift.gold, healed])
 	var line = foe_line(m, "leave_peacefully")
 	var lines := [line] if line != null else []
-	await leave_fight(lines + [State.sys_line(Texts.parted(int(gift.gold), healed))] + _take_notes())
+	await leave_fight(lines + [State.sys_line(Texts.parted(int(gift.gold), healed))] + felt_lines(m, "spared") + _take_notes())
 
 
 ## Up to `amount` health back; returns how much it was.

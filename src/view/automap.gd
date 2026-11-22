@@ -77,6 +77,8 @@ func panel_rect() -> Rect2:
 func full_lines() -> Dictionary:
 	var f = state.floor_map
 	var where := "PRACTICE" if state.practice else (str(Content.table("floors").test_room.header) if state.testing else "B%dF" % state.depth)
+	if state.visiting != "": # a clan's hall is no floor of the count
+		where = str(Content.table("envoys").clans[state.visiting].hall.name)
 	var biome := str(Floors.biome_named(f.biome).get("name", "")) if f.biome != "" else ""
 	if biome != "":
 		where += " · " + biome
@@ -208,6 +210,9 @@ func secret_marks() -> Array:
 		out.append({"rect": Rect2(Vector2(f.merchant.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.INK})
 	if not f.quester.is_empty() and state.seen.has(f.quester.cell) and _in_window(f.quester.cell):
 		out.append({"rect": Rect2(Vector2(f.quester.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.YOU})
+	for e in f.envoys: # a clan's asker, or in its hall the lord
+		if state.seen.has(e.cell) and _in_window(e.cell):
+			out.append({"rect": Rect2(Vector2(e.cell) * s + Vector2.ONE, Vector2.ONE * (s - 2.0)), "color": Palette.MERCY if e.get("lord", false) else Palette.YOU})
 	if not f.lore.is_empty() and state.seen.has(f.lore.cell) and _in_window(f.lore.cell):
 		out.append({"rect": _edge(f.lore.cell, f.lore.side, LORE_EDGE), "color": Palette.DIM if f.lore.read else Palette.MERCY})
 	return out

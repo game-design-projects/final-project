@@ -36,10 +36,14 @@ const JevMind = preload("res://src/mind/jev_mind.gd")
 const Keepsakes = preload("res://src/rules/keepsakes.gd")
 const KeepsakeStage = preload("res://src/game/stages/keepsake.gd")
 const LocalMind = preload("res://src/mind/local_mind.gd")
+const SeededMind = preload("res://src/mind/seeded_mind.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Skills = preload("res://src/rules/skills.gd")
 const Social = preload("res://src/rules/social.gd")
+const ClanHall = preload("res://src/rules/clan_hall.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Lords = preload("res://src/rules/lords.gd")
+const Words = preload("res://src/mind/words.gd")
 const Requests = preload("res://src/rules/requests.gd")
 const Roaming = preload("res://src/rules/roaming.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
@@ -89,6 +93,7 @@ func _run() -> void:
 	await _npcs()
 	await _lords()
 	await _allies()
+	await _clan_requests()
 	await _roaming()
 	await _input_cooldown()
 	await _charting()
@@ -1871,16 +1876,21 @@ func _clans() -> void:
 	_check(Clans.of("slime") != "" and Clans.of("bandit") != "" and Clans.of("slime") != Clans.of("bandit"), "the kinds of monster belong to different clans")
 	for species in Content.table("species"):
 		_check(Clans.of(species) != "", "%s has a clan" % species)
-		for kind in ["kin_spared", "kin_slain", "side_spared", "side_slain"]:
+		var clan_of: String = Clans.of(species)
+		var kinds := ["kin_spared", "kin_slain"]
+		if not Clans.felt_by(clan_of, "likes").is_empty() or float(Content.table("clans").clans[clan_of].get("hears_all", 0.0)) > 0.0:
+			kinds += ["friend_spared", "friend_slain"] # it hears of someone it doesn't dislike
+		if not Clans.felt_by(clan_of, "dislikes").is_empty():
+			kinds += ["rival_slain", "rival_kept"]
+		for kind in kinds:
 			_check(not Content.species(species).lines.get(kind, []).is_empty(), "%s has %s lines" % [species, kind])
-	# a kill pleases the clans on the other side, and each says so in its own voice (#165); the Hoard has no rivals to please
-	for species in ["slime", "bandit", "snake", "rock"]:
-		var rival_lines: Array = Content.species(species).lines.get("rival_slain", [])
-		_check(rival_lines.size() == 2, "%s has its two rival_slain lines" % species)
-		for line in rival_lines:
+	# a kill pleases a clan that dislikes the victim's, and each says so in its own voice (#165); a clan that dislikes nobody
+	# has no rival lines to say
+	for species in Content.table("species"):
+		for line in Content.species(species).lines.get("rival_slain", []):
 			var said: String = Content.fill(str(line), {"kin": "Goo"})
-			_check(not said.contains("{") and Overlay.banner_fits(said), "and it fills and fits the banner: %s" % said)
-	_check(not Content.species("dragon").lines.has("rival_slain"), "the Hoard has no rival_slain line: nobody is its rival")
+			_check(not said.contains("{") and Overlay.banner_fits(said), "every rival line fills and fits the banner: %s" % said)
+	_check(Content.species("dragon").lines.get("rival_slain", []).size() == 2 and not Content.species("slime").lines.has("rival_slain"), "the Hoard hates the Crew and has its own rival lines; the Burrow dislikes nobody and has none")
 
 	# the test the issue asks for: spare one, and a later one of the same group reacts and starts in another mood
 	var flow = _flow(31)
@@ -1948,62 +1958,60 @@ func _clans() -> void:
 	var clamped = State.from_dict(JSON.parse_string(JSON.stringify(huge)))
 	_check(clamped.reputation[clan] <= Clans.STANDING_MAX and not clamped.reputation.has("nobody"), "reputation out of range is brought back (%s)" % str(clamped.reputation))
 
-	# word spills to the clan's side, the dragon hears a little of everything, killing turns them the other way
+	# word reaches the clans with a feeling about the victim's: a friend takes it as its own, by half; a rival is glad of a killing
+	# and sore when you take one in; a clan with no feeling hears nothing, and the dragon hears a little of the rest
 	var slain := State.new()
 	var victim := Monster.new()
 	victim.species = "slime"
 	victim.name = "OOZE"
 	Clans.record(slain, victim, "slain")
-	var side_clans: Array = Clans.side_of(clan)
-	_check(side_clans.size() >= 1, "a clan has others on its side")
-	_check(slain.reputation[clan] < 0.0 and slain.reputation[side_clans[0]] < 0.0 and slain.reputation[side_clans[0]] > slain.reputation[clan], "killing one hurts its clan most, its side less (%s)" % str(slain.reputation))
-	# the clans on the other side care now, and the other way round: a kill pays them half what it costs its own (#165)
-	var rival: String = Clans.of("bandit")
-	var rival_of: Array = Clans.rivals(clan)
-	_check(not side_clans.has(rival) and rival_of.size() == 2 and not rival_of.has(clan) and not rival_of.has(Clans.of("dragon")), "the clans on the other side are its rivals, and the Hoard is nobody's (%s)" % str(rival_of))
-	_check(is_equal_approx(float(slain.reputation[rival]), absf(float(slain.reputation[clan])) * float(Content.table("clans").rivalry)), "a kill is half as welcome to each of them as it is unwelcome to its own (#165) (%s)" % str(slain.reputation))
-	_check(is_equal_approx(float(slain.reputation[rival]), 9.0), "so a slime's death is worth 9 to the Crew")
-	_check(slain.reputation[Clans.of("dragon")] < 0.0, "the dragon hears of everything")
+	var friends: Array = Clans.who_feels("likes", clan)
+	var rivals: Array = Clans.who_feels("dislikes", clan)
+	_check(friends == [Clans.of("snake")] and rivals == [Clans.of("rock")], "the Coil likes the Burrow and the Old Stone dislikes it (%s, %s)" % [friends, rivals])
+	_check(Clans.felt_by(clan, "likes").has(Clans.of("dragon")) and Clans.feeling(Clans.of("dragon"), clan) == "ignores", "the Burrow adores the Hoard, which has never noticed it")
+	_check(Clans.feeling(Clans.of("bandit"), Clans.of("snake")) == "dislikes" and Clans.feeling(Clans.of("snake"), Clans.of("bandit")) == "dislikes", "the Crew hunts the Coil, and the Coil wants it paid back")
+	_check(Clans.feeling(Clans.of("bandit"), Clans.of("rock")) == "dislikes" and Clans.feeling(Clans.of("rock"), Clans.of("bandit")) == "", "rocks fall on the Crew, and the Old Stone has no idea")
+	_check(Clans.feeling(Clans.of("dragon"), Clans.of("bandit")) == "dislikes", "the Hoard hates thieves")
+	_check(slain.reputation[clan] < 0.0 and slain.reputation[friends[0]] < 0.0 and slain.reputation[friends[0]] > slain.reputation[clan], "killing one hurts its clan most, its friends less (%s)" % str(slain.reputation))
+	_check(slain.reputation[rivals[0]] > 0.0, "and its rival is glad of it (%s)" % str(slain.reputation))
+	_check(slain.reputation.get(Clans.of("bandit"), 0.0) == 0.0 and slain.reputation.get(Clans.of("dragon"), 0.0) == 0.0, "a clan with no feeling about it doesn't care, nor one that ignores it (%s)" % str(slain.reputation))
+	var stone := Monster.new()
+	stone.species = "rock"
+	stone.name = "FLINT"
+	var heard_all := State.new()
+	Clans.record(heard_all, stone, "slain")
+	_check(heard_all.reputation[Clans.of("dragon")] < 0.0 and heard_all.reputation[Clans.of("bandit")] > 0.0, "the dragon hears a little of the rest, and the Crew is glad of a rock gone (%s)" % str(heard_all.reputation))
 	var grudge = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0], Vector2i.ONE)
 	var was_angry: float = grudge.meters.anger
 	var was_kind: float = grudge.meters.friendliness
 	var heard: Dictionary = Clans.hear(grudge, slain)
 	_check(heard.kind == "kin_slain" and heard.who == "OOZE" and heard.tone == "bad", "kin of the slain knows who did it (%s)" % str(heard))
 	_check(grudge.meters.anger > was_angry and grudge.meters.friendliness < was_kind, "and starts angrier")
-	var on_side = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(side_clans[0]))[0], Vector2i.ONE)
-	_check(Clans.hear(on_side, slain).kind == "side_slain", "its side has heard too")
+	var a_friend = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(friends[0]))[0], Vector2i.ONE)
+	_check(Clans.hear(a_friend, slain).kind == "friend_slain", "its friends have heard too")
+	var a_rival = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(rivals[0]))[0], Vector2i.ONE)
+	var rival_kind: float = a_rival.meters.friendliness
+	var glad: Dictionary = Clans.hear(a_rival, slain)
+	_check(glad.kind == "rival_slain" and glad.tone == "good" and a_rival.meters.friendliness > rival_kind, "its rival has heard, and starts friendlier (%s)" % str(glad))
 	var far = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "bandit")[0], Vector2i.ONE)
 	var far_mood: float = far.meters.friendliness
-	var far_news: Dictionary = Clans.hear(far, slain)
-	_check(far_news.kind == "rival_slain" and far_news.tone == "good" and far_news.who == "OOZE", "the other side hears of the kill, and is glad of it (#165) (%s)" % str(far_news))
-	_check(far.meters.friendliness > far_mood and far.heard.get("clan", "") == rival, "so it starts friendlier (%.0f -> %.0f)" % [far_mood, far.meters.friendliness])
-	_check(str(far.heard.get("heard", [])).contains("OOZE"), "and remembers who died (%s)" % str(far.heard.get("heard", [])))
-	_check(str(far.heard.get("heard", [])).contains("the player killed OOZE"), "and says it in a verb a mind can read (%s)" % str(far.heard.get("heard", [])))
-
-	# the deed a clan names is the one that moved it, not a kill of its own side: two bandits please the Burrow, a rock of its own
-	# side takes half of that back, and the slime it meets still has the bandit to talk about (#165)
-	var mixed := State.new()
-	var mugger := Monster.new()
-	mugger.species = "bandit"
-	mugger.name = "MUGGER"
-	var brick := Monster.new()
-	brick.species = "rock"
-	brick.name = "BRICK"
-	Clans.record(mixed, mugger, "slain")
-	Clans.record(mixed, mugger, "slain")
-	Clans.record(mixed, brick, "slain")
-	_check(float(mixed.reputation[clan]) == 9.0, "two bandits leave the Burrow at 18, and a rock of its own side takes 9 of that back (%s)" % str(mixed.reputation))
-	var mixed_slime := Monster.new()
-	mixed_slime.species = "slime"
-	mixed_slime.name = "DRIP"
-	var mixed_news: Dictionary = Clans.hear(mixed_slime, mixed)
-	_check(mixed_news.kind == "rival_slain" and mixed_news.tone == "good" and mixed_news.who == "MUGGER", "so the news a slime hears is the bandit it is glad of, not the rock at its side (%s)" % str(mixed_news))
-	_check(Clans.news(mixed_news) == "The Burrow heard you killed MUGGER. It starts friendlier.", "and the banner agrees with the line it says (%s)" % Clans.news(mixed_news))
+	_check(Clans.hear(far, slain).is_empty() and far.meters.friendliness == far_mood and far.heard.is_empty(), "a clan with no feeling has nothing to say")
+	var taken_in := State.new()
+	var rival_before: float = 0.0
+	Clans.record(taken_in, victim, "spared")
+	_check(taken_in.reputation.get(rivals[0], 0.0) == rival_before, "sparing one costs nothing with its rival")
+	Clans.record(taken_in, victim, "recruited")
+	var sore_rival = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(rivals[0]))[0], Vector2i.ONE)
+	var sore: Dictionary = Clans.hear(sore_rival, taken_in)
+	_check(taken_in.reputation[rivals[0]] < 0.0 and sore.kind == "rival_kept" and sore.tone == "bad", "taking one in does: its rival is sore about it (%s, %s)" % [str(taken_in.reputation), str(sore)])
+	_check(str(a_rival.heard.get("heard", [])).contains("the player killed OOZE"), "and the deed it keeps is a verb a mind can read (%s)" % str(a_rival.heard.get("heard", [])))
 
 	# a favour tells no tale: with nothing it heard that moved it up, the newest it heard of is still its news, so its mood moves
-	# and it remembers (#165)
 	var favour_only := State.new()
-	Clans.record(favour_only, brick, "slain")
+	var coil_victim := Monster.new()
+	coil_victim.species = "snake"
+	coil_victim.name = "HISS"
+	Clans.record(favour_only, coil_victim, "slain")
 	Clans.favour(favour_only, "slime", 20.0)
 	var favour_slime := Monster.new()
 	favour_slime.species = "slime"
@@ -2011,54 +2019,22 @@ func _clans() -> void:
 	var favour_news: Dictionary = Clans.hear(favour_slime, favour_only)
 	_check(not favour_news.is_empty() and favour_slime.meters.friendliness > 0.0, "a clan moved only by a favour still starts friendlier, and has a deed to tell (%s)" % str(favour_news))
 
-	# a mercy reaches nobody across the sides: only a kill is good news to a rival (#165)
-	var mercy := State.new()
-	Clans.record(mercy, victim, "spared")
-	Clans.record(mercy, victim, "recruited")
-	Clans.favour(mercy, "slime", 20.0)
-	_check(rival_of.all(func(c): return not mercy.reputation.has(c)), "a spare, a recruit and a favour move no rival at all (%s)" % str(mercy.reputation))
-
-	# killing its enemies cools an angry clan by exactly the 9 a kill pays its rivals (#165)
-	var cooled := State.new()
-	var thug := Monster.new()
-	thug.species = "bandit"
-	thug.name = "THUG"
-	Clans.record(cooled, thug, "slain")
-	_check(float(cooled.reputation[rival]) == -18.0 and Clans.hostility_of(cooled, "bandit") == "angry", "killing a bandit makes the Crew angry (%s)" % str(cooled.reputation))
-	Clans.record(cooled, victim, "slain")
-	_check(float(cooled.reputation[rival]) == -9.0 and Clans.hostility_of(cooled, "bandit") == "", "one slime lifts it out of angry: -18 -> -9 (%s)" % str(cooled.reputation))
-	Clans.record(cooled, victim, "slain")
-	_check(float(cooled.reputation[rival]) == 0.0 and Clans.mood_word(float(cooled.reputation[rival])) == "CALM", "two leave it level with you, and calm (%s)" % str(cooled.reputation))
-	var fond := State.new()
-	for i in 20:
-		Clans.record(fond, victim, "slain")
-	_check(float(fond.reputation[rival]) == Clans.STANDING_MAX, "a rival's standing stops at STANDING_MAX (%s)" % str(fond.reputation))
-
-	# the log says so the first time a kill pleases a rival past nothing, by clan and by name, and only then (#163, #165)
-	var victory = _flow(34)
-	var doomed = await _at_menu(victory)
-	await victory.encounter.defeat(doomed, "slain")
-	var won = victory.state
-	var pleased_line: String = Clans.pleased() % [Clans.title(rival), doomed.name]
-	_check(won.lines.any(func(l): return l.text == pleased_line), "a kill pleases the Crew, and the log says it by clan and by name (%s)" % str(won.lines.map(func(l): return l.text)))
-	_check(won.lines.filter(func(l): return l.text.contains("is pleased:")).size() == 2, "both clans on the other side are named, and nobody else")
-	_check(victory.encounter._pleased({rival: 9.0}, doomed).is_empty(), "a clan already above nothing is not told again for that crossing")
-	# the line is said each time a clan is carried past nothing, not once a run: nothing is saved to remember it (#165)
-	var renewed = victory.state
-	Clans.record(renewed, thug, "slain")
-	Clans.record(renewed, thug, "slain")
-	_check(float(renewed.reputation[rival]) == -27.0, "two more of the Crew's own take it below nothing (%s)" % str(renewed.reputation))
-	for i in 3:
-		Clans.record(renewed, victim, "slain")
-	_check(float(renewed.reputation[rival]) == 0.0 and victory.encounter._pleased({rival: -9.0}, doomed).is_empty(), "level with you is not past it: nothing is said at 0 (%s)" % str(renewed.reputation))
-	Clans.record(renewed, victim, "slain")
-	_check(float(renewed.reputation[rival]) == 9.0 and victory.encounter._pleased({rival: 0.0}, doomed).size() == 1, "and carried past it again, it is told again (%s)" % str(renewed.reputation))
-	_check(victory.encounter._rivals_standing(doomed, "spared").is_empty(), "and a mercy reads no rival standing at all")
+	# every deed says which clans like it or dislike it, and why
+	var told_slain: Array = Clans.felt("slime", "slain")
+	_check(told_slain.size() == 2 and not told_slain[0].glad and told_slain[0].clan == friends[0] and told_slain[1].glad and told_slain[1].clan == rivals[0], "a slime killed: the Coil dislikes it, the Old Stone likes it, the sore one first (%s)" % str(told_slain))
+	_check(told_slain[1].text == "The Old Stone likes that you killed a slime: slimes are too soft.", "and the line says who, what and why: %s" % told_slain[1].text)
+	_check(Clans.felt("slime", "spared").all(func(f): return f.glad) and Clans.felt("slime", "recruited").any(func(f): return not f.glad and f.clan == rivals[0]), "sparing one only pleases; taking one in is disliked by its rival")
+	_check(Clans.felt("dragon", "slain").size() == 1 and Clans.felt("dragon", "slain")[0].clan == clan, "a dragon killed: only the Burrow minds")
+	for species in Content.table("species"):
+		for deed in ["spared", "recruited", "slain"]:
+			for felt in Clans.felt(species, deed):
+				_check_quietly(felt.text.begins_with(Clans.title(felt.clan)) and felt.text.ends_with(".") and not felt.text.contains("%") and Hud.log_fits([State.sys_line(felt.text)], 760.0) == 1, "what a clan makes of a deed reads as one line: %s" % felt.text)
+	_check(true, "every clan's reaction to every deed is a sentence the log has room for")
 
 	# every sentence fits the banner, and a hated monster can still be won over
 	for id in Content.table("clans").clans:
 		for tone in ["good", "bad"]:
-			for deed in ["spared", "slain"]:
+			for deed in ["spared", "recruited", "slain"]:
 				var text: String = Clans.news({"clan": id, "deed": deed, "who": "WWWWWWWW", "tone": tone})
 				_check(Overlay.banner_fits(text), "the news fits the banner: %s" % text)
 	_check(Clans.mood(-1000.0).friendliness >= -Clans.MOOD_MAX and Clans.mood(1000.0).friendliness <= Clans.MOOD_MAX, "a clan's opinion only moves a mood so far")
@@ -2066,10 +2042,10 @@ func _clans() -> void:
 
 
 ## Kills climb a clan through angry, furious and enraged (#77). A furious clan sends elites to the floors made after it got so; an
-## enraged one won't take mercy, a cut or an offer; sparing its side or a favour cools it; the header and the cards say why it's harder.
+## enraged one won't take mercy, a cut or an offer; sparing its own, its friends or a favour cools it; the header and the cards say why it's harder.
 func _hostility() -> void:
 	var clan: String = Clans.of("slime")
-	var side: String = Clans.side_of(clan)[0]
+	var side: String = Clans.who_feels("likes", clan)[0] # the Coil: a friend takes a slime's death as half its own
 	var slime_line: Dictionary = Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0]
 	var tally := State.new()
 	var kill := func(species: String, who: String) -> Array:
@@ -2083,8 +2059,8 @@ func _hostility() -> void:
 	_check(not Clans.sends_elites(tally, "slime"), "and sends no elites yet")
 	kill.call("slime", "B")
 	_check(Clans.hostility_of(tally, "slime") == "furious" and Clans.sends_elites(tally, "slime"), "two kills: furious, and it sends elites")
-	_check(Clans.hostility(float(tally.reputation[side])) == "angry" and not Clans.sends_elites(tally, side_species(side)), "its side is only angry (%s)" % str(tally.reputation))
-	_check(float(tally.reputation[Clans.of("bandit")]) == 18.0 and not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "the other side is pleased instead, and sends no elites (%s)" % str(tally.reputation))
+	_check(Clans.hostility(float(tally.reputation[side])) == "angry" and not Clans.sends_elites(tally, side_species(side)), "its friend is only angry (%s)" % str(tally.reputation))
+	_check(not Clans.sends_elites(tally, "bandit") and Clans.hostility_of(tally, "bandit") == "", "a clan with no feeling about it doesn't care")
 	var goo = Monster.make(Rng.new(5), slime_line, Vector2i.ONE)
 	_check(not Clans.enraged(tally, goo), "furious still takes mercy")
 	kill.call("slime", "C")
@@ -2094,7 +2070,7 @@ func _hostility() -> void:
 	rock.species = side_species(side)
 	rock.name = "R"
 	var cooled: Array = Clans.record(tally, rock, "spared")
-	_check(not Clans.enraged(tally, goo) and cooled.any(func(c): return c.clan == clan and c.to == "furious"), "sparing one on its side cools it back to furious (%s)" % str(cooled))
+	_check(not Clans.enraged(tally, goo) and cooled.any(func(c): return c.clan == clan and c.to == "furious"), "sparing one of its friends cools it back to furious (%s)" % str(cooled))
 	var favoured: Array = Clans.favour(tally, "slime", 30.0)
 	_check(favoured.any(func(c): return c.clan == clan and Clans.rank(c.to) < Clans.rank(c.from)), "and a favour to its kind cools it further (%s)" % str(favoured))
 	_check(Clans.mood_word(20.0) == "FRIENDLY", "a clan that likes you says so")
@@ -3163,7 +3139,7 @@ func _lurkers() -> void:
 ## A floor with someone asking for this, whichever seed from `start` gives one.
 func _asking(start: int, kind: String) -> Variant:
 	for i in 200:
-		var flow = _flow(start + i)
+		var flow = _flow(start + i, ["no-clan-requests"])
 		await flow.new_run()
 		if not flow.state.floor_map.quester.is_empty() and flow.state.floor_map.quester.kind == kind:
 			return flow
@@ -3171,15 +3147,226 @@ func _asking(start: int, kind: String) -> Variant:
 	return null
 
 
+## The clans' askers (clan-requests, rules/envoys.gd): two stand on every floor, each with its clan's two requests; a request is
+## done at its asker or wherever it happens, pays, and pleases its clan; two done open the clan's teleporter at the stairs, to
+## the hall where its lord stands among its own, off the run's count.
+func _clan_requests() -> void:
+	# the words: four askers, two requests each, of kinds the rules know, and a hall and a piece for each lord
+	var t: Dictionary = Envoys.table()
+	var ids := {}
+	_check(Envoys.clans().size() == 4 and Envoys.clans().all(func(c): return Clans.is_clan(c) and Lords.table().lords.has(c)), "every clan with a lord has an asker (%s)" % [Envoys.clans()])
+	for clan in Envoys.clans():
+		var e: Dictionary = Envoys.entry(clan)
+		_check(Clans.of(str(e.species)) == clan and str(e.name) != "" and not Floors.biome_named(str(e.hall.biome)).is_empty() and e.lord_says.size() >= 1, "%s's asker is one of its own, with a hall and a piece for its lord" % clan)
+		_check(e.requests.size() == int(t.need), "%s has as many requests as open its teleporter" % clan)
+		for r in e.requests:
+			ids[str(r.id)] = true
+			var need := ["label", "sub", "ask", "wait", "done"] + (["fail", "sounds"] if str(r.kind) == "say" else []) + (["give", "ready"] if str(r.kind) in Envoys.GIVEN_AT else []) + (["answer", "sounds"] if str(r.kind) == "ask_dragon" else [])
+			_check_quietly(str(r.kind) in Envoys.KINDS and need.all(func(k): return str(r.get(k, "")) != "") and Envoys.request(str(r.id)).clan == clan, "%s says everything a %s needs" % [r.id, r.kind])
+			for key in ["ask", "wait", "done", "fail", "ready", "answer"]:
+				if r.has(key):
+					_check_quietly(Hud.log_fits([State.speech(str(e.name), str(r[key]))], 760.0) == 1, "%s's %s has room in the log" % [r.id, key])
+	_check(ids.size() == 8, "eight requests, each with an id of its own")
+
+	# who stands where: two clans a floor, never the same clan twice, and every clan on two of the first four floors
+	for seed_value in range(1, 11):
+		var times := {}
+		for depth in range(1, 5):
+			var here: Array = Envoys.on_floor(seed_value, depth)
+			_check_quietly(here.size() == 2 and here[0] != here[1], "seed %d B%dF has two clans' askers (%s)" % [seed_value, depth, here])
+			for clan in here:
+				times[clan] = int(times.get(clan, 0)) + 1
+		_check_quietly(times.size() == 4 and times.values().all(func(n): return n == 2), "seed %d: every clan's asker is met twice by B4F (%s)" % [seed_value, times])
+	_check(Envoys.on_floor(3, 2) == Envoys.on_floor(3, 2), "the same run has the same askers")
+	var flow = _flow(7)
+	await flow.new_run()
+	var s = flow.state
+	var f = s.floor_map
+	_check(f.envoys.size() == 2 and f.quester.is_empty(), "a floor has its two askers, and no stray one (%d)" % f.envoys.size())
+	_check(f.envoys.all(func(e): return f.is_open(e.cell) and f.monster_at(e.cell) == null and e.cell != f.start and e.cell != f.stairs and f.in_the_way(e.cell)), "each on an open cell of its own, which a route goes round")
+	_check(f.lore.is_empty() or f.envoys.all(func(e): return e.cell != f.lore.cell), "and never on the writing")
+	var plain = _flow(7, ["no-clan-requests"])
+	await plain.new_run()
+	_check(plain.state.floor_map.envoys.is_empty() and plain.state.floor_map.grid == f.grid and plain.state.floor_map.monsters.map(func(m): return [m.cell, m.kind]) == f.monsters.map(func(m): return [m.cell, m.kind]) and plain.state.floor_map.stairs == f.stairs, "no-clan-requests: none, and the floor is laid out the same")
+	_use()
+	var kept = State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict())))
+	_check(kept != null and kept.floor_map.envoys.size() == 2 and kept.floor_map.envoys[0].cell == f.envoys[0].cell and str(kept.floor_map.envoys[0].clan) == str(f.envoys[0].clan), "a save keeps the askers where they stand")
+	var bad: Dictionary = s.to_dict()
+	bad.floor.envoys[0].clan = "nobody"
+	_check(State.from_dict(JSON.parse_string(JSON.stringify(bad))) == null, "and one with an asker of no clan is refused")
+
+	# what the mind makes of a typed line, by rule
+	_check(not Envoys.passes(Words.sounds_like("hiss", "hiss")) and not Envoys.passes(Words.sounds_like("hisss", "hiss")) and Envoys.passes(Words.sounds_like("hisssssssss", "hiss")), "a hiss has to be long")
+	_check(Envoys.passes(Words.sounds_like("i am a rock. i sit. i am a rock.", "monotone")) and not Envoys.passes(Words.sounds_like("HELLO there!!", "monotone")) and not Envoys.passes(Words.sounds_like("hi", "monotone")), "monotone is flat, and long enough to hear")
+	_check(Envoys.passes(Words.sounds_like("do you like slimes?", "likes_slimes")) and not Envoys.passes(Words.sounds_like("do you like gold?", "likes_slimes")), "asking a dragon about slimes names slimes")
+	_check(is_equal_approx(await LocalMind.new().sounds_like("hisssssssss", "hiss"), 1.0) and is_equal_approx(await SeededMind.new(Rng.new(1)).sounds_like("hisssssssss", "hiss"), 1.0), "the local and the seeded mind judge it by that rule")
+
+	# the rules of each kind, on a bare run
+	var run := State.new()
+	var snake := Monster.new()
+	snake.species = "snake"
+	snake.name = "NYSS"
+	_check(Envoys.slain(run, snake).is_empty() and Envoys.count(run, "crew_sport") == 0, "a snake killed before the request is taken doesn't count")
+	Envoys.take(run, "crew_sport")
+	for i in 4:
+		_check_quietly(Envoys.slain(run, snake).is_empty(), "snake %d of 5 doesn't finish it" % (i + 1))
+	_check(Envoys.count(run, "crew_sport") == 4 and Envoys.speak(run, Envoys.request("crew_sport")).contains("4 of 5"), "the asker keeps the count (%s)" % Envoys.speak(run, Envoys.request("crew_sport")))
+	_check(Envoys.slain(run, snake) == ["crew_sport"], "the fifth snake does")
+	var gold_before: int = run.gold
+	var crew_before: float = Clans.standing_of(run, "bandit")
+	var paid: Dictionary = Envoys.finish(run, "crew_sport")
+	_check(int(paid.gold) == int(t.pays.gold) and run.gold == gold_before + int(t.pays.gold) and is_equal_approx(Clans.standing_of(run, "bandit") - crew_before, float(t.pays.standing)) and paid.opened == "", "a request done pays, and pleases its clan (%s)" % str(paid))
+	_check(Envoys.finish(run, "crew_sport").is_empty() and Envoys.status(run, Envoys.request("crew_sport")) == "done", "and only once")
+	Envoys.take(run, "crew_gold")
+	run.gold = 49
+	_check(Envoys.status(run, Envoys.request("crew_gold")) == "waiting", "49 gold is not fifty")
+	run.gold = 50
+	_check(Envoys.status(run, Envoys.request("crew_gold")) == "ready", "50 is")
+	var opened: Dictionary = Envoys.finish(run, "crew_gold")
+	_check(opened.opened == "crew" and run.gates == ["crew"] and Envoys.ways(run) == ["crew"] and str(Envoys.way("crew").label).contains("THE CREW") and Envoys.way("crew").hall == "crew", "the second done for a clan opens its teleporter (%s)" % str(Envoys.way("crew")))
+	var rock := Monster.new()
+	rock.species = "rock"
+	rock.strikes = {"heavy": 2}
+	_check(Envoys.felled(run, rock).is_empty(), "a heavy win before the request is taken doesn't count")
+	Envoys.take(run, "old_stone_heavy")
+	rock.strikes = {"heavy": 2, "light": 1}
+	_check(Envoys.felled(run, rock).is_empty(), "one light strike and the fight was not won heavy")
+	rock.strikes = {}
+	_check(Envoys.felled(run, rock).is_empty(), "nor is a fight with no strike at all")
+	rock.strikes = {"heavy": 1}
+	_check(Envoys.felled(run, rock) == ["old_stone_heavy"], "heavy strikes only is")
+	Envoys.take(run, "burrow_bring")
+	_check(Envoys.status(run, Envoys.request("burrow_bring")) == "waiting" and Envoys.friend_for(run, Envoys.request("burrow_bring")) == null, "bring a slime: none with you yet")
+	run.allies = [Ally.make("snake", "HISS", 60.0), Ally.make("slime", "GLOP", 60.0)]
+	_check(Envoys.status(run, Envoys.request("burrow_bring")) == "ready" and Envoys.friend_for(run, Envoys.request("burrow_bring")).name == "GLOP" and Envoys.speak(run, Envoys.request("burrow_bring")).contains("Glop"), "a slime at your side is the one (%s)" % Envoys.speak(run, Envoys.request("burrow_bring")))
+	var dragon := Monster.new()
+	dragon.species = "dragon"
+	_check(Envoys.to_ask(run, dragon).is_empty(), "nothing to ask a dragon until the Burrow's asker sends you")
+	Envoys.take(run, "burrow_ask")
+	_check(Envoys.to_ask(run, dragon).get("id", "") == "burrow_ask" and Envoys.to_ask(run, rock).is_empty(), "then a dragon is the one to ask, and nobody else")
+	run.floor_map = f
+	var run_saved: Dictionary = JSON.parse_string(JSON.stringify(run.to_dict()))
+	var run_back = State.from_dict(run_saved)
+	_check(run_back != null and run_back.gates == ["crew"] and Envoys.is_done(run_back, "crew_gold") and Envoys.is_taken(run_back, "burrow_ask") and not Envoys.is_done(run_back, "burrow_ask"), "a save keeps the requests and the open teleporter")
+	run_saved.errands = {"nothing": {"taken": true}, "crew_gold": "yes", "coil_hiss": {"taken": true, "done": false, "n": 1e12}}
+	run_saved.gates = ["crew", "nobody", 7]
+	var cleaned = State.from_dict(JSON.parse_string(JSON.stringify(run_saved)))
+	_check(cleaned != null and cleaned.errands.keys() == ["coil_hiss"] and int(cleaned.errands.coil_hiss.n) <= 999 and cleaned.gates == ["crew"], "and what is not a request of ours is dropped (%s, %s)" % [str(cleaned.errands), str(cleaned.gates)])
+
+	# at the asker: its lines, taking one, typing to it, handing over gold and a friend
+	var coil := Envoys.figure("coil", f.envoys[0].cell)
+	await flow.go("envoy", {"who": coil})
+	_check(s.stage == "envoy" and s.menu.size() == 3 and s.menu[0].label == "BRING A BANDIT" and s.menu[1].label == "HISS AT IT" and s.lines.size() == 2 and str(s.lines[0].who) == "SISSEL", "the Coil's asker has a line for each request, and a way out (%s)" % str(s.menu.map(func(row): return row.label)))
+	await flow.press("2")
+	_check(s.stage == "envoy_say" and Envoys.is_taken(s, "coil_hiss") and Transitions.TYPING.has(s.stage), "HISS AT IT is taken, and wants it typed (%s)" % s.stage)
+	await flow.submit_text("hiss")
+	_check(s.stage == "explore" and not Envoys.is_done(s, "coil_hiss") and s.lines.any(func(l): return str(l.text).contains("leak")), "a short hiss won't do, and it says so (%s)" % s.stage)
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu[1].label == "HISS AT IT", "it can be tried again")
+	await flow.press("2")
+	var hp_before: int = s.hp
+	await flow.submit_text("hissssssssssss")
+	_check(s.stage == "explore" and Envoys.is_done(s, "coil_hiss") and s.gates.is_empty() and s.lines.any(func(l): return str(l.text).contains("THAT isss a hisss")), "a long one does: done, paid, and one more for the Coil's teleporter (%s)" % s.stage)
+	_check(s.hp >= hp_before, "and nothing is lost by it")
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu.size() == 2 and s.menu[0].label == "BRING A BANDIT", "the asker has one request left")
+	await flow.press("1")
+	_check(s.stage == "explore" and Envoys.is_taken(s, "coil_bring"), "taking it goes back to the walk")
+	s.allies = [Ally.make("bandit", "JINKS", 60.0)]
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu[0].label == "HERE IS JINKS", "with a bandit at your side the line hands it over (%s)" % s.menu[0].label)
+	await flow.press("1")
+	_check(s.stage == "explore" and s.allies.is_empty() and Envoys.is_done(s, "coil_bring") and s.gates == ["coil"], "the bandit is lectured and storms off, and the Coil's teleporter is open (%s)" % str(s.gates))
+	_check(s.lines.any(func(l): return str(l.text).contains("hunting")) and s.lines.any(func(l): return str(l.text).contains("storms off")) and s.lines.any(func(l): return str(l.text).contains("WILL SEE YOU")), "and the log says all of it (%s)" % str(s.lines.map(func(l): return l.text)))
+	await flow.go("envoy", {"who": coil})
+	_check(s.menu.size() == 1 and s.menu[0].label == "LEAVE", "an asker with nothing left only lets you go")
+	await flow.press("cancel")
+	var crew := Envoys.figure("crew", f.envoys[0].cell)
+	await flow.go("envoy", {"who": crew})
+	await flow.press("2")
+	s.gold = 60
+	await flow.go("envoy", {"who": crew})
+	_check(s.menu[1].label == "HAND OVER 50 GOLD", "fifty gold in the purse and the line hands it over (%s)" % s.menu[1].label)
+	await flow.press("2")
+	_check(s.gold == 60 - 50 + int(t.pays.gold) and Envoys.is_done(s, "crew_gold") and s.lines.any(func(l): return str(l.text).contains("definitely stole it")), "the fifty is gone, the request pays, and the asker says where it thinks it came from (%d gold)" % s.gold)
+
+	# away from the asker: a fight won heavy, and a dragon asked
+	Envoys.take(s, "old_stone_heavy")
+	var foe = f.monsters.filter(func(x): return not x.boss and not x.lurking).front()
+	await flow.go("intro", {"foe": foe})
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	foe.strikes = {"heavy": 1}
+	await flow.encounter.defeat(foe, "slain")
+	_check(Envoys.is_done(s, "old_stone_heavy") and s.lines.any(func(l): return str(l.who) == "SLATE" and str(l.text).contains("brother of ours")), "a foe felled with heavy strikes only finishes the Old Stone's request, in its asker's words (%s)" % s.stage)
+	Envoys.take(s, "burrow_ask")
+	var champion = f.monsters.filter(func(x): return x.boss).front()
+	await flow.go("intro", {"foe": champion})
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	await flow.go("act")
+	await flow.go("talk")
+	await flow.submit_text("do you like slimes?")
+	_check(Envoys.is_done(s, "burrow_ask") and s.lines.any(func(l): return str(l.text).contains("desperate for attention")), "a dragon asked whether it likes slimes answers, and the Burrow's request is done (%s)" % s.stage)
+
+	# the teleporter at the stairs, the hall and its lord, and the way on down
+	var to_hall = _flow(7)
+	await to_hall.new_run()
+	var hs = to_hall.state
+	hs.gates = ["burrow"]
+	var depth_before: int = hs.depth
+	await _reach_stairs(to_hall)
+	await to_hall.press("up")
+	_check(hs.stage == "end" and hs.menu.any(func(row): return row.label == "THE BURROW'S TELEPORTER"), "the stairs offer the open teleporter (%s)" % str(hs.menu.map(func(row): return row.label)))
+	var events: Array = []
+	to_hall.happened.connect(func(name, _data): events.append(name))
+	await to_hall.press(str(hs.menu.find_custom(func(row): return row.label == "THE BURROW'S TELEPORTER") + 1))
+	var hall = hs.floor_map
+	_check(hs.stage == "explore" and hs.visiting == "burrow" and hs.depth == depth_before and hs.gates.is_empty() and events.has("teleport"), "through it: in the Burrow's hall, on no floor of the count, and the picture shows the teleport (%s)" % str(events))
+	_check(hall.monsters.size() == ClanHall.kinds_of("burrow").size() and hall.monsters.all(func(m): return m.species == "slime") and hall.envoys.size() == 1 and hall.envoys[0].get("lord", false) and str(hall.envoys[0].name) == str(Lords.table().lords.burrow.name), "every kind of slime stands there, and MOTHER GLOOP (%d)" % hall.monsters.size())
+	var minion = hall.monsters[0]
+	hs.cell = minion.cell + Vector2i(1, 0) if hall.is_open(minion.cell + Vector2i(1, 0)) else minion.cell - Vector2i(1, 0)
+	hs.facing = FloorMap.DIRS.find(minion.cell - hs.cell)
+	await to_hall.press("up")
+	_check(hs.stage == "explore" and not minion.is_gone() and hs.lines.any(func(l): return str(l.text).contains("means you harm")), "walking into one of them is no fight (%s)" % hs.stage)
+	hs.banner = null
+	for c in hall.size * hall.size: # the whole hall seen: a floor of the run would chart itself now
+		var at := Vector2i(c % hall.size, c / hall.size)
+		if hall.is_open(at) and at != hall.stairs:
+			hs.seen[at] = true
+	_check(Chart.share(hs) >= float(Chart.table().instinct_at) and Chart.share(hs) < 1.0 and not Chart.instinct_due(hs), "a hall is no floor to chart: nearly all of it seen, and explorer's instinct has nothing to say (%.2f)" % Chart.share(hs))
+	var hall_saved = State.from_dict(JSON.parse_string(JSON.stringify(hs.to_dict())))
+	_check(hall_saved != null and hall_saved.visiting == "burrow" and hall_saved.floor_map.envoys[0].get("lord", false), "a save keeps you in the hall")
+	var lord: Dictionary = hall.envoys[0]
+	var lord_gold: int = hs.gold
+	await to_hall.go("envoy", {"who": lord})
+	_check(hs.stage == "envoy" and hs.lines.size() == 2 and str(hs.lines[0].text).contains("LORD OF THE BURROW") and hs.menu[0].label == "HEAR IT OUT", "the lord says who it is, and begins (%s)" % str(hs.lines.map(func(l): return l.text)))
+	for i in Envoys.entry("burrow").lord_says.size() - 1:
+		await to_hall.press("1")
+	_check(hs.lords_met == ["burrow"] and hs.gold == lord_gold + int(t.hall.pays.gold) and hs.menu.size() == 1 and str(hs.lines[-1].text).contains("little witch"), "heard out, it pays and the run remembers (%s)" % str(hs.lines.map(func(l): return l.text)))
+	await to_hall.press("1")
+	await to_hall.go("envoy", {"who": lord})
+	_check(hs.gold == lord_gold + int(t.hall.pays.gold) and hs.menu.size() == 1, "and has said its piece: nothing is paid twice")
+	await to_hall.press("1")
+	await _reach_stairs(to_hall)
+	await to_hall.press("up")
+	_check(hs.stage == "end" and not hs.run_over and not hs.menu.any(func(row): return str(row.label).contains("TELEPORTER")), "the hall's stairs offer the ways down, and no teleporter twice (%s)" % str(hs.menu.map(func(row): return row.label)))
+	await to_hall.press("1")
+	_check(hs.stage == "explore" and hs.visiting == "" and hs.depth == depth_before + 1 and hs.floor_map.envoys.size() == 2, "and lead down to the next floor of the run (B%dF)" % hs.depth)
+	_use()
+
+
 ## The faction lords (#77): each biome's lord asks on the first floor of that biome, its name and title from the data, the run
 ## remembers it was met, and paying its favour moves its clan by the lord's number.
 func _lords() -> void:
-	var flow = _flow(7)
+	var flow = _flow(7, ["no-clan-requests"])
 	await flow.new_run()
 	var q: Dictionary = flow.state.floor_map.quester
 	_check(not q.is_empty() and str(q.get("title", "")) != "", "a biome's first floor has its lord asking")
 	_check(str(q.species) == "bandit" and str(q.name) == str(Lords.table().lords.crew.name), "the halls' lord is the Crew's (%s, %s)" % [q.get("name", ""), q.get("title", "")])
-	var again = _flow(7)
+	var again = _flow(7, ["no-clan-requests"])
 	await again.new_run()
 	var bq: Dictionary = again.state.floor_map.quester
 	_check(bq.name == q.name and bq.title == q.title and bq.kind == q.kind, "the same seed gives the same lord")
@@ -3203,7 +3390,7 @@ func _lords() -> void:
 	_check(flow.state.lines.size() == 2 and str(flow.state.lines[0].text).contains("LORD OF") and str(flow.state.lines[1].who) == str(q.name), "the lord says who it is before what it wants (%s)" % str(flow.state.lines[0].text))
 	await flow.press("cancel")
 	# the second favour, where the biome comes back: the same lord, and paying it swears the clan
-	var back_flow = _flow(7)
+	var back_flow = _flow(7, ["no-clan-requests"])
 	await back_flow.new_run()
 	back_flow.state.lords_met = [clan]
 	back_flow.state.depth = 4
@@ -3220,7 +3407,7 @@ func _lords() -> void:
 	var clan_name := Clans.title(clan)
 	_check(Overlay.banner_fits(str(pact.title) % clan_name.to_upper()) and Overlay.banner_fits(str(pact.line) % clan_name), "the pact's banner fits the picture")
 	# no place in the party: the clan opens its warren on the next stairs instead
-	var warren_flow = _flow(7)
+	var warren_flow = _flow(7, ["no-clan-requests"])
 	await warren_flow.new_run()
 	warren_flow.state.allies = [Ally.make("slime", "A", 70.0), Ally.make("rock", "B", 70.0), Ally.make("snake", "C", 70.0)]
 	var joined := Requests.swear(warren_flow.state, "crew", {"species": "bandit", "name": "SIRRA"})
@@ -3247,7 +3434,7 @@ func _lords() -> void:
 	await warren_end.press("1")
 	_check(warren_end.state.depth == 5 and warren_end.state.floor_map.monsters.slice(0, -1).all(func(m): return m.species == "bandit") and warren_end.state.floor_map.monsters.back().boss, "the last floor below is all bandits (%s)" % str(warren_end.state.floor_map.monsters.map(func(m): return m.species)))
 	# with the feature off there is no choice to make, so the mark waits for a stair that offers one
-	var wait_flow = _flow(7, ["no-branching"])
+	var wait_flow = _flow(7, ["no-branching", "no-clan-requests"])
 	await wait_flow.new_run()
 	wait_flow.state.lords_met = ["crew"]
 	wait_flow.state.depth = 4
@@ -3303,6 +3490,13 @@ func _lords() -> void:
 				_check(not target.boss and not target.lurking, "the lord names a monster that can be dealt with")
 				if str(lord_q.kind) == "spare":
 					_check(target.species == str(lord_q.species), "its kin is one of its own (%s)" % target.species)
+				var hunts: Array = Lords.table().lords[home].get("hunts", [])
+				if str(lord_q.kind) == "rid" and not hunts.is_empty() and f.monsters.any(func(m): return hunts.has(m.species) and not m.boss and not m.lurking):
+					_check(hunts.has(target.species), "seed %d B%dF: %s wants one its grudge names gone (%s)" % [seed_value, depth, lord_q.name, target.species])
+			var own: Dictionary = Lords.says(home, str(lord_q.kind), "" if str(lord_q.kind) == "fetch" else str(f.monsters[int(lord_q.target)].species))
+			if not own.is_empty():
+				var asked: String = Requests.speak(lord_q, flow.state)
+				_check_quietly(asked == str(own.ask) % Requests.subject(lord_q, f) and asked != str(Requests.table().kinds[lord_q.kind].ask) % Requests.subject(lord_q, f) and Requests.thanks(lord_q, f) == str(own.thanks), "seed %d B%dF: %s asks in its own words (%s)" % [seed_value, depth, lord_q.name, asked])
 			_check(f.monsters.all(func(m): return m.cell != lord_q.cell), "seed %d B%dF: the lord does not stand on a monster" % [seed_value, depth])
 	_check(lost == 0, "over twenty seeds every first floor of a biome has its lord")
 	_check(met.size() == Lords.table().lords.size(), "over twenty seeds every lord asks (%s)" % str(met.keys()))
@@ -3316,7 +3510,7 @@ func _lords() -> void:
 	_check(Lords.due("halls", 0, ["crew"]).is_empty(), "a met lord does not ask again")
 	# A clan you angered offers a way back (#166): its lord asks, in the clan's words, and paying it cools the clan as far as
 	# calm and no further — a favour paid, remembered like any other, so the lord's line goes on.
-	var angry = _flow(7)
+	var angry = _flow(7, ["no-clan-requests"])
 	await angry.new_run()
 	angry.state.reputation[clan] = -40.0
 	angry.state.depth = 1
@@ -3344,7 +3538,7 @@ func _lords() -> void:
 	_check(Overlay.banner_fits(str(holds.done_title) % holds_name.to_upper()) and Overlay.banner_fits(holds_line), "the way back's banner fits the picture")
 	_check(holds_line.begins_with(holds_name), "and opens with the clan's name (%s)" % holds_line)
 	# paid at the request stage, the picture says the clan holds its hand, not that a debt was paid
-	var stage_flow = _flow(7)
+	var stage_flow = _flow(7, ["no-clan-requests"])
 	await stage_flow.new_run()
 	stage_flow.state.reputation[clan] = -40.0
 	stage_flow.state.depth = 1
@@ -3360,7 +3554,7 @@ func _lords() -> void:
 	_check(stage_flow.state.banner != null and str(stage_flow.state.banner.title) == str(holds.done_title) % holds_name.to_upper(), "and the picture says the clan holds its hand (%s)" % str(stage_flow.state.banner.title if stage_flow.state.banner != null else ""))
 	_check(stage_flow.state.stage == "explore" and stage_flow.state.floor_map.quester.is_empty(), "then it goes, and the walk goes on")
 	# a clan cooled past calm on that floor keeps what it has: the way back is no penalty
-	var early = _flow(7)
+	var early = _flow(7, ["no-clan-requests"])
 	await early.new_run()
 	early.state.reputation[clan] = -40.0
 	early.state.depth = 1
@@ -3377,7 +3571,7 @@ func _lords() -> void:
 	await angry._make_floor()
 	var after: Dictionary = angry.state.floor_map.quester
 	_check(not after.is_empty() and str(after.get("lord", "")) == clan and bool(after.get("big", false)) and not bool(after.get("redeem", false)), "and the halls' return still has its second favour to ask (%s)" % str(after.get("title", "")))
-	var calm = _flow(7)
+	var calm = _flow(7, ["no-clan-requests"])
 	await calm.new_run()
 	_check(not calm.state.floor_map.quester.get("redeem", false), "a clan that is only calm gets the usual favour")
 	await _lords_in_a_run()
@@ -3391,7 +3585,8 @@ func _lords() -> void:
 ## stretch of the walk, where a trader's place is given up and a lord's is not. The ways down are numbered from 1 (Floors.paths),
 ## so one game takes each stair's first way and the other its second; B5F has no stair to pick a way on.
 func _lords_in_a_run() -> void:
-	var flow = _flow(1)
+	# the lord on its floor is what `no-clan-requests` plays: with the clans' askers on, a lord stands in its hall and on no floor
+	var flow = _flow(1, ["no-clan-requests"])
 	await flow.new_run()
 	var lost := 0
 	var games := 0
@@ -3468,7 +3663,7 @@ func _a_lord_when_the_trader_gives_up() -> void:
 
 ## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.
 func _lord_again(clan: String) -> Variant:
-	var flow = _flow(7)
+	var flow = _flow(7, ["no-clan-requests"])
 	await flow.new_run()
 	flow.state.lords_met = [clan]
 	flow.state.depth = 4
@@ -3533,6 +3728,13 @@ func _npcs() -> void:
 	for kind in t.kinds:
 		for key in ["ask", "wait", "ready", "thanks", "yes", "give", "sub"]:
 			_check(t.kinds[kind].has(key), "%s says %s" % [kind, key])
+	for clan in Lords.table().lords: # a lord has its own words for its own favour, one per thing an asker says, each naming what it's about
+		var lord: Dictionary = Lords.table().lords[clan]
+		var need := ["ask", "wait", "ready", "thanks"] + (["failed"] if t.kinds[lord.kind].has("failed") else [])
+		for key in need:
+			var line := str(lord.get("says", {}).get(key, ""))
+			_check(line != "" and (key == "thanks" or line.count("%s") == 1) and Hud.log_fits([State.speech(str(lord.name), line % "WWWWWWWW" if line.contains("%s") else line)], 760.0) == 1, "%s says %s in its own words, and the log has room: %s" % [lord.name, key, line])
+		_check(Lords.says(clan, "nothing").is_empty() and (lord.get("hunts", []).is_empty() or Lords.says(clan, str(lord.kind), "nobody").is_empty()), "%s speaks as any asker of another favour, or of one its grudge doesn't name" % lord.name)
 	# fetching
 	var flow = await _asking(100, "fetch")
 	var s = flow.state
