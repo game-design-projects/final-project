@@ -87,15 +87,18 @@ static func generate(rng: Rng, plan := {}):
 
 
 ## The floor's lord (rules/lords.gd) in its biome: its place drawn from a generator of its own, so the floor's own draws, and
-## so its layout, are what the seed always made.
+## so its layout, are what the seed always made. A lord is due here (#166), so its place is not given up for want of the
+## usual stretch of the walk: `Secrets.place_lord` falls back on any cell that leaves a way through the floor whole, and a
+## floor that somehow has none says so rather than quietly losing the run's second favour, the pact and the warren.
 static func _place_lord(f, walk: Dictionary, hall: Vector2i, lord: Dictionary) -> void:
 	if f.quester.is_empty(): # no one was asking here: a place of its own, from the lord's generator, after the monsters stand
 		var lrng := Rng.new(Rng.offset(int(f.seed_value), LORD_SEED))
 		var stood := {}
 		for m in f.monsters: # they are here already, and `reserved()` does not know them
 			stood[m.cell] = true
-		var cell: Variant = Secrets.place_trader(lrng, f, walk, hall, stood)
+		var cell: Variant = Secrets.place_lord(lrng, f, walk, hall, stood)
 		if cell == null:
+			print("floor: no place for %s, the lord of %s" % [lord.name, lord.clan])
 			return
 		f.quester = {"cell": cell}
 	f.quester["lord"] = lord # the asker is the lord; `_finish_request` fills it with the lord's own favour
@@ -149,6 +152,8 @@ static func _finish_request(rng: Rng, f, walk: Dictionary, hall: Vector2i, plan:
 	for m in f.monsters:
 		taken[m.cell] = true
 	var cell: Variant = Secrets.quiet_spot(draws, f, walk, hall, taken)
+	if cell == null: # no quiet spot at all: the thing still gets a place that leaves the way through whole, so the favour can be finished
+		cell = Secrets.place_lord(draws, f, walk, hall, taken)
 	if cell == null:
 		f.quester = {}
 		return

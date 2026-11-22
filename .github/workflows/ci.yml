@@ -79,6 +79,13 @@ jobs:
         run: |
           set -euo pipefail
           tools/favours_test.sh
+      # A lord asks on the first floor of each biome, and where the biome comes back the same lord asks its second favour,
+      # whose payment swears the clan and opens its warren (#154, #166). Two reports said a default game never met one; the
+      # default seeds have to meet a lord each, and one has to swear a clan.
+      - name: Play the lords in a normal game
+        run: |
+          set -euo pipefail
+          tools/lords_test.sh
       - name: Check initiated dialogue and dynamic moods
         run: |
           set -euo pipefail
