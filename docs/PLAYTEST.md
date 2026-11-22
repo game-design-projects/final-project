@@ -53,6 +53,10 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **A level.** #162: every fight teaches experience, however it ended, and enough makes a level (2 more max HP and the health
   with it, and every second level a harder strike). Does a tester notice the banner and the row's fill, and can they say what
   the level gave them?
+- **Clans on the other side.** #165: a kill is half as welcome to each of the clans on the other side as it is unwelcome to the
+  victim's own, and the log says so the first time; two rival kills are worth one of its own dead, so killing a clan's enemies
+  can cool a clan that hates you. Does a tester notice a rival clan's monsters starting friendlier, does a kill start to read as
+  taking a side, and does the praise ever make killing feel cheaper than it should?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
 - **A favour, all the way.** Someone asks for something on some floors; a lord of a clan asks more, asks again where its biome
   comes back, and swears its clan when paid. Does a tester finish one, and can they say what they got?
