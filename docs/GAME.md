@@ -109,9 +109,11 @@ You dodge on a 7×7 grid. Each kind attacks in its own way, and its pace follows
 | B5F | Captain (bandit) | Pawns | A rank of pawns marches at you, taking the squares diagonally ahead | 1.80 |
 | B5F | Hypnocoil (snake) | Hypnosis | Left is right and up is down, and goo lands where it glows | 1.20 (not its mirror) |
 | B5F | Golem (rock) | Fists | Its fists land where you stand, on the beat, then a sweep | 0.55 |
-| Any | Champion (the Hoard) | All five | Every attack of its floor's kinds, one a turn | – |
+| Any | Champion (the Hoard) | All five | Every attack of its floor's kinds, one a turn, and its goo warns less than a slime's: 0.7 s against 0.82 s | – |
 
 Bot hits is how often a slow bot (it sees a warning 0.38 s after it shows and steps every 0.26 s) is hit in one dodge at the pace of a monster pressed a little (intensity 1.3), over 40 dodges; by floor it averages 0.37, 0.34, 0.92, 0.81 and 1.25. Measured on **0.9.5**; every row was re-read from the build with `godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound seeds=40 csv=1` (the `slow` column at intensity 1.3), and the floor averages are the average of each floor's five. `tools/sim_dodge.gd` plays every attack with a bot that reads the warnings, over many seeds, and prints how often it is hit, how much of the box is lit, and whether any moment left no way out; `tools/kinds_test.gd` fails an attack that lights the whole box, walls you in, or lands on your square with less than 0.3 s of warning.
+
+A champion's goo is read with `-- boss=1`: over 40 dodges its splash is the same cross on 0.7 s of warning, and the slow bot is hit 2.8 times by it at intensity 1.2 where the rain's 0.82 s let it be hit 1.1, while the bot that reads every warning is hit at neither (#170). The rain a slime fights in is unchanged.
 
 Every third attack is a mini-game instead: **walls** (be at the gap when one arrives), **stars** (catch them to heal, keep off the red) or **dance** (be on the light when the beat lands, to heal).
 
