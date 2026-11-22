@@ -44,7 +44,9 @@ static func generate(rng: Rng, plan := {}):
 	f.biome = str(biome.get("id", ""))
 	var hall := _lay_out(f, rng, biome)
 	var walk := _walk_from(f, f.start, hall)
-	var secrets: Dictionary = plan.get("secrets", {})
+	var secrets: Dictionary = (plan.get("secrets", {}) as Dictionary).duplicate() # a copy: the vault is this floor's, and the biome's numbers stay as they are
+	if bool(plan.get("vault", false)):
+		secrets.vault = true
 	if not secrets.is_empty():
 		Secrets.hide_chests(rng, f, walk, hall, secrets)
 		walk = _walk_from(f, f.start, hall)

@@ -314,10 +314,19 @@ func _arrival() -> Array:
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
 		lines.append(State.sys_line(biome.line))
+	if _vault_due() != "":
+		lines.append(State.sys_line(_vault_due()))
 	var senders := elites_from(state.floor_map)
 	if not senders.is_empty():
 		lines.append(State.sys_line(str(Clans.elite().arrival) % " and ".join(senders.map(func(c): return Clans.title(c)))))
 	return lines
+
+
+## The line about this run's vault while the floor still hides it (#161), or "" for a floor that holds none.
+func _vault_due() -> String:
+	if state.floor_map == null or not state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))):
+		return ""
+	return str(Content.table("keepsakes").vault.due)
 
 
 ## The clans that sent elites to this floor, in the order their elites stand.
@@ -366,6 +375,7 @@ func _make_floor(way := {}) -> void:
 		plan.boss_at_exit = true
 		plan.biome = Floors.biome(state.run_seed, state.depth)
 		plan.secrets = Floors.secrets(plan.get("biome", {}))
+		plan.vault = state.depth == Floors.vault_floor(state.run_seed) and feature("keepsakes") # one floor of the run hides the Hoard's keepsakes
 		plan.items = true
 		plan.food = true
 		plan.shop = Items.shop_on(state.depth) or way.get("shop", false)
@@ -404,7 +414,10 @@ func load_state(saved: Dictionary) -> bool:
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())
 	event("state_replaced", {"how": "load"})
-	await go("explore", {"lines": [State.sys_line(Texts.welcome_back(state.summary()))]})
+	var lines := [State.sys_line(Texts.welcome_back(state.summary()))]
+	if _vault_due() != "": # a run left on the vault's floor hears of it again (#161)
+		lines.append(State.sys_line(_vault_due()))
+	await go("explore", {"lines": lines})
 	return true
 
 
