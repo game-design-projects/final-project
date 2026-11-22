@@ -48,6 +48,7 @@ const FIELDS := {
 	"run_ended": ["how"], # the run ended at the stairs: "cleared" or "lonely"
 	"run_closed": ["embers"], # the run is over for good, having earned this many embers in all (the feature legacy)
 	"trophy": ["id"], # an achievement was earned; the scene keeps it
+	"story": ["id", "title", "text", "pictured"], # a moment of the story (flow.story): `pictured` says the scene puts it up as a drawing (view/story_cg.gd, data/story.json)
 	"found": ["what"], # you found something on the floor: "chest", "vault" (the Hoard's keepsakes, rules/secrets.gd), or "lore" with {id, read, total}: the writing on a wall, and how many pieces of it have been read over all runs
 	"charted": ["how", "cells"], # the rest of the floor's layout went onto the map: "instinct" (enough of it seen), "map" (a monster was carrying one) or "clan" (one of a clan that trusts you showed you), and how many cells that was
 	"butchered": ["species"], # a friend went into the bag

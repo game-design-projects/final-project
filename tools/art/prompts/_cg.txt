@@ -1,0 +1,7 @@
+Asset type (this overrides the line above about cells): a whole story illustration, a CG, shown on the full screen at a moment of the story with a caption the game sets under it. It is not cut into cells.
+Format: landscape 3:2, one single scene, edge to edge, no border, no panels.
+Composition: one clear focal point a little above the middle, plenty of pure black space, and the bottom fifth of the image kept dark and nearly empty for the caption.
+Characters: drawn exactly in the look of the character references: big heads, tiny bodies, two tall glowing pill-shaped eyes (solid white rounded bars), no mouth unless the brief asks for one, every body a solid black silhouette with a white outline so it hides what is behind it.
+The player is never seen. At most their two small hands come in from the bottom edge, black with a white outline, sleeves only, no face, no body.
+Tone: spooky but cute, a picture book about a haunted dungeon; never gore, never blood, never horror.
+Line art only: lines may be thicker for near things and thinner for far things, but the inside of every shape stays pure black, except a flame, a coin or a heart, which may be solid white.

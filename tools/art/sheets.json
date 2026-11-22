@@ -573,5 +573,193 @@
    "gate_bars",
    "gate_chain"
   ]
+ },
+ "cg_premise": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "chest"
+  ]
+ },
+ "cg_gate": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "bandit"
+  ]
+ },
+ "cg_door": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_end_ghost": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "wick"
+  ]
+ },
+ "cg_end_quiet": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "wick",
+   "slime",
+   "bandit",
+   "snake",
+   "rock"
+  ]
+ },
+ "cg_end_blood": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_end_tangled": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "slime",
+   "snake"
+  ]
+ },
+ "cg_end_lonely": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lord_burrow": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "lord_slime",
+   "slime"
+  ]
+ },
+ "cg_lord_crew": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "lord_bandit",
+   "bandit"
+  ]
+ },
+ "cg_lord_old_stone": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "lord_rock",
+   "rock"
+  ]
+ },
+ "cg_lord_coil": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "lord_snake",
+   "snake"
+  ]
+ },
+ "cg_vexalith": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "dragon"
+  ]
+ },
+ "cg_lore_1_warm": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "wick"
+  ]
+ },
+ "cg_lore_1_wary": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lore_1_cold": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "chest"
+  ]
+ },
+ "cg_lore_2_warm": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lore_2_wary": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lore_2_cold": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lore_3_warm": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "slime"
+  ]
+ },
+ "cg_lore_3_wary": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "bandit",
+   "snake",
+   "rock"
+  ]
+ },
+ "cg_lore_3_cold": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "snake"
+  ]
+ },
+ "cg_lore_4_warm": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "wick"
+  ]
+ },
+ "cg_lore_4_wary": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "rock",
+   "bandit"
+  ]
+ },
+ "cg_lore_4_cold": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lore_5_warm": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
+ },
+ "cg_lore_5_wary": {
+  "plain": true,
+  "width": 1024,
+  "refs": [
+   "dragon"
+  ]
+ },
+ "cg_lore_5_cold": {
+  "plain": true,
+  "width": 1024,
+  "refs": []
  }
 }

@@ -36,6 +36,7 @@ const Vision = preload("res://src/rules/vision.gd")
 const Tips = preload("res://src/view/tips.gd")
 const Transitions = preload("res://src/game/transitions.gd")
 const TrophyPanel = preload("res://src/view/trophy_panel.gd")
+const StoryCg = preload("res://src/view/story_cg.gd")
 const TrophyToast = preload("res://src/view/trophy_toast.gd")
 const Warmth = preload("res://src/rules/warmth.gd")
 
@@ -105,6 +106,7 @@ var _choice: Control
 var _pause: MenuPanel
 var _trophy: TrophyPanel # the achievements, over everything
 var _toast: TrophyToast # one just earned, in the picture's corner
+var _story: StoryCg # a moment of the story as a drawing, over everything; the game holds still under it
 var _tips
 var _pad
 var _debug := false # the flag `debug`
@@ -124,6 +126,7 @@ func _ready() -> void:
 	add_child(audio)
 	audio.bind(flow)
 	flow.happened.connect(_on_event)
+	flow.story_pictures = func(id: String) -> bool: return Settings.get_value("story_cg") and StoryCg.has_picture(id)
 	for id in Settings.get_value("seen_tips"):
 		flow.coach.seen[str(id)] = true
 	for id in Progress.earned():
@@ -188,6 +191,7 @@ func _start_request() -> void:
 		await flow.test_room()
 	else:
 		flow.film_seen = request.get("cg", "") == "whole"
+		flow.film_played = request.get("cg", "") != ""
 		await flow.new_run(_practice_due())
 
 
@@ -359,10 +363,13 @@ func _build_screen() -> void:
 	_trophy = TrophyPanel.new()
 	_trophy.closed.connect(_trophies_closed)
 	add_child(_trophy)
+	_story = StoryCg.new()
+	_story.closed.connect(_story_closed)
+	add_child(_story)
 
 
 func _process(dt: float) -> void:
-	if flow == null or _pause.visible or _trophy.visible:
+	if flow == null or _pause.visible or _trophy.visible or _story.visible:
 		return
 	# during a dodge nothing waits on the answer (a question asked ahead, see stages/dodge.gd): no "thinking" to distract
 	_dock.thinking_ms = 0 if flow.state.stage == "dodge" else Network.waiting_ms()
@@ -395,7 +402,7 @@ func _process(dt: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not event is InputEventKey or not event.pressed or flow == null or _pause.visible or _trophy.visible:
+	if not event is InputEventKey or not event.pressed or flow == null or _pause.visible or _trophy.visible or _story.visible:
 		return
 	if _on_title:
 		if event.keycode == KEY_ESCAPE:
@@ -510,7 +517,7 @@ func map_open() -> bool:
 ## the big OK button; on the foe a click keeps its card open (touch has no hover), and on the automap it opens the whole floor's map
 ## (or, where that can't open, keeps the map's legend open).
 func _on_picture_input(event: InputEvent) -> void:
-	if flow == null or _pause.visible:
+	if flow == null or _pause.visible or _story.visible:
 		return
 	if event is InputEventMouseMotion:
 		_tips.hover(Vector2(-1, -1) if _map_open else _in_picture(event.position)) # under the whole map the corner map isn't there to point at
@@ -567,7 +574,7 @@ func _on_dock_hover(index: int) -> void:
 
 
 func _on_pad(key: String) -> void:
-	if _pause.visible:
+	if _pause.visible or _story.visible:
 		return
 	if _on_title:
 		if key == "cancel":
@@ -684,6 +691,13 @@ func _on_event(name: String, data: Dictionary) -> void:
 			_header.trophies = [flow.trophies.earned.size(), of]
 			_header.trophy_lit = Hud.TROPHY_LIT_S
 			_choice.badges = _run_badges()
+		"story":
+			if data.pictured:
+				_dock.set_talking(false)
+				_tips.visible = false
+				_social.suspended = true
+				_story.large_text = Settings.get_value("text_size") == "large"
+				_story.show_story(str(data.id), str(data.title), str(data.text))
 		"found":
 			if data.what == "lore":
 				Progress.read_lore(data.id)
@@ -776,6 +790,13 @@ func _trophies_closed() -> void:
 		return
 	_social.suspended = false
 	_tips.visible = true
+	_dock.set_talking(flow.state.stage in Transitions.TYPING)
+
+
+## The story's drawing is put away: the game goes on from where it held still.
+func _story_closed() -> void:
+	_social.suspended = false
+	_tips.visible = not _on_title
 	_dock.set_talking(flow.state.stage in Transitions.TYPING)
 
 

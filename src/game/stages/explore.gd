@@ -234,7 +234,7 @@ func _read_the_wall(flow) -> void:
 	var again: bool = flow.lore_read.has(piece.id)
 	flow.lore_read[piece.id] = true
 	var read: int = flow.lore_read.size()
-	flow.announce(piece.title, piece.text)
+	flow.story("lore_" + piece.id.replace("-", "_"), piece.title, piece.text, flow.BANNER_MS)
 	s.say([State.sys_line(piece.text), State.sys_line(Lore.found_line(read))])
 	print("explore: read the writing %s at %s%s, %d of %d over all runs" % [piece.id, s.cell, " again" if again else "", read, Lore.total()])
 	flow.event("found", {"what": "lore", "id": piece.id, "read": read, "total": Lore.total()})

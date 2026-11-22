@@ -17,6 +17,7 @@ prompt=$(mktemp)
   [[ $# -gt 0 ]] && echo "Input images: Image 1 is a style reference only: match its line weight, its wobble and its calm, cute feel, but do not copy its character."
   cat "$here/prompts/_style.txt"
   [[ $figures == *" $name "* ]] && cat "$here/prompts/_figure.txt"
+  [[ $name == cg_* ]] && cat "$here/prompts/_cg.txt" # a story CG: one whole scene (tools/art/cg.sh draws them with their references)
   cat "$here/prompts/$name.txt"
 } > "$prompt"
 images=(); for r in "$@"; do images+=(-i "$r"); done

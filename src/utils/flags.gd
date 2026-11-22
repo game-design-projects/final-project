@@ -32,7 +32,7 @@ const KNOWN := {
 	"out": "out=<dir>: where the screenshot tool writes its pictures",
 	"nofocus": "for the screenshot tools: the window stays on top (so it renders at full speed) but never takes the keyboard",
 	"motif": "motif=N: with the feature motifs, try only that section of the audition (from 1)",
-	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone; only=<attack,...>: for tools/sim_dodge.gd",
+	"only": "only=<species>: for tools/flicker_check.gd, measure that monster alone; only=<attack,...>: for tools/sim_dodge.gd; only=<story id,...>: for tools/story_shots.gd",
 	"seeds": "seeds=N: for tools/sim_dodge.gd, how many dodges per attack and intensity; for tools/sim_chart.gd, how many floors per biome and depth",
 	"at": "at=0.65: for tools/sim_chart.gd, the share of a floor seen at which instinct charts the rest, instead of the data's",
 	"csv": "csv=1: for tools/sim_dodge.gd, print CSV lines",

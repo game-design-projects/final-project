@@ -118,6 +118,16 @@ Two sheets were drawn outside that pipeline (ChatGPT's image tool, from the prom
 - **A lord is a still**: a figure made from one drawing. Its entry in `sheets.json` names the sheet and the cell (`"still"`), and `process.py` bends that drawing into the six frames of an `idle`: the body rises off its feet with a breath, `moves` shift a part with it (`bob`, `sway`, `lean`, `pump`, `grow`), `eyes` are squashed flat for a blink and `brows` lifted for a face with no eyes to shut. `fill` dims the inside of a filled-in shape (a beard, a pale belly), which the figure shader would otherwise light like a lamp. The rects are in the source cell's pixels. A still has no other action, so the game hops and flinches it in code, as it does for a blank face.
 - **`events.png`** has a drawing for each name in `Vignette.KNOWN`, and the gate's bars and chain as drawings of their own so they can move. `src/view/vignette.gd` holds where the moving and coloured parts are, as shares of each drawing's ink: a redrawn picture needs them measured again (`art_test` checks they still lie inside it).
 
+### The story CGs
+
+```bash
+tools/art/cg.sh [gate door ...]                     # draw story CGs (all that have no source yet), 4 at once (JOBS=n), with their references
+tools/art/keep.sh cg_gate 1                         # keep a take
+uv run --script tools/art/process.py cg_gate        # 1024 wide into assets/art/, and into data/sprites.json
+```
+
+A CG's `sheets.json` entry is a `plain` picture with `refs`, the characters `tools/art/cg_refs.py` cuts from the source sheets for it. `data/story.json` gives each its tint; the game names the moment with `flow.story`.
+
 ### The opening film
 
 NEW GAME plays `assets/video/intro.ogv` (`src/menu/intro_cg.gd`) before the run. Godot plays Ogg Theora only, so a rendered mp4 is re-encoded by a script; the prompt it came from, and what each render got right and wrong, are in [intro/seedance-prompt.md](intro/seedance-prompt.md).
