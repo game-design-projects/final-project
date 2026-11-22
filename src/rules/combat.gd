@@ -22,7 +22,7 @@ const HOARD_FIRE_BONUS := 4 # the dragon's charm
 # The heavy strike: the line runs faster and the mark is smaller, for a harder hit that some monsters take worse than others.
 # tools/features_test.gd keeps the trade honest: at steady timing it pays against a rock or a dragon and never against a slime or
 # a snake.
-const HEAVY_BAR_SCALE := 0.6
+const HEAVY_BAR_SCALE := 0.5 # 550 ms: at 0.6 an ordinary hand was still about even with a bandit (#163)
 const HEAVY_MISS_EDGE := 0.35
 const HEAVY_DAMAGE := 1.25
 const HEAVY_PLAIN := 1.0 # a species with no number of its own takes a heavy blow as any other
