@@ -156,12 +156,20 @@ static func spoken(a_name: String) -> String:
 	return a_name.left(1) + a_name.substr(1).to_lower()
 
 
-## Whether a game played with the fight menu as it stands can do this request at all: one that wants a fight won with HEAVY
-## strikes needs a menu that offers HEAVY, which the feature `heavy-strike` gives it and the `skill-combat` experiment takes away
-## (rules and stages don't read each other's flags, so the caller says whether the menu has it). A request the menu can't do is
-## never offered: an asker that keeps asking for what you cannot give holds its teleporter shut for good.
-static func can_do(r: Dictionary, heavy: bool) -> bool:
-	return str(r.kind) != "heavy_win" or heavy
+## Whether a game played with the fight menu as it stands can do this request at all. Every kind can now: a heavy_win is done
+## by a fight won with HEAVY strikes only or by one ended with no strike at all (#288), so a menu with no HEAVY in it (the
+## feature `heavy-strike` off, or the `skill-combat` experiment) and a player who never strikes can both do it. Kept so a kind
+## added later that some menu can't do has the one place to say so: an asker that keeps asking for what you cannot give holds
+## its teleporter shut for good.
+static func can_do(_r: Dictionary, _heavy: bool) -> bool:
+	return true
+
+
+## What the menu says a request wants: a heavy_win asked where the menu has no HEAVY says only its peaceful half.
+static func sub(r: Dictionary, heavy: bool) -> String:
+	if not heavy and r.has("sub_still"):
+		return str(r.sub_still)
+	return str(r.sub)
 
 
 ## A request is done: it pays, its clan hears, and the second one done for a clan opens its teleporter. Returns {gold, healed,
@@ -204,10 +212,13 @@ static func slain(s, m) -> Array:
 	return out
 
 
-## A foe fell: the taken heavy_win requests are done if every strike of yours in that fight was a heavy one (and one landed).
-static func felled(s, m) -> Array:
+## A fight ended (`how`: "slain" or "spared"): the taken heavy_win requests are done if no strike of yours in it was a light
+## one, and either it fell to heavy strikes (one landed at least) or it was spared or won over (#288: a player who never
+## strikes can do it too, the stillness a rock respects).
+static func fight_ended(s, m, how: String) -> Array:
 	var out := []
-	if int(m.strikes.get("heavy", 0)) <= 0 or int(m.strikes.get("light", 0)) > 0:
+	var heavy := int(m.strikes.get("heavy", 0))
+	if int(m.strikes.get("light", 0)) > 0 or (how == "slain" and heavy <= 0) or how not in ["slain", "spared"]:
 		return out
 	for clan in clans():
 		for r in entry(clan).requests:

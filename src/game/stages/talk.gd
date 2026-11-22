@@ -1,4 +1,5 @@
-## SAY SOMETHING: type one line (once per fight). The mind reads what it meant, and the monster reacts, may answer a
+## SAY SOMETHING: type one line (once per fight; a line that misses the question a request sent you to ask this foe is not
+## spent, so a champion you can't run from can still be asked). The mind reads what it meant, and the monster reacts, may answer a
 ## question about the floor, or, for a bandit or snake, take a paid truce if the line names money.
 extends "res://src/game/stages/stage.gd"
 
@@ -47,7 +48,13 @@ static func say(flow, text: String, read = null) -> void:
 	s.listening = true
 	var words: Dictionary = read if read is Dictionary else await flow.mind.read_words(text)
 	var errand: Dictionary = Envoys.to_ask(s, m) if flow.feature("clan-requests") else {} # a request sent you to ask this one something
-	var asked_it: bool = not errand.is_empty() and Envoys.passes(await flow.mind.sounds_like(text, str(errand.sounds)))
+	var asked_it := false
+	if not errand.is_empty():
+		# the words' own reading counts as well as the mind's, so a plain "do you like slimes?" is never missed because the
+		# mind made a joke of it (#287)
+		var score: float = maxf(await flow.mind.sounds_like(text, str(errand.sounds)), Words.sounds_like(text, str(errand.sounds)))
+		asked_it = Envoys.passes(score)
+		print("talk: %s asked for %s: %.2f, %s" % [m.name, str(errand.id), score, "heard" if asked_it else "missed"])
 	var top := Odds.top(words)
 	if m.species in CASHES_IN and top == "gold" and Words.mentions_money(text):
 		s.listening = false
@@ -80,4 +87,7 @@ static func say(flow, text: String, read = null) -> void:
 		flow.event("shout", {"text": str(errand.answer), "species": m.species, "boss": m.boss})
 		lines.append(State.speech(m.name, str(errand.answer)))
 		lines = await Envoy.finished(flow, errand, lines, false)
+	elif not errand.is_empty(): # the question a request sent you with wasn't in it: say so, and the line isn't spent (#287)
+		m.spoke = false
+		lines.append(State.sys_line(str(errand.get("miss", Envoys.table().lines.missed))))
 	await flow.encounter.after_player(lines, decision, not asked)

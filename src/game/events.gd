@@ -49,7 +49,7 @@ const FIELDS := {
 	"run_closed": ["embers"], # the run is over for good, having earned this many embers in all (the feature legacy)
 	"trophy": ["id"], # an achievement was earned; the scene keeps it
 	"found": ["what"], # you found something on the floor: "chest", "vault" (the Hoard's keepsakes, rules/secrets.gd), or "lore" with {id, read, total}: the writing on a wall, and how many pieces of it have been read over all runs
-	"charted": ["how", "cells"], # the rest of the floor's layout went onto the map: "instinct" (enough of it seen) or "map" (a monster was carrying one), and how many cells that was
+	"charted": ["how", "cells"], # the rest of the floor's layout went onto the map: "instinct" (enough of it seen), "map" (a monster was carrying one) or "clan" (one of a clan that trusts you showed you), and how many cells that was
 	"butchered": ["species"], # a friend went into the bag
 	"found_out": ["species"], # a friend worked out what happened to another
 	"state_replaced": ["how"], # a new run ("new"), the next floor ("floor"), a loaded save ("load") or the test room ("test") replaced the game state; whoever holds the old one must let go

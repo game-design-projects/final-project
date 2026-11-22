@@ -9,11 +9,12 @@
   "left_behind": -0.12,
   "meals": -0.06
  },
+ "_harder": "What a level does to every fight (#291): `intensity` scales the attacks, `damage` adds to each hit, `mercy` and `join` scale the odds a monster takes mercy and how much it wants to come along. A level without it is a fight as it was. `effect` is what the log says the level does, when the halls turn.",
  "levels": [
-  {"id": "cold", "from": 0.0, "up": "", "down": "The last torch goes out behind its own flame. Nothing down here has a face any more."},
-  {"id": "shut", "from": 0.1, "up": "One torch opens an eye, and shuts it again when you look.", "down": "The torches have shut their eyes as you go by."},
-  {"id": "wary", "from": 0.28, "up": "The torches look at you again, sidelong.", "down": "The torches look away from you."},
-  {"id": "kind", "from": 0.46, "up": "The torches turn back to you.", "down": "The torches stop leaning your way."},
+  {"id": "cold", "from": 0.0, "harder": {"intensity": 1.25, "damage": 1, "mercy": 0.45, "join": 0.45}, "effect": "Every fight comes at you harder now, and few will take mercy or follow you.", "up": "", "down": "The last torch goes out behind its own flame. Nothing down here has a face any more."},
+  {"id": "shut", "from": 0.1, "harder": {"intensity": 1.15, "damage": 1, "mercy": 0.65, "join": 0.65}, "effect": "Fights come harder: they hit harder, and mercy and friends come slower.", "up": "One torch opens an eye, and shuts it again when you look.", "down": "The torches have shut their eyes as you go by."},
+  {"id": "wary", "from": 0.28, "harder": {"intensity": 1.08, "damage": 0, "mercy": 0.85, "join": 0.85}, "effect": "They come at you a little faster, and mercy is a little harder to find.", "up": "The torches look at you again, sidelong.", "down": "The torches look away from you."},
+  {"id": "kind", "from": 0.46, "effect": "The halls let you be: fights are as they were.", "up": "The torches turn back to you.", "down": "The torches stop leaning your way."},
   {"id": "beloved", "from": 0.74, "up": "The torches lean in as you pass. They seem glad.", "down": ""}
  ]
 }

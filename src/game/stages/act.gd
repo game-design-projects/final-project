@@ -4,6 +4,7 @@ extends "res://src/game/stages/list_stage.gd"
 const Clans = preload("res://src/rules/clans.gd")
 const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Reveal = preload("res://src/rules/reveal.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
@@ -20,8 +21,11 @@ func enter(flow, _args: Dictionary) -> void:
 		var pays: bool = m.species in CASHES_IN and a.intent == "gold"
 		var tip: String = (str(Clans.no_mercy().cut) % m.name if Clans.enraged(s, m) else Texts.GOLD_ACT_TIP) if pays else ""
 		items.append({"label": a.label, "sub": tip})
+	var errand: Dictionary = Envoys.to_ask(s, m) if flow.feature("clan-requests") else {}
 	if m.spoke:
 		items.append({"label": "SAY SOMETHING", "sub": "Already spoke this fight"})
+	elif not errand.is_empty(): # the request that sent you here says what to ask (#287)
+		items.append({"label": "SAY SOMETHING", "sub": str(errand.get("say_sub", errand.sub))})
 	else:
 		items.append({"label": "SAY SOMETHING", "sub": "Ask about stairs, the champion or another monster; one line per fight"})
 	s.menu = items

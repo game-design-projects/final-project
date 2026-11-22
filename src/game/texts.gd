@@ -291,6 +291,17 @@ const VERDICT_SPARED := "SPARED. It goes its own way."
 const VERDICT_SLAIN := "SLAIN."
 
 
+## An ally's loyalty moved after a deed: "WICK thinks less of you: loyalty 55, CONTENT.", the mood said louder when it changed.
+## "" when it didn't move.
+static func loyalty_moved(who: String, before: float, after: float, mood_before: String, mood_after: String) -> String:
+	if roundi(after) == roundi(before):
+		return ""
+	var how := "thinks better of you" if after > before else "thinks less of you"
+	if mood_after != mood_before:
+		return "%s %s: loyalty %d, now %s." % [who, how, roundi(after), mood_after]
+	return "%s %s: loyalty %d (%s)." % [who, how, roundi(after), mood_after]
+
+
 static func ally_gone(charm_name: String) -> String:
 	return "(%s is gone)" % charm_name
 

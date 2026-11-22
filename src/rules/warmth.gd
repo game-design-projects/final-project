@@ -1,6 +1,7 @@
 ## How the halls feel about you. Nothing here is stored: it is read off what the run already keeps (who was spared, slain, left, eaten),
 ## so an old save has a warmth too and a retried fight takes its deeds back with it. Warm halls look at you; every cruelty turns
-## something away, until the set is the cold wireframe it started as. Numbers and words are in data/warmth.json.
+## something away, until the set is the cold wireframe it started as, and colder halls fight harder (`harder`, #291): their
+## attacks come faster and hit harder, and mercy and friends come slower. Numbers and words are in data/warmth.json.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -40,3 +41,18 @@ static func line(was: int, now: int) -> String:
 	if now == was:
 		return ""
 	return str(table().levels[now].up if now > was else table().levels[now].down)
+
+
+const SOFT := {"intensity": 1.0, "damage": 0, "mercy": 1.0, "join": 1.0}
+
+
+## What the halls' coldness does to every fight (#291): {intensity, damage, mercy, join}, all as they were in warm halls.
+static func harder(state) -> Dictionary:
+	var out := SOFT.duplicate()
+	out.merge(table().levels[level(of(state))].get("harder", {}), true)
+	return out
+
+
+## What a level does, for the log when the halls turn: "" when it says nothing.
+static func effect(i: int) -> String:
+	return str(table().levels[i].get("effect", ""))

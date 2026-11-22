@@ -97,6 +97,7 @@ func _strike(flow, t: float) -> void:
 		x = 0.5 # the steady hand: anywhere on the wider mark is the middle
 	var heavy: bool = s.bar.heavy
 	var how := "heavy" if heavy else "light"
+	flow.encounter.struck(m) # a clan devoted to you doesn't stay so (#290)
 	m.strikes[how] = int(m.strikes.get(how, 0)) + 1 # a request may ask for a fight won with heavy strikes only (rules/envoys.gd)
 	var aid: int = Combat.party_aid(s.party_size()) + s.strike_edge()
 	var result: Dictionary
