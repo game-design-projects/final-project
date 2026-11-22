@@ -13,9 +13,9 @@ them). This folder is under `tools/music/`, which Godot ignores.
 | `donjon_explore_choir.ogg`, `donjon_explore_undercroft.ogg`, `donjon_explore_caves.ogg` | Never in the game | Exploring loops, 130.91 s each. |
 | `*.mid` | | The MIDI each render comes from. |
 
-The three fight tracks measure -16.2 dBFS mean, 0.9 dB over the hum theme's combat loop.
+The three fight tracks measure -16.2 dBFS mean, 0.9 dB over the hum theme's combat loop (both source only now).
 
 ## Still to write down
 
-Which soundfont or instruments these were rendered with, and its licence. `assets/CREDITS.txt` names Abdulla as the
-composer and nothing else until that is known.
+Which soundfont or instruments these were rendered with, and its licence. None of them ships, so `assets/CREDITS.txt`
+carries no entry for them; one is needed before any of them is played again.
