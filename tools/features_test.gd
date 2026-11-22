@@ -93,6 +93,8 @@ func _run() -> void:
 	await _npcs()
 	await _lords()
 	await _allies()
+	await _favour()
+	await _cold_halls()
 	await _clan_requests()
 	await _roaming()
 	await _input_cooldown()
@@ -4551,3 +4553,75 @@ func _input_cooldown() -> void:
 	_check(hurried.state.cell != hurried.state.floor_map.start or hurried.state.stage != "explore", "keys work as ever before any fight")
 	_use()
 
+## #290: a clan that likes you does things for you, one more at each level, and a devoted one's faith breaks at a strike.
+func _favour() -> void:
+	_check(Clans.mood_word(13.0) == "CALM" and Clans.mood_word(14.0) == "FRIENDLY" and Clans.mood_word(40.0) == "TRUSTED" and Clans.mood_word(70.0) == "DEVOTED", "three levels of favour, each with its word")
+	var title_font: Font = load("res://src/view/fonts.gd").title()
+	for id in Content.table("clans").clans:
+		for change in [{"clan": id, "from": "", "to": "friendly", "favour": true}, {"clan": id, "from": "friendly", "to": "trusted", "favour": true}, {"clan": id, "from": "trusted", "to": "devoted", "favour": true}, {"clan": id, "from": "trusted", "to": "friendly", "favour": true}, {"clan": id, "from": "devoted", "to": "", "favour": true, "broken": true}]:
+			var words: Dictionary = Clans.moved_words(change)
+			_check_quietly(Overlay.banner_fits(words.text) and words.line.contains(Clans.title(id)) and title_font.get_string_size(words.title, HORIZONTAL_ALIGNMENT_LEFT, -1, 7).x <= Overlay.BANNER_W, "%s favour %s->%s fits the banner: %s / %s" % [id, change.from, change.to, words.title, words.line])
+	_check(true, "every move of every clan's favour fits the banner")
+	var tally := State.new()
+	var up: Array = Clans.favour(tally, "slime", 20.0)
+	_check(up.any(func(c): return c.clan == Clans.of("slime") and c.get("favour", false) and c.to == "friendly"), "a favour that makes a clan friendly says so (%s)" % str(up))
+
+	var flow = _flow(7, ["no-branching"])
+	await flow.new_run()
+	var s = flow.state
+	var m = s.floor_map.monsters.filter(func(x): return not x.boss and not x.lurking).front()
+	var clan := Clans.of(m.species)
+	m.meters.anger = 100.0
+	m.no_hunt = 0
+	var near := {m.cell: 1}
+	_check(Roaming._intent(m, s.floor_map, near, s, {"revenge": true}) == "hunt", "an angry %s right beside you hunts you" % m.species)
+	s.reputation[clan] = 20.0
+	_check(Roaming._intent(m, s.floor_map, near, s, {"revenge": true}) != "hunt", "and the same one doesn't, when its clan is friendly")
+
+	s.reputation[clan] = 45.0
+	s.charted = {}
+	flow.encounter.pending_notes = []
+	flow.encounter.greeting(m)
+	var told: Array = flow.encounter._take_notes()
+	_check(not s.charted.is_empty() and told.any(func(l): return str(l.text).contains("draws you the floor")), "one of a clan that trusts you shows you the floor (%d cells, %s)" % [s.charted.size(), str(told.map(func(l): return str(l.text)))])
+	var charted: int = s.charted.size()
+	flow.encounter.greeting(m)
+	_check(s.charted.size() == charted and flow.encounter._take_notes().is_empty(), "and says nothing once the floor is known")
+
+	s.reputation[clan] = 75.0
+	_check(Clans.devoted(s, m) and await flow.encounter.mercy(m) >= 0.75, "one of a devoted clan takes mercy readily")
+	_check(Tips.clan_text(m, s).contains("takes mercy readily"), "and its card says so (%s)" % Tips.clan_text(m, s))
+	flow.encounter.struck(m)
+	_check(Clans.standing_of(s, m.species) <= 0.0 and not Clans.devoted(s, m) and Clans.mood_word(Clans.standing_of(s, m.species)) == "CALM", "strike one and its faith breaks: calm again (%.0f)" % Clans.standing_of(s, m.species))
+	var boss = s.floor_map.monsters.filter(func(x): return x.boss).front()
+	s.reputation[Clans.of(boss.species)] = 90.0
+	_check(not Clans.devoted(s, boss), "a champion is never let off by it")
+
+
+## #291: the colder the halls, the harder every fight, and the log says what the turn means.
+func _cold_halls() -> void:
+	var flow = _flow(7, ["no-branching"])
+	await flow.new_run()
+	var s = flow.state
+	_check(Warmth.harder(s) == Warmth.SOFT, "a fresh run fights as it always did (%s)" % str(Warmth.harder(s)))
+	var last := Warmth.SOFT
+	var harder_each := true
+	for kills in [2, 4, 6]:
+		s.tally.slain = kills
+		var now: Dictionary = Warmth.harder(s)
+		harder_each = harder_each and now.intensity > last.intensity and now.mercy < last.mercy and now.join < last.join and now.damage >= last.damage
+		last = now
+	_check(harder_each and last.damage >= 1, "each colder level is harder: faster attacks, less mercy, fewer friends, and in the coldest a harder hit (%s)" % str(last))
+	s.tally.slain = 0
+	await flow.go("explore")
+	s.tally.slain = 6
+	await flow.go("explore")
+	_check(s.lines.any(func(l): return str(l.text) == Warmth.effect(Warmth.level(Warmth.of(s)))), "the log says what the colder halls do (%s)" % str(s.lines.map(func(l): return str(l.text))))
+	var m = s.floor_map.monsters.filter(func(x): return not x.boss and not x.lurking).front()
+	await flow.go("intro", {"foe": m})
+	await flow.tick(flow.clock + 1000.0)
+	if s.stage == "intro":
+		await flow.press("confirm")
+	await flow.go("wait", {"pressure": 1.0})
+	await flow.go("dodge", {"pressure": 1.0})
+	_check(s.dodge != null and s.dodge.elite_damage == int(last.damage), "and a fight in them hits harder (%s, %s)" % [str(s.dodge.elite_damage) if s.dodge != null else "no dodge", s.stage])

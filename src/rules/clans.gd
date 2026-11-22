@@ -11,7 +11,9 @@
 ##
 ## Killing climbs a clan's hostility (`hostility`): angry, then furious (two of its own dead, nothing made up for it: the floors
 ## made after that send its elites), then enraged (four: none of its own will take mercy). Its standing is the one number behind
-## all of it, so sparing its own or its friends, or doing one of its kind a favour, brings it back down.
+## all of it, so sparing its own or its friends, or doing one of its kind a favour, brings it back down. The other way, a clan
+## that likes you does things for you (`favour`, #290): friendly, its own don't hunt you; trusted, one shows you the floor;
+## devoted, they take mercy readily, until you strike one and its faith breaks.
 extends RefCounted
 
 const Content = preload("res://src/rules/content.gd")
@@ -127,6 +129,7 @@ static func _spread(state, from: String, worth: float, deed: String) -> Array:
 		var part: float = worth * reach(from, clan, deed)
 		if part != 0.0:
 			var was := hostility(float(state.reputation.get(clan, 0.0)))
+			var liked_was := favour_level(float(state.reputation.get(clan, 0.0)))
 			var lowest := -STANDING_MAX
 			var sworn = state.get("lords_sworn")
 			if sworn is Array and (sworn as Array).has(clan): # sworn: its own never turn on you past angry
@@ -136,6 +139,10 @@ static func _spread(state, from: String, worth: float, deed: String) -> Array:
 			if now != was:
 				moved.append({"clan": clan, "from": was, "to": now})
 				print("clans: %s %s -> %s (standing %.0f)" % [clan, was if was != "" else "calm", now if now != "" else "calm", state.reputation[clan]])
+			var liked_now := favour_level(float(state.reputation[clan]))
+			if liked_now != liked_was:
+				moved.append({"clan": clan, "from": liked_was, "to": liked_now, "favour": true})
+				print("clans: %s favour %s -> %s (standing %.0f)" % [clan, liked_was if liked_was != "" else "calm", liked_now if liked_now != "" else "calm", state.reputation[clan]])
 	return moved
 
 
@@ -199,18 +206,98 @@ static func no_mercy() -> Dictionary:
 	return _table().no_mercy
 
 
-## A clan's mood in a word, for the map's legend and the cards: FRIENDLY, CALM, or its hostility's title.
+## A clan's mood in a word, for the map's legend and the cards: its favour's title (FRIENDLY, TRUSTED, DEVOTED), CALM, or its
+## hostility's title.
 static func mood_word(standing: float) -> String:
 	var level := _level(hostility(standing))
 	if not level.is_empty():
 		return str(level.title)
-	return "FRIENDLY" if standing >= float(_table().friendly_at) else "CALM"
+	var liked := _favour_level(favour_level(standing))
+	return str(liked.title) if not liked.is_empty() else "CALM"
+
+
+# ---------------------------------------------------------------- favour (#290)
+
+## How much a clan with this standing likes you: "" (not especially), "friendly", "trusted" or "devoted".
+static func favour_level(standing: float) -> String:
+	var out := ""
+	for level in _table().favour:
+		if standing >= float(level.at):
+			out = str(level.id)
+	return out
+
+
+## How far up the favour levels: 0 for none, then 1, 2, 3.
+static func favour_rank(id: String) -> int:
+	var levels: Array = _table().favour
+	for i in levels.size():
+		if levels[i].id == id:
+			return i + 1
+	return 0
+
+
+static func _favour_level(id: String) -> Dictionary:
+	for level in _table().favour:
+		if level.id == id:
+			return level
+	return {}
+
+
+## How much the clan of this kind of monster likes you now.
+static func favour_of(state, species: String) -> String:
+	return favour_level(standing_of(state, species)) if of(species) != "" else ""
+
+
+## Whether its clan is friendly or better: its own don't hunt you.
+static func befriended(state, species: String) -> bool:
+	return favour_rank(favour_of(state, species)) >= favour_rank("friendly")
+
+
+## Whether its clan trusts you or better: one of its own shows you the floor.
+static func trusts(state, species: String) -> bool:
+	return favour_rank(favour_of(state, species)) >= favour_rank("trusted")
+
+
+## Whether its clan is devoted to you: its own take mercy readily, until you strike one.
+static func devoted(state, m) -> bool:
+	return not m.boss and favour_rank(favour_of(state, m.species)) >= favour_rank("devoted")
+
+
+## The least mercy one of a devoted clan takes, or 0.
+static func mercy_floor(state, m) -> float:
+	return float(_favour_level("devoted").mercy) if devoted(state, m) else 0.0
+
+
+## You struck one of a devoted clan: its faith breaks, and its standing falls back to calm. Returns the move, as `record` does.
+static func break_faith(state, species: String) -> Array:
+	var clan := of(species)
+	var was := favour_level(standing_of(state, species))
+	state.reputation[clan] = minf(float(state.reputation.get(clan, 0.0)), float(_table().faith.broken))
+	print("clans: %s's faith breaks (standing %.0f)" % [clan, state.reputation[clan]])
+	return [{"clan": clan, "from": was, "to": favour_level(float(state.reputation[clan])), "favour": true, "broken": true}]
+
+
+## The words for a clan showing you the floor: {title, line}.
+static func shown(clan: String) -> Dictionary:
+	var w: Dictionary = _table().shown
+	return {"title": str(w.title) % title(clan).to_upper(), "line": str(w.line)}
 
 
 ## What a move of hostility says: {title, text} for the picture's banner, and `line` for the log when the picture is taken. The level
 ## it reached and what that means, or that it cooled.
 static func moved_words(change: Dictionary) -> Dictionary:
 	var name := title(change.clan)
+	if change.get("favour", false): # a move of favour, not of hostility (#290)
+		if change.get("broken", false):
+			var faith: Dictionary = _table().faith
+			return {"title": str(faith.title) % name.to_upper(), "text": str(faith.text), "line": str(faith.line) % name}
+		if favour_rank(change.to) > favour_rank(change.from):
+			var liked := _favour_level(change.to)
+			return {"title": "%s IS %s" % [name.to_upper(), liked.title], "text": str(liked.effect), "line": str(liked.line) % name}
+		var warmer: Dictionary = _table().warmer
+		var now := str(_favour_level(change.to).get("title", "calm")).to_lower()
+		var was := str(_favour_level(change.from).get("title", "calm")).to_lower()
+		return {"title": str(warmer.title) % name.to_upper(), "text": "Now %s, no longer %s." % [now, was], "line": str(warmer.line) % [name, now, was]}
 	if rank(change.to) > rank(change.from):
 		var level := _level(change.to)
 		return {"title": "%s IS %s" % [name.to_upper(), level.title], "text": str(level.effect), "line": str(level.line) % name}

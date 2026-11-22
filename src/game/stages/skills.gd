@@ -51,6 +51,7 @@ func pick(flow, index: int) -> void:
 	print("skills: %s on %s: %s, %d energy left" % [id, m.name, did, f.energy])
 	var words := []
 	if did.damage > 0:
+		flow.encounter.struck(m) # a clan devoted to you doesn't stay so (#290)
 		s.sharpened = 0
 		var betrayal := Social.hit(m)
 		if betrayal != "":

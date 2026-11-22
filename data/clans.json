@@ -13,6 +13,15 @@
  },
  "mood": {"friendliness": 0.5, "anger": -0.4},
  "friendly_at": 14,
+ "_favour": "The other side of hostility (#290): a clan that likes you enough does something for you. friendly: its own never hunt you on the floor. trusted: the first of its own you meet on a floor draws you its map. devoted: its own take mercy at least `mercy` of the time, and the first strike at one of them breaks its faith: its standing falls back to `broken`. `at` is the standing each starts at; the first is `friendly_at`.",
+ "favour": [
+  {"id": "friendly", "at": 14, "title": "FRIENDLY", "effect": "Its own won't hunt you on the floor.", "line": "%s is friendly: its own won't hunt you."},
+  {"id": "trusted", "at": 40, "title": "TRUSTED", "effect": "Meet one of its own and it shows you the floor.", "line": "%s trusts you: its own will show you the floor."},
+  {"id": "devoted", "at": 70, "title": "DEVOTED", "effect": "Its own take mercy readily. Strike one, and that ends.", "line": "%s is devoted: its own take mercy readily. Strike one, and that ends.", "mercy": 0.75}
+ ],
+ "faith": {"broken": 0, "title": "%s'S FAITH BREAKS", "text": "You struck one of its own. It is only calm with you now.", "line": "%s's faith breaks: you struck one of its own."},
+ "shown": {"title": "%s SHOWS THE WAY", "line": "%s draws you the floor in the dust: it is on your map now."},
+ "warmer": {"title": "%s COOLS TO YOU", "line": "%s is %s with you now, no longer %s."},
  "hostility": [
   {"id": "angry", "at": -18, "title": "ANGRY", "effect": "Its own start out angrier.", "line": "%s is angry: its own start out angrier."},
   {"id": "furious", "at": -36, "title": "FURIOUS", "effect": "Its own come as elites from the next floor on.", "line": "%s is furious: its own come as elites from the next floor."},

@@ -244,6 +244,8 @@ static func clan_text(m, s) -> String:
 		out.append("An elite: tougher, and it hits harder.")
 	if Clans.enraged(s, m):
 		out.append("It won't take mercy.")
+	if Clans.devoted(s, m):
+		out.append("%s: %s. It takes mercy readily; strike it and that ends." % [Clans.title(clan), word])
 	return " ".join(out)
 
 

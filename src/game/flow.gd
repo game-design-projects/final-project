@@ -505,8 +505,11 @@ func _note_warmth() -> void:
 	print("flow: warmth %s -> %s (%.2f)" % [Warmth.level_id(was), Warmth.level_id(now), Warmth.of(state)])
 	event("warmth", {"from": was, "to": now})
 	var said := Warmth.line(was, now)
+	var does := Warmth.effect(now) # what the turn means for the fights, in the log as well as on the picture (#291)
 	if said != "" and not banner_up():
-		announce(WARMTH_TITLE, said)
+		announce(WARMTH_TITLE, said + ("\n" + does if does != "" else ""))
+	if does != "" and not state.testing:
+		state.say(state.lines + [State.sys_line(does)])
 
 
 ## Put a moment worth stopping for on the picture: a banner that fades by itself.

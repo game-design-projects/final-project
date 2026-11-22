@@ -1,6 +1,7 @@
 ## Monsters walk when you do: each step you take gives every monster a turn, one at a time, and turning or bumping a wall gives none,
 ## so you can always stop and look. What it does comes from who it is (data/roaming.json), and how it feels can override that: an
-## angry one or one whose clan you wronged hunts you, a frightened one backs away, a friendly one comes close and stops short.
+## angry one or one whose clan you wronged hunts you, a frightened one backs away, a friendly one comes close and stops short,
+## and none whose clan likes you hunts you at all (#290).
 ##
 ## A move is never drawn from `Dice` or the game's generator: those aren't saved, and a pinned `Dice` gives one fixed number, so
 ## it would shift the fights and change after a load. It is worked out from the floor's seed, the monster's place in the list and the
@@ -99,7 +100,9 @@ static func _intent(m, f, to_you: Dictionary, state, options: Dictionary) -> Str
 		return "hunt" if options.get("boss_chase", false) and m.cell != f.stairs and seen else "still"
 	if m.meters.fear >= float(t.afraid_at) and near <= int(t.afraid_sense):
 		return "away"
-	var may_hunt: bool = m.no_hunt <= 0 # it lost you a few steps ago: it goes back to its own way about the floor (#169)
+	# it lost you a few steps ago: it goes back to its own way about the floor (#169); and a clan that likes you doesn't send its
+	# own after you (#290)
+	var may_hunt: bool = m.no_hunt <= 0 and not Clans.befriended(state, m.species)
 	if may_hunt and options.get("revenge", false) and near <= int(t.revenge_sense) and float(state.reputation.get(Clans.of(m.species), 0.0)) <= float(t.revenge_at):
 		return "hunt"
 	if may_hunt and m.meters.anger >= float(t.angry_at) and near <= int(t.angry_sense):

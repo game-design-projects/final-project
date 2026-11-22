@@ -17,6 +17,7 @@ const DodgeRun = preload("res://src/rules/dodge_run.gd")
 const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 
 const MOVES := {"up": Vector2i(0, -1), "down": Vector2i(0, 1), "left": Vector2i(-1, 0), "right": Vector2i(1, 0)}
 
@@ -36,7 +37,11 @@ func enter(flow, args: Dictionary) -> void:
 		pace = maxf(Pace.LOWEST, pace * Pace.opening(s.tally.spared + s.tally.slain + s.tally.fled))
 	print("dodge: pace %.2f (B%dF, friendliness %d, struggle %.0f, %d allies%s)" % [pace, s.depth, m.meters.friendliness, s.struggle, s.allies.size(), ", elite" if m.elite else ""])
 	var mood := Feelings.mood(m) if flow.feature("mood-attacks") else ""
-	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace, Clans.elite() if m.elite else {}, mood)
+	var harder: Dictionary = (Clans.elite() if m.elite else {}).duplicate()
+	var cold: Dictionary = Warmth.harder(s) # cold halls fight harder (#291), on top of an elite's own
+	harder.intensity = float(harder.get("intensity", 1.0)) * float(cold.intensity)
+	harder.damage = int(harder.get("damage", 0)) + int(cold.damage)
+	s.dodge = DodgeRun.start(genre, float(args.get("pressure", 1.0)), m.boss, m.turn, flow.clock, s.charms(), pace, harder, mood)
 	s.dodge.guard = Combat.party_guard(s.allies.size()) + (Keepsakes.THICK_GUARD if Keepsakes.has(s, "thick_hide") else 0)
 	flow.encounter.think_ahead(m) # the mercy the menu after it needs, asked while you dodge (a heart caught changes it: then it asks again)
 	if Keepsakes.has(s, "quick_feet"):

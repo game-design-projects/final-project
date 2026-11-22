@@ -23,6 +23,7 @@ const Roaming = preload("res://src/rules/roaming.gd")
 const Social = preload("res://src/rules/social.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 
 const REACTION_LINES := {"good": "pleased", "bad": "stung", "sad": "hurt", "fear": "scared", "odd": "puzzled"} # how a deed landed -> what it says about it
 
@@ -66,6 +67,7 @@ func greeting(m):
 	if remembered != "":
 		flow.event("shout", {"text": remembered, "species": m.species, "boss": m.boss})
 		memory = State.speech(m.name, remembered)
+	_shows_the_way(m)
 	var news: Dictionary = Clans.hear(m, flow.state)
 	if news.is_empty():
 		return memory if memory != null else foe_line(m, "converse")
@@ -79,6 +81,37 @@ func greeting(m):
 	return said if said != null else foe_line(m, "converse")
 
 
+## One of a clan that trusts you draws you the floor (#290): what isn't on your map yet is charted, said in the log with the
+## next message and on the picture when it's free. Nothing when the floor is known already, or in the test room or on the practice
+## floor.
+func _shows_the_way(m) -> void:
+	var s = flow.state
+	if s.testing or s.practice or not Clans.trusts(s, m.species):
+		return
+	var cells: int = Chart.reveal(s)
+	if cells <= 0:
+		return
+	var words := Clans.shown(Clans.of(m.species))
+	pending_notes.append({"who": "", "text": str(words.line) % m.name})
+	if not flow.banner_up():
+		flow.announce(str(words.title), str(words.line) % m.name)
+	flow.event("charted", {"how": "clan", "cells": cells})
+	flow.event("sound", {"name": "good"})
+	print("encounter: %s's clan trusts you: %d cells charted" % [m.name, cells])
+
+
+## You strike `m`: the first strike at one of a clan devoted to you breaks its faith (#290). Said on the picture, or in the log
+## with the next message when something else holds the picture.
+func struck(m) -> void:
+	var s = flow.state
+	if s.testing or s.practice or not Clans.devoted(s, m):
+		return
+	var moved := Clans.break_faith(s, m.species)
+	flow.event("sound", {"name": "bad"})
+	for line in tell_hostility(moved):
+		pending_notes.append({"who": "", "text": str(line.text)})
+
+
 ## Whether it was begging when you struck: the odds as the gauge last showed them, not asked again, so a blow that ends the
 ## fight never waits on the mind.
 func begging() -> bool:
@@ -90,7 +123,7 @@ func begging() -> bool:
 func mercy(m) -> float:
 	if Clans.enraged(flow.state, m):
 		return 0.0
-	var odds: float = await flow.mind.mercy(m)
+	var odds: float = maxf(await flow.mind.mercy(m) * float(Warmth.harder(flow.state).mercy), Clans.mercy_floor(flow.state, m)) # cold halls spare you less (#291), a devoted clan's own more (#290)
 	if Keepsakes.has(flow.state, "open_hand"):
 		odds = minf(1.0, odds + Keepsakes.OPEN_MERCY)
 	return odds
@@ -125,7 +158,7 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	if not act is String:
 		Feelings.warm_up(m, feeling)
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
-	var mercy: float = 0.0 if Clans.enraged(flow.state, m) else after.mercy
+	var mercy: float = 0.0 if Clans.enraged(flow.state, m) else maxf(after.mercy * float(Warmth.harder(flow.state).mercy), Clans.mercy_floor(flow.state, m))
 	var pressure: float = after.pressure
 	if not act is String:
 		var learned := Reveal.learn(m, m.last_intent, str(feeling.get("tone", "")))
@@ -322,7 +355,10 @@ func tell_hostility(moved: Array) -> Array:
 	if moved.is_empty() or flow.state.testing: # the test room forgets it at once, so it isn't said
 		return []
 	var words: Dictionary = Clans.moved_words(moved[0])
-	if Clans.rank(moved[0].to) > Clans.rank(moved[0].from):
+	if moved[0].get("favour", false):
+		if Clans.favour_rank(moved[0].to) > Clans.favour_rank(moved[0].from):
+			flow.event("sound", {"name": "good"})
+	elif Clans.rank(moved[0].to) > Clans.rank(moved[0].from):
 		flow.event("sound", {"name": "bad"})
 	if not flow.banner_up():
 		flow.announce(words.title, words.text)

@@ -8,6 +8,7 @@ const Combat = preload("res://src/rules/combat.gd")
 const Content = preload("res://src/rules/content.gd")
 const State = preload("res://src/game/state.gd")
 const Texts = preload("res://src/game/texts.gd")
+const Warmth = preload("res://src/rules/warmth.gd")
 
 const TAKE := 0
 
@@ -40,7 +41,7 @@ func enter(flow, args: Dictionary) -> void:
 
 ## How much `m` wants to come along, asked while you choose; the mind card shows it when it comes.
 func _think_join(flow, m) -> void:
-	var wants: float = await flow.mind.join(m)
+	var wants: float = await flow.mind.join(m) * float(Warmth.harder(flow.state).join) # cold halls make few friends (#291)
 	if flow.state.foe != m or flow.state.stage != "ask":
 		return
 	_wants = wants
@@ -50,7 +51,7 @@ func _think_join(flow, m) -> void:
 
 func pick(flow, index: int) -> void:
 	if _wants < 0.0:
-		_wants = await flow.mind.join(flow.state.foe) # chosen before the mind answered: the same question, already out
+		_wants = await flow.mind.join(flow.state.foe) * float(Warmth.harder(flow.state).join) # chosen before the mind answered: the same question, already out
 	if _room and index == TAKE:
 		await flow.encounter.take_along(flow.state.foe, _wants)
 	else:
