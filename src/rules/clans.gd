@@ -210,14 +210,16 @@ static func mood(standing: float) -> Dictionary:
 
 ## `m` meets you and hears what its clan has heard since it last did: its mood moves by the difference, and it remembers. Returns
 ## {clan, kind, deed, who, tone} for what it has to say (`kind` names its lines), or {} when there's no news for it. A clan that
-## only heard of a kill on the other side hears it as `rival_slain`, and in good tone: the kill pleases it (#165).
+## only heard of a kill on the other side hears it as `rival_slain`, and in good tone: the kill pleases it (#165). Its own last
+## deed is always what it talks about; of the rest, it names the newest one with the sign its opinion moved in, so a kill of its own
+## side is not the news when it is gladder of you.
 static func hear(m, state) -> Dictionary:
 	var clan := of(m.species)
 	var standing: float = float(state.reputation.get(clan, 0.0))
 	var before: float = float(m.heard.get("standing", 0.0))
 	if clan == "" or absf(standing - before) < NEWS_AT:
 		return {}
-	var deed: Dictionary = _latest(state.deeds, clan)
+	var deed: Dictionary = _latest(state.deeds, clan, standing > before)
 	if deed.is_empty():
 		return {}
 	var now := mood(standing)
@@ -236,17 +238,25 @@ static func hear(m, state) -> Dictionary:
 	return news
 
 
-## The deed a clan talks about: its own last one if it has one, or else the last it heard of — a kill on the other side reaches
-## its rivals, and nothing else does.
-static func _latest(deeds: Array, clan: String) -> Dictionary:
+## The deed a clan talks about: its own last one if it has one, or else the newest it heard of with the sign its opinion moved in —
+## a kill on the other side is heard with the opposite sign, so a deed of its own side is not the news when the clan is gladder of
+## you — and, when nothing it heard has that sign, the newest it heard of, so a favour, which tells no tale, still leaves it one to
+## tell (#165).
+static func _latest(deeds: Array, clan: String, rose: bool) -> Dictionary:
 	var heard := {}
+	var newest := {}
 	for i in range(deeds.size() - 1, -1, -1):
 		var deed: Dictionary = deeds[i]
 		if deed.clan == clan:
 			return deed
-		if heard.is_empty() and reach(deed.clan, clan, str(deed.deed)) != 0.0:
+		var part := reach(deed.clan, clan, str(deed.deed))
+		if part == 0.0:
+			continue
+		if newest.is_empty():
+			newest = deed
+		if heard.is_empty() and (part < 0.0) == rose:
 			heard = deed
-	return heard
+	return heard if not heard.is_empty() else newest
 
 
 ## What a clan knows, in words a mind can read.
@@ -255,7 +265,8 @@ static func _retell(deeds: Array, clan: String) -> Array:
 	for deed in deeds:
 		if reach(deed.clan, clan, str(deed.deed)) != 0.0:
 			var whose := "one of its own" if deed.clan == clan else "of %s" % title(deed.clan)
-			out.append("the player %s %s the %s, %s" % [deed.deed, deed.who, deed.species, whose])
+			var did := "killed" if deed.deed == "slain" else str(deed.deed)
+			out.append("the player %s %s the %s, %s" % [did, deed.who, deed.species, whose])
 	return out.slice(-HEARD_SHOWN)
 
 

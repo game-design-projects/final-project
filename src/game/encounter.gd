@@ -308,8 +308,8 @@ func _rivals_standing(m, how: String) -> Dictionary:
 
 
 ## One line for the log for each rival clan this kill has pleased into the positive. The crossing is the whole answer — the
-## deed took it from nothing or less to above nothing — so nothing is saved to remember it, and a clan already above nothing is
-## not told twice in a run (#163, #165).
+## deed took it from nothing or less to above nothing — so nothing is saved to remember it: a clan already above nothing is not
+## told for this crossing, and one carried past nothing again later in the run is told again (#163, #165).
 func _pleased(standing: Dictionary, m) -> Array:
 	var s = flow.state
 	if s.testing: # the test room forgets it at once, so it isn't said
