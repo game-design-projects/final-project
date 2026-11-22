@@ -80,9 +80,10 @@ func _credits_have_one_title() -> void:
 	_check(page.title == "CREDITS" and first != "" and not first.to_upper().contains("CREDITS"), "the credits text does not start with the CREDITS heading again (starts: %s)" % first.left(30))
 
 
-## The LICENCES page carries the texts the credits name, in full: the open font licence of each typeface (with the font's own
-## copyright line) and the two Creative Commons texts the music's samples and the voice references are under. A file missing
-## from a build says so instead of leaving a blank.
+## The LICENCES page carries the texts the credits name, in full: every `.txt` that ships in assets/fonts and assets/LICENSES —
+## the open font licence of each typeface (with the font's own copyright line) and the two Creative Commons texts the music's
+## samples and the voice references are under — is on the page under its name, so a text added to a build is shown rather than
+## travelling unshown. A file missing from a build says so instead of leaving a blank.
 func _licences_carry_their_texts() -> void:
 	var page: Dictionary = Menus.licences()
 	_check(page.title == "LICENCES" and page.body.contains("SIL OPEN FONT LICENSE Version 1.1"), "the licences page carries the open font licence")
@@ -90,6 +91,16 @@ func _licences_carry_their_texts() -> void:
 	_check(page.body.contains("Attribution-ShareAlike 3.0 Unported") and page.body.contains("Attribution 4.0 International"), "and the two Creative Commons texts the credits name")
 	_check(not page.body.contains("(missing from this build)"), "none of the licence texts is missing from this build")
 	_check(Menus.credits().body.contains("LICENCES"), "and the credits page says where they are")
+	var shipped := 0
+	var absent := []
+	for dir in ["res://assets/fonts", "res://assets/LICENSES"]:
+		for file in DirAccess.get_files_at(dir):
+			if not file.ends_with(".txt"):
+				continue
+			shipped += 1
+			if not page.body.contains(file.to_upper()):
+				absent.append(file)
+	_check(shipped >= 4 and absent.is_empty(), "every text that ships is on the page (%d texts%s)" % [shipped, (", and these are not: " + ", ".join(absent)) if not absent.is_empty() else ""])
 
 
 ## DATA offers OPEN SAVE FOLDER, except with `nosave`: the saves are then in memory, and the folder is the player's real one.
