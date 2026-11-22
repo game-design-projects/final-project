@@ -48,7 +48,7 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `far_check` | Every species at every distance down the longest line of each floor, and across floors: is it seen, and is a name ever over nothing |
 | `hold_check` | Each arrow held in the real game scene: cells, turns, bumps, whether the camera turned back, the slowest frame |
 | `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
-| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
+| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots`, `story_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 | `sim_chart` | How much of a floor is seen when the stairs first show, and the steps instinct saves on the way to them, per biome and depth (`seeds=N`); for tuning `chart` in `data/floors.json` |
 | `sim_strike` | What the fight bar's two commands are worth to the same hand, per species: the damage of each when both are stopped the same ms from the middle (so the faster line isn't read against its own narrower mark), and what a swing is worth to a steady, an ordinary and a shaky hand, misses counted (`boss=1`, `charms=rock|dragon`, `swings=N`); for tuning `combat.gd`'s `HEAVY_*` and the species' `heavy` numbers (#163) |
@@ -124,6 +124,7 @@ Two sheets were drawn outside that pipeline (ChatGPT's image tool, from the prom
 tools/art/cg.sh [gate door ...]                     # draw story CGs (all that have no source yet), 4 at once (JOBS=n), with their references
 tools/art/keep.sh cg_gate 1                         # keep a take
 uv run --script tools/art/process.py cg_gate        # 1024 wide into assets/art/, and into data/sprites.json
+godot --path . -s res://tools/story_shots.gd -- out=/some/dir [only=gate,end_quiet] [nofocus]  # the CGs over the running game (needs a window)
 ```
 
 A CG's `sheets.json` entry is a `plain` picture with `refs`, the characters `tools/art/cg_refs.py` cuts from the source sheets for it. `data/story.json` gives each its tint; the game names the moment with `flow.story`.
