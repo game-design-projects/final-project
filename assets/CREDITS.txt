@@ -12,7 +12,7 @@ OPENING FILM (assets/video/intro.ogv)
 
 MUSIC: every place and every foe (assets/audio/music/*.ogg)
 - Original music made for this game: a tune for each biome, each clan's hall, the trader, the practice floor and the test room, for every kind of monster and every champion, and the victory and stairs stings. Written and rendered offline by tools/music/build-themes.py (the player is tools/music/orchestra.py, the mixing and the hall tools/music/sampler.py) and encoded to Ogg Vorbis by tools/music/to_ogg.sh.
-- Its instruments are recordings from the Versilian Studios Chamber Orchestra 2, Community Edition (VSCO-2 CE, https://github.com/sgossner/VSCO-2-CE), released under Creative Commons CC0 1.0 (public domain dedication): strings, brass, woodwinds, harp, glockenspiel, marimba, kettle drums, snare, tambourine, triangle and cymbals by Versilian Studios, and the organ sampled by Simon Dalzell of Ivy Audio. CC0 asks for nothing; both are credited because they ask it as a courtesy.
+- Its instruments are recordings from the Versilian Studios Chamber Orchestra 2, Community Edition (VSCO-2 CE, https://github.com/sgossner/VSCO-2-CE), released under Creative Commons CC0 1.0 (public domain dedication): strings, brass, woodwinds, harp, glockenspiel, marimba, kettle drums, snare, triangle and cymbals by Versilian Studios, and the organ sampled by Simon Dalzell of Ivy Audio. CC0 asks for nothing; both are credited because they ask it as a courtesy.
 - The audio files are the project's own recordings of that music, shipped under the game's own terms.
 
 MUSIC: the hum theme, at the camp (assets/audio/hum-explore.ogg)

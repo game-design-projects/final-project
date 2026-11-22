@@ -18,4 +18,5 @@ fi
 git -C "$dest" sparse-checkout set "${paths[@]}"
 git -C "$dest" checkout master
 git -C "$dest" pull --ff-only
+touch "$dest/.gdignore" # the project's own folder: Godot must not import 2 GB of samples the game never plays
 echo "fetch: $(find "$dest" -name '*.wav' | wc -l | tr -d ' ') samples in $dest"

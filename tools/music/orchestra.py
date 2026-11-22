@@ -298,7 +298,7 @@ def render_note(inst: str, m: int, dur: float, vel: float = 1.0) -> np.ndarray:
 def _timpani_pitches() -> dict:
     """The kettle drums' recordings carry no note in their names: measure each one's pitch."""
     out: dict = {}
-    for p in sorted(glob.glob(os.path.join(LIB, HITS["timpani"]))):
+    for p in sorted(q for q in glob.glob(os.path.join(LIB, HITS["timpani"])) if q.lower().endswith(".wav")):
         x = _wav(p)[: int(1.0 * S.SR)]
         spec = np.abs(np.fft.rfft(x * np.hanning(len(x)), n=1 << 17))
         f = np.fft.rfftfreq(1 << 17, 1 / S.SR)
@@ -323,7 +323,7 @@ def hit(name: str, vel: float = 0.7, m: int | None = None) -> np.ndarray:
         x = _wav(p)
         x = np.interp(np.arange(int(len(x) / 2 ** (((m or pm) - pm) / 12))) * 2 ** (((m or pm) - pm) / 12), np.arange(len(x)), x)
     else:
-        files = sorted(glob.glob(os.path.join(LIB, HITS[name])))
+        files = sorted(p for p in glob.glob(os.path.join(LIB, HITS[name])) if p.lower().endswith(".wav"))
         if not files:
             raise FileNotFoundError(f"orchestra: no {name}; run tools/music/fetch.sh")
         by_dyn = {}

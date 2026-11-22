@@ -388,12 +388,14 @@ def play(c: Ctx, stem: str, inst: str, notes: list, bar0: int, vel: float, pan: 
         pos += dur
 
 
-DRUM = {"burrow": "tamb", "crew": "snare", "old_stone": "snare", "coil": "tamb", "hoard": "snare", "trade": "triangle", "test_room": "snare_soft"}
+# The family's small drum, or none: the slimes and the snakes have only their kettles (no shaker, no tambourine).
+DRUM = {"burrow": None, "crew": "snare", "old_stone": "snare", "coil": None, "hoard": "snare", "trade": "triangle", "test_room": "snare_soft"}
 
 
 def drum(c: "Ctx", vel: float) -> np.ndarray:
-    """The family's small drum: a tambourine for the slimes and snakes, a snare for the rest, a triangle at the trader."""
-    return O.hit(DRUM.get(c.fam.name, "snare_soft"), vel)
+    """The family's small drum: a snare for most, a triangle at the trader, and silence for the slimes and the snakes."""
+    name = DRUM.get(c.fam.name, "snare_soft")
+    return O.hit(name, vel) if name else np.zeros(1)
 
 
 def timp(m: int, vel: float) -> np.ndarray:
