@@ -60,12 +60,18 @@ class FakeSfx:
 class FakeMusic:
 	extends RefCounted
 	var calls: Array = []
-	var champion := false # set by an encounter's boss flag (#167)
-
-	var foes: Array = [] # who each fight was said to be with
+	var foes: Array = [] # whose tune each fight was said to have
+	var scenes: Array = [] # each place's tune, as it was said
+	var prepared: Array = []
 
 	func fight_with(who: String) -> void:
 		foes.append(who)
+
+	func set_scene(name: String) -> void:
+		scenes.append(name)
+
+	func prepare(names: Array) -> void:
+		prepared.append_array(names)
 
 	func set_mode(mode: String) -> void:
 		calls.append("mode:" + mode)
@@ -101,8 +107,9 @@ func _run() -> void:
 	await _music_pacing()
 	await _music_fades()
 	await _motifs()
-	await _hum_theme()
-	await _music_set()
+	_every_place_and_foe_has_its_tune()
+	await _music_places()
+	await _music_foes()
 	_finish()
 
 
@@ -503,9 +510,8 @@ func _voice_keys() -> void:
 
 # ---------------------------------------------------------------- the music
 
-func _music(hum := false) -> Node:
+func _music() -> Node:
 	var m = Music.new()
-	m.hum = hum
 	var seq := [0.0]
 	m.random = func():
 		seq[0] = fposmod(seq[0] + 0.381966, 1.0)
@@ -517,19 +523,18 @@ func _music(hum := false) -> Node:
 func _music_pacing() -> void:
 	var m = _music()
 	await process_frame
-	# a fight never gets the tune of the one before
-	var last := ""
-	var repeats := 0
-	var seen := {}
-	for i in 200:
-		m.set_mode("battle")
-		var pick: String = m.battle_name()
-		seen[pick] = true
-		if pick == last:
-			repeats += 1
-		last = pick
-		m.set_mode("explore")
-	_check(repeats == 0 and seen.size() == Music.BATTLES.size(), "the battle theme is never the last fight's, and all four come up (%d repeats in 200 fights, %d themes)" % [repeats, seen.size()])
+	# a fight plays the tune it was given, and the next its own
+	m.fight_with("fight-gumdrop")
+	m.set_mode("battle")
+	_check(m.battle_name() == "fight-gumdrop" and m.loop_player("battle").stream.loop, "a fight plays its foe's tune, looping (%s)" % m.battle_name())
+	m.set_mode("explore")
+	m.fight_with("fight-cobra")
+	m.set_mode("battle")
+	_check(m.battle_name() == "fight-cobra", "and the next fight its own (%s)" % m.battle_name())
+	m.set_mode("explore")
+	m.fight_with("fight-nobody")
+	m.set_mode("battle")
+	_check(m.battle_name() == Music.DEFAULT_FIGHT, "a foe with no tune of its own gets the first slime's, not silence (%s)" % m.battle_name())
 	m.free()
 	m = _music()
 	await process_frame
@@ -550,19 +555,6 @@ func _music_pacing() -> void:
 	_check(absf(m.pending_in() - 2.0) < 0.01, "after a fight the explore loop waits 2 s (%.2f)" % m.pending_in())
 	# the sting holds the explore loop back for its length plus 4 s
 	m.set_mode("battle")
-	# a champion's fight has its own theme, the same every time, and a usual fight still picks among the four (#167)
-	m.champion = false
-	var usual := {}
-	for i in 8:
-		usual[m.pick_battle()] = true
-	_check(usual.size() > 1, "a usual fight picks among the themes (%s)" % str(usual.keys()))
-	m.champion = true
-	var champion_picks := {}
-	for i in 4:
-		champion_picks[m.pick_battle()] = true
-	_check(champion_picks.keys() == [Music.CHAMPION_THEME], "a champion's fight always has its own theme (%s)" % str(champion_picks.keys()))
-	_check(Music.BATTLES.has(Music.CHAMPION_THEME), "and that theme is one of the tracks that ship")
-	m.champion = false
 	m.sting("victory")
 	var len: float = m.sting_length()
 	_check(len > 1.0, "the victory sting is loaded (%.1f s)" % len)
@@ -635,78 +627,107 @@ func _motifs() -> void:
 	_check(Music.pick_motifs([1, 2, 3], "9") == [1, 2, 3], "and a number that isn't one is ignored")
 
 
-## The music set: with it a fight plays the theme of who it is with (a monster, a champion, the last champion), each looping
-## whole, over the hum theme's exploring loop; without it every fight plays the hum theme's combat loop.
-func _music_set() -> void:
-	var m = _music(true)
-	m.music_set = true
+## Every place and every foe has a tune of its own, and the tunes are all different files: the three biomes and each again
+## deeper, the four halls, the camp, the trader, the practice floor and the test room, every kind in data/kinds.json and every
+## champion in data/floors.json. Of the music before, only the hum theme is left, at the camp.
+func _every_place_and_foe_has_its_tune() -> void:
+	var places := ["camp", "trade", "practice", "test-room"]
+	for b in Content.table("biomes").biomes:
+		places += ["explore-" + str(b.id), "explore-%s-deep" % b.id]
+	for clan in ["burrow", "crew", "old_stone", "coil"]:
+		places.append("hall-" + clan)
+	var foes := []
+	for kind in Content.table("kinds").kinds:
+		foes.append("fight-" + str(kind))
+	for c in Content.table("floors").champions:
+		foes.append("champion-" + str(c.name).to_lower())
+	var missing := []
+	var paths := {}
+	for n in places + foes:
+		var path := Music.track_path(n)
+		if not ResourceLoader.exists(path):
+			missing.append(n)
+		paths[path] = true
+	_check(missing.is_empty(), "every place and every foe has its tune (%d places, %d foes; missing %s)" % [places.size(), foes.size(), missing])
+	_check(paths.size() == places.size() + foes.size(), "and no two share one (%d tunes for %d)" % [paths.size(), places.size() + foes.size()])
+	for n in Music.STINGS:
+		_check(ResourceLoader.exists("res://assets/audio/music/sting-%s.ogg" % n), "the %s sting is there" % n)
+	var old := []
+	for f in DirAccess.get_files_at("res://assets/audio"):
+		if f.ends_with(".ogg") and f != Music.CAMP.get_file():
+			old.append(f)
+	_check(old.is_empty() and Music.track_path("camp") == Music.CAMP, "of the old music only the hum theme is left, and it is the camp's (%s)" % [old])
+	var credits := FileAccess.get_file_as_string("res://assets/CREDITS.txt")
+	_check(credits.contains("assets/audio/music/*.ogg") and credits.contains("hum-explore.ogg") and credits.contains("GeneralUser GS"), "the credits name the new music and the hum theme with its soundfont")
+
+
+## Where you are picks the exploring tune: a biome, the same biome deeper, a hall, the practice floor, the test room.
+func _music_places() -> void:
+	var State = load("res://src/game/state.gd")
+	var FloorMap = load("res://src/rules/floor_map.gd")
+	var s = State.new()
+	s.floor_map = FloorMap.new()
+	var biomes: Array = Content.table("biomes").biomes
+	s.depth = 1
+	s.floor_map.biome = str(biomes[0].id)
+	_check(Music.scene_of(s) == "explore-" + str(biomes[0].id), "a floor plays its biome's tune (%s)" % Music.scene_of(s))
+	s.depth = biomes.size() + 1
+	_check(Music.scene_of(s) == "explore-%s-deep" % biomes[0].id, "the same biome come round again, deeper, plays its other tune (%s)" % Music.scene_of(s))
+	s.floor_map.biome = ""
+	_check(Music.scene_of(s) == Music.DEFAULT_SCENE, "a floor with no biome plays the halls' (%s)" % Music.scene_of(s))
+	s.visiting = "coil"
+	_check(Music.scene_of(s) == "hall-coil", "a clan's hall plays the clan's own (%s)" % Music.scene_of(s))
+	s.visiting = ""
+	s.practice = true
+	_check(Music.scene_of(s) == "practice", "the practice floor has its own")
+	s.practice = false
+	s.testing = true
+	_check(Music.scene_of(s) == "test-room", "and the test room")
+	_check(Music.scene_of(null) == Music.DEFAULT_SCENE, "no game yet: the halls' tune")
+	# the camp takes the floor's music over and gives it back where it was, and plays for as long as you sit
+	var m = _music()
 	await process_frame
+	m.set_scene("explore-caves")
 	m.set_mode("explore")
-	_check(m.loop_player("explore").stream.resource_path == Music.HUM_EXPLORE, "the music set leaves the exploring loop as it was")
-	var lengths := {"fight": 41.86, "boss": 41.86, "final": 45.33}
-	for who in ["fight", "boss", "final"]:
-		m.fight_with(who)
-		m.set_mode("battle")
-		var b: AudioStreamPlayer = m.loop_player("battle")
-		_check(m.battle_name() == Music.SET_BATTLES[who] and b != null and b.stream.loop and absf(b.stream.get_length() - lengths[who]) < 0.05, "a fight with a %s plays %s, looping whole (%.2f s)" % [who, m.battle_name(), b.stream.get_length() if b != null else 0.0])
-		m.set_mode("explore")
-	_check(Music.SET_BATTLES.values().size() == 3 and Music.SET_BATTLES.fight != Music.SET_BATTLES.boss and Music.SET_BATTLES.boss != Music.SET_BATTLES.final, "a monster, a champion and the last champion each have a theme of their own")
-	# the set's boss theme is the champion's own music here: the old music's fixed champion theme (#167) is for the game without it
-	m.champion = true
-	m.fight_with("boss")
-	_check(m.pick_battle() == Music.SET_BATTLES.boss, "a champion's fight plays the set's boss theme, not the old music's (%s)" % m.pick_battle())
-	m.champion = false
-	m.fight_with("nobody")
-	m.set_mode("battle")
-	_check(m.battle_name() == Music.SET_BATTLES.fight, "a fight with anyone else is a fight")
-	m.sting("victory")
-	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a won fight still plays the victory sting over it")
+	var floor_player: AudioStreamPlayer = m.loop_player("explore")
+	_check(floor_player.playing and floor_player.stream.resource_path.ends_with("explore-caves.ogg"), "exploring plays the place's tune")
+	m.set_scene("camp")
+	var camp: AudioStreamPlayer = m.loop_player("explore")
+	_check(camp != floor_player and camp.stream.resource_path == Music.CAMP and camp.playing and m.pending_in() < 0.0, "the camp plays the hum theme, with no rest waiting (%.1f)" % m.pending_in())
+	m.set_scene("explore-caves")
+	_check(m.loop_player("explore") == floor_player and is_instance_valid(camp), "back on the floor, its own player again: it kept its place")
+	m.set_scene("explore-halls")
+	await create_timer(1.3).timeout
+	_check(not is_instance_valid(floor_player), "a floor left for another lets its music go")
+	m.set_scene("nowhere-at-all")
+	_check(m.loop_player("explore").stream.resource_path.ends_with(Music.DEFAULT_SCENE + ".ogg"), "a place with no tune falls back to the halls'")
 	m.free()
-	m = _music(true)
+	# the game's events: a new floor or a stage says where you are
+	var audio = _fresh_audio()
 	await process_frame
-	m.fight_with("final")
-	m.set_mode("battle")
-	_check(m.battle_name() == Music.HUM_BATTLES[0], "without it, the hum theme's combat loop, whoever the fight is with")
-	m.free()
+	var fake: FakeMusic = _fake(audio)[1]
+	audio._on_event("stage", {"from": "explore", "to": "camp"})
+	audio._on_event("stage", {"from": "camp", "to": "trade"})
+	_check(fake.scenes == ["camp", "trade"] and fake.calls == ["mode:explore", "mode:explore"], "the camp and the trader say so to the music (%s %s)" % [fake.scenes, fake.calls])
+	audio.queue_free()
+
+
+## Who a fight is with picks its tune: a monster its kind's, a champion its own.
+func _music_foes() -> void:
+	var Monster = load("res://src/rules/monster.gd")
+	var m = Monster.new()
+	m.kind = "gazer"
+	_check(Music.fight_of(m) == "fight-gazer", "a monster's fight plays its kind's tune (%s)" % Music.fight_of(m))
+	m.boss = true
+	m.name = "CINDERA"
+	_check(Music.fight_of(m) == "champion-cindera", "a champion's its own (%s)" % Music.fight_of(m))
+	_check(Music.fight_of(null) == Music.DEFAULT_FIGHT, "and nobody, the default")
 	var audio = _fresh_audio()
 	await process_frame
 	var fake: FakeMusic = _fake(audio)[1]
 	audio._on_event("encounter", {"boss": false, "final": false})
-	audio._on_event("encounter", {"boss": true, "final": false})
-	audio._on_event("encounter", {"boss": true, "final": true})
-	_check(fake.foes == ["fight", "boss", "final"] and fake.calls == ["mode:battle", "mode:battle", "mode:battle"], "the game says who each fight is with before its music starts (%s)" % [fake.foes])
+	_check(fake.foes == [Music.DEFAULT_FIGHT] and fake.calls == ["mode:battle"], "the fight's tune is said before its music starts (%s)" % [fake.foes])
 	audio.queue_free()
-	var credits := FileAccess.get_file_as_string("res://assets/CREDITS.txt")
-	_check(credits.contains("set-fight.ogg") and credits.contains("set-boss.ogg") and credits.contains("set-final.ogg"), "the credits name the music set's three tracks")
-
-
-## The hum theme (#49): its exploring loop and, in every fight, its combat loop, both looping whole; the stings as ever.
-func _hum_theme() -> void:
-	var m = _music(true)
-	await process_frame
-	m.set_mode("explore")
-	var e: AudioStreamPlayer = m.loop_player("explore")
-	_check(e != null and e.playing and e.stream.resource_path == Music.HUM_EXPLORE, "exploring plays the hum theme's loop")
-	_check(e.stream.loop and absf(e.stream.get_length() - 174.55) < 0.05, "which loops whole, 174.55 s (%.2f)" % e.stream.get_length())
-	var picks := {}
-	for i in 5:
-		m.set_mode("battle")
-		picks[m.battle_name()] = true
-		m.set_mode("explore")
-	_check(picks.keys() == Music.HUM_BATTLES, "every fight plays the combat loop (%s)" % [picks.keys()])
-	m.set_mode("battle")
-	var b: AudioStreamPlayer = m.loop_player("battle")
-	_check(b != null and b.stream.loop and absf(b.stream.get_length() - 65.45) < 0.05, "which loops whole, 65.45 s (%.2f)" % b.stream.get_length())
-	m.sting("victory")
-	_check(m.sting_length() > 1.0 and m.loop_player("battle") == null, "a spared foe: the victory sting is loaded (%.1f s) and the combat loop is off" % m.sting_length())
-	m.free()
-	m = _music()
-	await process_frame
-	m.set_mode("explore")
-	_check(m.loop_player("explore").stream.resource_path == Music.EXPLORE, "without it, the passacaglia as before")
-	m.free()
-	var credits := FileAccess.get_file_as_string("res://assets/CREDITS.txt")
-	_check(credits.contains("hum-explore.ogg") and credits.contains("GeneralUser GS"), "the credits name the hum theme and its soundfont")
 
 
 func _files_under(path: String) -> Array:

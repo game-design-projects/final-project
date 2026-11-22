@@ -175,13 +175,13 @@ static func track_path(name: String) -> String:
 func set_mode(mode: String) -> void:
 	if not enabled or (mode == _mode and (mode != "battle" or _battle != null)):
 		return
+	if mode == "explore" and _explore == null:
+		set_scene(DEFAULT_SCENE) # before the mode changes, so it only chooses the tune and the mode brings it in
 	var was := _mode
 	_mode = mode
 	print_verbose("music: %s -> %s" % [was, mode])
 	match mode:
 		"explore":
-			if _explore == null:
-				set_scene(DEFAULT_SCENE)
 			_drop_battle(FADES.battle.out)
 			if was == "":
 				_explore_in(FIRST_FADE_IN)
@@ -318,6 +318,7 @@ func _explore_in(fade: float) -> void:
 		_explore.play()
 	_fade(_explore, _level("explore", _scene), fade)
 	if _scene in STAY:
+		_cancel_next() # the floor's rest is not this place's
 		print_verbose("music: %s in, for as long as you are there" % _scene)
 		return
 	_schedule(_between(TRIAL.play if not motifs.is_empty() else PACE.play), _rest_after_playing)

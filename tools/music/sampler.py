@@ -1,6 +1,6 @@
-"""An offline sampler for Donjon's music, shared by build-ambient.py, build-battle.py and build-stings.py.
+"""An offline sampler for Donjon's music, played by build-themes.py (every place's and every foe's tune).
 
-All three scores are played by the same small baroque band, from real samples in tools/music/soundfonts
+Every tune is played by the same small baroque band, from real samples in tools/music/soundfonts
 (MusyngKite, CC BY-SA 3.0; see assets/CREDITS.txt): harpsichord, church organ, string ensemble, choir
 "aahs", music box and tubular bells. Only the kettle drums (timpani) and a medieval tabor are synthesised
 here. Everything plays in one generated stone hall, so the dungeon, the fights and the fanfares sound

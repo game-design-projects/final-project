@@ -1,8 +1,9 @@
 # Hum theme: dungeon exploration and combat loops (issue #49)
 
-Two finished loops built on a hummed melody, with their full source. **They are the game's music** (feature
-`hum-theme`, on by default): copied to `assets/audio/hum-explore.ogg` and `assets/audio/hum-combat.ogg`, played by
-`src/audio/music.gd`. After a rebuild here, copy the new `.ogg` files over those two. This folder is under
+Two finished loops built on a hummed melody, with their full source. **The exploring loop is the camp's music**, the one
+old theme the game still plays (every other place and foe has its own tune, from `../build-themes.py`): copied to
+`assets/audio/hum-explore.ogg` and played by `src/audio/music.gd` (`CAMP`). The combat loop is no longer in the game.
+After a rebuild here, copy the new `donjon_voice.ogg` over `assets/audio/hum-explore.ogg`. This folder is under
 `tools/music/`, which Godot ignores.
 
 | File | What |

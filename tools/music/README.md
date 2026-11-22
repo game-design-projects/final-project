@@ -2,75 +2,61 @@
 
 # Rebuilding the music
 
-The game's music is rendered offline from sampled instruments, then encoded to Ogg Vorbis (Godot can't play AAC).
-The seven files live in `assets/audio/`: `ambient.ogg` (exploring), `battle-toccata|charge|crusade|gallop.ogg`
-(fights) and the stings `fanfare.ogg`, `victory.ogg`. You only need this folder to change the music; the game
-doesn't run any of it.
+The game's music is written and rendered offline from sampled instruments, then encoded to Ogg Vorbis (Godot can't play
+AAC). Every place and every foe has its own tune, in `assets/audio/music/`: 45 files, 28 MB. The camp keeps the one old
+theme, Abdulla's hum theme (`assets/audio/hum-explore.ogg`, from `hum-theme/`). The game doesn't run any of this; you only
+need it to change the music. What plays where is in [docs/AUDIO.md](../../docs/AUDIO.md).
 
 | Script | Writes | What |
 | --- | --- | --- |
-| `sampler.py` | | the offline sampler the others share: decodes the soundfont samples, renders into a circular timeline, hall reverb, mastering |
-| `build-ambient.py` | `ambient.wav` | the exploring passacaglia in D minor, 40 bars of 3/4 at 64 BPM = 112.5 s |
-| `build-battle.py` | `battle-<name>.wav` | the four fight loops, 16 bars of 4/4 each: toccata 132 BPM, charge 126, crusade 112, gallop 120 |
-| `build-stings.py` | `fanfare.wav`, `victory.wav` | the one-shot cues |
+| `build-themes.py` | `assets/audio/music/*.ogg` (and a WAV of each in `--wav-dir`) | every tune: the families, their head motifs and bands are tables at its top, and each tune's phrases are written from its own seed |
+| `sampler.py` | | the offline sampler it plays through: decodes the soundfont samples, renders into a circular timeline, hall reverb, mastering |
 | `to_ogg.sh` | `*.ogg` | WAV (or any audio file) to Ogg Vorbis; for a loop it cuts exactly one loop |
+| `cut_motifs.sh` | `build/motifs/*.ogg` | Abdulla's motif audition, cut for the `motifs` trial (never shipped) |
 
 ## Rebuild
 
 Needs numpy and scipy for the renders, and ffmpeg (with libvorbis) for the encode. From the repository root:
 
 ```bash
-uv venv /tmp/donjon-music-venv && source /tmp/donjon-music-venv/bin/activate && uv pip install numpy scipy
-
-python3 tools/music/build-ambient.py /tmp      # /tmp/ambient.wav
-python3 tools/music/build-battle.py /tmp       # /tmp/battle-toccata.wav, -charge, -crusade, -gallop
-python3 tools/music/build-stings.py /tmp       # /tmp/fanfare.wav and /tmp/victory.wav
-
-tools/music/to_ogg.sh loop  /tmp/ambient.wav         assets/audio/ambient.ogg         112.5
-tools/music/to_ogg.sh loop  /tmp/battle-toccata.wav  assets/audio/battle-toccata.ogg  3840/132
-tools/music/to_ogg.sh loop  /tmp/battle-charge.wav   assets/audio/battle-charge.ogg   3840/126
-tools/music/to_ogg.sh loop  /tmp/battle-crusade.wav  assets/audio/battle-crusade.ogg  3840/112
-tools/music/to_ogg.sh loop  /tmp/battle-gallop.wav   assets/audio/battle-gallop.ogg   3840/120
-tools/music/to_ogg.sh sting /tmp/fanfare.wav         assets/audio/fanfare.ogg
-tools/music/to_ogg.sh sting /tmp/victory.wav         assets/audio/victory.ogg
-
-godot --headless --path . --import   # Godot reads the new files (the loop flag of the five loops is kept in their .import files)
+uv run --no-project --with numpy --with scipy python -I tools/music/build-themes.py            # all 45, in parallel, about a minute
+uv run --no-project --with numpy --with scipy python -I tools/music/build-themes.py --list     # their names
+uv run --no-project --with numpy --with scipy python -I tools/music/build-themes.py --only fight-gazer,hall-coil
+godot --headless --path . --import   # Godot reads the new files; a new tune needs this once for its .import
 ```
 
-`sampler.py` reads the six MusyngKite sets it plays (CC BY-SA 3.0) from `soundfonts/` beside it.
+The tune list comes from the game's data: a new kind in `data/kinds.json` or a new champion in `data/floors.json` gets
+its tune on the next build, and `tools/audio_test.gd` fails until it has one.
+
+## How a tune is written
+
+A family is one melody idea: a mode, a metre, a tempo, a two-bar head motif, the rhythm cells its bars are made of, the
+chord progressions it may take, a way of accompanying and a band. A tune is a family plus a key shift, a tempo factor,
+which lead opens, which ostinato, and a seed. Its four phrases are: the head and an open ending, the head and a close,
+a B phrase on the bridge's chords with the head's rhythm, and the head and another close. The bars after the head are
+written note by note: a note of the chord on the strong units, steps and thirds between, drawn toward a rising and
+falling contour, never three of the same note, a leap turned back. Fights play them as the tune, the B phrase with the
+first lead an octave under, a break with the head on bells, and the tune again on another lead with an echo; places as
+the tune, the B phrase, and the tune again.
+
+Two tunes are written out whole instead: the Wet Caves' "Drip Lullaby" and Vexalith's "The Champion Stirs". Their
+openings are the caves' and the Hoard's head motifs.
 
 ## How a loop file is cut
 
 A render holds one loop plus a repeat of its first second (`sampler.py` `TAIL`), and it is circular: whatever
 rings past the end wraps to the start, so any window one loop long is seamless. `to_ogg.sh loop` takes the window
 that starts `LOOP_START` = 0.25 s into the render and lasts exactly `floor(seconds x 44100)` samples, so Godot's
-gapless Ogg loop (`AudioStreamOggVorbis.loop`) wraps inside the music. The first 10 ms of the window are cross-faded
-with the audio that follows the window's end (the repeated material), so the wrap is continuous even after the
-lossy encode.
-
-Three numbers must agree, and `tests/audio/test_ambient.gd` checks them:
-
-- the loop length: `TRACKS` in `src/audio/ambient.gd` (`loopSeconds`) and the last argument of `to_ogg.sh loop`;
-- `LOOP_START` in `src/audio/ambient.gd` and `LOOP_START_SAMPLES` in `to_ogg.sh`: beat 0 of a render sounds 0.25 s
-  before the start of its file, which is what `Ambient.beat_clock()` reports to the heartbeat;
-- the length of the `.ogg` the game ships, within 10 ms of `loopSeconds`.
-
-If you change a tempo or the number of bars, update `loopSeconds` too.
+gapless Ogg loop (`AudioStreamOggVorbis.loop`, which `src/audio/music.gd` sets on every tune but the stings) wraps
+inside the music. The first 10 ms of the window are cross-faded with the audio that follows the window's end (the
+repeated material), so the wrap is continuous even after the lossy encode. `build-themes.py` passes each tune's exact
+length. The tunes are encoded at Vorbis quality 4 (`OGG_QUALITY`); `to_ogg.sh` defaults to 6.
 
 ## Levels
 
-The renders are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings) by `sampler.py`; the
-volumes in `TRACKS` / `STINGS` (0.7 and 0.75) put a fight about 2.6 dB above the exploring music. Check an encode
-with `ffmpeg -i assets/audio/battle-toccata.ogg -af astats -f null - 2>&1 | grep -E "Overall|RMS level|Peak level"`;
-it should read -17 dB RMS and a peak around -2 dB.
-
-## Converting the old `.m4a` files
-
-The Godot port started from the web version's `.m4a` files, which live on in git history. The same `to_ogg.sh` takes
-them, because ffmpeg decodes AAC and removes its priming and padding, so a decoded file is exactly one loop plus the
-one-second tail:
-
-```bash
-git show 12d2be7:crawler/public/ambient.m4a > /tmp/ambient.m4a
-tools/music/to_ogg.sh loop /tmp/ambient.m4a assets/audio/ambient.ogg 112.5
-```
+The renders are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings) by `sampler.py`; `VOLUME`
+in `src/audio/music.gd` (0.7 and 0.75) puts a fight about 2.6 dB above the exploring music. Each build logs every
+part's loudness per section against the mix, so the lead can be read against the band without ears, and the share of
+the spectrum under 120 Hz (the kettle drums are held between E2 and D#3 so it stays under about 20%). Check an encode
+with `ffmpeg -i assets/audio/music/fight-slime.ogg -af astats -f null - 2>&1 | grep -E "Overall|RMS level|Peak level"`;
+it should read about -17 dB RMS.
