@@ -137,8 +137,9 @@ static func place_trader(rng, f, walk: Dictionary, hall: Vector2i, avoid := {}) 
 
 ## A spot for a clan's lord, which a floor cannot be without when one is due (#166): the trader's stretches of the walk
 ## first, and then any cell that leaves a way through the floor whole — a dead end first, as it can never cut a route.
-## A trader's own place is given up when those stretches are crowded; a lord's is not, which is what kept lords off four
-## floors in ten. Null only where no cell is left at all. `avoid` is more cells to keep off (the monsters already standing).
+## A trader's own place is given up when those stretches are crowded, and that is right for a trader; a floor that loses its
+## lord loses the second favour, the pact and the warren with it, so this one does not. Null only where no cell is left at
+## all, and the floor says so in the log when that happens. `avoid` is more cells to keep off (the monsters already standing).
 static func place_lord(rng, f, walk: Dictionary, hall: Vector2i, avoid := {}) -> Variant:
 	var usual: Variant = place_trader(rng, f, walk, hall, avoid)
 	if usual != null:
