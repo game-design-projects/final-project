@@ -135,6 +135,31 @@ static func place_trader(rng, f, walk: Dictionary, hall: Vector2i, avoid := {}) 
 	return _pad_in(rng, f, walk, hall, TRADER_AT, walk.dist[walk.farthest], f.reserved(), avoid)
 
 
+## A spot for a clan's lord, which a floor cannot be without when one is due (#166): the trader's stretches of the walk
+## first, and then any cell that leaves a way through the floor whole — a dead end first, as it can never cut a route.
+## A trader's own place is given up when those stretches are crowded; a lord's is not, which is what kept lords off four
+## floors in ten. Null only where no cell is left at all. `avoid` is more cells to keep off (the monsters already standing).
+static func place_lord(rng, f, walk: Dictionary, hall: Vector2i, avoid := {}) -> Variant:
+	var usual: Variant = place_trader(rng, f, walk, hall, avoid)
+	if usual != null:
+		return usual
+	var blocked: Dictionary = f.reserved()
+	var ends := []
+	var others := []
+	for c: Vector2i in walk.order:
+		if blocked.has(c) or avoid.has(c) or c == f.stairs or c == f.start or Grid.in_hall(c, hall) or walk.dist[c] < MIN_FROM_START:
+			continue
+		if _open_sides(f, c).size() == 1:
+			ends.append(c)
+		else:
+			others.append(c)
+	for pool in [rng.shuffle(ends), rng.shuffle(others)]:
+		for i in mini(pool.size(), SAFE_TRIES):
+			if _leaves_floor_whole(f, walk, blocked, pool[i]):
+				return pool[i]
+	return null
+
+
 ## Where the things that stir wait: on the way somewhere, so you see one coming, yet never where the floor needs you to pass (a
 ## roomy spot or a loop, with a way round). The cells, fewer if the floor has no such place. Nothing has to stand here yet.
 static func place_lurkers(rng, f, walk: Dictionary, hall: Vector2i, count: int) -> Array:

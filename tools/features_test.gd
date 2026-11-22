@@ -3159,6 +3159,57 @@ func _lords() -> void:
 	var calm = _flow(7)
 	await calm.new_run()
 	_check(not calm.state.floor_map.quester.get("redeem", false), "a clan that is only calm gets the usual favour")
+	await _lords_in_a_run()
+
+
+## A whole run, every floor of it and both ways down each stair: a lord is due on the run's first floor of a biome, and where
+## that biome comes back (floors 4 and 5 of the three-biome cycle) the same lord asks its second favour, whose payment swears
+## the clan and opens its warren (#166). A floor that quietly lost its lord took the second favour, the pact and the warren out
+## of a played game, so none may: not a warren of another clan, where a lord's spare has no kin to name, and not a crowded
+## stretch of the walk, where a trader's place is given up and a lord's is not.
+func _lords_in_a_run() -> void:
+	var flow = _flow(1)
+	await flow.new_run()
+	var lost := 0
+	var games := 0
+	var asked := 0
+	var second := 0
+	var homes := {}
+	for seed_value in range(1, 13):
+		for choice in [0, 1]:
+			games += 1
+			var met: Array = []
+			for depth in range(1, 6):
+				flow.state.run_seed = seed_value
+				flow.state.depth = depth
+				flow.state.lords_met = met.duplicate() # as paying each favour would leave it
+				flow.state.lords_sworn = []
+				flow.state.reputation = {}
+				var way := {}
+				for w in ([] if depth == 1 else Floors.paths(seed_value, depth - 1, true, [])):
+					if int(w.get("path", 0)) == choice:
+						way = w
+				await flow._make_floor(way)
+				var f = flow.state.floor_map
+				var first := true
+				for d in range(1, depth):
+					if str(Floors.biome(seed_value, d).get("id", "")) == str(f.biome):
+						first = false
+				var due: Dictionary = Lords.due(str(f.biome), int(f.seed_value), met, [], not first, {})
+				var q: Dictionary = f.quester
+				if q.is_empty() or not q.has("lord"):
+					if not due.is_empty():
+						lost += 1
+						print("features_test: seed %d B%dF (way %d) lost the lord of %s" % [seed_value, depth, choice, str(due.get("clan", "?"))])
+					continue
+				asked += 1
+				if bool(q.get("big", false)):
+					second += 1
+				homes[str(q.lord)] = true
+				met.append(str(q.lord))
+	_check(lost == 0, "over twelve seeds and both ways down every stair, no floor with a lord due loses it (%d of %d games, %d lords asked)" % [games, games, asked])
+	_check(asked >= games * 3, "each game asks at least one lord a biome (%d lords over %d games)" % [asked, games])
+	_check(second > 0 and homes.size() == 4, "and a biome that comes back has its second favour to ask (%d of them, every lord %s)" % [second, str(homes.keys())])
 
 
 ## A run where the halls come back (depth 4 of seed 7) and `clan`'s lord was met on B1F: its second favour is asking there.

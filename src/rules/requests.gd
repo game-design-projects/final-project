@@ -20,7 +20,9 @@ static func table() -> Dictionary:
 
 ## The floor's lord filling this asker, instead of a stray monster (`rules/lords.gd`): its kind is the lord's own, and the name
 ## and title are the data's, so the same floor always has the same lord. The draws come from the lord's own generator, so the
-## floor's layout is what its seed always made. False when no monster is there for the kind it asks (see `_finish_request`).
+## floor's layout is what its seed always made. A lord is due here (#166), so where its own kind cannot be asked — a spare with
+## no kin on a warren of another clan, a fetch on a floor with nothing to fetch — it asks the next kind it can, rather than the
+## floor losing its lord: False only on a floor with no monster and no room for a thing at all.
 static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	var targets := []
 	for i in f.monsters.size():
@@ -29,8 +31,13 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	var kind: String = lord.kind
 	if kind == "fetch" and not plan.get("items", false):
 		kind = "rid" # nothing lies about for it to want
-	if targets.is_empty():
-		return false
+	var kin := targets.filter(func(i): return f.monsters[i].species == str(lord.species))
+	if kind == "spare" and kin.is_empty():
+		kind = "rid" # a warren of another clan stands here: none of its own kin to spare
+	if kind == "rid" and targets.is_empty():
+		if not plan.get("items", false):
+			return false
+		kind = "fetch" # nobody to be rid of: ask for a thing instead
 	var q: Dictionary = f.quester
 	q.lord = str(lord.clan)
 	q.title = str(lord.title)
@@ -42,9 +49,6 @@ static func fill_lord(rng, f, lord: Dictionary, plan: Dictionary) -> bool:
 	if kind == "fetch":
 		q.target = -1
 	elif kind == "spare": # its kin: the same species as the lord
-		var kin := targets.filter(func(i): return f.monsters[i].species == str(lord.species))
-		if kin.is_empty():
-			return false
 		q.target = int(rng.pick(kin))
 	else:
 		q.target = int(rng.pick(targets))
