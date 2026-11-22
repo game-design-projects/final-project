@@ -49,6 +49,10 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **The champion's goo.** #170: a champion's splash is a slime's cross on 0.7 s of warning instead of 0.82 s, so the
   first pattern of a champion's fight has to be read as it starts. Does it feel like a boss's rain rather than a slime's, and
   does a splash that lands before a tester has planned a step feel unfair rather than tight?
+- **The twin lanterns.** #275: two lanterns flare in turn, and the pattern read as the set's hardest until the bot was
+  allowed to stand still and wait for a flare to pass, which it clears at 0.15 hits a dodge at the champion's first pace and
+  1.27 at its last. Does a tester who waits out a flare find the gap, and does the pair read as a boss's own attack rather
+  than as two lights on a timer?
 - **Names over heads.** A monster's name, an ally's, a trader's, the one asking a favour. Is anything ever named that is not
   on the screen?
 - **The row under the picture.** LVL, HP with the thin level fill under it, GOLD, PARTY, FED (or HUNGRY/STARVING) at 11 px,
