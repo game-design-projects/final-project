@@ -344,6 +344,12 @@ def hit(name: str, vel: float = 0.7, m: int | None = None) -> np.ndarray:
 _old_render = S.render_note
 
 
+def reset() -> None:
+    """Start the round robins over: a tune takes the same samples in whatever order the pool built the others, so a
+    build is repeatable and a single tune rendered with `--only` is the tune the full build writes."""
+    _rr.clear()
+
+
 def use() -> None:
     """Play sampler.py's scores on this orchestra: its notes by these names come from here, others as before."""
     S.render_note = render_note
