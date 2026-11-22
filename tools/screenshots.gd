@@ -3,6 +3,7 @@
 ## mind, a command, an ally) and the touch pad. It needs a real window (it opens one briefly):
 ##   godot --path . -s res://tools/screenshots.gd -- out=/some/dir seed=7
 ## Without `out` the pictures go to user://shots. It prints where. Nothing reaches the player's saves (the `nosave` flag is always on, so a save stays in memory).
+## A store that has not played the tips yet starts a run on the practice floor; the pictures are of a run's floor, so the tool starts its run again off it.
 extends SceneTree
 
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -47,6 +48,10 @@ func _initialize() -> void:
 		await _wait(0.1)
 	await _shot("00c_title_card_prompt")
 	await _game._begin()
+	# A store that has not played the tips yet starts the run on the practice floor, which holds one monster and no second
+	# fight to end: the pictures want a floor of a run, so the run starts again off it, on the seed the tool was given.
+	if _game.flow.state.practice:
+		await _game.flow.new_run(false)
 	await _wait(0.4)
 	await _camp()
 	await _walk_and_fight()
@@ -250,6 +255,11 @@ func _walk_and_fight() -> void:
 	await flow.press("confirm")
 	await _wait(0.15)
 	await _shot("07_after_strike")
+	# what the foe says as the swing lands holds the dodge (`ambush-prompt`), waiting on a key: let it go, or no picture
+	# after this one is reached
+	if s.hint == "ANY KEY CONTINUE":
+		await flow.press("confirm")
+		await _wait(0.2)
 	# each kind of dodge, whatever the monster really fights in
 	var real_max: int = s.max_hp
 	s.max_hp = 9999 # the camera isn't here to survive, only to look
@@ -290,6 +300,9 @@ func _walk_and_fight() -> void:
 		await flow.go("intro", {"foe": boss})
 		await _wait(1.6)
 		await _shot("09_boss")
+		if s.hint == "ANY KEY CONTINUE": # its own line holds the fight the same way (`ambush-prompt`)
+			await flow.press("confirm")
+			await _wait(0.2)
 		await flow.encounter.defeat(boss, "spared")
 		await _wait(0.4)
 		await _shot("10_result")
