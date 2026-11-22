@@ -145,6 +145,8 @@ func sting(name: String) -> void:
 		push_error("music: no sting '%s'" % name)
 		return
 	var stream: AudioStream = _stream(path)
+	if stream == null:
+		return # _stream said why
 	_drop_battle(FADES.sting)
 	_drop_motif(FADES.sting)
 	_fade_out_explore(FADES.sting)
@@ -416,6 +418,8 @@ func _stream(path: String) -> AudioStream:
 			stream = ResourceLoader.load_threaded_get(path)
 		else:
 			stream = load(path)
+		if stream == null:
+			push_error("music: can't load '%s'; if it was just pulled, run `godot --headless --path . --import`" % path)
 		if stream is AudioStreamOggVorbis and (path == explore_path() or battles().any(func(n): return path == _battle_path(n))):
 			stream.loop = true # the loops are cut to whole bars, so they wrap inside the music
 		_streams[path] = stream

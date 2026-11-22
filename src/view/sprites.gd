@@ -27,10 +27,20 @@ static func lord_look(species: String) -> String:
 	return own if has(own) else species
 
 
+## The atlas of sheet `name`, loaded the first time. One that can't be loaded (an asset pulled but not yet imported:
+## `godot --headless --import` makes .godot/imported) says so once and stands in as a clear pixel, so what draws it
+## draws nothing rather than failing on every frame.
 static func texture(name: String) -> Texture2D:
 	if not _textures.has(name):
-		_textures[name] = load(str(sheet(name).file))
-		print_verbose("sprites: loaded %s" % name)
+		var path := str(sheet(name).get("file", ""))
+		var tex: Texture2D = load(path) if path != "" else null
+		if tex == null:
+			push_error("sprites: can't load %s from '%s'; if it was just pulled, run `godot --headless --path . --import`" % [name, path])
+			var blank := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+			tex = ImageTexture.create_from_image(blank)
+		else:
+			print_verbose("sprites: loaded %s" % name)
+		_textures[name] = tex
 	return _textures[name]
 
 
