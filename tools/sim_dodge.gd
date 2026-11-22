@@ -7,7 +7,8 @@
 ##   clean    share of dodges with no hit
 ##   lit      mean share of open squares hurting at once
 ##   peak     the most open squares hurting at once, as a share
-##   doomed   how often every square within two steps would hurt before the bot could get anywhere (should be 0)
+##   doomed   how often every square within two steps would hurt before the bot could get anywhere (a sweeping beam can
+##            leave every way out crossed by a light, so read it with `plan=timed` before calling it a wall: #275)
 ##   blind    hazards on your square drawn less than REACT_MS before they hurt (should be 0)
 ##   quiet    the longest stretch with nothing warning or hurting, in ms (a long one is dead air)
 ## `only=a,b` limits it to those attacks, `seeds=N` sets how many (default 40), `csv=1` prints one CSV line per row, and
@@ -230,14 +231,12 @@ func _short_cost(run, danger: Array, start: int) -> float:
 ## Which squares a known hazard would hurt, and when, in the slot [from, from + width): {square: how many hazards}.
 func _slot_danger(run, from: float, width: float, latency: float, now: float) -> Dictionary:
 	var out := {}
-	var to := minf(from + width, run.end_t)
+	var to := minf(from + width, run.end_t) # a hazard landing after the dodge is over is not counted: the slot ends there
 	if from >= run.end_t:
 		return out
 	for h in run.hazards:
 		if DodgeRun.CATCHES.has(h.kind) or now < _drawn_from(h) + latency:
 			continue
-		if h.hit >= run.end_t:
-			continue # it lands after the dodge is over
 		if h.hit < to and h.end > from:
 			for k in h.cells:
 				out[int(k)] = int(out.get(int(k), 0)) + 1
