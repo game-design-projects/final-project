@@ -37,6 +37,7 @@ const KNOWN := {
 	"at": "at=0.65: for tools/sim_chart.gd, the share of a floor seen at which instinct charts the rest, instead of the data's",
 	"csv": "csv=1: for tools/sim_dodge.gd, print CSV lines",
 	"boss": "boss=1: for tools/sim_dodge.gd, play each attack as a champion's (its 6200 ms fight, a fifth denser than a usual monster's); for tools/sim_strike.gd, a strike's champion's damage scale",
+	"plan": "plan=timed: for tools/sim_dodge.gd, the bot plans over time (it may wait, then step) instead of two steps ahead, and `doomed` reads its next two decisions",
 	"charms": "charms=none|rock|dragon: for tools/sim_strike.gd, the party's charm: the rock's slower bar, or the dragon's fire on every strike",
 	"swings": "swings=N: for tools/sim_strike.gd, how many swings its per-swing table draws for each hand",
 }
