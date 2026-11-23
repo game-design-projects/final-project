@@ -123,10 +123,16 @@ func begging() -> bool:
 func mercy(m) -> float:
 	if Clans.enraged(flow.state, m):
 		return 0.0
-	var odds: float = maxf(await flow.mind.mercy(m) * float(Warmth.harder(flow.state).mercy), Clans.mercy_floor(flow.state, m)) # cold halls spare you less (#291), a devoted clan's own more (#290)
+	var odds: float = _spare_odds(m, await flow.mind.mercy(m))
 	if Keepsakes.has(flow.state, "open_hand"):
 		odds = minf(1.0, odds + Keepsakes.OPEN_MERCY)
 	return odds
+
+
+## What the odds the mind gave become for `m`: a cold hall spares you less (#291) and a clan devoted to you more (#290). One
+## place, so the odds the gauge shows and the odds the fight's end is read on cannot part company.
+func _spare_odds(m, odds: float) -> float:
+	return maxf(odds * float(Warmth.harder(flow.state).mercy), Clans.mercy_floor(flow.state, m))
 
 
 ## Asks the mind about `m`'s mercy without waiting for the answer, so the fight (or the dodge) goes on while it thinks. The mind
@@ -158,7 +164,7 @@ func decide(m, act, act_label: String, words = null) -> Dictionary:
 	if not act is String:
 		Feelings.warm_up(m, feeling)
 	var after: Dictionary = await flow.mind.mercy_and_pressure(m) # one request for Jev: both are about the monster as it is now
-	var mercy: float = 0.0 if Clans.enraged(flow.state, m) else maxf(after.mercy * float(Warmth.harder(flow.state).mercy), Clans.mercy_floor(flow.state, m))
+	var mercy: float = 0.0 if Clans.enraged(flow.state, m) else _spare_odds(m, after.mercy)
 	var pressure: float = after.pressure
 	if not act is String:
 		var learned := Reveal.learn(m, m.last_intent, str(feeling.get("tone", "")))
