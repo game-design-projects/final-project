@@ -390,6 +390,7 @@ func _process(dt: float) -> void:
 	_stage.calm = Settings.get_value("calm")
 	_stage.update(s, _clock_ms / 1000.0, dt)
 	_overlay.clock_ms = _clock_ms
+	_overlay.event_art = _event_art()
 	var walking: bool = s.floor_map != null and s.stage in Transitions.WALK
 	if _map_open and not _map_allowed():
 		show_map(false) # a fight, a trader, the stairs: the map is put away
@@ -540,6 +541,20 @@ func _on_picture_input(event: InputEvent) -> void:
 			show_map(true)
 		else:
 			_tips.toggle("map") # at camp, with a trader, at the stairs: no whole map there, so the tap keeps the legend open as it always did
+
+
+## What the walk has stopped at, for the layer inside the picture (view/overlay.gd): the choices lay it out over the picture
+## (view/choice_popup.gd), and its box there is this box in the picture's own pixels. The corner map is over the picture and not
+## in it, so it goes dark with it here.
+func _event_art() -> Dictionary:
+	var art: Dictionary = _choice.art()
+	var dim := float(art.get("dim", 0.0))
+	_automap.modulate = Color(1.0 - dim, 1.0 - dim, 1.0 - dim)
+	if art.is_empty() or _picture.size.x <= 0.0 or _picture.size.y <= 0.0:
+		return {}
+	var box: Rect2 = art.box
+	art.box = Rect2(_in_picture(box.position), box.size / _picture.size * Vector2(_viewport.size))
+	return art
 
 
 ## A point of the picture control as a point of the overlay's 448 x 288, which sits in the middle of a wider picture.

@@ -28,6 +28,7 @@ func _initialize() -> void:
 	await _wait(0.6)
 	await _game._begin()
 	await _wait(0.4)
+	await _past_story()
 	var flow = _game.flow
 	var s = flow.state
 	# a champion out of the way leaves three keepsakes
@@ -70,9 +71,22 @@ func _initialize() -> void:
 
 func _pair(name: String) -> void:
 	await _wait(0.5)
+	await _past_story()
 	await _shot(name + "_a")
 	await _wait(0.9)
 	await _shot(name + "_b")
+
+
+## A moment of the story is a drawing over everything, and the game holds still under it (view/story_cg.gd): send it away, as a
+## key would, so the walk goes on and the picture taken is of what the walk stopped at.
+func _past_story() -> void:
+	var story = _game._story
+	var tries := 0
+	while story.visible and tries < 8:
+		story._age = 99.0 # past the guard that keeps the key that brought it on from sending it away
+		story._dismiss()
+		await _wait(0.45)
+		tries += 1
 
 
 func _wait(seconds: float) -> void:
@@ -82,6 +96,7 @@ func _wait(seconds: float) -> void:
 func _until(stage: String) -> void:
 	var waited := 0.0
 	while _game.flow.state.stage != stage and waited < 20.0:
+		await _past_story()
 		if _game.flow.state.hint == "ANY KEY CONTINUE":
 			await _game.flow.press("confirm")
 		await _wait(0.1)

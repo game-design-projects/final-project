@@ -559,8 +559,8 @@
  },
  "events": {
   "cols": 2,
-  "rows": 4,
-  "cell_px": 384,
+  "rows": 5,
+  "cell_px": 472,
   "feet": "middle",
   "closed": false,
   "frames": [
@@ -571,7 +571,9 @@
    "door",
    "ending",
    "gate_bars",
-   "gate_chain"
+   "gate_chain",
+   "keepsake_things",
+   "keepsake_stands"
   ]
  },
  "cg_premise": {

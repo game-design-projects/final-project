@@ -145,14 +145,24 @@ func _what_the_walk_stops_at_is_drawn() -> void:
 	imported.load(str(sheet.file) + ".import")
 	_check(imported.get_value("params", "mipmaps/generate", false), "the events atlas has mipmaps: its pictures are drawn small")
 	var bounds := Rect2(Vector2.ZERO, Sprites.texture(Vignette.SHEET).get_size())
-	for id in Vignette.KNOWN + ["gate_bars", "gate_chain"]:
+	for id in Vignette.KNOWN + ["gate_bars", "gate_chain", "keepsake_things", "keepsake_stands"]:
 		_check(sheet.frames.has(id) and bounds.encloses(Sprites.drawing_rect(Vignette.SHEET, id)), "the events sheet has a drawing of the %s" % id)
 	var box := Rect2(40.0, 20.0, 200.0, 100.0)
 	for id in Vignette.KNOWN:
 		var to := Vignette.fit(id, box)
 		_check(box.grow(0.01).encloses(to) and (is_equal_approx(to.size.x, box.size.x) or is_equal_approx(to.size.y, box.size.y)), "the %s fills its box and stays inside it (%s)" % [id, to])
-	for part in Vignette.KEEPSAKES + Vignette.DOOR_HANDLES + Vignette.RAYS + [Vignette.FLAME_FOOT, Vignette.GATE_BARS, Vignette.GATE_CHAIN, Vignette.DOORWAY]:
+	for part in Vignette.KEEPSAKE_EACH + Vignette.DOOR_HANDLES + Vignette.RAYS + [Vignette.FLAME_FOOT, Vignette.GATE_BARS, Vignette.GATE_CHAIN, Vignette.DOORWAY, Vignette.KEEPSAKE_THINGS, Vignette.KEEPSAKE_STANDS]:
 		_check(Rect2(0, 0, 1, 1).grow(0.001).encloses(part), "a part of a drawing lies inside it (%s)" % part)
+	# the keepsakes are gold from top to tip: what lies on the stands and the stands are drawings of their own, and between them
+	# they are the whole drawing, so neither is coloured by a box laid across the other
+	var whole := Sprites.ink(Vignette.SHEET, "keepsakes").size
+	for layer in [["keepsake_things", Vignette.KEEPSAKE_THINGS], ["keepsake_stands", Vignette.KEEPSAKE_STANDS]]:
+		var ink := Sprites.ink(Vignette.SHEET, str(layer[0])).size
+		var place: Rect2 = layer[1]
+		_check(absf(ink.x - place.size.x * whole.x) < 1.5 and absf(ink.y - place.size.y * whole.y) < 1.5, "the %s are drawn at their own size where they belong in the keepsakes (%s against %s)" % [layer[0], ink, place.size * whole])
+	var each: Array = Vignette.KEEPSAKE_EACH
+	_check(each.size() == 3 and is_zero_approx(each[0].position.x) and is_equal_approx(each[0].end.x, each[1].position.x) and is_equal_approx(each[1].end.x, each[2].position.x) and is_equal_approx(each[2].end.x, 1.0), "the three things share their drawing out between them, side by side")
+	_check(Vignette.KEEPSAKE_THINGS.end.y > Vignette.KEEPSAKE_STANDS.position.y, "a thing's tip sits down inside its stand's rim, which is why a box could not colour it")
 	var gate := Vignette.fit("gate", box)
 	_check((Vignette.GATE_BARS.end.y + Vignette.GATE_DROP) * gate.size.y < gate.size.y, "the bars stop short of the floor when they are all the way down")
 	for step in Vignette.STEPS_DOWN + Vignette.STEPS_UP:

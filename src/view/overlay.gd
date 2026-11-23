@@ -16,6 +16,7 @@ const Fonts = preload("res://src/view/fonts.gd")
 const Palette = preload("res://src/view/palette.gd")
 const Sprites = preload("res://src/view/sprites.gd")
 const Transitions = preload("res://src/game/transitions.gd")
+const Vignette = preload("res://src/view/vignette.gd")
 
 const W := 448.0
 const H := 288.0
@@ -91,6 +92,11 @@ var intro_strength := 0.5
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _art: BattleArt # what is drawn behind this layer: the monster, the title picture
+## What the walk has stopped at, which the scene says each frame (view/choice_popup.gd lays it out over the picture, and this is
+## its place in the picture's own pixels): {id, box, wall, accent, picked, backed, dim}, or {} for nothing. It is drawn here and
+## not over the picture, so the glow, the scanlines and the picture's pixels are the drawing's own.
+var event_art := {}
+var _event_layer: Control # where it is drawn: over everything else in this layer, and smoothed as it is made smaller
 var _popups: Array = [] # [{text, color, at, born}]
 var extra_x := 0.0 # how much wider the picture is than this layer, on each side
 var _words := "" # what you last typed, on its way to the monster
@@ -111,6 +117,12 @@ func _ready() -> void:
 	_art = BattleArt.new()
 	_art.overlay = self
 	add_child(_art)
+	_event_layer = Control.new()
+	_event_layer.name = "EventArt"
+	_event_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_event_layer.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_event_layer.draw.connect(_draw_event_art)
+	add_child(_event_layer)
 
 
 ## Whether the monster in this fight is the drawing (battle_art.gd), with the halls dimmed behind it, rather than line art on black.
@@ -299,6 +311,8 @@ func _process(dt: float) -> void:
 		_left_fight_at = clock_ms
 	_was_fighting = in_fight()
 	queue_redraw()
+	if _event_layer != null: # a layer driven before it is in the tree has none yet
+		_event_layer.queue_redraw()
 
 
 func _draw() -> void:
@@ -330,6 +344,26 @@ func _draw() -> void:
 		draw_line(at, at.lerp(c.from, 0.25), Color(Palette.WARN, 0.5), 2.0)
 	if not quiet: # the whole floor's map is up over the picture, and the banner would land on the line the map says its keys in
 		_banner()
+
+
+## What the walk has stopped at (`event_art`): the picture goes dark behind a choice, and the moving picture of the thing is drawn
+## over that, in a dark box of its own when it stands alone over the walk.
+func _draw_event_art() -> void:
+	if event_art.is_empty() or state == null:
+		return
+	var k := minf(size.x / W, size.y / H)
+	_event_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2(k, k))
+	var dim := float(event_art.get("dim", 0.0))
+	if dim > 0.0:
+		_event_layer.draw_rect(whole_picture(), Color(0, 0, 0, dim))
+	var id := str(event_art.get("id", ""))
+	if id == "":
+		return
+	var box: Rect2 = event_art.box
+	if event_art.get("backed", false):
+		_event_layer.draw_rect(box.grow(3.0), Color(0, 0, 0, 0.8))
+		_event_layer.draw_rect(box.grow(3.0), Color(event_art.wall, 0.5), false, 1.0)
+	Vignette.draw(_event_layer, id, box, clock_ms / 1000.0, event_art.wall, event_art.accent, int(event_art.get("picked", -1)))
 
 
 ## Where the soul is in the box, in picture pixels (the box's middle when there is no dodge).
