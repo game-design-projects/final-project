@@ -1701,7 +1701,7 @@ func _late_decisions() -> void:
 	_check(s.menu[-1].label == "MAIN MENU" and s.menu[0].label != toll.hold_label, "and the way down is open")
 	_check(s.vignette == "stairs", "and the picture is the stairs now, not the gate (%s)" % s.vignette)
 	_check(State.from_dict(JSON.parse_string(JSON.stringify(s.to_dict()))).left_behind == ["GLOP"], "a save remembers who")
-	var ended := {"route": "x", "text": "y", "tail": "z"}
+	var ended := {"id": "end_quiet", "route": "x", "text": "y", "tail": "z"}
 	flow._stages["end"]._finish(flow, ended)
 	_check(s.lines[-1].text.contains("GLOP"), "and so does the end of the run (%s)" % s.lines[-1].text)
 	_choices_over_the_picture(s, "ending", 0, 2) # a run's end has nothing but buttons: no card to hold the question off them
@@ -3039,7 +3039,13 @@ func _heavy_trade() -> void:
 	for soft in ["slime", "snake"]:
 		_check(mean[50.0][soft] < mean[50.0].quick, "a steady hand still does better with FIGHT against a %s (%.1f against %.1f)" % [soft, mean[50.0][soft], mean[50.0].quick])
 	_check(absf(mean[50.0].bandit - mean[50.0].quick) < mean[50.0].quick * 0.15, "against a bandit it is about even (%.1f against %.1f)" % [mean[50.0].bandit, mean[50.0].quick])
-	_check(absf(mean[80.0].bandit - mean[80.0].quick) < mean[80.0].quick * 0.15, "and still about even from an ordinary hand (%.1f against %.1f)" % [mean[80.0].bandit, mean[80.0].quick])
+	# An ordinary hand, one that misses by 80 ms, no longer comes out ahead anywhere but a rock (#163, the heavy line at
+	# HEAVY_BAR_SCALE 0.5): measured on seed 35 it pays 13.7 against FIGHT's 11.9 there, and is behind against a bandit (9.3),
+	# a dragon (11.0), a snake (7.3) and a slime (5.1). At 0.6 of the bar it was about even with a bandit and ahead against a
+	# dragon from that hand, which is the "HEAVY may be too easy" the playtest wrote.
+	_check(mean[80.0].rock > mean[80.0].quick, "an ordinary hand still wants it against a rock (%.1f against %.1f)" % [mean[80.0].rock, mean[80.0].quick])
+	for ordinary_out in ["bandit", "dragon", "snake"]:
+		_check(mean[80.0][ordinary_out] < mean[80.0].quick, "and stays with FIGHT against a %s (%.1f against %.1f)" % [ordinary_out, mean[80.0][ordinary_out], mean[80.0].quick])
 	for error_ms in mean:
 		_check(mean[error_ms].slime < mean[error_ms].quick, "against a slime FIGHT is always better (%.0f ms: %.1f against %.1f)" % [error_ms, mean[error_ms].slime, mean[error_ms].quick])
 	for species in weighed:

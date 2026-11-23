@@ -15,7 +15,7 @@ set -euo pipefail
 SR=44100
 LOOP_START_SAMPLES=11025 # 0.25 s
 FADE_SAMPLES=441 # 10 ms
-QUALITY=6
+QUALITY=${OGG_QUALITY:-6} # the newer tunes (build-themes.py) are encoded at 4
 
 mode=${1:?usage: to_ogg.sh loop|sting <in> <out.ogg> [loop seconds]}
 in=${2:?missing input}

@@ -26,6 +26,9 @@ const Opening = preload("res://src/view/opening.gd")
 const Overlay = preload("res://src/view/overlay.gd")
 const Rng = preload("res://src/utils/rng.gd")
 const Sprites = preload("res://src/view/sprites.gd")
+const StoryCg = preload("res://src/view/story_cg.gd")
+const Lore = preload("res://src/rules/lore.gd")
+const Texts = preload("res://src/game/texts.gd")
 const Vignette = preload("res://src/view/vignette.gd")
 const State = preload("res://src/game/state.gd")
 const WallArt = preload("res://src/view/wall_art.gd")
@@ -55,6 +58,8 @@ func _run() -> void:
 	_the_battle_screen_shows_the_face()
 	_the_opening()
 	_the_menu_has_her()
+	_every_moment_of_the_story_is_drawn()
+	await _a_moment_is_told_once()
 	_finish()
 
 
@@ -599,3 +604,55 @@ func _the_menu_has_her() -> void:
 	wick.size = Vector2(700, 820)
 	_check(wick.stands_at().x < 0.0, "and a narrow window leaves her out")
 	wick.free()
+
+
+## Every id the game can tell (flow.story) has a picture: a tint in data/story.json, a sheet cg_<id> in the atlas data, a texture
+## with mipmaps (it is drawn smaller than it is), and no picture there that the game never asks for.
+func _every_moment_of_the_story_is_drawn() -> void:
+	var told := ["premise", "gate", "door", "vexalith", str(Texts.lonely_ending().id)]
+	for tally in [{"spared": 0, "slain": 0}, {"spared": 2, "slain": 0}, {"spared": 0, "slain": 2}, {"spared": 1, "slain": 1}]:
+		told.append(str(Texts.ending({"spared": tally.spared, "slain": tally.slain, "fled": 0, "recruited": 0, "left": 0}, []).id))
+	for clan in Envoys.table().clans:
+		told.append("lord_" + str(clan))
+	for depth in Lore.depths():
+		for tone in ["warm", "wary", "cold"]:
+			told.append("lore_" + Lore.piece(depth, tone).id.replace("-", "_"))
+	var pictures: Dictionary = StoryCg.table().pictures
+	_check(told.size() == 28, "the game tells 28 moments (%d)" % told.size())
+	for id in told:
+		var sheet := Sprites.sheet("cg_" + id)
+		var imported := ConfigFile.new()
+		imported.load(str(sheet.get("file", "")) + ".import")
+		_check_quietly(pictures.has(id) and not sheet.is_empty() and ResourceLoader.exists(str(sheet.get("file", ""))) \
+			and imported.get_value("params", "mipmaps/generate", false), "the story moment %s has its picture, with mipmaps" % id)
+	for id in pictures:
+		_check_quietly(id in told, "the story picture %s is one the game tells" % id)
+
+
+## flow.story: a moment is told once a run, a run's new start tells them again, the test room tells none, and words that would have
+## had a banner keep it when there is no drawing.
+func _a_moment_is_told_once() -> void:
+	var flow = _flow(7)
+	var heard := []
+	flow.happened.connect(func(name, data):
+		if name == "story":
+			heard.append(data))
+	flow.story_pictures = func(id: String) -> bool: return id != "lore_1_warm"
+	await flow.new_run()
+	_check(heard.size() == 1 and heard[0].id == "premise" and heard[0].pictured, "a new run with no film tells its premise, as a drawing (%s)" % [heard])
+	heard.clear()
+	flow.film_played = true
+	await flow.new_run()
+	_check(heard.is_empty(), "a run the opening film opened doesn't tell the premise again")
+	flow.story("gate", "THE GATE", "words")
+	flow.story("gate", "THE GATE", "words")
+	_check(heard.size() == 1, "a moment is told once a run (%d)" % heard.size())
+	flow.state.banner = null
+	flow.story("lore_2_cold", "T", "words", 3000.0)
+	_check(flow.state.banner == null, "a moment with a drawing puts up no banner as well")
+	flow.story("lore_1_warm", "T", "words", 3000.0)
+	_check(flow.state.banner != null and str(flow.state.banner.title) == "T" and not heard[-1].pictured, "a moment with no drawing keeps its banner")
+	heard.clear()
+	await flow.test_room()
+	flow.story("gate", "THE GATE", "words")
+	_check(heard.is_empty(), "the test room tells no story")

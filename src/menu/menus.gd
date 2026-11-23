@@ -247,6 +247,7 @@ static func gameplay() -> Dictionary:
 		_setting("text_size", "TEXT SIZE", "The log and what monsters say, wherever the larger size fits"),
 		_setting("easy", "EASY DODGE", "Attacks come slower, with longer warnings"),
 		_setting("tips", "TIPS", "Short tips the first time you meet something; off skips the tutorial"),
+		_setting("story_cg", "STORY PICTURES", "A drawing over the screen at each moment of the story; off puts the words on a banner"),
 		{"label": "SHOW THE TIPS AGAIN", "sub": "Forget which tips you have seen", "act": func(): Settings.set_value("seen_tips", [])},
 	]}
 
@@ -319,12 +320,11 @@ static func _achievements_row(ctx: Dictionary) -> Dictionary:
 
 
 ## What the credits name, in full: the licences that require their text to travel with what they cover — the two fonts' SIL
-## Open Font License, and the two Creative Commons texts the old music's samples and the reference voices are under. Read from
+## Open Font License, and the Creative Commons text the reference voices are under. Read from
 ## the files themselves, so the page says what a build carries (a file missing from a build says so rather than going quiet).
 const LICENCE_FILES := [
 	"res://assets/fonts/OFL-PressStart2P.txt",
 	"res://assets/fonts/OFL-VT323.txt",
-	"res://assets/LICENSES/CC-BY-SA-3.0.txt",
 	"res://assets/LICENSES/CC-BY-4.0.txt",
 ]
 

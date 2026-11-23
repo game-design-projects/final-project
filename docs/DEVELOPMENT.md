@@ -48,13 +48,13 @@ Tests can't judge how it looks. These draw the real thing and print numbers, wit
 | `far_check` | Every species at every distance down the longest line of each floor, and across floors: is it seen, and is a name ever over nothing |
 | `hold_check` | Each arrow held in the real game scene: cells, turns, bumps, whether the camera turned back, the slowest frame |
 | `reveal_shots` | Deterministic step/turn panel frames at 0, 40, 70, 100, 200, 1000 ms through bloom/CRT, plus lifecycle assertions (`out=<dir>`) |
-| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
+| `screenshots`, `camera_shots`, `map_shots`, `nerve_shots`, `event_shots`, `trophy_shots`, `room_shots`, `clan_shots`, `story_shots` | Pictures to look at (`nofocus` keeps the window from taking the keyboard) |
 | `sim_recruit` | How long winning each monster over takes against killing it |
 | `sim_chart` | How much of a floor is seen when the stairs first show, and the steps instinct saves on the way to them, per biome and depth (`seeds=N`); for tuning `chart` in `data/floors.json` |
 | `sim_strike` | What the fight bar's two commands are worth to the same hand, per species: the damage of each when both are stopped the same ms from the middle (so the faster line isn't read against its own narrower mark), and what a swing is worth to a steady, an ordinary and a shaky hand, misses counted (`boss=1`, `charms=rock|dragon`, `swings=N`); for tuning `combat.gd`'s `HEAVY_*` and the species' `heavy` numbers (#163) |
 | `sim_dodge` | How hard each attack is: a bot that reads the warnings plays it over many seeds and intensities (`only=<attack,...>`, `seeds=N`, `csv=1`, `boss=1` for a champion's attack: 6200 ms at a fifth more intensity, and its rows print the intensity the run got, `plan=timed` for a bot that plans over time and may wait rather than two steps ahead); it prints hits, how much of the box is lit, and moments with no way out |
 
-The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms. `tools/credits_test.py` reads the credits back without Godot: every file in `assets/audio`, `art`, `fonts` and `video`, and every voice bank, is named in `assets/CREDITS.txt`; each font ships its SIL Open Font License beside it with its own copyright line; the two Creative Commons texts are the versions the credits name; the old music says its samples are CC BY-SA 3.0 and the hum theme names its author and soundfont; and every export preset in `tools/build.sh` carries the licence texts into the build, since Godot ships only resources and the fonts had been travelling without theirs.
+The Worker's tests run with `node --test worker.test.js` in `proxy/`. CI runs all of them, plays whole games, checks that CREDITS ships, and builds the four platforms. `tools/credits_test.py` reads the credits back without Godot: every file in `assets/audio` (and `audio/music`), `art`, `fonts` and `video`, and every voice bank, is named in `assets/CREDITS.txt`; each font ships its SIL Open Font License beside it with its own copyright line; the Creative Commons text is the version the credits name; the music names the CC0 orchestra it is played on and the hum theme names its author and soundfont; and every export preset in `tools/build.sh` carries the licence texts into the build, since Godot ships only resources and the fonts had been travelling without theirs.
 
 Two checks read a *build* rather than the source: `tools/pack_version_test.py` opens the macOS zip `tools/build.sh macos` wrote and fails unless that zip is named `donjon-<config/version>-macos.zip`, holds exactly one `Donjon.app` at its root, and both of that bundle's versions are `config/version` (0.9.5 shipped with a literal 1.0, #229), and the web job plays the exported `index.pck` headless until the main menu prints. `tools/intro_refs.py` is not a check: it cuts the reference frames out of the game's own atlases for the intro video's prompt (`uv run --with pillow python tools/intro_refs.py`).
 
@@ -91,7 +91,7 @@ The default applies only to the game. A headless run or a `-s` tool script (ever
 
 ## Features
 
-What shipped from 0.6.1 on is simply the game now. Twenty features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `hum-theme`, `motifs`, `achievements`, `legacy`, `nerve`, `mood-attacks`, `follow-through`, `keepsakes` and `test-room`; the opt-in `skill-combat` and `gemini-voices` are off unless named. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off; there is no switch for all of them at once.
+What shipped from 0.6.1 on is simply the game now. Twenty features still have a flag, on by default, because they are meant to be tried against the game without them: `branching`, `toll`, `last-door`, `roaming`, `heavy-strike`, `flee-cost`, `ambush-prompt`, `dynamic-moods`, `initiated-dialogue`, `wick`, `dungeon-reveal`, `motifs`, `clan-requests`, `achievements`, `legacy`, `nerve`, `mood-attacks`, `follow-through`, `keepsakes` and `test-room`; the opt-in `skill-combat` and `gemini-voices` are off unless named. `FEATURES` in `src/utils/flags.gd` is the list, with what each does. `no-<name>` or `<name>=off` turns one off; there is no switch for all of them at once.
 
 The exception is `OPT_IN`: experiments that replace part of the game and are tried beside it, off unless named. Today that is `skill-combat` (`godot --path . -- skill-combat`, or `?skill-combat` on the web build): SKILLS takes FIGHT's place. Its numbers are in `data/skills.json`. And `gemini-voices`: monsters speak from the Gemini TTS bank (`assets/voices/gemini/`, rendered once by `tools/voices/render.py gemini`, see [tools/voices/README.md](../tools/voices/README.md)) for every line it has, and from the usual bank for the rest; with no such bank rendered it changes nothing. The bank is not carried in builds, like the Qwen3 bank: the experiment is heard from source or in the test room, not from an export. `test-room gemini-voices` is the quickest way to hear every monster.
 
@@ -117,6 +117,17 @@ Two sheets were drawn outside that pipeline (ChatGPT's image tool, from the prom
 
 - **A lord is a still**: a figure made from one drawing. Its entry in `sheets.json` names the sheet and the cell (`"still"`), and `process.py` bends that drawing into the six frames of an `idle`: the body rises off its feet with a breath, `moves` shift a part with it (`bob`, `sway`, `lean`, `pump`, `grow`), `eyes` are squashed flat for a blink and `brows` lifted for a face with no eyes to shut. `fill` dims the inside of a filled-in shape (a beard, a pale belly), which the figure shader would otherwise light like a lamp. The rects are in the source cell's pixels. A still has no other action, so the game hops and flinches it in code, as it does for a blank face.
 - **`events.png`** has a drawing for each name in `Vignette.KNOWN`, and the gate's bars and chain as drawings of their own so they can move. `src/view/vignette.gd` holds where the moving and coloured parts are, as shares of each drawing's ink: a redrawn picture needs them measured again (`art_test` checks they still lie inside it).
+
+### The story CGs
+
+```bash
+tools/art/cg.sh [gate door ...]                     # draw story CGs (all that have no source yet), 4 at once (JOBS=n), with their references
+tools/art/keep.sh cg_gate 1                         # keep a take
+uv run --script tools/art/process.py cg_gate        # 1024 wide into assets/art/, and into data/sprites.json
+godot --path . -s res://tools/story_shots.gd -- out=/some/dir [only=gate,end_quiet] [nofocus]  # the CGs over the running game (needs a window)
+```
+
+A CG's `sheets.json` entry is a `plain` picture with `refs`, the characters `tools/art/cg_refs.py` cuts from the source sheets for it. `data/story.json` gives each its tint; the game names the moment with `flow.story`.
 
 ### The opening film
 

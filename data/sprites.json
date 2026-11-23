@@ -2365,5 +2365,201 @@
     83.3
    ]
   }
+ },
+ "cg_door": {
+  "file": "res://assets/art/cg_door.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_end_blood": {
+  "file": "res://assets/art/cg_end_blood.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_end_ghost": {
+  "file": "res://assets/art/cg_end_ghost.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_end_lonely": {
+  "file": "res://assets/art/cg_end_lonely.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_end_quiet": {
+  "file": "res://assets/art/cg_end_quiet.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_end_tangled": {
+  "file": "res://assets/art/cg_end_tangled.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_gate": {
+  "file": "res://assets/art/cg_gate.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lord_burrow": {
+  "file": "res://assets/art/cg_lord_burrow.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lord_coil": {
+  "file": "res://assets/art/cg_lord_coil.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lord_crew": {
+  "file": "res://assets/art/cg_lord_crew.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lord_old_stone": {
+  "file": "res://assets/art/cg_lord_old_stone.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_1_cold": {
+  "file": "res://assets/art/cg_lore_1_cold.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_1_warm": {
+  "file": "res://assets/art/cg_lore_1_warm.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_1_wary": {
+  "file": "res://assets/art/cg_lore_1_wary.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_2_cold": {
+  "file": "res://assets/art/cg_lore_2_cold.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_2_warm": {
+  "file": "res://assets/art/cg_lore_2_warm.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_2_wary": {
+  "file": "res://assets/art/cg_lore_2_wary.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_3_cold": {
+  "file": "res://assets/art/cg_lore_3_cold.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_3_warm": {
+  "file": "res://assets/art/cg_lore_3_warm.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_3_wary": {
+  "file": "res://assets/art/cg_lore_3_wary.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_4_cold": {
+  "file": "res://assets/art/cg_lore_4_cold.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_4_warm": {
+  "file": "res://assets/art/cg_lore_4_warm.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_4_wary": {
+  "file": "res://assets/art/cg_lore_4_wary.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_5_cold": {
+  "file": "res://assets/art/cg_lore_5_cold.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_5_warm": {
+  "file": "res://assets/art/cg_lore_5_warm.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_lore_5_wary": {
+  "file": "res://assets/art/cg_lore_5_wary.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_premise": {
+  "file": "res://assets/art/cg_premise.png",
+  "size": [
+   1024,
+   683
+  ]
+ },
+ "cg_vexalith": {
+  "file": "res://assets/art/cg_vexalith.png",
+  "size": [
+   1024,
+   683
+  ]
  }
 }

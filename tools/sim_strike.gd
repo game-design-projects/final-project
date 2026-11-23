@@ -3,7 +3,7 @@
 ##   per hit   — both commands stopped the same number of ms from the middle, so the faster line is not flattered by being read
 ##               against its own narrower edge;
 ##   per swing — what a whole fight is worth to a hand that misses the middle by that much on average, misses counted, which is
-##               the other half of the trade: on the usual 1100 ms bar the heavy mark is 231 ms wide against the plain one's 1012.
+##               the other half of the trade: on the usual 1100 ms bar the heavy mark is 192 ms wide against the plain one's 1012.
 ## The rows are the species in `data/species.json`, each on its own `heavy` number, so a species added there is in the tables
 ## without this tool being touched.
 ##   godot --headless --path . -s res://tools/sim_strike.gd -- nosave [boss=1] [charms=none|rock|dragon] [swings=4000]
@@ -47,7 +47,7 @@ func _initialize() -> void:
 	print("  %6s %6s | %s" % ["off", "FIGHT", _names(species)])
 	# The rows: the middle, a steady hand's average miss, and each command's own far edge one ms inside, the way `features_test`
 	# reads the last blow that lands. Read from the bars rather than written in ms, so `charms=rock` (a 1500 ms bar) shows that
-	# bar's edges instead of the usual bar's 115.5 and 506 ms.
+	# bar's edges instead of the usual bar's 96 and 506 ms.
 	var same_hand_ms := [0.0, 50.0, heavy_bar * Combat.HEAVY_MISS_EDGE / 2.0 - 1.0, bar * Combat.MISS_EDGE / 2.0 - 1.0]
 	for error in same_hand_ms:
 		var cells := species.map(func(id): return "%6d" % _heavy_hit(id, boss, fire, error, heavy_bar))

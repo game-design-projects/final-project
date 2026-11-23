@@ -40,6 +40,7 @@ func enter(flow, _args: Dictionary) -> void:
 		_at_door = true
 		s.vignette = "door"
 		s.say([State.sys_line(Texts.DOOR_SHUT), State.sys_line(Texts.DOOR_HINT)])
+		flow.story("door", str(Floors.premise().title), Texts.DOOR_SHUT)
 		s.menu = [{"label": "TURN BACK", "sub": "Find someone who will come with you"}, {"label": "LEAVE ALONE", "sub": "Ends the run, not cleared"}, {"label": "MAIN MENU", "sub": ""}]
 		print("end: the Last Door stays shut, no allies")
 	elif s.run_over:
@@ -84,6 +85,7 @@ func _ask_toll(flow) -> void:
 	_at_toll = true
 	s.vignette = "gate"
 	s.say([State.sys_line(Texts.floor_done(s.depth)), State.sys_line(toll.ask)])
+	flow.story("gate", str(toll.title), str(toll.ask))
 	s.menu = [{"label": toll.hold_label, "sub": toll.hold_sub % int(toll.hp)}]
 	for a in s.allies:
 		s.menu.append({"label": toll.leave_label % a.name, "sub": toll.leave_sub})
@@ -132,6 +134,7 @@ func _finish(flow, ending: Dictionary, how := "cleared") -> void:
 	elif embers > 0:
 		tail += " " + Legacy.line("carried") % embers
 	s.say([State.speech(ending.route, ending.text), State.sys_line(tail)])
+	flow.story(str(ending.id), str(ending.route), str(ending.text))
 	s.menu = [{"label": "NEW RUN", "sub": ""}, {"label": "MAIN MENU", "sub": ""}]
 	print("end: %s" % ending.route)
 
