@@ -535,6 +535,11 @@ func _music_pacing() -> void:
 	m.set_mode("battle")
 	_check(m.battle_name() == "fight-cobra", "and the next fight its own (%s)" % m.battle_name())
 	m.set_mode("explore")
+	m.fight_with("set-boss")
+	m.set_mode("battle")
+	_check(m.battle_name() == "set-boss" and m.loop_player("battle").stream.resource_path == "res://assets/audio/set-boss.ogg" and m.loop_player("battle").stream.loop, "a theme of the music set plays from its own file, looping (%s)" % m.battle_name())
+	_check(is_equal_approx(m._level("battle", "set-boss"), m._level("battle", "fight-cobra") - 1.0), "a decibel under a foe's own tune, which it is mastered above")
+	m.set_mode("explore")
 	m.fight_with("fight-nobody")
 	m.set_mode("battle")
 	_check(m.battle_name() == Music.DEFAULT_FIGHT, "a foe with no tune of its own gets the first slime's, not silence (%s)" % m.battle_name())
@@ -657,11 +662,14 @@ func _every_place_and_foe_has_its_tune() -> void:
 		_check(ResourceLoader.exists("res://assets/audio/music/sting-%s.ogg" % n), "the %s sting is there" % n)
 	var old := []
 	for f in DirAccess.get_files_at("res://assets/audio"):
-		if f.ends_with(".ogg") and f != Music.CAMP.get_file():
+		if f.ends_with(".ogg") and f != Music.CAMP.get_file() and not Music.SET.values().has(f.get_basename()):
 			old.append(f)
-	_check(old.is_empty() and Music.track_path("camp") == Music.CAMP, "of the old music only the hum theme is left, and it is the camp's (%s)" % [old])
+	_check(old.is_empty() and Music.track_path("camp") == Music.CAMP, "of the old music only Abdulla's is left: the hum theme, which is the camp's, and his three fight themes (%s)" % [old])
+	var set_missing: Array = Music.SET.values().filter(func(n): return not ResourceLoader.exists(Music.track_path(n)) or paths.has(Music.track_path(n)))
+	_check(Music.SET.size() == 3 and set_missing.is_empty(), "the music set's three fight themes are there, files of their own beside the hum theme (%s)" % [set_missing])
 	var credits := FileAccess.get_file_as_string("res://assets/CREDITS.txt")
 	_check(credits.contains("assets/audio/music/*.ogg") and credits.contains("hum-explore.ogg") and credits.contains("GeneralUser GS"), "the credits name the new music and the hum theme with its soundfont")
+	_check(Music.SET.values().all(func(n): return credits.contains("assets/audio/%s.ogg" % n)), "and the music set's three themes")
 
 
 ## Where you are picks the exploring tune: a biome, the same biome deeper, a hall, the practice floor, the test room.
@@ -725,12 +733,25 @@ func _music_foes() -> void:
 	m.name = "CINDERA"
 	_check(Music.fight_of(m) == "champion-cindera", "a champion's its own (%s)" % Music.fight_of(m))
 	_check(Music.fight_of(null) == Music.DEFAULT_FIGHT, "and nobody, the default")
+	# the music set (the feature `music-set`, on by default): Abdulla's theme for who the fight is with, in place of the foe's own
+	_check(Music.set_theme(false, false) == "set-fight" and Music.set_theme(true, false) == "set-boss" and Music.set_theme(true, true) == "set-final", "the music set has a theme for a monster, a champion and the last champion")
+	_check(Music.track_path("set-boss") == "res://assets/audio/set-boss.ogg" and Music.track_path("fight-gazer").begins_with(Music.DIR), "its files are beside the hum theme, the foes' own in the music folder")
 	var audio = _fresh_audio()
 	await process_frame
 	var fake: FakeMusic = _fake(audio)[1]
 	audio._on_event("encounter", {"boss": false, "final": false})
-	_check(fake.foes == [Music.DEFAULT_FIGHT] and fake.calls == ["mode:battle"], "the fight's tune is said before its music starts (%s)" % [fake.foes])
+	audio._on_event("encounter", {"boss": true, "final": false})
+	audio._on_event("encounter", {"boss": true, "final": true})
+	_check(fake.foes == ["set-fight", "set-boss", "set-final"] and fake.calls == ["mode:battle", "mode:battle", "mode:battle"], "a fight plays the set's theme for who it is with, said before its music starts (%s)" % [fake.foes])
 	audio.queue_free()
+	Flags.set_args(PackedStringArray(["nosave", "no-music-set"]))
+	var own = _fresh_audio()
+	await process_frame
+	var own_fake: FakeMusic = _fake(own)[1]
+	own._on_event("encounter", {"boss": false, "final": false})
+	_check(own_fake.foes == [Music.DEFAULT_FIGHT] and own_fake.calls == ["mode:battle"], "no-music-set: the foe's own tune (%s)" % [own_fake.foes])
+	own.queue_free()
+	Flags.set_args(PackedStringArray(["nosave", "seed=7"]))
 
 
 func _files_under(path: String) -> Array:
