@@ -125,14 +125,15 @@ static func favour(state, species: String, worth: float) -> Array:
 
 ## A friend of yours butchered (rules/survival.gd), or the word of it getting out. To its clan that is a death, and a worse one
 ## than any in a fight: the clan takes `worth` in full, and the clans that like it their share of that. A clan that dislikes it
-## is glad of the death as it would be of any other, one kill's worth and no more: nobody is pleased by the treachery. With a
-## name (`who`) the deed is kept as a killing, so its kin speak of it, by name, when they meet you. Returns the changes of
+## is glad of the death as it would be of any other, one kill's worth and no more: nobody is pleased by the treachery, and the
+## word getting out (no `who`) is of the same death, so it pleases nobody again. With a name (`who`) the deed is kept as a
+## killing, so its kin speak of it, by name, when they meet you. Returns the changes of
 ## hostility, the clan's own first, as `record` does.
 static func betrayed(state, species: String, worth: float, who := "") -> Array:
 	var from := of(species)
 	if from == "":
 		return []
-	var moved := _spread(state, from, worth, "slain", true)
+	var moved := _spread(state, from, worth, "slain", 1.0 if who != "" else 0.0) # the telling is of the same death
 	if who != "":
 		state.deeds.append({"clan": from, "species": species, "who": who, "deed": "slain"})
 		if state.deeds.size() > DEEDS_MAX:
@@ -142,12 +143,15 @@ static func betrayed(state, species: String, worth: float, who := "") -> Array:
 	return moved
 
 
-static func _spread(state, from: String, worth: float, deed: String, glad_of_one := false) -> Array:
+## `glad_deaths`, when it is not negative, is how many such deeds a clan that is glad of this one may be glad of: 1 for a
+## butchering (glad of the death, as of any other, and of nothing more), 0 for the word of it getting out (the death it was
+## glad of is the same one).
+static func _spread(state, from: String, worth: float, deed: String, glad_deaths := -1.0) -> Array:
 	var moved := []
 	for clan in _table().clans:
 		var part: float = worth * reach(from, clan, deed)
-		if glad_of_one and worth < 0.0 and part > 0.0: # glad of the death, as of any other, and of nothing more
-			part = minf(part, float(_table().deeds[deed]) * reach(from, clan, deed))
+		if glad_deaths >= 0.0 and worth < 0.0 and part > 0.0:
+			part = minf(part, glad_deaths * float(_table().deeds[deed]) * reach(from, clan, deed))
 		if part != 0.0:
 			var was := hostility(float(state.reputation.get(clan, 0.0)))
 			var liked_was := favour_level(float(state.reputation.get(clan, 0.0)))

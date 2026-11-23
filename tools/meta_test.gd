@@ -485,6 +485,7 @@ func _butcher() -> void:
 	var worse := float(Survival.table().butcher.clan_worth) + float(Survival.table().butcher.found_out_worth)
 	_check(float(t.reputation[Clans.of("slime")]) <= worse and Clans.hostility_of(t, "slime") == "enraged", "seen, it is worse again: the word of how it went reaches the clan, and the Burrow is enraged (%.0f)" % float(t.reputation[Clans.of("slime")]))
 	_check(t.lines.size() > 2, "and nothing of it is left out of the log (%d lines)" % t.lines.size())
+	_check(is_equal_approx(float(t.reputation.get(Clans.of("rock"), 0.0)), -float(Content.table("clans").deeds.slain) * 0.5), "the telling is of the same death: a clan that dislikes the Burrow is glad of it once, not once more for every tongue (%s)" % [t.reputation])
 	# the last friend
 	var last = _flow(7)
 	await last.new_run()
