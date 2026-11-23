@@ -85,6 +85,7 @@ func _run() -> void:
 	await _hostility()
 	await _map_gen()
 	await _secrets()
+	await _vault()
 	await _lore()
 	await _items()
 	await _shop()
@@ -754,7 +755,7 @@ func _keepsakes() -> void:
 	_check(Keepsakes.offer(11, 1, first).all(func(id): return not first.has(id)), "one already held is never offered again")
 	_check(Keepsakes.offer(11, 1, all.slice(0, 7)).size() == 2 and Keepsakes.offer(11, 1, all).is_empty(), "with few left fewer are offered, and with none left none")
 	_check(range(40).all(func(i): return Keepsakes.offer(i, 1, [], false).all(func(id): return not Keepsakes.NEEDS_NERVE.has(id))), "a game without nerve is never offered the ones that feed it")
-	_check(Transitions.allowed("fightbar", "keepsake") and Transitions.allowed("ask", "keepsake") and Transitions.allowed("keepsake", "explore") and not Transitions.allowed("explore", "keepsake"), "the choice comes at the end of a fight and nowhere else")
+	_check(Transitions.allowed("fightbar", "keepsake") and Transitions.allowed("ask", "keepsake") and Transitions.allowed("keepsake", "explore") and Transitions.allowed("explore", "keepsake"), "the choice comes at the end of a fight, and out of the Hoard's vault on the walk (#161)")
 	_check(Transitions.WALK.has("keepsake") and Transitions.DECIDING.has("keepsake"), "it is made on the floor, the fight behind you, and it is the whole moment: its cards go over the picture")
 	var named := {}
 	var naming := RegEx.create_from_string('vignette = (?:"(\\w+)" if .* else )?"(\\w+)"')
@@ -1883,6 +1884,17 @@ func _clans() -> void:
 			kinds += ["rival_slain", "rival_kept"]
 		for kind in kinds:
 			_check(not Content.species(species).lines.get(kind, []).is_empty(), "%s has %s lines" % [species, kind])
+	# a kill pleases the clans that dislike the victim's, and each says so in its own voice (#165): every kind whose clan holds a
+	# grudge has its two lines, and the Burrow, which dislikes nobody, has none to say
+	for species in Content.table("species"):
+		var rival_lines: Array = Content.species(species).lines.get("rival_slain", [])
+		if Clans.felt_by(Clans.of(species), "dislikes").is_empty():
+			_check(rival_lines.is_empty(), "%s has no rival_slain line: its clan dislikes nobody" % species)
+			continue
+		_check(rival_lines.size() == 2, "%s has its two rival_slain lines" % species)
+		for line in rival_lines:
+			var said: String = Content.fill(str(line), {"kin": "Goo"})
+			_check(not said.contains("{") and Overlay.banner_fits(said), "and it fills and fits the banner: %s" % said)
 
 	# the test the issue asks for: spare one, and a later one of the same group reacts and starts in another mood
 	var flow = _flow(31)
@@ -1973,6 +1985,13 @@ func _clans() -> void:
 	var heard_all := State.new()
 	Clans.record(heard_all, stone, "slain")
 	_check(heard_all.reputation[Clans.of("dragon")] < 0.0 and heard_all.reputation[Clans.of("bandit")] > 0.0, "the dragon hears a little of the rest, and the Crew is glad of a rock gone (%s)" % str(heard_all.reputation))
+	# a kill pays each clan that dislikes the victim's half what it costs its own (#165). There are no sides: the Burrow's rival is
+	# the Old Stone, and the Crew, with no feeling about slimes, is not one
+	var rival: String = rivals[0]
+	var rival_of: Array = Clans.rivals(clan)
+	_check(rival_of == rivals and not rival_of.has(clan) and not rival_of.has(Clans.of("bandit")) and not rival_of.has(Clans.of("dragon")), "the clans that dislike it are its rivals, and nobody else is (%s)" % str(rival_of))
+	_check(is_equal_approx(float(slain.reputation[rival]), absf(float(slain.reputation[clan])) * absf(float(Content.table("clans").feelings.dislikes.slain))), "a kill is half as welcome to a rival as it is unwelcome to its own (#165) (%s)" % str(slain.reputation))
+	_check(is_equal_approx(float(slain.reputation[rival]), 9.0), "so a slime's death is worth 9 to the Old Stone")
 	var grudge = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == "slime")[0], Vector2i.ONE)
 	var was_angry: float = grudge.meters.anger
 	var was_kind: float = grudge.meters.friendliness
@@ -1996,6 +2015,78 @@ func _clans() -> void:
 	var sore_rival = Monster.make(Rng.new(4), Content.table("encounter").roster.filter(func(e): return e.species == side_species(rivals[0]))[0], Vector2i.ONE)
 	var sore: Dictionary = Clans.hear(sore_rival, taken_in)
 	_check(taken_in.reputation[rivals[0]] < 0.0 and sore.kind == "rival_kept" and sore.tone == "bad", "taking one in does: its rival is sore about it (%s, %s)" % [str(taken_in.reputation), str(sore)])
+
+	_check(a_rival.heard.get("clan", "") == rival and str(a_rival.heard.get("heard", [])).contains("the player killed OOZE"), "the rival remembers who died, in a verb a mind can read (#165) (%s)" % str(a_rival.heard.get("heard", [])))
+
+	# the deed a clan names is the one that moved it (#165): two bandits please the Coil, a slime of the Burrow it likes takes half
+	# of that back, and the snake it meets still has the bandit to talk about, not the slime
+	var coil: String = Clans.of("snake")
+	var mixed := State.new()
+	var mugger := Monster.new()
+	mugger.species = "bandit"
+	mugger.name = "MUGGER"
+	Clans.record(mixed, mugger, "slain")
+	Clans.record(mixed, mugger, "slain")
+	Clans.record(mixed, victim, "slain")
+	_check(float(mixed.reputation[coil]) == 9.0, "two bandits leave the Coil at 18, and a slime it likes takes 9 of that back (%s)" % str(mixed.reputation))
+	var mixed_snake := Monster.new()
+	mixed_snake.species = "snake"
+	mixed_snake.name = "SSILK"
+	var mixed_news: Dictionary = Clans.hear(mixed_snake, mixed)
+	_check(mixed_news.kind == "rival_slain" and mixed_news.tone == "good" and mixed_news.who == "MUGGER", "so the news a snake hears is the bandit it is glad of, not the slime it liked (%s)" % str(mixed_news))
+	_check(Clans.news(mixed_news) == "%s heard you killed MUGGER. It starts friendlier." % Clans.title(coil), "and the banner agrees with the line it says (%s)" % Clans.news(mixed_news))
+
+	# a favour tells no tale: with nothing it heard that moved it up, the newest it heard of is still its news, so its mood moves
+	# and it remembers (#165)
+	var favour_only := State.new()
+	Clans.record(favour_only, victim, "slain")
+	Clans.favour(favour_only, "snake", 20.0)
+	var favour_snake := Monster.new()
+	favour_snake.species = "snake"
+	favour_snake.name = "SSILK"
+	var favour_news: Dictionary = Clans.hear(favour_snake, favour_only)
+	_check(not favour_news.is_empty() and favour_snake.meters.friendliness > 0.0, "a clan moved only by a favour still starts friendlier, and has a deed to tell (%s)" % str(favour_news))
+
+	# a spare and a favour are no news to a rival: only a kill pleases it (#165), and only a friend taken in makes it sore (above)
+	var mercy := State.new()
+	Clans.record(mercy, victim, "spared")
+	Clans.favour(mercy, "slime", 20.0)
+	_check(rival_of.all(func(c): return float(mercy.reputation.get(c, 0.0)) == 0.0), "a spare and a favour move no rival at all (%s)" % str(mercy.reputation))
+
+	# killing what it dislikes cools an angry clan by exactly the 9 a kill pays a rival (#165)
+	var cooled := State.new()
+	Clans.record(cooled, stone, "slain")
+	_check(float(cooled.reputation[rival]) == -18.0 and Clans.hostility_of(cooled, "rock") == "angry", "killing a rock makes the Old Stone angry (%s)" % str(cooled.reputation))
+	Clans.record(cooled, victim, "slain")
+	_check(float(cooled.reputation[rival]) == -9.0 and Clans.hostility_of(cooled, "rock") == "", "one slime lifts it out of angry: -18 -> -9 (%s)" % str(cooled.reputation))
+	Clans.record(cooled, victim, "slain")
+	_check(float(cooled.reputation[rival]) == 0.0 and Clans.mood_word(float(cooled.reputation[rival])) == "CALM", "two leave it level with you, and calm (%s)" % str(cooled.reputation))
+	var fond := State.new()
+	for i in 20:
+		Clans.record(fond, victim, "slain")
+	_check(float(fond.reputation[rival]) == Clans.STANDING_MAX, "a rival's standing stops at STANDING_MAX (%s)" % str(fond.reputation))
+
+	# the log says so the first time a kill pleases a rival past nothing, by clan and by name, and only then (#163, #165)
+	var victory = _flow(34)
+	var doomed = await _at_menu(victory)
+	var doomed_rivals: Array = Clans.rivals(Clans.of(doomed.species))
+	await victory.encounter.defeat(doomed, "slain")
+	var won = victory.state
+	_check(not doomed_rivals.is_empty() and doomed_rivals.all(func(c): return won.lines.any(func(l): return l.text == Clans.pleased() % [Clans.title(c), doomed.name])), "a kill pleases each clan that dislikes its clan, and the log says it by clan and by name (%s)" % str(won.lines.map(func(l): return l.text)))
+	_check(won.lines.filter(func(l): return l.text.contains("is pleased:")).size() == doomed_rivals.size(), "every such clan is named, and nobody else (%s of the %s)" % [str(doomed_rivals), doomed.species])
+	_check(victory.encounter._pleased({rival: 9.0}, doomed).is_empty(), "a clan already above nothing is not told again for that crossing")
+	# the line is said each time a clan is carried past nothing, not once a run: nothing is saved to remember it (#165)
+	var renewed = victory.state
+	renewed.reputation[rival] = 9.0
+	Clans.record(renewed, stone, "slain")
+	Clans.record(renewed, stone, "slain")
+	_check(float(renewed.reputation[rival]) == -27.0, "two of the Old Stone's own take it below nothing (%s)" % str(renewed.reputation))
+	for i in 3:
+		Clans.record(renewed, victim, "slain")
+	_check(float(renewed.reputation[rival]) == 0.0 and victory.encounter._pleased({rival: -9.0}, doomed).is_empty(), "level with you is not past it: nothing is said at 0 (%s)" % str(renewed.reputation))
+	Clans.record(renewed, victim, "slain")
+	_check(float(renewed.reputation[rival]) == 9.0 and victory.encounter._pleased({rival: 0.0}, doomed).size() == 1, "and carried past it again, it is told again (%s)" % str(renewed.reputation))
+	_check(victory.encounter._rivals_standing(doomed, "spared").is_empty(), "and a mercy reads no rival standing at all")
 
 	# every deed says which clans like it or dislike it, and why
 	var told_slain: Array = Clans.felt("slime", "slain")
@@ -2477,6 +2568,134 @@ func _secrets() -> void:
 	_check(fissures.size() == 2, "a cracked wall always shows a fissure, on both its faces (%d)" % fissures.size())
 	var legend: Array = Tips.map_blocks().map(func(b): return str(b.get("left", "")))
 	_check(legend.has("PAD") and legend.has("CHEST"), "the legend names pads and chests")
+	_use()
+
+
+## The Hoard's vault (#161): one floor of a run hides its keepsakes behind a cracked wall, arriving there says so, and the
+## choice leaves you back on the walk with one, the walk going on from the cell it stopped at.
+func _vault() -> void:
+	# which floor, from the run's seed: always one of the middle floors, and every one of them can be the one
+	var floors := {}
+	var steady := true
+	for seed_value in range(1, 200):
+		var at := Floors.vault_floor(seed_value)
+		steady = steady and at == Floors.vault_floor(seed_value)
+		floors[at] = floors.get(at, 0) + 1
+	_check(steady, "the run's seed picks the vault's floor, the same every time")
+	_check(not floors.has(0) and floors.keys().all(func(d): return d >= Floors.FIRST_VAULT_DEPTH and d < Floors.run_floors()), "never the first floor nor the last (%s)" % [floors.keys()])
+	_check(floors.size() == Floors.run_floors() - 2 and floors.values().all(func(n): return n > 0), "and every floor between them can be the one (%s)" % [floors])
+
+	# generation: only that floor of a run holds one, and it is a chest behind a crack like any other
+	var wrong := []
+	var checked := 0
+	for seed_value in [1, 2, 3, 7, 47]:
+		var at := Floors.vault_floor(seed_value)
+		for depth in range(1, Floors.run_floors() + 1):
+			var plan: Dictionary = Floors.plan(depth)
+			plan.biome = Floors.biome(seed_value, depth)
+			plan.secrets = Floors.secrets(plan.biome)
+			plan.vault = depth == at
+			plan.items = true
+			plan.food = true
+			plan.lurkers = true
+			plan.lore = true
+			plan.names_taken = {}
+			var made = FloorGen.generate(Rng.new(Floors.floor_seed(seed_value, depth)), plan)
+			checked += 1
+			var vaults: Array = made.treasure.filter(func(t): return bool(t.get("vault", false)))
+			if vaults.size() != (1 if depth == at else 0) or made.treasure.any(func(t): return int(t.get("gold", 0)) <= 0):
+				wrong.append("seed %d B%dF: %s" % [seed_value, depth, made.treasure])
+	_check(wrong.is_empty(), "one floor of each run hides one vault, and every vault still holds the purse it would have (%d floors, %s)" % [checked, wrong])
+
+	# the walk: arriving says so, the wall gives into it, and the choice goes back to the walk
+	var seed_value := -1
+	for i in range(1, 60):
+		if Floors.vault_floor(i) == 2:
+			seed_value = i
+			break
+	_check(seed_value > 0, "a seed with its vault on B2F, to meet one on the walk")
+	var flow = _flow(seed_value)
+	var seen := []
+	flow.happened.connect(func(name, data): seen.append([name, data]))
+	await flow.new_run()
+	var s = flow.state
+	await flow.next_floor()
+	_check(s.depth == 2 and s.floor_map.treasure.any(func(t): return bool(t.get("vault", false))), "B2F of that run hides the vault (%s)" % [s.floor_map.treasure])
+	_check(s.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and arriving says something of the Hoard's is walled up here (%s)" % [s.lines.map(func(l): return l.text)])
+	var f = s.floor_map
+	var chest: Dictionary = f.treasure.filter(func(t): return bool(t.get("vault", false)))[0]
+	var wall := Vector2i(-1, -1)
+	for y in f.size:
+		for x in f.size:
+			if f.is_cracked(Vector2i(x, y)) and absi(x - chest.cell.x) + absi(y - chest.cell.y) == 1:
+				wall = Vector2i(x, y)
+	_check(wall != Vector2i(-1, -1) and not s.seen.has(chest.cell), "behind a cracked wall, out of sight")
+	var copy = FloorMap.from_dict(JSON.parse_string(JSON.stringify(f.to_dict())), Monster)
+	_check(JSON.stringify(copy.treasure) == JSON.stringify(f.treasure) and copy.treasure.any(func(t): return bool(t.get("vault", false))), "a save keeps the vault in the floor")
+	var older: Dictionary = JSON.parse_string(JSON.stringify(f.to_dict()))
+	older.treasure = [{"cell": [chest.cell.x, chest.cell.y], "gold": 7}]
+	var read = FloorMap.from_dict(older, Monster)
+	_check(read.treasure.size() == 1 and read.treasure[0].gold == 7 and not read.treasure[0].has("vault"), "and a save from before the vaults reads its chests as the purses they were")
+	var before: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	s.banner = null
+	flow.clock = 100000.0
+	flow.coach.seen = {}
+	_face(s, wall)
+	var gold_before: int = s.gold
+	var held_before: Array = s.keepsakes.duplicate()
+	await flow.press("up")
+	_check(f.is_open(wall) and s.cell != chest.cell, "walking into the wall opens it")
+	var opened: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict())) # the wall open, the vault in sight and its keepsakes untaken
+	var looked = _flow(seed_value)
+	await looked.load_state(opened)
+	_check(looked.state.seen.has(chest.cell) and not looked.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "a run left with the wall already open no longer hears it is walled up (%s)" % [looked.state.lines.map(func(l): return l.text)])
+	s.cell = wall
+	s.facing = f.DIRS.find(chest.cell - wall)
+	await flow.press("up")
+	_check(s.stage == "keepsake" and s.cell == chest.cell, "stepping on the vault offers keepsakes (%s)" % s.stage)
+	var offered: Array = Keepsakes.offer(s.run_seed, s.depth, held_before, true, Keepsakes.VAULT_SALT)
+	_check(s.menu.map(func(row): return row.label) == offered.map(func(id): return Keepsakes.name_of(id)), "the vault's own three, drawn apart from the champion's (%s)" % [s.menu.map(func(row): return row.label)])
+	_check(str(s.lines[-1].text) == str(Content.table("keepsakes").vault.ask) and s.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.opened)), "and the log says the wall gave into it and what it holds")
+	_check(not f.treasure.any(func(t): return t.cell == chest.cell) and s.gold == gold_before, "the vault is emptied, and pays no purse with the keepsake")
+	_check(seen.any(func(h): return h[0] == "found" and str(h[1].get("what", "")) == "vault"), "the game says it found a vault")
+	await flow.tick(flow.clock + Flow.BEFORE_KEEPSAKE_MS + 1.0)
+	await flow.press("confirm")
+	var mine: String = offered[0]
+	_check(s.stage == "explore" and s.keepsakes == held_before + [mine], "taking one goes back to the walk, the keepsake held (%s, %s)" % [s.stage, s.keepsakes])
+	_check(s.lines.any(func(l): return str(l.text).begins_with("You take the %s" % Keepsakes.name_of(mine))), "and the log says which")
+	await flow.tick(flow.clock + Flow.AFTER_FIGHT_MS + 1.0)
+	var stood: Vector2i = s.cell
+	await flow.press("down")
+	_check(s.stage == "explore" and s.cell != stood, "and the walk goes on (%s to %s)" % [stood, s.cell])
+	var emptied: Dictionary = JSON.parse_string(JSON.stringify(s.to_dict()))
+	var after = _flow(seed_value)
+	await after.load_state(emptied)
+	_check(after.state.depth == 2 and not after.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "a run left after the vault is emptied no longer hears it is walled up (%s)" % [after.state.lines.map(func(l): return l.text)])
+	var kept = _flow(seed_value)
+	await kept.load_state(before)
+	_check(kept.state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))) and kept.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and a run left before it opened hears of it again, the vault still in the floor")
+
+	# the wall itself hides the vault, not what the camera saw: walking backwards into the crack breaks it while facing away,
+	# so the room never enters `State.seen`, and a save made there still must not hear it is walled up
+	var back = _flow(seed_value)
+	await back.load_state(before)
+	var bs = back.state
+	var door_dir: int = FloorMap.DIRS.find(chest.cell - wall)
+	bs.cell = wall + FloorMap.DIRS[(door_dir + 2) % 4]
+	bs.facing = (door_dir + 2) % 4 # away from the wall, so DOWN walks backwards into it
+	back.clock = 100000.0
+	await back.press("down")
+	_check(back.state.floor_map.is_open(wall) and not back.state.seen.has(chest.cell), "walking backwards into the wall opens it, its room still out of sight")
+	var behind: Dictionary = JSON.parse_string(JSON.stringify(back.state.to_dict()))
+	var backward = _flow(seed_value)
+	await backward.load_state(behind)
+	_check(not backward.state.lines.any(func(l): return str(l.text) == str(Content.table("keepsakes").vault.due)), "and a save then does not hear it is walled up (%s)" % [backward.state.lines.map(func(l): return l.text)])
+
+	# with keepsakes off the floor hides purses, and a run too short has no vault at all
+	var off = _flow(seed_value, ["no-keepsakes"])
+	await off.new_run()
+	await off.next_floor()
+	_check(off.state.depth == 2 and not off.state.floor_map.treasure.any(func(t): return bool(t.get("vault", false))) and not off.state.floor_map.treasure.is_empty(), "with keepsakes off, the floor hides purses and no vault (%s)" % [off.state.floor_map.treasure])
 	_use()
 
 

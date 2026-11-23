@@ -91,7 +91,10 @@ func _step(flow, backwards: bool) -> void:
 	s.steps += 1
 	if fed and s.steps % flow.WALK_HEAL_STEPS == 0 and s.hp < s.max_hp:
 		s.hp += 1
-	if not _find_secrets(flow): # a cell with news of its own keeps the log and the picture: instinct waits for the next step or turn
+	var found: String = await _find_secrets(flow) # a cell with news of its own keeps the log and the picture: instinct waits for the next step or turn
+	if found == "keepsake": # the Hoard's vault takes the stage; the walk goes on from it
+		return
+	if found == "":
 		_instinct(flow)
 	var company = s.floor_map.monster_at(s.cell) # a pad can set you down where something already stands (#175)
 	if company != null:
@@ -169,21 +172,33 @@ func _break_wall(flow, wall: Vector2i) -> void:
 	flow.event("sound", {"name": "hit"})
 
 
-## What the cell you just stepped on was hiding. True when there was something, and the log says it.
-func _find_secrets(flow) -> bool:
+## What the cell you just stepped on was hiding, and what the log said of it: "" for nothing, "found" for something, and
+## "keepsake" when the Hoard's vault took the stage, so the step stops there and the walk goes on from the choice (#161).
+func _find_secrets(flow) -> String:
 	var s = flow.state
-	var found_any := false
-	var gold: int = Keepsakes.gold(s, s.floor_map.take_treasure(s.cell))
-	if gold > 0:
-		found_any = true
-		s.gold += gold
-		s.say([State.sys_line(Floors.secret_line("chest") % gold)])
-		print("explore: a chest at %s, %d gold" % [s.cell, gold])
-		flow.event("found", {"what": "chest"})
-		flow.event("sound", {"name": "good"})
+	var found_any := ""
+	var chest: Dictionary = s.floor_map.take_treasure(s.cell)
+	if not chest.is_empty():
+		if bool(chest.get("vault", false)) and flow.feature("keepsakes") and not s.testing:
+			var offered: Array = Keepsakes.offer(s.run_seed, s.depth, s.keepsakes, flow.feature("nerve"), Keepsakes.VAULT_SALT)
+			if not offered.is_empty():
+				var words: Dictionary = Keepsakes.table().vault
+				print("explore: the Hoard's vault at %s, %d keepsakes offered" % [s.cell, offered.size()])
+				flow.event("found", {"what": "vault"})
+				flow.event("sound", {"name": "good"})
+				await flow.go("keepsake", {"offered": offered, "vault": true, "then": "walk", "lines": [State.sys_line(str(words.opened))]})
+				return "keepsake"
+		var gold: int = Keepsakes.gold(s, int(chest.get("gold", 0)))
+		if gold > 0:
+			found_any = "found"
+			s.gold += gold
+			s.say([State.sys_line(Floors.secret_line("chest") % gold)])
+			print("explore: a chest at %s, %d gold" % [s.cell, gold])
+			flow.event("found", {"what": "chest"})
+			flow.event("sound", {"name": "good"})
 	var found: String = s.floor_map.pickup_at(s.cell)
 	if found != "":
-		found_any = true
+		found_any = "found"
 		var name := Items.label(found)
 		if Items.carry(s, found):
 			s.floor_map.remove_pickup(s.cell)
@@ -195,11 +210,11 @@ func _find_secrets(flow) -> bool:
 		else:
 			s.say([State.sys_line(Items.line("full") % name)])
 	if s.floor_map.lore_at(s.cell) and not s.floor_map.lore.read:
-		found_any = true
+		found_any = "found"
 		_read_the_wall(flow)
 	var there = s.floor_map.pad_partner(s.cell)
 	if there != null:
-		found_any = true
+		found_any = "found"
 		print("explore: pad from %s to %s" % [s.cell, there])
 		s.cell = there
 		s.visited[there] = true

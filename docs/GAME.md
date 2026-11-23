@@ -24,6 +24,8 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 
 **A champion leaves keepsakes.** On every floor but the last, the champion out of your way leaves three keepsakes and you take one, yours for the rest of the run. The same run offers the same three on the same floor, and never one you already hold, so four champions make four choices out of nine. What you carry is listed beside the dodge box, and sitting down (Enter on the walk) says it too.
 
+**One floor of a run holds a vault** (#161). The run's seed picks one of the floors between the first and the last, and arriving there says so: something of the Hoard's is walled up on it, behind a cracked wall. A save left on that floor says it again when it is loaded, until the wall is broken into or the vault is emptied. Break in and the wall gives into the vault, which offers three keepsakes of its own, drawn apart from that floor's champion and never one you already hold — five choices out of nine in a run that looks for it. A game with keepsakes off has no vault, and its floors hide purses as they always did.
+
 | Keepsake | What it does |
 | --- | --- |
 | EMBER HEART | 6 more max HP, and all your health back |
@@ -38,7 +40,7 @@ The camera glides from cell to cell, and the automap in the corner learns what t
 
 **Fights teach.** Every monster you finish with teaches experience, and it does not matter how: slain, spared, won over or sent on its way are worth the same, and only backing out teaches nothing. Enough experience makes a level — 2 more max HP and 2 health back, and every second level every strike that lands hits 1 harder — announced when the fight ends, with the log keeping it and the status row's thin line filling toward the next. A run of the five floors reaches about level 6. The curve is in `data/experience.json`.
 
-Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and two of the clans' askers, who want a favour instead of a fight. Floors 2 and 4 have a trader.
+Floors hide things: chests behind cracked walls (walk into a crack to break it), pads that carry you across the floor, items lying about, something stirring in plain sight that you can walk round or walk into, and two of the clans' askers, who want a favour instead of a fight. Floors 2 and 4 have a trader, and one floor of every run hides the Hoard's vault behind a crack, with the keepsakes above in it.
 
 **The clans' askers.** Each clan has one named asker with two requests of its own, and two askers of different clans stand on every floor, so each clan's is met on two of the first four floors (`data/envoys.json`, the feature `clan-requests`). Walk into one to hear it. A request you take is kept for the run. Each one done pays 6 gold and 4 health and pleases its clan.
 
@@ -89,7 +91,7 @@ Then the monster attacks, unless what you did calmed it. Monsters belong to clan
 | The Coil (snakes) | The Burrow | The Crew | It is hunted, and wants that paid back |
 | The Hoard (dragons) | Nobody | The Crew | Bandits are thieves. It has never noticed the slimes, and hears a quarter of what is done to the rocks and snakes |
 
-A clan that likes the victim's takes your deed as its own, by half: sore at a killing, glad of a sparing. A clan that dislikes it is glad of a killing (half a kill's worth, the other way), doesn't mind a sparing, and is sore when you take one in as a friend. After a fight the log says each of these in a line: "The Old Stone likes that you killed a slime: slimes are too soft." A monster that has heard says so in its own words when you meet it. One kill of its own makes a clan ANGRY (its own start out angrier). Two, with nothing made up for them, make it FURIOUS: every floor reached after that has its kind as elites, tagged ELITE over their heads and in the header, with a quarter more health, faster attacks and a point more per hit (never the champion). Four make it ENRAGED: none of its own takes mercy, a cut or an offer, and SPARE greys out, even for a champion of the Hoard. Sparing one of its own or of a clan it likes, or doing one of its kind a favour, cools it back down. A banner says so whenever a clan moves.
+A clan that likes the victim's takes your deed as its own, by half: sore at a killing, glad of a sparing. A clan that dislikes it is glad of a killing (half a kill's worth, the other way), doesn't mind a sparing, and is sore when you take one in as a friend. After a fight the log says each of these in a line: "The Old Stone likes that you killed a slime: slimes are too soft." The first time a kill carries such a clan past nothing the log says that as well ("The Old Stone is pleased: OOZE is dead."), and again each time it is carried past nothing (#165). A monster that has heard says so in its own words when you meet it. One kill of its own makes a clan ANGRY (its own start out angrier). Two, with nothing made up for them, make it FURIOUS: every floor reached after that has its kind as elites, tagged ELITE over their heads and in the header, with a quarter more health, faster attacks and a point more per hit (never the champion). Four make it ENRAGED: none of its own takes mercy, a cut or an offer, and SPARE greys out, even for a champion of the Hoard. Sparing one of its own or of a clan it likes, or doing one of its kind a favour, cools it back down. A banner says so whenever a clan moves.
 
 **What makes it harder** is on the screen: the header tags how much tougher this floor's monsters are (FOES +12% HP for each floor below B1F, a quarter more down the steep stair), the map's legend (the info key on the walk) gives every clan's mood and what its levels mean, and an elite's or an enraged clan's fight opens with a banner saying which.
 
@@ -103,7 +105,7 @@ How long winning a monster over takes, from `tools/sim_recruit.gd` over 1000 see
 | Rock | 1% | 2 | 87% | 3 |
 | Dragon | 0% | 4 | 79% | 7 |
 
-A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way. So does one that never takes ACT or SPARE from the fight menu (`-- fight-only`), and the two roads do not cost the same. Over the same five seeds the attack-only games end with 108 health left of 266 between them, in three fights started over, and take 1963 s of game time; the peaceful ones end with 247 of their 268, in 1876 s, and start nothing over. Talking is the safer and the quicker road as the game stands, which is what #163 asks about: what a kill should be worth that a mercy is not.
+A run with no strike in it reaches the end: `tools/autoplay.gd -- pacifist` does, 5 games of 5, and the test suite keeps it that way. So does one that never takes ACT or SPARE from the fight menu (`-- fight-only`), and the two roads do not cost the same. Over the same five seeds the attack-only games end with 151 health left of 272 between them, in one fight started over, and take 1574 s of game time; the peaceful ones end with 218 of their 260, in 1806 s, and start nothing over. Talking is the safer road as the game stands and killing the quicker one, which is what #163 asks about: what a kill should be worth that a mercy is not.
 
 ## The box: lit squares hurt
 
@@ -136,9 +138,11 @@ You dodge on a 7×7 grid. Each kind attacks in its own way, and its pace follows
 | B5F | Captain (bandit) | Pawns | A rank of pawns marches at you, taking the squares diagonally ahead | 1.80 |
 | B5F | Hypnocoil (snake) | Hypnosis | Left is right and up is down, and goo lands where it glows | 1.20 (not its mirror) |
 | B5F | Golem (rock) | Fists | Its fists land where you stand, on the beat, then a sweep | 0.55 |
-| Any | Champion (the Hoard) | All five | Every attack of its floor's kinds, one a turn | – |
+| Any | Champion (the Hoard) | All five | Every attack of its floor's kinds, one a turn, and its goo warns less than a slime's: 0.7 s against 0.82 s | – |
 
 Bot hits is how often a slow bot (it sees a warning 0.38 s after it shows and steps every 0.26 s) is hit in one dodge at the pace of a monster pressed a little (intensity 1.3), over 40 dodges; by floor it averages 0.37, 0.34, 0.92, 0.81 and 1.25. Measured on **0.9.5**; every row was re-read from the build with `godot --headless --path . -s res://tools/sim_dodge.gd -- nosave nosound seeds=40 csv=1` (the `slow` column at intensity 1.3), and the floor averages are the average of each floor's five. `tools/sim_dodge.gd` plays every attack with a bot that reads the warnings, over many seeds, and prints how often it is hit, how much of the box is lit, and whether any moment left no way out; `tools/kinds_test.gd` fails an attack that lights the whole box, walls you in, or lands on your square with less than 0.3 s of warning.
+
+A champion's goo is read with `-- boss=1`: over 40 dodges its splash is the same cross on 0.7 s of warning, and the slow bot is hit 2.8 times by it at intensity 1.2 where the rain's 0.82 s let it be hit 1.1, while the bot that reads every warning is hit at neither (#170). The rain a slime fights in is unchanged.
 
 Every third attack is a mini-game instead: **walls** (be at the gap when one arrives), **stars** (catch them to heal, keep off the red) or **dance** (be on the light when the beat lands, to heal).
 

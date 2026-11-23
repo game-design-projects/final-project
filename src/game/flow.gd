@@ -15,6 +15,7 @@ const Dice = preload("res://src/utils/dice.gd")
 const Encounter = preload("res://src/game/encounter.gd")
 const Events = preload("res://src/game/events.gd")
 const FloorGen = preload("res://src/rules/floor_gen.gd")
+const FloorMap = preload("res://src/rules/floor_map.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Floors = preload("res://src/rules/floors.gd")
 const Items = preload("res://src/rules/items.gd")
@@ -337,10 +338,33 @@ func _arrival() -> Array:
 	var biome: Dictionary = Floors.biome_named(state.floor_map.biome)
 	if not biome.is_empty():
 		lines.append(State.sys_line(biome.line))
+	var vault_due := _vault_due()
+	if vault_due != "":
+		lines.append(State.sys_line(vault_due))
 	var senders := elites_from(state.floor_map)
 	if not senders.is_empty():
 		lines.append(State.sys_line(str(Clans.elite().arrival) % " and ".join(senders.map(func(c): return Clans.title(c)))))
 	return lines
+
+
+## The line about this run's vault while the floor still hides it (#161), or "" for a floor that holds none: the vault is
+## hidden by its cracked wall until the wall is broken into, whichever way the party walked into it. The wall is the floor's
+## own cell and is saved with it, so a run saved after that does not hear it is walled up when it is loaded.
+func _vault_due() -> String:
+	if state.floor_map == null:
+		return ""
+	for t in state.floor_map.treasure:
+		if bool(t.get("vault", false)) and _vault_walled(t.cell):
+			return str(Content.table("keepsakes").vault.due)
+	return ""
+
+
+## Whether the vault's room is still walled up: a cracked cell beside it is the wall, and a broken one is open floor.
+func _vault_walled(cell: Vector2i) -> bool:
+	for d in FloorMap.DIRS:
+		if state.floor_map.is_cracked(cell + d):
+			return true
+	return false
 
 
 ## The clans that sent elites to this floor, in the order their elites stand.
@@ -391,6 +415,7 @@ func _make_floor(way := {}) -> void:
 		plan.boss_at_exit = true
 		plan.biome = Floors.biome(state.run_seed, state.depth)
 		plan.secrets = Floors.secrets(plan.get("biome", {}))
+		plan.vault = state.depth == Floors.vault_floor(state.run_seed) and feature("keepsakes") # one floor of the run hides the Hoard's keepsakes
 		plan.items = true
 		plan.food = true
 		plan.shop = Items.shop_on(state.depth) or way.get("shop", false)
@@ -433,7 +458,11 @@ func load_state(saved: Dictionary) -> bool:
 	encounter.pending_rows = []
 	print("flow: loaded a run (%s)" % state.summary())
 	event("state_replaced", {"how": "load"})
-	await go("explore", {"lines": [State.sys_line(Texts.welcome_back(state.summary()))]})
+	var lines := [State.sys_line(Texts.welcome_back(state.summary()))]
+	var due := _vault_due() # a run left on the vault's floor hears of it again (#161), until its wall is broken
+	if due != "":
+		lines.append(State.sys_line(due))
+	await go("explore", {"lines": lines})
 	return true
 
 

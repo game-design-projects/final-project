@@ -19,6 +19,7 @@
   {"id": "enraged", "at": -72, "title": "ENRAGED", "effect": "None of its own will take mercy now.", "line": "%s is enraged: none of its own will take mercy now."}
  ],
  "calmer": {"title": "%s COOLS", "effect": "Now %s, no longer %s.", "line": "%s has cooled to %s."},
+ "pleased": "%s is pleased: %s is dead.",
  "elite": {
   "from": "furious",
   "hp_scale": 1.25,

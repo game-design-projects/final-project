@@ -37,6 +37,7 @@ const KNOWN := {
 	"at": "at=0.65: for tools/sim_chart.gd, the share of a floor seen at which instinct charts the rest, instead of the data's",
 	"csv": "csv=1: for tools/sim_dodge.gd, print CSV lines",
 	"boss": "boss=1: for tools/sim_dodge.gd, play each attack as a champion's (its 6200 ms fight, a fifth denser than a usual monster's); for tools/sim_strike.gd, a strike's champion's damage scale",
+	"plan": "plan=timed: for tools/sim_dodge.gd, the bot plans over time (it may wait, then step) instead of two steps ahead, and `doomed` reads its next two decisions",
 	"charms": "charms=none|rock|dragon: for tools/sim_strike.gd, the party's charm: the rock's slower bar, or the dragon's fire on every strike",
 	"swings": "swings=N: for tools/sim_strike.gd, how many swings its per-swing table draws for each hand",
 }
@@ -60,7 +61,7 @@ const FEATURES := {
 	"toll": "the gate on the third stairs drops unless someone holds its chain and stays: you pay in health, or leave a friend, which the Last Door may make you regret",
 	"wick": "a run opens with a very small witch hopping out of the dark to hand you a heart, and she is your first friend until you lose her",
 	"last-door": "the last stairs open only for someone with a friend; alone you can turn back, or take the lonely ending",
-	"keepsakes": "a champion out of your way leaves three keepsakes, of which you take one for the rest of the run (rules/keepsakes.gd): more health, a harder strike, a wider perfect mark, a thicker hide, easier nerve, readier mercy, more gold, or one fall forgiven a fight; none on the last floor",
+	"keepsakes": "a champion out of your way leaves three keepsakes, of which you take one for the rest of the run (rules/keepsakes.gd): more health, a harder strike, a wider perfect mark, a thicker hide, easier nerve, readier mercy, more gold, or one fall forgiven a fight; none on the last floor, and one floor of every run walls three more up in a vault behind a cracked wall (rules/secrets.gd)",
 	"follow-through": "with friends, a strike that lands doesn't stop the line: each friend has a mark further along the bar, and a press as the line crosses it is that friend's strike (a HEAVY blow is too quick for them)",
 	"nerve": "a dodge with no hit in it, and every close call (stepping off a square in its last moments before it lands), earns nerve: a strike that lands or a SPARE spends it for a harder hit or better odds, and a hit shakes one out of you",
 	"mood-attacks": "how a monster feels shows in its attack: a friendly one drops hearts to catch (each heals you and pleases it), a frightened one falters (one hazard in three never comes) and breaks off early",

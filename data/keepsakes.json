@@ -2,6 +2,11 @@
  "ask": "%s leaves three keepsakes. Take one: it is yours for the rest of the run.",
  "taken": "You take the %s: %s.",
  "held": "You carry the %s.",
+ "vault": {
+  "due": "Something of the Hoard's is walled up on this floor: a cracked wall hides it.",
+  "opened": "The wall gives into a vault of the Hoard's: its keepsakes lie here.",
+  "ask": "The vault holds three keepsakes. Take one: it is yours for the rest of the run."
+ },
  "keepsakes": {
   "ember_heart": {"name": "EMBER HEART", "text": "6 more max HP, and all your health back"},
   "sharp_tooth": {"name": "SHARP TOOTH", "text": "every strike of yours that lands does 2 more"},

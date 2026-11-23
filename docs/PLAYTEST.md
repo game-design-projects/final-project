@@ -26,8 +26,9 @@ The order matters less than the coverage; the numbers are ten-minute blocks.
    square, its colour and the marks on it read as "this will land here, now", and can a tester step off in time? After two or
    three fights, ask what the level they reached said and what it gave them (#162).
 4. **The things a floor hides.** A cracked wall (walk into it), the chest behind it, a pad, the writing on a wall, the stairs,
-   and a trader (floors 2 and 4, or below a market stair). Press **M** once 80% of a floor is seen: does the rest of the
-   layout appearing help, or steal the mystery?
+   and a trader (floors 2 and 4, or below a market stair). One floor of the run has a vault behind a crack: arriving there says
+   so in the log, and breaking in offers three keepsakes (#161) — does the tester look for it, and does the relic make the walk
+   worth it? Press **M** once 80% of a floor is seen: does the rest of the layout appearing help, or steal the mystery?
 5. **The gate on the third stairs.** Someone has to hold it. Ask what the choice felt like, and whether the cost was clear.
 6. **A champion.** The keepsake choice after it: three cards, one kept. Can a tester say what each does and why they picked it?
 7. **The end.** The Last Door wants company. Ask what the ending screen said, and whether embers meant anything to them.
@@ -46,6 +47,13 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **The commands beside FIGHT.** #163: HEAVY is the hard hit only near the middle of its mark now, and a blow landed wide pays
   no more than the FIGHT that hand would have had. Does any tester reach for HEAVY, ACT, ITEM or FLEE without being told, does a
   heavy hit that lands *badly* feel like the risk it is meant to be, and can they find the middle by eye or by the line's note?
+- **The champion's goo.** #170: a champion's splash is a slime's cross on 0.7 s of warning instead of 0.82 s, so the
+  first pattern of a champion's fight has to be read as it starts. Does it feel like a boss's rain rather than a slime's, and
+  does a splash that lands before a tester has planned a step feel unfair rather than tight?
+- **The twin lanterns.** #275: two lanterns flare in turn, and the pattern read as the set's hardest until the bot was
+  allowed to stand still and wait for a flare to pass, which it clears at 0.15 hits a dodge at the champion's first pace and
+  1.27 at its last. Does a tester who waits out a flare find the gap, and does the pair read as a boss's own attack rather
+  than as two lights on a timer?
 - **Names over heads.** A monster's name, an ally's, a trader's, the one asking a favour. Is anything ever named that is not
   on the screen?
 - **The row under the picture.** LVL, HP with the thin level fill under it, GOLD, PARTY, FED (or HUNGRY/STARVING) at 11 px,
@@ -53,7 +61,14 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **A level.** #162: every fight teaches experience, however it ended, and enough makes a level (2 more max HP and the health
   with it, and every second level a harder strike). Does a tester notice the banner and the row's fill, and can they say what
   the level gave them?
+- **Clans on the other side.** #165: a kill is half as welcome to each of the clans on the other side as it is unwelcome to the
+  victim's own, and the log says so the first time; two rival kills are worth one of its own dead, so killing a clan's enemies
+  can cool a clan that hates you. Does a tester notice a rival clan's monsters starting friendlier, does a kill start to read as
+  taking a side, and does the praise ever make killing feel cheaper than it should?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
+- **The vault.** #161: one floor of the run says something of the Hoard's is walled up on it, behind a cracked wall, and the
+  vault holds a keepsake. Does a tester go looking for the crack once the log says so, is the vault found without being shown
+  where, and does walking a floor now have a reason beyond the stairs?
 - **A favour, all the way.** Someone asks for something on some floors; a lord of a clan asks more, asks again where its biome
   comes back, and swears its clan when paid. Does a tester finish one, and can they say what they got?
 - **A chase that ends.** A hunter that cannot see you for five steps gives up for ten, and a pad carries a chaser across the

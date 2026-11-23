@@ -95,6 +95,17 @@ static func felt(species: String, deed: String) -> Array:
 	return out
 
 
+## The clans pleased by what hurts this one (#165): the ones that dislike it. There are no sides here, so a rival is whoever
+## holds the grudge: the Old Stone is the Burrow's, and the Burrow is nobody's.
+static func rivals(clan: String) -> Array:
+	return who_feels("dislikes", clan)
+
+
+## The words of a clan pleased by a kill, when it first crosses above nothing: {clan, dead}.
+static func pleased() -> String:
+	return str(_table().pleased)
+
+
 ## Write a deed into the run: "spared", "slain" or "recruited" against monster `m`. Returns how it moved the clans' hostility,
 ## [{clan, from, to}] (hostility ids, "" for none), the monster's own clan first.
 static func record(state, m, deed: String) -> Array:
@@ -230,14 +241,17 @@ static func mood(standing: float) -> Dictionary:
 
 
 ## `m` meets you and hears what its clan has heard since it last did: its mood moves by the difference, and it remembers. Returns
-## {clan, kind, deed, who, tone} for what it has to say (`kind` names its lines), or {} when there's no news for it.
+## {clan, kind, deed, who, tone} for what it has to say (`kind` names its lines), or {} when there's no news for it. A clan that
+## only heard of a kill of a clan it dislikes hears it as `rival_slain`, and in good tone: the kill pleases it (#165). Its own last
+## deed is always what it talks about; of the rest, it names the newest one that moved its opinion the way it has moved, so a kill
+## of a clan it likes is not the news when it is gladder of you.
 static func hear(m, state) -> Dictionary:
 	var clan := of(m.species)
 	var standing: float = float(state.reputation.get(clan, 0.0))
 	var before: float = float(m.heard.get("standing", 0.0))
 	if clan == "" or absf(standing - before) < NEWS_AT:
 		return {}
-	var deed: Dictionary = _latest(state.deeds, clan)
+	var deed: Dictionary = _latest(state.deeds, clan, standing > before)
 	if deed.is_empty():
 		return {}
 	var now := mood(standing)
@@ -264,16 +278,25 @@ static func _news_kind(clan: String, deed: Dictionary) -> String:
 	return "friend_slain" if bad else "friend_spared"
 
 
-## The deed a clan talks about: its own last one if it has one, or else the last it heard of.
-static func _latest(deeds: Array, clan: String) -> Dictionary:
+## The deed a clan talks about: its own last one if it has one, or else the newest it heard of that moved its opinion the way it
+## has moved — a kill of a clan it dislikes pleases it, so a kill of one it likes is not the news when the clan is gladder of
+## you — and, when nothing it heard moved it that way, the newest it heard of, so a favour, which tells no tale, still leaves it
+## one to tell (#165).
+static func _latest(deeds: Array, clan: String, rose: bool) -> Dictionary:
 	var heard := {}
+	var newest := {}
 	for i in range(deeds.size() - 1, -1, -1):
 		var deed: Dictionary = deeds[i]
 		if deed.clan == clan:
 			return deed
-		if heard.is_empty() and reach(deed.clan, clan, deed.deed) != 0.0:
+		var part: float = float(_table().deeds.get(deed.deed, 0.0)) * reach(deed.clan, clan, deed.deed) # which way this deed moved it
+		if part == 0.0:
+			continue
+		if newest.is_empty():
+			newest = deed
+		if heard.is_empty() and (part > 0.0) == rose:
 			heard = deed
-	return heard
+	return heard if not heard.is_empty() else newest
 
 
 ## What a clan knows, in words a mind can read.
@@ -285,7 +308,8 @@ static func _retell(deeds: Array, clan: String) -> Array:
 			var how := feeling(clan, deed.clan)
 			if how == "likes" or how == "dislikes":
 				whose += ", which its clan %s because %s" % [how, why(clan, deed.clan)]
-			out.append("the player %s %s the %s, %s" % [deed.deed, deed.who, deed.species, whose])
+			var did := "killed" if deed.deed == "slain" else str(deed.deed)
+			out.append("the player %s %s the %s, %s" % [did, deed.who, deed.species, whose])
 	return out.slice(-HEARD_SHOWN)
 
 

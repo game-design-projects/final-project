@@ -33,6 +33,7 @@ func _run() -> void:
 	_floors_hold_their_kinds()
 	_saves()
 	_champion_cycle()
+	_champion_goo()
 	_every_attack()
 	_finish()
 
@@ -145,6 +146,34 @@ func _champion_cycle() -> void:
 	boss.genres = []
 	boss.turn = 1
 	_check(Dodge.genre_on_turn(boss, enc.boss.genres, []) == enc.boss.genres[1], "one with no list of its own uses the old four")
+
+
+## A champion's goo is a slime's splash on less warning: the same squares, falling sooner (#170). The first volley is the same
+## one on the same seed — the aim and the target are the rain's, only the warning is the champion's — so the two runs' first
+## hazards are read against each other. A slime's rain is the one it always was.
+func _champion_goo() -> void:
+	var usual := _first_goo(false)
+	var boss := _first_goo(true)
+	_check(not usual.is_empty() and not boss.is_empty(), "both a slime's and a champion's goo make a hazard")
+	_check(usual.warn == 820.0 and boss.warn == 700.0, "a champion's goo warns %d ms and a slime's %d (#170)" % [boss.warn, usual.warn])
+	_check(boss.warn < usual.warn and boss.warn >= REACT_MS + TICK_MS, "so its splash is read sooner, and still in time")
+	_check(boss.cells == usual.cells and usual.cells.size() >= 4, "and falls as the same cross of %d squares on the same seed (%s)" % [boss.cells.size(), str(boss.cells)])
+
+
+## The first goo blob of a dodge, as {warn: ms it warns, cells: the squares it lights, in order}, or {} if it made none.
+func _first_goo(boss: bool) -> Dictionary:
+	var rng := Rng.new(31337)
+	var run = DodgeRun.start("bullet", 1.0, boss, 0, 0.0, {}, 1.0)
+	var t := 0.0
+	while not run.is_over(t):
+		run.update(t, rng)
+		for h in run.hazards:
+			if h.kind == "goo":
+				var cells: Array = h.cells.keys()
+				cells.sort()
+				return {"warn": roundi(float(h.hit) - float(h.warn)), "cells": cells}
+		t += TICK_MS
+	return {}
 
 
 # ---------------------------------------------------------------- the attacks

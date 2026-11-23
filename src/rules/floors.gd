@@ -10,10 +10,21 @@ const PATHS_OFFERED := 2
 const PATH_SEED := 100 # the ways down are drawn from their own seed, not any floor's
 const BIOME_SEED := 200 # the order of the biomes has its own seed too
 const FLOOR_SEED_STEP := 7919 # a prime, so the floors' seeds don't line up with the seeds next to this run's
+const VAULT_SEED := 600 # which floor of a run hides the Hoard's vault, drawn apart from the floors' own seeds
+const FIRST_VAULT_DEPTH := 2 # not the first floor, where exploring is still being taught, nor the last, where a keepsake is worth nothing
 
 
 static func run_floors() -> int:
 	return int(Content.table("floors").run_floors)
+
+
+## The floor of a run whose cracked wall holds the Hoard's vault (rules/secrets.gd): one of the floors between the first and
+## the last, drawn from the run's seed, so a printed seed hides it on the same floor. 0 for a run too short to have one.
+static func vault_floor(run_seed: int) -> int:
+	var last := run_floors() - 1
+	if last < FIRST_VAULT_DEPTH:
+		return 0
+	return Rng.new(Rng.offset(run_seed, VAULT_SEED)).int_range(FIRST_VAULT_DEPTH, last)
 
 
 ## Whether `depth` is the last floor of a run.
