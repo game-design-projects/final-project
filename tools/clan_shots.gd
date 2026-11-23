@@ -29,6 +29,7 @@ func _initialize() -> void:
 	await _wait(0.6)
 	await _game._begin()
 	await _wait(0.4)
+	await _past_story()
 	var flow = _game.flow
 	var s = flow.state
 	var f = s.floor_map
@@ -113,11 +114,24 @@ func _look_at(s, f, cell: Vector2i) -> void:
 				return
 
 
+## A moment of the story is a drawing over everything, and the game holds still under it (view/story_cg.gd): send it away, as a
+## key would, so the walk goes on and the picture taken is of the asker, the hall or its lord.
+func _past_story() -> void:
+	var story = _game._story
+	var tries := 0
+	while story.visible and tries < 8:
+		story._age = 99.0 # past the guard that keeps the key that brought it on from sending it away
+		story._dismiss()
+		await _wait(0.45)
+		tries += 1
+
+
 func _wait(seconds: float) -> void:
 	await create_timer(seconds).timeout
 
 
 func _shot(name: String) -> void:
+	await _past_story()
 	await process_frame
 	RenderingServer.force_draw()
 	root.get_texture().get_image().save_png("%s/%s.png" % [_out, name])
