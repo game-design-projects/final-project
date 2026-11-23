@@ -2,6 +2,7 @@
 ## turn, and no monster moves while you sit. Butchering asks once more, with NO picked first.
 extends "res://src/game/stages/list_stage.gd"
 
+const Clans = preload("res://src/rules/clans.gd")
 const Experience = preload("res://src/rules/experience.gd")
 const Items = preload("res://src/rules/items.gd")
 const Keepsakes = preload("res://src/rules/keepsakes.gd")
@@ -62,7 +63,7 @@ func _add_party(flow) -> void:
 		for a in s.allies:
 			_add(s, "FEED %s" % a.name, "It would like that. It won't ask what it is.", ["feed", a])
 	for a in s.allies:
-		_add(s, "BUTCHER %s" % a.name, "Food for days. The others may notice.", ["ask", a])
+		_add(s, "BUTCHER %s" % a.name, "Food for days. Its clan will know, and so may the others.", ["ask", a])
 
 
 func pick(flow, index: int) -> void:
@@ -100,6 +101,8 @@ func _feed(flow, ally) -> void:
 	if done.found_out:
 		lines = [State.sys_line(Survival.line("found_out") % ally.name)]
 		_left(flow, ally)
+		if not s.butchered.is_empty():
+			lines.append_array(_clan_hears(flow, done.moved, s.butchered[-1]))
 		lines.append_array(_told(done.told))
 	s.say(lines)
 
@@ -112,11 +115,14 @@ func _butcher(flow, ally) -> void:
 	flow.event("ally_left", {"species": ally.species})
 	var made: int = done.made
 	var lines := [State.sys_line(Survival.line("butchered") % [ally.name, made, "roast" if made == 1 else "roasts"]) if made > 0 else State.sys_line(Survival.line("no_room"))]
+	lines.append_array(_clan_hears(flow, done.moved, ally))
 	for w in done.witnesses:
 		lines.append(State.sys_line(Survival.line("witness") % w.name))
 		_left(flow, w)
 	lines.append_array(_told(done.told))
-	s.say(lines.slice(0, 2)) # the log has room for two
+	if not done.uneasy.is_empty(): # the ones who saw nothing and were told nothing still miss it
+		lines.append(State.sys_line(Survival.line("missed" if done.uneasy.size() == 1 else "missed_many") % _names(done.uneasy)))
+	s.say(lines) # all of it: what it cost is the point, and the log keeps its newest lines
 
 
 func _left(flow, ally) -> void:
@@ -125,7 +131,30 @@ func _left(flow, ally) -> void:
 
 
 func _told(told: Array) -> Array:
-	return [State.sys_line(Survival.line("told") % told[0].name)] if not told.is_empty() else []
+	if told.is_empty():
+		return []
+	return [State.sys_line(Survival.line("told" if told.size() == 1 else "told_many") % _names(told))]
+
+
+## "A", "A and B", "A, B and C".
+func _names(who: Array) -> String:
+	var names: Array = who.map(func(a): return str(a.name))
+	if names.size() <= 1:
+		return "" if names.is_empty() else str(names[0])
+	return "%s and %s" % [", ".join(names.slice(0, names.size() - 1)), names[-1]]
+
+
+## What the clan of the one in the pot makes of it (`moved`, from rules/survival.gd): how much angrier it is, on the picture
+## when the picture is free and in the log either way, since this is what the deed cost and the log is where the deed is. When
+## its hostility is where it was, that its kin will hear, by name.
+func _clan_hears(flow, moved: Array, victim) -> Array:
+	if flow.state.testing: # the test room forgets it at once, so it isn't said
+		return []
+	var angrier: Array = moved.filter(func(c): return not c.get("favour", false) and Clans.rank(str(c.to)) > Clans.rank(str(c.from)))
+	if angrier.is_empty():
+		return [State.sys_line(Survival.line("kin_hear") % [Clans.title(Clans.of(str(victim.species))), str(victim.name)])]
+	var said: Array = flow.encounter.tell_hostility(angrier)
+	return said if not said.is_empty() else [State.sys_line(str(Clans.moved_words(angrier[0]).line))]
 
 
 ## Esc gets you up, or out of the question.

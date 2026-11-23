@@ -73,7 +73,10 @@ static func notice_odds(ally, first: float = 0.0) -> float:
 	return clampf(float(b.notice.get(ally.species, 0.1)) + first + float(b.notice_per_meal) * ally.meals, 0.0, 1.0)
 
 
-## `ally` becomes roasts. Anyone left may have seen. {"made": how many fitted in the bag, "witnesses": allies who saw and left, "told": allies told}.
+## `ally` becomes roasts. Its clan takes it as far worse than a death in a fight (`clan_worth`, and `Clans.betrayed`), at once: one
+## of its own went off with you and did not come back. Anyone left may have seen, and walks out; the rest are told, or only miss
+## it, and think less of you either way. {"made": how many fitted in the bag, "witnesses": allies who saw and left, "told":
+## allies told, "uneasy": allies who only miss it, "moved": the clans whose hostility changed}.
 static func butcher(state, ally, dice: Dice) -> Dictionary:
 	var b: Dictionary = table().butcher
 	state.allies.erase(ally)
@@ -82,46 +85,52 @@ static func butcher(state, ally, dice: Dice) -> Dictionary:
 	for _i in int(b.roasts):
 		if Items.carry(state, ROAST):
 			made += 1
-	var out := {"made": made, "witnesses": [], "told": []}
-	Clans.favour(state, ally.species, float(b.clan_worth) * 0.5) # a monster that went off with you and never came back is talked about
+	var out := {"made": made, "witnesses": [], "told": [], "uneasy": [], "moved": []}
+	out.moved = Clans.betrayed(state, ally.species, float(b.clan_worth), ally.name)
 	for other in state.allies.duplicate():
 		if other in out.witnesses or not state.allies.has(other):
 			continue
 		if Odds.succeeds(dice, notice_odds(other, float(b.notice_at_butcher))):
-			var heard := find_out(state, other, ally)
+			var heard := find_out(state, other, ally, out.moved)
 			out.witnesses.append(other)
 			for t in heard:
 				if not out.told.has(t):
 					out.told.append(t)
-	print("survival: butchered %s, %d roasts, %d saw it" % [ally.name, made, out.witnesses.size()])
+	for other in state.allies: # nobody told them and they saw nothing, but there is one fewer round the fire
+		if not out.told.has(other):
+			other.loyalty = clampf(other.loyalty + float(b.missed_loyalty), 0.0, 100.0)
+			out.uneasy.append(other)
+	print("survival: butchered %s, %d roasts, %d saw it, %d told, %d uneasy" % [ally.name, made, out.witnesses.size(), out.told.size(), out.uneasy.size()])
 	return out
 
 
-## A roast from the bag to this ally: it is happier, and it may work out what it just ate. {"found_out": bool, "told": allies told}.
+## A roast from the bag to this ally: it is happier, and it may work out what it just ate. {"found_out": bool, "told": allies told,
+## "moved": the clans whose hostility changed because it will tell}.
 static func feed(state, ally, dice: Dice) -> Dictionary:
 	var index: int = state.items.find(ROAST)
 	if index < 0:
 		push_warning("survival: no roast to feed %s" % ally.name)
-		return {"found_out": false, "told": []}
+		return {"found_out": false, "told": [], "moved": []}
 	state.items.remove_at(index)
 	state.meals += 1
 	ally.meals += 1
 	ally.loyalty = clampf(ally.loyalty + float(table().butcher.feed_loyalty), 0.0, 100.0)
 	var knows := Odds.succeeds(dice, notice_odds(ally))
-	var told := find_out(state, ally, state.butchered[-1] if not state.butchered.is_empty() else null) if knows else []
+	var moved := []
+	var told := find_out(state, ally, state.butchered[-1] if not state.butchered.is_empty() else null, moved) if knows else []
 	print("survival: fed %s, loyalty %.0f, %s" % [ally.name, ally.loyalty, "it knows" if knows else "it suspects nothing"])
-	return {"found_out": knows, "told": told}
+	return {"found_out": knows, "told": told, "moved": moved}
 
 
-## This ally has worked it out: it leaves, the others hear and trust you less, and the clan of whoever went into the pot hears too.
-## Who was told.
-static func find_out(state, ally, victim) -> Array:
+## This ally has worked it out: it leaves, the others hear and trust you less, and the clan of whoever went into the pot hears how
+## it went (`found_out_worth`, on top of what the death cost). Who was told; the clans whose hostility changed are added to `moved`.
+static func find_out(state, ally, victim, moved: Array = []) -> Array:
 	var b: Dictionary = table().butcher
 	state.allies.erase(ally)
 	state.tally.left += 1
 	state.found_out = true
 	if victim != null:
-		Clans.favour(state, str(victim.species), float(b.clan_worth))
+		moved.append_array(Clans.betrayed(state, str(victim.species), float(b.found_out_worth)))
 	for other in state.allies:
 		other.loyalty = clampf(other.loyalty + float(b.told_loyalty), 0.0, 100.0)
 	print("survival: %s found out and left, %d told" % [ally.name, state.allies.size()])
