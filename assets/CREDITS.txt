@@ -21,7 +21,8 @@ MUSIC: the hum theme, at the camp (assets/audio/hum-explore.ogg)
 
 MUSIC: the music set, in a fight (assets/audio/set-fight.ogg, assets/audio/set-boss.ogg, assets/audio/set-final.ogg)
 - Written for this game by Abdulla Alfalasi: the piano battle for a fight with a monster, the boss theme for a champion and the final-boss theme for the last one. His renders and the MIDI they come from were contributed to this repository (tools/music/music-set/, with a README beside them), and the three are the project's own recordings: they ship under the game's own terms, and no separate licence is granted for reusing them elsewhere.
-- Not recorded yet: which soundfont or instruments the three were rendered with, and its licence (tools/music/music-set/README.md, "Still to write down"). This entry names the composer and nothing else until that is known.
+- Rendered offline from his MIDI with FluidSynth 2.3.4 on the MuseScore General soundfont (MuseScore_General_Full.sf2, from Ubuntu's musescore-general-soundfont-lossless 0.2.1; https://musescore.org/en/node/269869), which is shared under the MIT licence. Only the rendered audio ships: the soundfont is not in the game or in this repository. The hall reverb is an impulse generated in code, with no third-party sample.
+- The soundfont's acknowledgements, which its licence file asks to be kept: FluidR3 by Frank Wen (2000-2002, 2008); FluidR3Mono, the mono conversion, by Michael Cowgill (2014-2017); the MuseScore General adaptation by S. Christian Collins (2018-2019); Temple Blocks by Ethan Winer (2002); Drumline Cymbals by Michael Schorsch (2016).
 
 SOUND EFFECTS
 - Synthesised when the game starts (src/audio/sfx.gd, src/audio/synth.gd), no samples.

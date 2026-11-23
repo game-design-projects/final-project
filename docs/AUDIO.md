@@ -49,7 +49,7 @@ With `music-set` on, which it is by default, a fight plays one of Abdulla's thre
 | a champion | `assets/audio/set-boss.ogg` | 41.86 s |
 | the last champion, at the Last Door | `assets/audio/set-final.ogg` | 45.33 s |
 
-They are byte for byte the renders in `tools/music/music-set/`, which also holds their MIDI. `no-music-set` plays every foe its own tune from the tables above, and the exploring music, the stings and the camp are the same either way. Still to write down: the soundfont the three were rendered with, and its licence (`assets/CREDITS.txt` says so).
+They are byte for byte the renders in `tools/music/music-set/`, which also holds their MIDI. `no-music-set` plays every foe its own tune from the tables above, and the exploring music, the stings and the camp are the same either way. They were rendered offline with FluidSynth on the MuseScore General soundfont (MIT); `assets/CREDITS.txt` has the record and `tools/music/music-set/README.md` how each track was made.
 
 ### Good news: the stings
 
