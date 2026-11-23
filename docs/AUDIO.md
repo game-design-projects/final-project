@@ -4,7 +4,7 @@
 
 The music follows the moment (`src/audio/music.gd`). `nomusic` turns it off, and the Settings sound page sets the level.
 
-Every place and every foe has a tune of its own, and no two are the same file. Of the music before, Abdulla's is left: his hum theme, at the camp, and the three fight themes of his music set, which a fight plays by who it is with (the feature `music-set`, on by default; see below). The passacaglia, the four battle loops, the hum theme's combat loop and the old stings are gone from the game (their sources stay in git history and in `tools/music/hum-theme/`).
+Every place and every foe has a tune of its own, and no two are the same file. Of the music before, one theme is left: Abdulla's hum theme, at the camp. The passacaglia, the four battle loops, the hum theme's combat loop, the music set and the old stings are gone from the game (their sources stay in git history and in `tools/music/hum-theme/` and `tools/music/music-set/`).
 
 ### Where you are: the exploring music
 
@@ -39,25 +39,13 @@ Each clan is a family: every tune of the clan opens its phrases with the clan's 
 
 A fight is three or four sections of eight bars (36 to 46 s): the tune, the B phrase with the first lead an octave under, a break with the head on the glockenspiel, and the tune again on the next lead with an echo.
 
-### Abdulla's music set (the feature `music-set`)
-
-With `music-set` on, which it is by default, a fight plays one of Abdulla's three themes by who it is with, in place of the foe's own tune (`Music.set_theme`): the game says who as the fight begins (the event `encounter`, `boss` and `final`).
-
-| The fight is with | Theme | Length |
-| --- | --- | --- |
-| a monster | `assets/audio/set-fight.ogg`, the piano battle | 41.86 s, one loop |
-| a champion | `assets/audio/set-boss.ogg` | 41.86 s |
-| the last champion, at the Last Door | `assets/audio/set-final.ogg` | 45.33 s |
-
-They are byte for byte the renders in `tools/music/music-set/`, which also holds their MIDI. `no-music-set` plays every foe its own tune from the tables above, and the exploring music, the stings and the camp are the same either way. They were rendered offline with FluidSynth on the MuseScore General soundfont (MIT); `assets/CREDITS.txt` has the record and `tools/music/music-set/README.md` how each track was made.
-
 ### Good news: the stings
 
 `sting-fanfare.ogg` (4.8 s, E♭ major, trumpet and horn into a snare roll, a kettle, a cymbal and the glockenspiel) plays when you go down the stairs, and the exploring music returns a few seconds after it. `sting-victory.ogg` (2.6 s, B♭ major, harp and flute climbing into a held string chord) plays when a fight ends in mercy; a kill ends the fight with its own sound and no sting (#168).
 
 ### Levels and how it's made
 
-The renders are mastered to −19 dBFS RMS (exploring) and −17 dBFS RMS (fights and stings); `VOLUME` (0.7, 0.75) puts a fight about 2.6 dB above the exploring music, and `TRIM_DB` plays the hum theme 1 dB down (it is mastered at −18) and the music set's three themes 1 dB down (they measure −16.2 to −16.3 dBFS mean against the fight tunes' −17.0). `tools/music/build-themes.py` writes every tune: the families are tables at its top (mode, metre, tempo, head motif, rhythm cells, chord progressions, band), and each tune's phrases after the head are written from its own seed, so a build is repeatable. It plays them on a recorded orchestra, the Versilian Studios Chamber Orchestra 2, Community Edition (CC0; `tools/music/orchestra.py`): string sections bowed, spiccato and pizzicato, solo violin, harp, flute, oboe, clarinet, horn, trumpet, trombone, organ, glockenspiel, marimba, real kettle drums, snare, triangle and cymbals. A note takes the recorded dynamic nearest its velocity and alternates the round robins, each phrase swells to its middle and eases at its end, and held instruments join their notes. `tools/music/sampler.py` mixes it in one generated hall and logs each tune's loudness per part and section, spectrum and loop seam. Rebuilding is in [tools/music/README.md](../tools/music/README.md). The orchestra's recordings live in `build/vsco2` (`tools/music/fetch.sh`), out of git and the exports; credits are in `assets/CREDITS.txt`.
+The renders are mastered to −19 dBFS RMS (exploring) and −17 dBFS RMS (fights and stings); `VOLUME` (0.7, 0.75) puts a fight about 2.6 dB above the exploring music, and `TRIM_DB` plays the hum theme 1 dB down (it is mastered at −18). `tools/music/build-themes.py` writes every tune: the families are tables at its top (mode, metre, tempo, head motif, rhythm cells, chord progressions, band), and each tune's phrases after the head are written from its own seed, so a build is repeatable. It plays them on a recorded orchestra, the Versilian Studios Chamber Orchestra 2, Community Edition (CC0; `tools/music/orchestra.py`): string sections bowed, spiccato and pizzicato, solo violin, harp, flute, oboe, clarinet, horn, trumpet, trombone, organ, glockenspiel, marimba, real kettle drums, snare, triangle and cymbals. A note takes the recorded dynamic nearest its velocity and alternates the round robins, each phrase swells to its middle and eases at its end, and held instruments join their notes. `tools/music/sampler.py` mixes it in one generated hall and logs each tune's loudness per part and section, spectrum and loop seam. Rebuilding is in [tools/music/README.md](../tools/music/README.md). The orchestra's recordings live in `build/vsco2` (`tools/music/fetch.sh`), out of git and the exports; credits are in `assets/CREDITS.txt`.
 
 ### On trial: Abdulla's motifs (issue #49)
 
