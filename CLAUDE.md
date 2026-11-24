@@ -22,3 +22,6 @@
 
 - 修改本文件或仓库里的其他文件后，直接 commit 并 push，**不用先征求许可**。
 - push 前先 `git pull --rebase`；冲突自己解决后继续 rebase 并 push，不停下来问。不 force push。
+
+## GitHub issues
+- 只有用户在当次任务里要求，才开、评论或给 issue 打标签。测量结果、后续事项和待定问题写进 PR 描述或 docs。

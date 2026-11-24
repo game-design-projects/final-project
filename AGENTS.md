@@ -31,3 +31,4 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). No `class_name`: modules are u
 
 - Commits: `<type>: <description>` (feat, fix, refactor, docs, test, chore, perf, ci). Keep a Changelog format in `CHANGELOG.md` (version-grouped, one-liners); a change made after a release goes under `## [Unreleased]`. Cutting a release — the version bump, the section move, the tag and the link block — is in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#cutting-a-release).
 - CI (`ci.yml`) uses no secrets. Workflow actions are pinned to commit SHAs.
+- GitHub issues: open, comment on or label one only when the user asks for it in that task. Measurements, follow-ups and open questions go in the PR description or the docs.
