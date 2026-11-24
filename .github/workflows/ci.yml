@@ -119,6 +119,10 @@ jobs:
         run: |
           set -euo pipefail
           tools/check.sh res://tools/rules_test.gd
+      # Autoplay samples only a few layouts; check that generated floors keep their monsters and stairs reachable,
+      # secrets correctly placed, and layouts reproducible for a given seed.
+      - name: Check floor generation and maps
+        run: tools/check.sh res://tools/map_test.gd -- nosave nosound
       # The kinds of monster and their attacks: five to a floor, a champion in all of them, and every attack played whole — it
       # makes hazards, keeps to the box, warns your square in time, never walls you in, and is the same attack twice on one seed.
       - name: Check the kinds and their attacks
