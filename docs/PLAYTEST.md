@@ -76,6 +76,14 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **A chase that ends.** A hunter that cannot see you for five steps gives up for ten, and a pad carries a chaser across the
   floor. Does a tester notice a chase end, or only that the monster left (#169)?
 - **Voices.** SETTINGS, SOUND, MONSTER VOICES. Whether a monster's voice helps it read as a character, or gets in the way.
+- **Who you are.** Can a tester say who they play and why the floors are new every run, from the first banner and the wall
+  writing alone? What do they think embers are?
+
+### For the team, not the testers
+
+- Two notes from the Nov 17 sheet nobody could read: "Split second see enemy that" and "Specific branches". Whoever wrote them.
+- The questline map (Abdulla's Nov 20 doc): the drafts' final text, whether committing to a clan shuts out the others, what the
+  Coil's charm does, and where a charm is kept across runs.
 
 ## What to write down
 
@@ -87,5 +95,5 @@ One note per moment, and the moment is what makes it useful:
   more than "the UI was unclear";
 - the build, if it is not the one everyone played.
 
-Notes go into #41 for a playtest's summary, and into an issue of their own when one is a bug with a reproduction. A design
-note goes to the issue that owns the question (#42 mystery, #56 who you are, #77 what a lord is).
+Notes go into the week's playtest round. A bug with a reproduction gets an issue of its own; a design question goes back
+into "What to watch for" above, for the next round.
