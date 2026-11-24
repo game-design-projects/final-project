@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-11-24
+
 ### Added
 - Abdulla's music set is back in the fights (the feature `music-set`, on by default): a fight plays his piano battle for a monster, his boss theme for a champion and his final-boss theme for the last champion, at the Last Door, in place of the foe's own tune (`Music.set_theme`, `assets/audio/set-fight.ogg`, `set-boss.ogg`, `set-final.ogg`, byte for byte the renders in `tools/music/music-set/`). #299 had taken the three out when every foe got a tune of its own; `no-music-set` plays every foe its own, and the exploring music, the camp and the stings are unchanged. They play 1 dB down, measuring -16.2 to -16.3 dBFS mean against the fight tunes' -17.0. The credits name Abdulla as the composer and the soundfont the three were rendered on (MuseScore General, MIT) with its acknowledgements, and `tools/music/music-set/README.md` says how each track was made.
 - Every place and every foe has its own music (`tools/music/build-themes.py`, `assets/audio/music/`, 45 tunes): each biome, and the same biome come round again deeper; each clan's hall; the trader, the practice floor and the test room; every kind of monster; every champion; new victory and stairs stings. A clan's tunes share its head motif, mode, metre and band and differ in key, tempo, leads and everything after the head; the clans, the champions and the places have melodies of their own.
@@ -655,7 +657,8 @@ Donjon moves from the browser to Godot. The web version's last changes, made jus
 - `npm test`: tests for the view geometry (`crawler/test/render.test.js`) and music mood switching (`crawler/test/ambient.test.js`).
 
 <!-- No v0.5.3 tag exists yet, so that version has no compare link; add it when the tag is cut. -->
-[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.5...main
+[Unreleased]: https://github.com/game-design-projects/final-project/compare/v0.9.6...main
+[0.9.6]: https://github.com/game-design-projects/final-project/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/game-design-projects/final-project/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/game-design-projects/final-project/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/game-design-projects/final-project/compare/v0.9.2...v0.9.3
