@@ -4,6 +4,9 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+- The autopilot takes the clans' askers' requests and does them (#259, `tools/autoplay.gd`), and `tools/favours_test.sh` plays four seeds as the game ships: requests taken and paid, a teleporter walked through, a lord heard out.
+
 ## [0.9.6] - 2026-11-24
 
 ### Added

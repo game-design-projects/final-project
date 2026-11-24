@@ -1,7 +1,10 @@
 ## Plays whole games with no window, to see that a run can be played from the start to the stairs without stalling.
 ## A simple autopilot presses keys (takes the floor's favour and finishes it, walks to the monster it chose for the first two
 ## fights, keeping it until it is gone, then the stairs; takes SPARE for the kin a spare favour names and picks the rest of the
-## menu at random, dodges at random) while the clock runs in 16 ms frames.
+## menu at random, dodges at random) while the clock runs in 16 ms frames. With `clan-requests` (the default) it also takes the
+## clans' askers' requests and does them (#259): it says the line an asker wants, fights a favour's fight the way it asks
+## (no light strike for a heavy_win, a spare for a friend to bring, the dragon asked, the kind to slay struck), hands over the
+## friend or the gold, takes an open teleporter at the stairs and hears the lord out in its hall.
 ## Nothing is saved or shown; it prints one line per game.
 ##   godot --headless --path . -s res://tools/autoplay.gd                  seeds 1..5, the local mind
 ##   godot --headless --path . -s res://tools/autoplay.gd -- seed=7 mock    one seed, the seeded random mind
@@ -10,6 +13,7 @@
 extends SceneTree
 
 const Dodge = preload("res://src/rules/dodge.gd")
+const Envoys = preload("res://src/rules/envoys.gd")
 const Fault = preload("res://src/utils/fault.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
 const Flags = preload("res://src/utils/flags.gd")
@@ -24,6 +28,9 @@ const MAX_FRAMES := 200000 # ~53 minutes of game time
 const DEFAULT_SEEDS := [1, 2, 3, 4, 5]
 const PHRASES := ["hello friend", "where are the stairs?", "I will pay 6 gold", "what does the champion do?", "asdf jkl", "you are strong and wise", "haha funny joke", "please stop, I mean no harm"]
 const ARROWS := ["up", "down", "left", "right"]
+## What it types to an asker or a dragon, by what the request listens for (mind/words.gd `sounds_like`): a hiss long enough,
+## flat words that repeat and end on a full stop, a question about liking slimes.
+const SAYS := {"hiss": "hisssssssss", "monotone": "the stone is still and the stone is grey.", "likes_slimes": "do dragons like slimes?"}
 
 var _autopilot: Rng
 var _stage_counts := {}
@@ -36,6 +43,8 @@ var _tried := {} # pacifist: ACT -> how far it moved the odds, for this foe
 var _fled := {} # fight-only: this game's monsters it has already fled from once, so it fights rather than fleeing for ever
 var _attack_menus := 0 # fight-only: the fight menus this game took, printed so the roads test can see the road ran
 var _tried_foe = null
+var _envoy_seen := {} # "depth|hall|clan" -> how its requests stood the last time it stood at that asker, so it goes back only when that changed
+var _says := "" # what the request it just took or is finishing at the asker listens for (envoy_say types it)
 var _last_try := -1
 var _mercy_before := 0.0
 
@@ -71,6 +80,8 @@ func _play(seed_value: int) -> bool:
 	_goal_monster = null
 	_fled = {} # once per game: a name fled in one game says nothing about the next one's monsters
 	_attack_menus = 0
+	_envoy_seen = {}
+	_says = ""
 	flow.happened.connect(func(name, _data): _event_counts[name] = _event_counts.get(name, 0) + 1)
 	await flow.new_run(Flags.on("practice"))
 	var t := 0.0
@@ -112,8 +123,16 @@ func _press_something(flow) -> void:
 			# food is listed first, then the party (to feed or butcher), and LEAVE last: it eats what there is, then gets up. Taking "1" with no
 			# food left would ask to butcher a friend, answer NO, and ask again for as long as the game lasts.
 			await flow.press("1" if str(s.menu[0].label).begins_with("EAT") else "cancel")
-		"trade", "envoy", "envoy_say":
+		"trade":
 			await flow.press("cancel")
+		"envoy":
+			await flow.press(_envoy_key(flow))
+		"envoy_say":
+			if SAYS.has(_says):
+				print("autoplay: says \"%s\" to the asker" % SAYS[_says])
+				await flow.submit_text(SAYS[_says])
+			else:
+				await flow.press("cancel")
 		"request":
 			# the first choice accepts the favour (or hands it over, or leaves when it has failed), so a whole game now asks,
 			# does and is paid: the request and the lords' favours were only ever asked and dropped before
@@ -137,8 +156,24 @@ func _press_something(flow) -> void:
 			# a monster a favour named to be spared is worth more alive: take SPARE whenever it is on offer, so that favour is
 			# finished the way it asks (the pilot used to kill it and fail the request)
 			var spare_at := _spare_index(s) if s.stage == "menu" else 0
+			var errand := _errand_fight(flow)
 			if spare_at > 0:
 				await flow.press(str(spare_at))
+			elif errand == "ask":
+				# a request sent it to ask this dragon something: ACT, then SAY SOMETHING (the act menu's last row)
+				await flow.press("2" if s.stage == "menu" else str(s.menu.size()))
+			elif errand == "strike" and s.stage == "act":
+				await flow.press("cancel") # back to the fight menu, to strike
+			elif errand == "strike" and _autopilot.chance(0.08):
+				await flow.press("1")
+			elif errand == "still" and _autopilot.chance(0.08):
+				# no light strike in this fight: ACT until SPARE is likely, then SPARE (the peaceful pilot's way)
+				if s.stage == "act":
+					await flow.press(str(_kindest_act(flow)))
+				else:
+					await flow.press("3" if s.menu[2].get("gold", false) and not s.menu[2].get("disabled", false) else "2")
+			elif errand != "":
+				pass # a favour's fight waits its turn rather than taking a random row
 			elif _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
 				await flow.press(str(_kindest_act(flow)))
 			elif _autopilot.chance(0.08):
@@ -150,7 +185,7 @@ func _press_something(flow) -> void:
 				await flow.press(str(_autopilot.pick(pool)))
 		"social":
 			# The peaceful pilot preserves recruitment; normal play samples real responses and Ignore.
-			await flow.press("5" if Flags.on("pacifist") else str(_autopilot.pick([1, 2, 3, 5])))
+			await flow.press("5" if Flags.on("pacifist") or _errand_fight(flow) == "still" else str(_autopilot.pick([1, 2, 3, 5])))
 		"skills":
 			if _autopilot.chance(0.08): # skill-combat: any skill that can be used now, END TURN once none can
 				var ready := range(1, s.menu.size()).filter(func(i): return not s.menu[i - 1].get("disabled", false))
@@ -159,9 +194,10 @@ func _press_something(flow) -> void:
 			await flow.press("1") # COME ALONG, or GO IN PEACE with a full party
 		"end":
 			# the shut door's first answer is TURN BACK: with nobody left to befriend that would go round for ever
-			await flow.press("2" if s.menu[0].label == "TURN BACK" else "1")
+			await flow.press("2" if s.menu[0].label == "TURN BACK" else str(_hall_way(s)))
 		"talk":
-			await flow.submit_text(_autopilot.pick(PHRASES))
+			var asked: Dictionary = Envoys.to_ask(s, s.foe) if flow.feature("clan-requests") and s.foe != null else {}
+			await flow.submit_text(str(SAYS.get(str(asked.get("sounds", "")), _autopilot.pick(PHRASES))))
 		"fightbar":
 			var progress: float = (flow.clock - s.bar.t0) / s.bar.dur if s.bar != null else 0.0
 			if progress > 0.46 and progress < 0.54:
@@ -234,7 +270,7 @@ func _explore_key(s) -> String:
 	var met: int = all_met - _met_before
 	if met >= 2 or (_goal_monster != null and _goal_monster.is_gone()):
 		_goal_monster = null # the stairs: two monsters met on this floor, or the one walked to is gone
-	if met < 2 and _goal_monster == null:
+	if met < 2 and _goal_monster == null and s.visiting == "": # in a clan's hall nobody fights: walking into one only gets a line
 		var best := 1 << 30
 		for m in s.floor_map.monsters:
 			if not m.is_gone() and not m.boss:
@@ -243,7 +279,9 @@ func _explore_key(s) -> String:
 					best = d
 					_goal_monster = m
 	# a favour it took: go and finish it (the thing it wants, or the monster it named), so the paid path is played too
-	var quest := _quest_goal(s)
+	var quest := _envoy_goal(s)
+	if quest == Vector2i(-1, -1):
+		quest = _quest_goal(s)
 	var goal: Vector2i = quest if quest != Vector2i(-1, -1) else (s.floor_map.stairs if _goal_monster == null else _goal_monster.cell)
 	var step := _first_step(s.floor_map, s.cell, goal)
 	if step < 0 and _goal_monster != null: # walled off from it: the stairs are the floor's one sure way on
@@ -302,6 +340,88 @@ func _quest_goal(s) -> Vector2i:
 	if m.is_gone():
 		return q.cell # the one it named is off the floor: the asker is who pays, not the empty cell
 	return m.cell
+
+
+## Where a clan's asker on this floor has something for it to do (a request to take, a friend or the gold to hand over, a line
+## to say), or its lord in its hall has not been heard out: that cell, or (-1, -1). An asker it has stood at is gone back to only
+## once how its requests stand has changed since, so a request it cannot finish yet does not hold the walk at its feet.
+func _envoy_goal(s) -> Vector2i:
+	if not Flags.enabled("clan-requests"):
+		return Vector2i(-1, -1)
+	for e in s.floor_map.envoys:
+		if e.get("lord", false):
+			if not s.lords_met.has(str(e.clan)):
+				return e.cell
+			continue
+		var stands := _envoy_stands(s, str(e.clan))
+		if (stands.contains("new") or stands.contains("ready")) and _envoy_seen.get(_envoy_key_of(s, str(e.clan)), "") != stands:
+			return e.cell
+	return Vector2i(-1, -1)
+
+
+func _envoy_key_of(s, clan: String) -> String:
+	return "%d|%s|%s" % [s.depth, s.visiting, clan]
+
+
+## How a clan's open requests stand, in the asker's menu order: "new,ready,waiting".
+func _envoy_stands(s, clan: String) -> String:
+	return ",".join(Envoys.open_for(s, clan).map(func(r): return Envoys.status(s, r)))
+
+
+## At a clan's asker: the first row that takes a request, says its line or hands its friend or gold over, or Esc when there is
+## none. The lord in its hall: the first row, which hears it out to the end and then leaves.
+func _envoy_key(flow) -> String:
+	var s = flow.state
+	var who: Dictionary = s.floor_map.envoy_at(s.cell + FloorMap.DIRS[s.facing])
+	if who.is_empty() or who.get("lord", false):
+		return "1"
+	var clan := str(who.clan)
+	_envoy_seen[_envoy_key_of(s, clan)] = _envoy_stands(s, clan)
+	var open := Envoys.open_for(s, clan) # the stage lists these, each request a row, in this order (stages/envoy.gd)
+	for i in open.size():
+		var now := Envoys.status(s, open[i])
+		if now == "new" or now == "ready":
+			_says = str(open[i].get("sounds", ""))
+			print("autoplay: at %s, %s %s" % [who.name, "takes" if now == "new" else "finishes", open[i].id])
+			return str(i + 1)
+	return "cancel"
+
+
+## How the request it has taken wants this fight played: "ask" (say the dragon its question), "still" (no light strike: a
+## heavy_win, or a friend of the kind a bring wants), "strike" (the kind a slay counts), or "" for none.
+func _errand_fight(flow) -> String:
+	var s = flow.state
+	var m = s.foe
+	if m == null or not flow.feature("clan-requests") or Flags.on("fight-only"):
+		return ""
+	if not m.spoke and not Envoys.to_ask(s, m).is_empty():
+		return "ask"
+	for clan in Envoys.clans():
+		for r in Envoys.open_for(s, str(clan)):
+			if not Envoys.is_taken(s, str(r.id)):
+				continue
+			match str(r.kind):
+				"heavy_win":
+					if int(m.strikes.get("light", 0)) == 0:
+						return "still"
+				"bring":
+					if str(m.species) == str(r.species) and Envoys.friend_for(s, r) == null:
+						return "still"
+				"slay":
+					if str(m.species) == str(r.species):
+						return "strike"
+	return ""
+
+
+## The stairs' row to take: an open teleporter to a clan's hall when there is one, else the first way down.
+func _hall_way(s) -> int:
+	for clan in Envoys.ways(s):
+		var label := str(Envoys.way(str(clan)).label)
+		for n in s.menu.size():
+			if str(s.menu[n].label) == label:
+				print("autoplay: takes %s" % label)
+				return n + 1
+	return 1
 
 
 ## The heading of the first step on the shortest way from `from` to `to`, or -1 if there is none.
