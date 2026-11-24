@@ -177,7 +177,7 @@ func _press_something(flow) -> void:
 				if s.stage == "act":
 					await flow.press(str(_kindest_act(flow)))
 				else:
-					await flow.press("3" if s.menu[2].get("gold", false) and not s.menu[2].get("disabled", false) else "2")
+					await flow.press(str(_peaceful_menu_key(s)))
 			elif errand != "":
 				pass # a favour's fight waits its turn rather than taking a random row
 			elif _autopilot.chance(0.08) and Flags.on("pacifist") and s.stage == "act":
@@ -187,7 +187,7 @@ func _press_something(flow) -> void:
 				if s.stage == "menu" and s.foe.boss:
 					pool = [1, 1, 2, 2, 3]
 				if s.stage == "menu" and Flags.on("pacifist"):
-					pool = [3] if s.menu[2].get("gold", false) else [2]
+					pool = [_peaceful_menu_key(s)]
 				await flow.press(str(_autopilot.pick(pool)))
 		"social":
 			# The peaceful pilot preserves recruitment; normal play samples real responses and Ignore.
@@ -306,6 +306,12 @@ func _menu_key(s, label: String) -> int:
 		if str(s.menu[n].label) == label and not s.menu[n].get("disabled", false):
 			return n + 1
 	return 0
+
+
+## A fight without a strike: take SPARE when it is usable and the odds are good, otherwise ACT.
+func _peaceful_menu_key(s) -> int:
+	var spare := _menu_key(s, "SPARE")
+	return spare if spare > 0 and s.menu[spare - 1].get("gold", false) else _menu_key(s, "ACT")
 
 
 ## The menu number of SPARE when this foe is the kin a favour wants spared and SPARE can be taken, else 0.
