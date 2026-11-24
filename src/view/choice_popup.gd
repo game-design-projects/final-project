@@ -41,26 +41,28 @@ var state # State, set by the owner
 var _title: Font = Fonts.title()
 var _body: Font = Fonts.body()
 var _hover := -1
-var _art: Control # the moving picture, on a layer of its own: a drawing is smoothed when it is made smaller, the letters never are
-var _art_box := Rect2() # where it goes, as the last draw laid it out
+var _art_box := Rect2() # where the moving picture goes, as the last draw laid it out
 
 
 func _ready() -> void:
 	mouse_exited.connect(func(): _set_hover(-1))
-	_art = Control.new()
-	_art.name = "Art"
-	_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_art.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_art.draw.connect(_draw_art)
-	add_child(_art)
 
 
-func _draw_art() -> void:
-	if state == null or not _art_box.has_area():
-		return
+## The moving picture of what the walk has stopped at, for the layer inside the picture to draw (view/overlay.gd), so the
+## picture's glow, scanlines and pixels are its own and it is not a clean drawing laid over them: {id, box (in this control),
+## wall, accent, picked (the keepsake the choice is on, or -1), backed (a dark box behind it: it stands alone over the walk),
+## dim (how far the picture goes dark behind a choice)}. Empty when nothing is up. The box is as the last draw laid it out.
+func art() -> Dictionary:
+	if state == null or not visible:
+		return {}
+	var choosing := deciding(state)
 	var colours: Dictionary = Palette.for_run(state.palette_id)
-	Vignette.draw(_art, state.vignette, _art_box, Time.get_ticks_msec() / 1000.0, colours.wall, colours.accent)
+	var out := {"id": "", "box": _art_box, "wall": colours.wall, "accent": colours.accent, "picked": -1, "backed": not choosing, "dim": DIM if choosing else 0.0}
+	if _art_box.has_area() and state.vignette in Vignette.KNOWN:
+		out.id = str(state.vignette)
+		if choosing and out.id == "keepsakes":
+			out.picked = int(state.selected)
+	return out if choosing or out.id != "" else {}
 
 
 ## Whether the choices are up (the commands are here and not in the dock). The dock asks this of the state too, so the one
@@ -208,18 +210,13 @@ func _layout() -> Dictionary:
 
 func _draw() -> void:
 	_art_box = Rect2()
-	_art.queue_redraw()
 	if state == null:
 		return
-	var colours: Dictionary = Palette.for_run(state.palette_id)
 	if not deciding(state):
 		if state.vignette in Vignette.KNOWN: # stopped at something, with its commands in the dock: the picture of it, alone
-			var box := Rect2((size.x - ART_H_ALONE * Vignette.RATIO) / 2.0, 10.0, ART_H_ALONE * Vignette.RATIO, ART_H_ALONE)
-			draw_rect(box.grow(8.0), Color(0, 0, 0, 0.8))
-			draw_rect(box.grow(8.0), Color(colours.wall, 0.5), false, 1.0)
-			_art_box = box
+			_art_box = Rect2((size.x - ART_H_ALONE * Vignette.RATIO) / 2.0, 10.0, ART_H_ALONE * Vignette.RATIO, ART_H_ALONE)
 		return
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, DIM))
+	# the picture goes dark behind a choice inside the picture itself, with the moving picture drawn there too (`art`)
 	var plan := _layout()
 	_art_box = plan.art
 	var y: float = plan.ask.position.y

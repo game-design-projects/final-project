@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 - The autopilot takes the clans' askers' requests and does them (#259, `tools/autoplay.gd`), and `tools/favours_test.sh` plays four seeds as the game ships: requests taken and paid, a teleporter walked through, a lord heard out.
 
+### Fixed
+- The keepsakes on a choice screen are gold from top to tip, and all three the same gold: they were tinted by boxes laid over the drawing, so the gold stopped at a straight line and each one's tip, which sits down inside its stand's rim, stayed white, and a glint that went from one to the next lit one of them a different gold whichever card was picked. What lies on the stands and the stands are drawings of their own now (`keepsake_things`, `keepsake_stands` in `tools/art/source/events.png`), and the one that is lit is the one the choice is on.
+- The picture of what the walk has stopped at (the keepsakes, the camp fire, the gate, the stairs, the Last Door, the way out) is part of the game's picture: it was drawn on a layer over the picture, above the glow and the scanlines, so it came out clean and flat against everything behind it. The choices still lay it out (`ChoicePopup.art`), and the layer inside the picture draws it (`Overlay.event_art`), with the dark that falls behind a choice.
+- `tools/event_shots.gd` and `tools/clan_shots.gd` take their pictures again: a new run comes up under its premise's story picture, which holds the game still, so every shot was of that picture and the walk never reached what it was to stop at. Both tools send a story picture away as a key would.
+
 ## [0.9.6] - 2026-11-24
 
 ### Added

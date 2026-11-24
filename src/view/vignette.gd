@@ -16,7 +16,11 @@ const SHEET := "events"
 
 # Where the parts of each drawing are, as shares of that drawing's own ink (0..1 across and down). They were measured on the
 # sheet, so a drawing that is redrawn needs its parts measured again.
-const KEEPSAKES := [Rect2(0.036, 0.2, 0.24, 0.45), Rect2(0.367, 0.2, 0.263, 0.45), Rect2(0.7335, 0.0, 0.2363, 0.67)] # the heart, the stone, the charm
+const KEEPSAKE_THINGS := Rect2(0.0359, 0.0, 0.9338, 0.7261) # where `keepsake_things` and `keepsake_stands` sit in `keepsakes`
+const KEEPSAKE_STANDS := Rect2(0.0, 0.6478, 1.0, 0.3522)
+const KEEPSAKE_EACH := [Rect2(0.0, 0.0, 0.3057, 1.0), Rect2(0.3057, 0.0, 0.3846, 1.0), Rect2(0.6903, 0.0, 0.3097, 1.0)] # the heart, the stone, the charm: shares of the things' own ink, cut in the black between them
+const KEEPSAKE_TOPS := [0.2, 0.2, 0.0] # where each one's top is, as a share of the whole drawing's height: the glint sits by it
+const KEEPSAKE_REST := 0.62 # how bright the two the glint is not on are, of the one it is on: the same gold, quieter
 const FLAME_FROM := 0.611 # the fire above this moves; the logs under it don't
 const FLAME_FOOT := Rect2(0.339, 0.611, 0.362, 0.093) # the foot of the flame, between the logs
 const GATE_BARS := Rect2(0.2072, 0.2052, 0.519, 0.5597) # where `gate_bars` and `gate_chain` sit in `gate`
@@ -32,15 +36,16 @@ const STEPS_DOWN := [Vector2(0.165, 0.013), Vector2(0.316, 0.242), Vector2(0.479
 const STEPS_UP := [Vector2(0.223, 0.834), Vector2(0.335, 0.758), Vector2(0.453, 0.668), Vector2(0.558, 0.562), Vector2(0.748, 0.607)] # the last is the doorway's sill
 
 
-## Draw `id` into `box` on `c` at time `t` (seconds). An id there is no picture for draws nothing.
-static func draw(c: CanvasItem, id: String, box: Rect2, t: float, wall: Color, accent: Color) -> void:
+## Draw `id` into `box` on `c` at time `t` (seconds). An id there is no picture for draws nothing. `picked` is which of the
+## things on offer the choice is on (the keepsakes: 0 to 2), or -1 when the picture is of nothing chosen between.
+static func draw(c: CanvasItem, id: String, box: Rect2, t: float, wall: Color, accent: Color, picked := -1) -> void:
 	if not KNOWN.has(id):
 		return
 	var to := fit(id, box)
 	var w := maxf(1.5, box.size.y / 60.0) # a line's width for what is drawn in code, in step with the picture's size
 	match id:
 		"keepsakes":
-			_keepsakes(c, to, t, wall, accent)
+			_keepsakes(c, to, t, wall, picked)
 		"gate":
 			_gate(c, to, t, wall, accent)
 		"door":
@@ -81,16 +86,28 @@ static func _layer(c: CanvasItem, id: String, to: Rect2, place: Rect2, colour: C
 	c.draw_texture_rect_region(Sprites.texture(SHEET), at, from, colour)
 
 
-## Three things on three stands, and a glint that goes from one to the next: the one it is on is lit.
-static func _keepsakes(c: CanvasItem, to: Rect2, t: float, wall: Color, accent: Color) -> void:
-	_whole(c, "keepsakes", to, wall)
-	var lit := int(t * 1.1) % 3
-	for i in 3:
-		_part(c, "keepsakes", to, KEEPSAKES[i], Palette.MERCY if i == lit else accent)
+## A part `part` (a share of its own ink) of a drawing of its own that belongs at `place` in another whose ink is at `to`.
+static func _layer_part(c: CanvasItem, id: String, to: Rect2, place: Rect2, part: Rect2, colour: Color) -> void:
+	var ink := Sprites.ink(SHEET, id)
+	var from := Rect2(Sprites.drawing_rect(SHEET, id).position + ink.position + part.position * ink.size, part.size * ink.size)
+	var whole := Rect2(to.position + place.position * to.size, place.size * to.size)
+	c.draw_texture_rect_region(Sprites.texture(SHEET), Rect2(whole.position + part.position * whole.size, part.size * whole.size), from, colour)
+
+
+## Three things on three stands, each of them gold from top to tip, and a glint on one: the one the choice is on (`picked`), or
+## each in turn when nothing is being chosen. The things and the stands are drawings of their own, so neither is coloured by a
+## box laid over the other: a thing's tip sits down inside its stand's rim, and a box cut it off there.
+static func _keepsakes(c: CanvasItem, to: Rect2, t: float, wall: Color, picked: int) -> void:
+	_layer(c, "keepsake_stands", to, KEEPSAKE_STANDS, wall)
+	var lit := picked if picked >= 0 and picked < KEEPSAKE_EACH.size() else int(t * 1.1) % KEEPSAKE_EACH.size()
+	var rest := Color(Palette.MERCY.r * KEEPSAKE_REST, Palette.MERCY.g * KEEPSAKE_REST, Palette.MERCY.b * KEEPSAKE_REST)
+	for i in KEEPSAKE_EACH.size():
+		_layer_part(c, "keepsake_things", to, KEEPSAKE_THINGS, KEEPSAKE_EACH[i], Palette.MERCY if i == lit else rest)
 	var glow := 0.5 + 0.5 * sin(t * 1.1 * TAU)
-	var on: Rect2 = KEEPSAKES[lit]
+	var on: Rect2 = KEEPSAKE_EACH[lit]
 	var size := Vector2.ONE * to.size.y * (0.16 + 0.1 * glow)
-	var at := to.position + Vector2(on.end.x - 0.01, on.position.y + 0.06) * to.size
+	var right: float = KEEPSAKE_THINGS.position.x + on.end.x * KEEPSAKE_THINGS.size.x
+	var at := to.position + Vector2(right - 0.01, float(KEEPSAKE_TOPS[lit]) + 0.06) * to.size
 	c.draw_texture_rect_region(Sprites.texture("props"), Rect2(at - size / 2.0, size), _prop("sparkle"), Color(Palette.INK, 0.45 + 0.55 * glow))
 
 

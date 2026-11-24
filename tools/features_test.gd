@@ -733,6 +733,17 @@ func _choices_over_the_picture(s, art: String, cards: int, plain: int) -> void:
 		_check(plan.ask.has_area() and top - plan.ask.end.y >= ChoicePopup.GAP - 0.5, "%s at %s: the first row of choices clears the question by the gap the layout counts (%.1f)" % [where, frame, top - plan.ask.end.y])
 		if frame.y >= 392.0:
 			_check(plan.art.has_area(), "%s at %s: and it is there when the picture has the room" % [where, frame])
+			# the moving picture is the picture's own: the choices lay it out and hand it to the layer inside the picture
+			# (view/overlay.gd), which draws it under the glow and the scanlines, and draw none of it over them
+			popup._art_box = plan.art
+			var handed: Dictionary = popup.art()
+			_check(handed.get("id", "") == s.vignette and handed.box == plan.art and is_equal_approx(float(handed.dim), ChoicePopup.DIM) and not handed.backed and popup.get_child_count() == 0, "%s at %s: and the picture draws it, with the dark behind the choice (%s)" % [where, frame, handed])
+			_check(int(handed.picked) == (int(s.selected) if s.vignette == "keepsakes" else -1), "%s at %s: lit where the choice is, if it is a choice of things (%d)" % [where, frame, int(handed.picked)])
+			var in_picture = Overlay.new()
+			root.add_child(in_picture)
+			var layer = in_picture.get_node_or_null("EventArt")
+			_check_quietly(layer != null and layer.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS and layer.mouse_filter == Control.MOUSE_FILTER_IGNORE, "%s at %s: the layer inside the picture has a place for it, smoothed as it is made small" % [where, frame])
+			in_picture.free()
 		var got := [-1]
 		popup.picked.connect(func(i): got[0] = i)
 		var click := InputEventMouseButton.new()
