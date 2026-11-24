@@ -22,3 +22,8 @@
 
 - 修改本文件或仓库里的其他文件后，直接 commit 并 push，**不用先征求许可**。
 - push 前先 `git pull --rebase`；冲突自己解决后继续 rebase 并 push，不停下来问。不 force push。
+
+## GitHub issues
+- 能关就关：代码已经做到的 issue 直接关；只剩“等 playtest 回答”或“等 teammate”（Abdulla 的文本、团队决定）的也关。
+- playtest 要问的问题写进 `docs/PLAYTEST.md` 的 “What to watch for”，由每周一轮的 playtest 去问；等 teammate 的事交给 teammate，不靠开着的 issue 挂着。
+- 只有代码还没做的事才留一个 open issue。`playtest` 标签不用管。

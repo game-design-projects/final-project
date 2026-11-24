@@ -516,9 +516,9 @@ func _note_warmth() -> void:
 	print("flow: warmth %s -> %s (%.2f)" % [Warmth.level_id(was), Warmth.level_id(now), Warmth.of(state)])
 	event("warmth", {"from": was, "to": now})
 	var said := Warmth.line(was, now)
-	var does := Warmth.effect(now) # what the turn means for the fights, in the log as well as on the picture (#291)
+	var does := Warmth.effect(now) # what the turn means for the fights, for the log (#291)
 	if said != "" and not banner_up():
-		announce(WARMTH_TITLE, said + ("\n" + does if does != "" else ""))
+		announce(WARMTH_TITLE, said) # the torches' line alone: it and the level's rule together run past the banner's two lines
 	if does != "" and not state.testing:
 		state.say(state.lines + [State.sys_line(does)])
 

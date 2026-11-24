@@ -6,6 +6,8 @@
 ## own. Short stings go over it all: the victory when a foe is spared, the fanfare at the stairs. A sting takes the loops out of
 ## its way, and the exploring music comes back after it has rung out and a few seconds more.
 ## Of the music before, the camp keeps one theme: Abdulla's hum theme. The tracks are in assets/audio/music/.
+## With the feature `music-set`, a fight plays one of Abdulla's three themes by who it is with (`set_theme`) in place of the
+## foe's own tune: a monster, a champion, the last champion.
 ## A loop's fade belongs to the player it fades, and a new fade cancels the old one on the same player, so an old fade
 ## can never stop what a newer one has started. A fight's loop gets a player of its own for each fight; each place keeps its
 ## own player while you are on its floor, so the camp hands the floor's music back where it left off.
@@ -21,9 +23,14 @@ const STAY := ["camp", "trade"]
 ## Where there is no biome (the classic floor), and the fight of a foe whose tune is missing.
 const DEFAULT_SCENE := "explore-halls"
 const DEFAULT_FIGHT := "fight-slime"
+## Abdulla's music set (tools/music/music-set/, the feature `music-set`): his three fight themes, kept beside the hum theme in
+## assets/audio/. Who the fight is with picks one: a monster, a champion, or the last champion at the Last Door.
+const SET := {"fight": "set-fight", "boss": "set-boss", "final": "set-final"}
+const SET_DIR := "res://assets/audio/"
 const STINGS := ["victory", "fanfare"]
-## Level trims by track, dB: the hum theme is mastered 1 dB hotter than the rest (-18 against -19 dBFS RMS).
-const TRIM_DB := {"camp": -1.0}
+## Level trims by track, dB: the hum theme is mastered 1 dB hotter than the rest (-18 against -19 dBFS RMS), and the music
+## set's three measure -16.2 to -16.3 dBFS mean against the fight tunes' -17.0.
+const TRIM_DB := {"camp": -1.0, "set-fight": -1.0, "set-boss": -1.0, "set-final": -1.0}
 ## The tracks are mastered to -19 dBFS RMS (exploring) and -17 dBFS RMS (fights and stings). These levels put a fight
 ## about as loud against the effects as the old music, and the exploring music about 2.6 dB under it.
 const VOLUME := {"explore": 0.7, "battle": 0.75, "sting": 0.75}
@@ -167,8 +174,15 @@ static func fight_of(foe) -> String:
 	return "fight-" + str(foe.kind)
 
 
+## The music set's theme for a fight (the feature `music-set`): the last champion's, a champion's, or a monster's.
+static func set_theme(boss: bool, final: bool) -> String:
+	return str(SET.final if final else (SET.boss if boss else SET.fight))
+
+
 static func track_path(name: String) -> String:
-	return CAMP if name == "camp" else "%s%s.ogg" % [DIR, name]
+	if name == "camp":
+		return CAMP
+	return "%s%s.ogg" % [SET_DIR if SET.values().has(name) else DIR, name]
 
 
 ## "explore" (the place's loop), "battle" (the next fight's tune, `fight_with`) or "silence".

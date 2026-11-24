@@ -25,6 +25,7 @@ var _sfx
 var _music
 var _voice: AudioStreamPlayer
 var _quiet := false
+var _set := false # the feature `music-set`: a fight plays Abdulla's theme for who it is with, not the foe's own tune
 
 
 func _ready() -> void:
@@ -37,6 +38,7 @@ func _ready() -> void:
 	add_child(_sfx)
 	_music = Music.new()
 	_music.enabled = not Flags.on("nomusic")
+	_set = Flags.enabled("music-set")
 	if Flags.enabled("motifs"):
 		_music.motifs = Music.pick_motifs(Music.local_motifs(), Flags.value("motif"))
 	add_child(_music)
@@ -53,7 +55,7 @@ func _place_music() -> void:
 	var s = _flow.state
 	_music.set_scene(Music.scene_of(s))
 	if s.floor_map != null:
-		_music.prepare(s.floor_map.monsters.map(func(m): return Music.fight_of(m)))
+		_music.prepare(Music.SET.values() if _set else s.floor_map.monsters.map(func(m): return Music.fight_of(m)))
 
 
 ## Start listening to this game.
@@ -91,7 +93,11 @@ func _on_event(name: String, data: Dictionary) -> void:
 				_music.set_mode("explore")
 		"encounter":
 			_sfx.play("boss" if data.boss else "encounter")
-			_music.fight_with(Music.fight_of(_flow.state.foe if _flow != null and _flow.state != null else null)) # its kind's tune, or the champion's
+			if _set: # Abdulla's theme for who the fight is with: a monster, a champion, the last champion
+				var last = data.get("final", false)
+				_music.fight_with(Music.set_theme(true if data.boss else false, last is bool and last))
+			else:
+				_music.fight_with(Music.fight_of(_flow.state.foe if _flow != null and _flow.state != null else null)) # its kind's tune, or the champion's
 			_music.set_mode("battle")
 		"strike":
 			_sfx.play("crit" if data.crit else "strike")

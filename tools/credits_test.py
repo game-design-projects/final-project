@@ -14,7 +14,7 @@ The checks: every file in assets/audio (and assets/audio/music), assets/art, ass
 in the credits (an exact name, or a line like `assets/audio/music/*.ogg` that covers it); every path to a `.txt` the credits
 name exists; each font has its SIL font-license file beside it, and that file is the OFL 1.1 with the font's own copyright
 line; the Creative Commons text is the one the credits claim it is; the music names the CC0 orchestra it is played on and
-the hum theme to be Abdulla's, rendered with GeneralUser GS; and every export preset in `tools/build.sh` carries the licence
+the hum theme to be Abdulla's, rendered with GeneralUser GS, and the music set to be his too, rendered on MuseScore General (MIT); and every export preset in `tools/build.sh` carries the licence
 texts into the build.
 """
 import fnmatch
@@ -30,6 +30,7 @@ LICENCES = os.path.join(ASSETS, "LICENSES")
 FONTS = os.path.join(ASSETS, "fonts")
 MUSIC = ["assets/audio/music/*.ogg"]  # every place's and every foe's tune, played on the VSCO-2 CE orchestra
 HUM = ["hum-explore.ogg"]
+SET = ["set-fight.ogg", "set-boss.ogg", "set-final.ogg"]  # Abdulla's music set, played in a fight (the feature `music-set`)
 
 failed = 0
 
@@ -115,6 +116,11 @@ def main():
     check(all(name in credits for name in HUM) and "Abdulla Alfalasi" in credits and "GeneralUser GS" in credits,
           "the hum theme names its author and the soundfont it was rendered with (%d of %d files)" % (
               sum(1 for name in HUM if name in credits), len(HUM)))
+    set_entry = next((part for part in credits.split("\n\n") if part.startswith("MUSIC: the music set")), "")
+    check(all(name in set_entry for name in SET) and "Abdulla Alfalasi" in set_entry and "tools/music/music-set/" in set_entry
+          and "MuseScore General" in set_entry and "MIT licence" in set_entry and "Frank Wen" in set_entry,
+          "the music set names its author, the soundfont it was rendered on, its licence and its acknowledgements (%d of %d files)" % (
+              sum(1 for name in SET if name in set_entry), len(SET)))
 
     # 6. every export preset carries the licence texts into the build
     build = read(BUILD)

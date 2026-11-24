@@ -66,6 +66,7 @@ These are the open questions, not the fixed ones. A note is most useful when it 
   dislikes it is glad of a kill and sore when you take one in, and after a fight the log says each of those in a line. Does a
   tester notice a clan's monsters starting friendlier, does a kill start to read as taking a side, and does the praise ever make
   killing feel cheaper than it should?
+- **Kindness and cruelty, coming back round.** #290, #291: a clan's standing now does more than soften mercy — FRIENDLY, its own stop hunting you; TRUSTED, one draws the floor onto your map; DEVOTED, its own take mercy readily until you strike one and its faith breaks — and the colder the halls, the faster and harder they hit, the less mercy and company they give, with the log saying what a turn means. Does a tester notice its own monsters leaving them alone, and can they say why; does the drawn floor read as a gift; and does a cold run read as what their kills did rather than as a spike that came from nowhere?
 - **The first floor.** Does a tester know what they want after one floor, or only where the stairs are?
 - **The vault.** #161: one floor of the run says something of the Hoard's is walled up on it, behind a cracked wall, and the
   vault holds a keepsake. Does a tester go looking for the crack once the log says so, is the vault found without being shown
@@ -75,6 +76,14 @@ These are the open questions, not the fixed ones. A note is most useful when it 
 - **A chase that ends.** A hunter that cannot see you for five steps gives up for ten, and a pad carries a chaser across the
   floor. Does a tester notice a chase end, or only that the monster left (#169)?
 - **Voices.** SETTINGS, SOUND, MONSTER VOICES. Whether a monster's voice helps it read as a character, or gets in the way.
+- **Who you are.** Can a tester say who they play and why the floors are new every run, from the first banner and the wall
+  writing alone? What do they think embers are?
+
+### For the team, not the testers
+
+- Two notes from the Nov 17 sheet nobody could read: "Split second see enemy that" and "Specific branches". Whoever wrote them.
+- The questline map (Abdulla's Nov 20 doc): the drafts' final text, whether committing to a clan shuts out the others, what the
+  Coil's charm does, and where a charm is kept across runs.
 
 ## What to write down
 
@@ -86,5 +95,5 @@ One note per moment, and the moment is what makes it useful:
   more than "the UI was unclear";
 - the build, if it is not the one everyone played.
 
-Notes go into #41 for a playtest's summary, and into an issue of their own when one is a bug with a reproduction. A design
-note goes to the issue that owns the question (#42 mystery, #56 who you are, #77 what a lord is).
+Notes go into the week's playtest round. A bug with a reproduction gets an issue of its own; a design question goes back
+into "What to watch for" above, for the next round.
