@@ -322,10 +322,7 @@ func _spare_index(s) -> int:
 	var i := int(q.get("target", -1))
 	if i < 0 or i >= s.floor_map.monsters.size() or s.floor_map.monsters[i] != s.foe:
 		return 0
-	for n in s.menu.size():
-		if str(s.menu[n].label) == "SPARE" and not s.menu[n].get("disabled", false):
-			return n + 1
-	return 0
+	return _menu_key(s, "SPARE")
 
 
 ## Where to go for the favour it has taken, or (-1, -1) when there is none to do here.
