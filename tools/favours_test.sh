@@ -8,8 +8,9 @@
 # the first floor of a biome asks a second favour where that biome comes back; paying it swears the clan (and its lord joins),
 # so at least one of those is checked too: the pilot used to skip a name it already knew, which left the pact unplayed.
 # These are the stray asker's and the floor lord's favours, so the games are played with `no-clan-requests`: with the clans'
-# askers on (the default) those two stand on no floor, and the pilot steps past a clan's asker without taking its request
-# (`tools/features_test.gd` plays those, a request at a time).
+# askers on (the default) those two stand on no floor.
+# Then the same four seeds as the game ships, with the clans' askers on (#259): the pilot takes their requests and does them, so
+# at least four have to be taken, two paid, one clan's teleporter opened and walked through, and its lord heard out in its hall.
 #   tools/favours_test.sh
 # GODOT points at the Godot binary (default: godot on PATH); OUT is where the log goes (default: the run_tests.sh one).
 set -euo pipefail
@@ -84,5 +85,27 @@ fi
 echo "on favours: exit $code, $reached of 4 games reached the stairs, $taken favours taken, $paid paid, $nonfetch of them a rid or a spare, $spare_paid a spare, $pacts pacts"
 if [ "$code" != 0 ]; then
 	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$log" | cut -c1-220 | head -10 || true
+fi
+
+# The clans' askers, as the game ships (#259).
+asks="$OUT/on-requests.log"
+: >"$asks"
+asks_code=0
+for seed in 7 11 23 47; do
+	limit 170 "$GODOT" --headless --path . -s res://tools/autoplay.gd -- nosave nosound mock "seed=$seed" >>"$asks" 2>&1 || asks_code=1
+done
+r_reached=$(grep -cE '^autoplay: 1 of 1' "$asks" || true)
+r_taken=$(grep -cE '^envoys: [a-z_]+ taken' "$asks" || true)
+r_done=$(grep -cE '^envoys: [a-z_]+ done' "$asks" || true)
+r_opened=$(grep -cE "^envoys: .*'s teleporter is open" "$asks" || true)
+r_through=$(grep -cE "^end: through .*'S TELEPORTER" "$asks" || true)
+r_lords=$(grep -cE '^envoys: the lord of .* was heard out' "$asks" || true)
+if [ "$r_reached" != 4 ] || [ "$r_taken" -lt 4 ] || [ "$r_done" -lt 2 ] || [ "$r_opened" -lt 1 ] || [ "$r_through" -lt 1 ] || [ "$r_lords" -lt 1 ]; then
+	asks_code=1
+fi
+echo "on clan requests: exit $asks_code, $r_reached of 4 games reached the stairs, $r_taken requests taken, $r_done done, $r_opened teleporters opened, $r_through walked through, $r_lords lords heard out"
+if [ "$asks_code" != 0 ]; then
+	grep -E 'SCRIPT ERROR|DID NOT FINISH' "$asks" | cut -c1-220 | head -10 || true
+	code=1
 fi
 exit "$code"
