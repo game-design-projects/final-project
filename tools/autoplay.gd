@@ -12,6 +12,7 @@
 ## Exit code 0 when every game reached the stairs, 1 otherwise.
 extends SceneTree
 
+const Clans = preload("res://src/rules/clans.gd")
 const Dodge = preload("res://src/rules/dodge.gd")
 const Envoys = preload("res://src/rules/envoys.gd")
 const Fault = preload("res://src/utils/fault.gd")
@@ -30,6 +31,7 @@ const PHRASES := ["hello friend", "where are the stairs?", "I will pay 6 gold", 
 const ARROWS := ["up", "down", "left", "right"]
 ## What it types to an asker or a dragon, by what the request listens for (mind/words.gd `sounds_like`): a hiss long enough,
 ## flat words that repeat and end on a full stop, a question about liking slimes.
+const ERRAND_FRAMES := 3600 # about a minute of the fight menu being up: a favour's fight is then played as a usual one, so a foe that will not be won its way cannot hold the game
 const SAYS := {"hiss": "hisssssssss", "monotone": "the stone is still and the stone is grey.", "likes_slimes": "do dragons like slimes?"}
 
 var _autopilot: Rng
@@ -44,6 +46,8 @@ var _fled := {} # fight-only: this game's monsters it has already fled from once
 var _attack_menus := 0 # fight-only: the fight menus this game took, printed so the roads test can see the road ran
 var _tried_foe = null
 var _envoy_seen := {} # "depth|hall|clan" -> how its requests stood the last time it stood at that asker, so it goes back only when that changed
+var _errand_foe = null # the foe a favour's fight is being played against, and how many frames its fight menu has been up
+var _errand_frames := 0
 var _says := "" # what the request it just took or is finishing at the asker listens for (envoy_say types it)
 var _last_try := -1
 var _mercy_before := 0.0
@@ -82,6 +86,8 @@ func _play(seed_value: int) -> bool:
 	_attack_menus = 0
 	_envoy_seen = {}
 	_says = ""
+	_errand_foe = null
+	_errand_frames = 0
 	flow.happened.connect(func(name, _data): _event_counts[name] = _event_counts.get(name, 0) + 1)
 	await flow.new_run(Flags.on("practice"))
 	var t := 0.0
@@ -388,11 +394,20 @@ func _envoy_key(flow) -> String:
 
 
 ## How the request it has taken wants this fight played: "ask" (say the dragon its question), "still" (no light strike: a
-## heavy_win, or a friend of the kind a bring wants), "strike" (the kind a slay counts), or "" for none.
+## heavy_win, or a friend of the kind a bring wants), "strike" (the kind a slay counts), or "" for none. An enraged foe takes
+## no mercy, so it is never fought still; the peaceful road never strikes; and a fight whose menu has been up for ERRAND_FRAMES
+## frames is played as a usual one.
 func _errand_fight(flow) -> String:
 	var s = flow.state
 	var m = s.foe
 	if m == null or not flow.feature("clan-requests") or Flags.on("fight-only"):
+		return ""
+	if _errand_foe != m:
+		_errand_foe = m
+		_errand_frames = 0
+	if s.stage == "menu":
+		_errand_frames += 1
+	if _errand_frames > ERRAND_FRAMES:
 		return ""
 	if not m.spoke and not Envoys.to_ask(s, m).is_empty():
 		return "ask"
@@ -402,13 +417,13 @@ func _errand_fight(flow) -> String:
 				continue
 			match str(r.kind):
 				"heavy_win":
-					if int(m.strikes.get("light", 0)) == 0:
+					if int(m.strikes.get("light", 0)) == 0 and not Clans.enraged(s, m):
 						return "still"
 				"bring":
-					if str(m.species) == str(r.species) and Envoys.friend_for(s, r) == null:
+					if str(m.species) == str(r.species) and Envoys.friend_for(s, r) == null and not Clans.enraged(s, m):
 						return "still"
 				"slay":
-					if str(m.species) == str(r.species):
+					if str(m.species) == str(r.species) and not Flags.on("pacifist"):
 						return "strike"
 	return ""
 
