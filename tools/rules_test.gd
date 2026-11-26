@@ -98,6 +98,7 @@ func _run() -> void:
 	_names_are_not_reused()
 	_questers_are_named_fresh()
 	_strike_bands()
+	_strike_edges()
 	_mood_after_a_hit()
 	_dodge_cells()
 	_odds_bounds()
@@ -135,6 +136,31 @@ func _strike_bands() -> void:
 	_check(Combat.bar_ms(false) == 1100.0 and Combat.bar_ms(true) == 1500.0, "the strike bar sweeps in 1100 ms, 1500 with the rock's charm")
 	_check(Combat.dodge_intensity(0.0, false) == 0.8 and is_equal_approx(Combat.dodge_intensity(3.0, true), 1.55 * 1.2), "dodge intensity is 0.8 + 0.25 * pressure, 1.2 times that for a champion")
 	_check(Combat.DODGE_DAMAGE == 3 and Combat.DODGE_DAMAGE_BOSS == 4 and Combat.START_HP == 20 and Combat.START_GOLD == 8 and Combat.CUT_COST == 6, "a dodge hit costs 3 (4 from a champion); you start with 20 health and 8 gold; a cut costs 6")
+
+
+# Each offset is tried on both halves of the bar. Use points just on either side of a cutoff, not the floating-point
+# boundary itself. The expectations are independent of Combat's constants so a shifted cutoff cannot move the test too.
+func _strike_edges() -> void:
+	var cases := [ # [offset from centre, miss, critical, damage]
+		[0.0395, false, true, 14], [0.0405, false, false, 11],
+		[0.4595, false, false, 4], [0.4605, true, false, 0],
+	]
+	var heavy_cases := [ # A bandit takes the standard heavy damage.
+		[0.0395, false, true, 18], [0.0405, false, false, 14],
+		[0.1745, false, false, 5], [0.1755, true, false, 0],
+	]
+	for side in [-1.0, 1.0]:
+		for row in cases:
+			var x: float = 0.5 + side * row[0]
+			_check_strike_edge("FIGHT", x, Combat.strike(x, false, false), row)
+		for row in heavy_cases:
+			var x: float = 0.5 + side * row[0]
+			_check_strike_edge("HEAVY", x, Combat.heavy_strike(x, false, "bandit", false), row)
+
+
+func _check_strike_edge(move: String, x: float, got: Dictionary, row: Array) -> void:
+	var want := {"miss": row[1], "crit": row[2], "damage": row[3]}
+	_check(got == want, "%s at %.4f: %s, expected %s" % [move, x, got, want])
 
 
 func _mood_after_a_hit() -> void:
