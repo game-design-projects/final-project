@@ -5,6 +5,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ## [Unreleased]
 
 ### Added
+- The headless rules suite checks both sides of the FIGHT and HEAVY bars just inside and outside their critical and miss cutoffs.
 - The autopilot takes the clans' askers' requests and does them (#259, `tools/autoplay.gd`), and `tools/favours_test.sh` plays four seeds as the game ships: requests taken and paid, a teleporter walked through, a lord heard out.
 
 ### Fixed
