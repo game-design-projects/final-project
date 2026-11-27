@@ -49,33 +49,57 @@ static func write(slot: String, state: Dictionary, summary: String, name := "") 
 		push_warning("saves: no slot '%s'" % slot)
 		return false
 	if name == "":
-		name = info(slot).name
+		name = _slot_info(slot, _read_doc(slot), false).name
 	return _store({"version": VERSION, "name": name, "summary": summary, "saved_at": int(Time.get_unix_time_from_system()), "seq": _next_seq(), "state": var_to_str(state)}, slot)
 
 
 ## What a slot list shows: {slot, empty, corrupt, name, summary, saved_at, seq}. `seq` is the save's number, higher for a
 ## later save (0 for a save from before saves were numbered).
 static func info(slot: String) -> Dictionary:
-	var doc = _read_doc(slot)
+	return _slot_info(slot, _read_doc(slot))
+
+
+static func _slot_info(slot: String, doc, check_state := true) -> Dictionary:
 	var none := {"slot": slot, "empty": true, "corrupt": false, "name": "", "summary": "", "saved_at": 0, "seq": 0}
 	if doc == null:
 		return none
-	if doc.is_empty():
-		none.merge({"empty": false, "corrupt": true, "summary": "DAMAGED SAVE"}, true)
-		return none
-	if int(doc.get("version", 0)) != VERSION:
-		none.merge({"empty": false, "corrupt": true, "summary": "OLD SAVE, NOT COMPATIBLE"}, true)
+	var problem := _doc_problem(doc)
+	if problem == "" and check_state and _read_state(doc).is_empty():
+		problem = "DAMAGED SAVE"
+	if problem != "":
+		none.merge({"empty": false, "corrupt": true, "summary": problem}, true)
 		return none
 	none.merge({"empty": false, "name": str(doc.get("name", "")), "summary": str(doc.get("summary", "")), "saved_at": int(doc.get("saved_at", 0)), "seq": int(doc.get("seq", 0))}, true)
 	return none
 
 
-## The game's state from a slot, or {} when it is empty, damaged or from a newer version.
+## The game's state from a slot, or {} when it is empty, damaged or from an incompatible version.
 static func read(slot: String) -> Dictionary:
 	var doc = _read_doc(slot)
-	if doc == null or doc.is_empty() or int(doc.get("version", 0)) != VERSION:
+	return {} if doc == null or _doc_problem(doc) != "" else _read_state(doc)
+
+
+static func _doc_problem(doc: Dictionary) -> String:
+	var version = doc.get("version", 0)
+	if doc.is_empty() or not _is_json_int(version):
+		return "DAMAGED SAVE"
+	if int(version) != VERSION:
+		return "OLD SAVE, NOT COMPATIBLE"
+	if not _is_json_int(doc.get("saved_at", 0)) or not _is_json_int(doc.get("seq", 0)):
+		return "DAMAGED SAVE"
+	return ""
+
+
+# JSON decodes numbers as floats; the in-memory documents still use ints.
+static func _is_json_int(value) -> bool:
+	return value is int or (value is float and value >= -9223372036854775808.0 and value < 9223372036854775808.0 and floorf(value) == value)
+
+
+static func _read_state(doc: Dictionary) -> Dictionary:
+	var encoded = doc.get("state")
+	if not encoded is String:
 		return {}
-	var state = str_to_var(str(doc.state)) # unlike a script, str_to_var can't build objects
+	var state = str_to_var(encoded) # unlike a script, str_to_var can't build objects
 	return state if state is Dictionary else {}
 
 
@@ -86,9 +110,12 @@ static func list() -> Array:
 ## The newest save that can be read, or {} (what Continue loads).
 static func latest() -> Dictionary:
 	var best := {}
-	for i in list():
+	for slot in slots():
+		var doc = _read_doc(slot)
+		var i := _slot_info(slot, doc, false)
 		if not i.empty and not i.corrupt and (best.is_empty() or i.seq > best.seq or (i.seq == best.seq and i.saved_at > best.saved_at)):
-			best = i
+			if not _read_state(doc).is_empty():
+				best = i
 	if not best.is_empty():
 		print_verbose("saves: latest is %s (seq %d)" % [best.slot, best.seq])
 	return best
@@ -138,12 +165,12 @@ static func _read_doc(slot: String):
 
 
 ## The number for the next save: one above every save there is. `saved_at` is the clock's time and only for showing; the
-## number is what says which save came last (two can share a second, and a clock can be set back). The slots are read each
-## time (seven small files), so a second window on the same saves that wrote since is counted too.
+## number is what says which save came last (two can share a second, and a clock can be set back). Read the slots each time
+## to count writes by another window, but only use metadata: numbering a write does not need to decode any saved states.
 static func _next_seq() -> int:
 	var highest := 0
-	for i in list():
-		highest = maxi(highest, i.seq)
+	for slot in slots():
+		highest = maxi(highest, _slot_info(slot, _read_doc(slot), false).seq)
 	return highest + 1
 
 
