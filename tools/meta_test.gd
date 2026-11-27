@@ -8,6 +8,7 @@ const Achievements = preload("res://src/rules/achievements.gd")
 const Ally = preload("res://src/game/ally.gd")
 const Badges = preload("res://src/view/badges.gd")
 const Clans = preload("res://src/rules/clans.gd")
+const Content = preload("res://src/rules/content.gd")
 const Flags = preload("res://src/utils/flags.gd")
 const Flow = preload("res://src/game/flow.gd")
 const FloorMap = preload("res://src/rules/floor_map.gd")
@@ -433,6 +434,7 @@ func _butcher() -> void:
 			left.append(n))
 	s.allies = [_ally("slime", "DRIP"), _ally("snake", "HISS"), _ally("rock", "GRUMM")]
 	var standing := float(s.reputation.get(Clans.of("slime"), 0.0))
+	var trust: Array = s.allies.map(func(a): return a.loyalty)
 	await flow.go("camp")
 	var labels: Array = s.menu.map(func(i): return i.label)
 	_check(labels == ["BUTCHER DRIP", "BUTCHER HISS", "BUTCHER GRUMM", "LEAVE"], "each friend can be butchered (%s)" % [labels])
@@ -452,7 +454,19 @@ func _butcher() -> void:
 	_check(left == ["butchered", "ally_left"], "the sound and the party hear of it (%s)" % [left])
 	_check(s.butchered == [{"species": "slime", "name": "DRIP"}], "the run remembers who")
 	_check(not s.found_out, "nobody noticed, on that roll")
-	_check(float(s.reputation.get(Clans.of("slime"), 0.0)) < standing, "its clan has its doubts anyway")
+	# what it costs: its clan takes it as far worse than a death in a fight, at once, and says so; its kin will name it; and the
+	# friends who saw nothing and were told nothing still miss it, and the log says that too
+	var burrow: String = Clans.of("slime")
+	var cost := float(Survival.table().butcher.clan_worth)
+	_check(is_equal_approx(float(s.reputation[burrow]), standing + cost) and cost <= 3.0 * float(Content.table("clans").deeds.slain), "its clan takes it as three deaths in a fight, or worse (%.0f -> %.0f)" % [standing, float(s.reputation[burrow])])
+	_check(Clans.hostility_of(s, "slime") == "furious", "one friend in the pot and the Burrow is furious (%s)" % Clans.hostility_of(s, "slime"))
+	_check(s.deeds.any(func(d): return d.who == "DRIP" and d.deed == "slain" and d.clan == burrow), "the run keeps it as a killing, by name, for its kin to speak of (%s)" % [s.deeds])
+	_check(is_equal_approx(float(s.reputation.get(Clans.of("rock"), 0.0)), -float(Content.table("clans").deeds.slain) * 0.5), "a clan that dislikes the Burrow is glad of one death, and of no more than one (%s)" % [s.reputation])
+	var said: Array = s.lines.map(func(l): return str(l.text))
+	_check(said.any(func(x): return x.contains(Clans.title(burrow)) and x.contains("furious")) or (s.banner != null and str(s.banner.text).contains("furious")), "the game says what the clan makes of it (%s, %s)" % [said, s.banner])
+	var missing := float(Survival.table().butcher.missed_loyalty)
+	_check(missing < 0.0 and s.allies[0].loyalty == float(trust[1]) + missing and s.allies[1].loyalty == float(trust[2]) + missing, "the two who are left think less of you, noticed or not (%.0f, %.0f)" % [s.allies[0].loyalty, s.allies[1].loyalty])
+	_check(said.has(Survival.line("missed_many") % "HISS and GRUMM"), "and the log says so, by name (%s)" % [said])
 	_check(s.menu.map(func(i): return i.label).has("FEED HISS"), "now there is something to feed the others")
 	_check(s.menu.map(func(i): return i.label).has("EAT %s" % Items.label(Survival.ROAST)), "or to eat")
 	await flow.press("cancel")
@@ -468,6 +482,10 @@ func _butcher() -> void:
 	two.dice.unpin()
 	_check(t.found_out and t.allies.size() < 3, "on a low roll someone saw, and walked out")
 	_check(t.lines.any(func(l): return str(l.text).contains("walks out")), "and the log says so (%s)" % [t.lines])
+	var worse := float(Survival.table().butcher.clan_worth) + float(Survival.table().butcher.found_out_worth)
+	_check(float(t.reputation[Clans.of("slime")]) <= worse and Clans.hostility_of(t, "slime") == "enraged", "seen, it is worse again: the word of how it went reaches the clan, and the Burrow is enraged (%.0f)" % float(t.reputation[Clans.of("slime")]))
+	_check(t.lines.size() > 2, "and nothing of it is left out of the log (%d lines)" % t.lines.size())
+	_check(is_equal_approx(float(t.reputation.get(Clans.of("rock"), 0.0)), -float(Content.table("clans").deeds.slain) * 0.5), "the telling is of the same death: a clan that dislikes the Burrow is glad of it once, not once more for every tongue (%s)" % [t.reputation])
 	# the last friend
 	var last = _flow(7)
 	await last.new_run()
@@ -538,7 +556,8 @@ func _feeding() -> void:
 	await by_menu.press(str(labels.find("FEED HISS") + 1))
 	by_menu.dice.unpin()
 	_check(m.lines[0].text == Survival.line("found_out") % "HISS", "the log says who worked it out")
-	_check(m.lines[1].text == Survival.line("told") % "GRUMM", "and who was told")
+	_check(m.lines.any(func(l): return l.text == Survival.line("told") % "GRUMM"), "and who was told (%s)" % [m.lines.map(func(l): return l.text)])
+	_check(m.lines.any(func(l): return str(l.text).contains(Clans.title(Clans.of("slime")))) and float(m.reputation[Clans.of("slime")]) == float(Survival.table().butcher.found_out_worth), "and what its clan makes of how it went (%.0f)" % float(m.reputation[Clans.of("slime")]))
 
 
 func _selling() -> void:
