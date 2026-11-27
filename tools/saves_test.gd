@@ -31,6 +31,7 @@ func _run() -> void:
 	Flags.set_args(PackedStringArray([]))
 	_round_trip()
 	_numbers_rise()
+	_damaged_saves_are_skipped()
 	_nosave_in_memory()
 	_a_store_heeds_nosave_said_later()
 	await _state_is_checked()
@@ -256,16 +257,44 @@ func _numbers_rise() -> void:
 	_check(Saves.latest().slot == "4", "so it is the newest")
 	var now := int(Time.get_unix_time_from_system())
 	var future := now + 3600 * 24 * 365
-	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from the future", "saved_at": future, "state": var_to_str({})}, "5") # saved when the clock was wrong, before saves were numbered
+	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from the future", "saved_at": future, "state": var_to_str({"hp": 3})}, "5") # saved when the clock was wrong, before saves were numbered
 	Saves.write("6", {"hp": 1}, "HP 1/20")
 	_check(Saves.latest().slot == "6", "a save made after a clock that was set forward is still the newest")
 	_check(absi(Saves.info("6").saved_at - now) < 60, "and says the real time, not the future one")
 	Saves.delete("5")
 	# a second window wrote while this one stayed open: this one's next save is still above it
 	var other_window: int = Saves.info("6").seq + 7
-	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from another window", "saved_at": now, "seq": other_window, "state": var_to_str({})}, "5")
+	Saves._store({"version": Saves.VERSION, "name": "", "summary": "from another window", "saved_at": now, "seq": other_window, "state": var_to_str({"hp": 3})}, "5")
 	Saves.write("2", {"hp": 2}, "HP 2/20") # the run's own count is far behind
 	_check(Saves.info("2").seq > other_window and Saves.latest().slot == "2", "a save is numbered above one another window wrote meanwhile, so Continue offers the later one")
 	Saves.delete("5")
 	for slot in ["2", "3", "4", "6"]: # slot 1 stays, for the nosave check that follows
 		Saves.delete(slot)
+
+
+## The JSON envelope can be readable even when the state is not a nonempty Dictionary. A newer broken slot must not hide
+## the last readable save. A slot from another format is still labelled old, without inspecting its state.
+func _damaged_saves_are_skipped() -> void:
+	var best: Dictionary = Saves.latest()
+	var valid := {"version": Saves.VERSION, "name": "newer", "summary": "newer", "saved_at": best.saved_at + 1, "seq": best.seq + 1, "state": var_to_str({"hp": 4})}
+	var cases := [
+		["state", {"hp": 4}, "DAMAGED SAVE"],
+		["state", var_to_str([4]), "DAMAGED SAVE"],
+		["state", var_to_str({}), "DAMAGED SAVE"],
+		["version", [], "DAMAGED SAVE"],
+		["saved_at", {}, "DAMAGED SAVE"],
+		["seq", [], "DAMAGED SAVE"],
+		["version", 1, "OLD SAVE, NOT COMPATIBLE"],
+	]
+	for c in cases:
+		var doc := valid.duplicate()
+		doc[c[0]] = c[1]
+		if c[2] == "OLD SAVE, NOT COMPATIBLE":
+			doc.state = []
+		var what := "%s = %s" % [c[0], str(c[1])]
+		_check(Saves._store(doc, "6"), "a save fixture with %s is written" % what)
+		_check(Saves.read("6").is_empty(), "a save with %s cannot be read" % what)
+		var row: Dictionary = Saves.info("6")
+		_check(row.get("corrupt", false) and not row.empty and row.summary == c[2], "a save with %s is labelled %s" % [what, c[2]])
+		_check(Saves.latest().get("slot") == best.slot, "Continue skips the newer slot with %s" % what)
+	Saves.delete("6")
