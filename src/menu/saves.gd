@@ -75,7 +75,10 @@ static func _slot_info(slot: String, doc, check_state := true) -> Dictionary:
 
 ## The game's state from a slot, or {} when it is empty, damaged or from an incompatible version.
 static func read(slot: String) -> Dictionary:
-	var doc = _read_doc(slot)
+	return _validated_state(_read_doc(slot))
+
+
+static func _validated_state(doc) -> Dictionary:
 	return {} if doc == null or _doc_problem(doc) != "" else _read_state(doc)
 
 
@@ -129,10 +132,12 @@ static func rename(slot: String, name: String) -> bool:
 	return _store(doc, slot)
 
 
-## Copy one slot over another (the autosave can be copied from, not onto).
+## Copy a readable slot over another (the autosave can be copied from, not onto).
 static func copy(from: String, to: String) -> bool:
+	if to == AUTO or not slots().has(to):
+		return false
 	var doc = _read_doc(from)
-	if doc == null or doc.is_empty() or to == AUTO or not slots().has(to):
+	if _validated_state(doc).is_empty():
 		return false
 	return _store(doc, to)
 
