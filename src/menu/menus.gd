@@ -159,9 +159,10 @@ static func slot_label(info: Dictionary) -> String:
 static func slot_actions(panel, ctx: Dictionary, slot: String) -> Dictionary:
 	var info := Saves.info(slot)
 	var manual := slot != Saves.AUTO
+	var unreadable: bool = info.empty or info.corrupt
 	var items := [
-		{"label": "LOAD", "disabled": info.empty or info.corrupt, "act": func(): _load(panel, ctx, info)},
-		{"label": "COPY TO...", "act": _go(panel, func(): return copy_target(panel, slot))},
+		{"label": "LOAD", "disabled": unreadable, "act": func(): _load(panel, ctx, info)},
+		{"label": "COPY TO...", "disabled": unreadable, "act": _go(panel, func(): return copy_target(panel, slot))},
 		{"label": "RENAME", "disabled": not manual or info.corrupt, "act": func(): panel.push(func(): return rename_page(panel, slot, info.name))},
 		{"label": "DELETE", "act": func(): panel.push(func(): return confirm(panel, "DELETE THIS SAVE?", "It can't be brought back.", "DELETE", _do_delete.bind(panel, slot)))},
 	]
@@ -194,18 +195,22 @@ static func copy_target(panel, from: String) -> Dictionary:
 		var to: String = info.slot
 		var item := {"label": slot_label(info), "sub": "EMPTY" if info.empty else "Replaces: " + info.summary}
 		if info.empty:
-			item.act = _do_copy.bind(panel, from, to, 2)
+			item.act = _do_copy.bind(panel, from, to, false)
 		else:
-			item.act = func(): panel.push(func(): return confirm(panel, "REPLACE SLOT %s?" % to, "%s is replaced." % slot_label(info), "REPLACE", _do_copy.bind(panel, from, to, 3)))
+			item.act = func(): panel.push(func(): return confirm(panel, "REPLACE SLOT %s?" % to, "%s is replaced." % slot_label(info), "REPLACE", _do_copy.bind(panel, from, to, true)))
 		items.append(item)
 	return {"title": "COPY TO", "items": items, "hint": KEYS_HINT}
 
 
-## `pops`: pages to go back (the target list and the slot's actions, plus the confirm when there was one).
-static func _do_copy(panel, from: String, to: String, pops: int) -> void:
-	Saves.copy(from, to)
-	for _i in pops:
-		panel.pop()
+static func _do_copy(panel, from: String, to: String, confirmed: bool) -> void:
+	var copied := Saves.copy(from, to)
+	if confirmed:
+		panel.pop() # overwrite confirmation
+	if not copied:
+		panel.push(func(): return notice(panel, "CAN'T COPY", "The destination slot was not changed."))
+		return
+	panel.pop() # destination list
+	panel.pop() # source slot actions
 	panel.refresh()
 
 

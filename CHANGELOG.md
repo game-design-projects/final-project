@@ -10,6 +10,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Fixed
 - Damaged saves are marked in the slot list. Continue skips them and offers the newest readable save instead.
+- The save manager prevents unreadable saves from being copied over good ones.
 - The peaceful and clan-request autopilots share the same fight-menu choice and skip SPARE when the game has disabled it. The named-kin spare favour uses the same enabled-row lookup while still taking SPARE regardless of odds.
 
 ## [0.9.6] - 2026-11-24
